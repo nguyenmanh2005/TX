@@ -1,0 +1,137 @@
+.plinko-container {
+    padding: 32px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.plinko-board-card {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    backdrop-filter: blur(10px);
+}
+
+.game-layout {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 18px;
+}
+
+.plinko-board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 12px;
+    padding: 12px;
+    align-items: end;
+}
+
+.plinko-slot {
+    text-align: center;
+    position: relative;
+}
+
+.slot-multiplier {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.16), rgba(255,255,255,0.04));
+    border: 1px solid rgba(255,255,255,0.12);
+    font-weight: 700;
+    color: #fff;
+    font-size: 14px;
+}
+
+.slot-well {
+    margin-top: 8px;
+    height: 90px;
+    border-radius: 14px;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.14), rgba(255,255,255,0.03));
+    border: 1px dashed rgba(255,255,255,0.12);
+    transition: all 0.25s ease;
+}
+
+.plinko-slot.active-slot .slot-well {
+    border-color: #4ade80;
+    box-shadow: 0 0 12px rgba(74, 222, 128, 0.5);
+    transform: translateY(-4px);
+}
+
+.plinko-legend {
+    margin-top: 8px;
+    color: #e5e7eb;
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.legend-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+.dot-low { background: #60a5fa; }
+.dot-medium { background: #fbbf24; }
+.dot-high { background: #f472b6; }
+
+.control-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.risk-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.chip {
+    position: relative;
+}
+.chip input { display: none; }
+.chip-label {
+    display: inline-block;
+    padding: 10px 16px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 600;
+}
+.chip-low { color: #bfdbfe; }
+.chip-medium { color: #fcd34d; }
+.chip-high { color: #f9a8d4; }
+.chip input:checked + .chip-label {
+    border-color: #4ade80;
+    box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.25);
+}
+
+.btn-drop {
+    width: 100%;
+    margin-top: 4px;
+}
+
+.note {
+    color: #cbd5e1;
+    font-size: 13px;
+    margin-top: 6px;
+}
+
+.game-footer-links {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    font-size: 14px;
+}
+
+@media (max-width: 900px) {
+    .game-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+

@@ -1,0 +1,332 @@
+/* ============================================
+   GAME NUMBER GUESSING - CSS
+   ============================================ */
+
+.number-guessing-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+.game-box-number-enhanced {
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 40px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.game-header-number-enhanced {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid rgba(102, 126, 234, 0.1);
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.game-title-number-enhanced {
+    font-size: 36px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0;
+}
+
+.balance-number-enhanced {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px 25px;
+    background: linear-gradient(135deg, rgba(46, 204, 113, 0.15), rgba(39, 174, 96, 0.15));
+    border: 2px solid rgba(46, 204, 113, 0.3);
+    border-radius: 16px;
+    font-weight: 700;
+    font-size: 20px;
+    box-shadow: 0 4px 15px rgba(46, 204, 113, 0.2);
+}
+
+.number-game-area {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.number-display-area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 20px 0;
+}
+
+.number-hint-box {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    border-radius: 20px;
+    padding: 25px;
+    max-width: 600px;
+    width: 100%;
+}
+
+.number-hint-box h3 {
+    font-size: 24px;
+    font-weight: 800;
+    color: #2c3e50;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.number-hint-box ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.number-hint-box li {
+    padding: 12px 0;
+    padding-left: 30px;
+    position: relative;
+    color: #2c3e50;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.number-hint-box li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: #28a745;
+    font-weight: 800;
+    font-size: 20px;
+}
+
+.game-controls-number-enhanced {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 30px;
+    margin: 25px 0;
+    border: 2px solid rgba(102, 126, 234, 0.15);
+}
+
+.control-group-number-enhanced {
+    margin-bottom: 25px;
+}
+
+.control-label-number-enhanced {
+    display: block;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 12px;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.control-input-number-enhanced {
+    width: 100%;
+    padding: 16px 20px;
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.control-input-number-enhanced:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+    transform: translateY(-2px);
+}
+
+.bet-quick-amounts-number-enhanced {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+}
+
+.bet-quick-btn-number-enhanced {
+    padding: 12px 24px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+    border: 2px solid rgba(102, 126, 234, 0.3);
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #667eea;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.bet-quick-btn-number-enhanced:hover {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+    border-color: #667eea;
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.bet-quick-btn-number-enhanced.active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+}
+
+.button-group-number-enhanced {
+    display: flex;
+    gap: 15px;
+    margin-top: 25px;
+    flex-wrap: wrap;
+}
+
+.guess-button-number-enhanced,
+.new-game-button-number-enhanced {
+    flex: 1;
+    min-width: 200px;
+    padding: 20px 40px;
+    font-size: 20px;
+    font-weight: 800;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.guess-button-number-enhanced {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+.guess-button-number-enhanced:hover:not(:disabled) {
+    transform: translateY(-8px) scale(1.05);
+    box-shadow: 0 12px 35px rgba(102, 126, 234, 0.6);
+}
+
+.new-game-button-number-enhanced {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+    color: white;
+    box-shadow: 0 8px 25px rgba(243, 156, 18, 0.4);
+}
+
+.new-game-button-number-enhanced:hover {
+    transform: translateY(-8px) scale(1.05);
+    box-shadow: 0 12px 35px rgba(243, 156, 18, 0.6);
+}
+
+.guess-button-number-enhanced:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.result-banner-number-enhanced {
+    margin: 25px 0;
+    font-size: 22px;
+    font-weight: 700;
+    padding: 20px 30px;
+    border-radius: 16px;
+    text-align: center;
+}
+
+.result-banner-number-enhanced.win {
+    color: #00ff00;
+    background: rgba(40, 167, 69, 0.3);
+    border: 2px solid #28a745;
+    box-shadow: 0 0 30px rgba(40, 167, 69, 0.5);
+    animation: winPulse 1s ease-in-out infinite;
+}
+
+.result-banner-number-enhanced.lose {
+    color: #ff6b6b;
+    background: rgba(220, 53, 69, 0.3);
+    border: 2px solid #dc3545;
+    animation: loseShake 0.5s ease-in-out;
+}
+
+@keyframes winPulse {
+    0%, 100% {
+        box-shadow: 0 0 30px rgba(40, 167, 69, 0.5);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 50px rgba(40, 167, 69, 0.8);
+        transform: scale(1.02);
+    }
+}
+
+@keyframes loseShake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(-10px);
+    }
+    75% {
+        transform: translateX(10px);
+    }
+}
+
+.number-info-enhanced {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 25px;
+    margin: 25px 0;
+    border: 2px solid rgba(102, 126, 234, 0.15);
+}
+
+.number-info-enhanced h3 {
+    font-size: 20px;
+    font-weight: 800;
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+.number-info-enhanced p {
+    color: #2c3e50;
+    line-height: 1.8;
+    margin: 10px 0;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .game-box-number-enhanced {
+        padding: 25px;
+    }
+    
+    .game-header-number-enhanced {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .button-group-number-enhanced {
+        flex-direction: column;
+    }
+    
+    .guess-button-number-enhanced,
+    .new-game-button-number-enhanced {
+        width: 100%;
+    }
+}
+

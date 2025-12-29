@@ -1,0 +1,49 @@
+/* ============================================
+   MASTER CSS - Import tất cả CSS files
+   Sử dụng file này để include tất cả styles
+   ============================================ */
+
+/* Import order is important */
+@import url('main.css');
+@import url('components.css');
+@import url('responsive.css');
+@import url('loading.css');
+@import url('animations.css');
+
+/* Additional global overrides */
+:root {
+    --font-family-base: 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+    --font-size-base: 16px;
+    --line-height-base: 1.6;
+}
+
+* {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-base);
+}
+
+/* Performance optimizations */
+.card-modern,
+.btn-modern,
+.stat-box {
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+/* Print optimizations */
+@media print {
+    @page {
+        margin: 1cm;
+    }
+    
+    .no-print {
+        display: none !important;
+    }
+}
+

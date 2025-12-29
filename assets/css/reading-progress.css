@@ -1,0 +1,12 @@
+/* Reading Progress Bar */
+.reading-progress-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--secondary-color), var(--primary-color));
+    z-index: 10001;
+    transition: width 0.1s ease;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+}
+

@@ -1,0 +1,49 @@
+/* Share Buttons */
+.share-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.share-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.98);
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.share-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    border-color: var(--primary-color);
+}
+
+.share-btn .share-icon {
+    font-size: 18px;
+}
+
+.share-btn .share-label {
+    font-size: 14px;
+}
+
+@media (max-width: 768px) {
+    .share-btn .share-label {
+        display: none;
+    }
+    
+    .share-btn {
+        padding: 10px;
+        width: 44px;
+        height: 44px;
+        justify-content: center;
+    }
+}
+

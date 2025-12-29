@@ -1,0 +1,165 @@
+.roulette-container {
+    padding: 24px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.roulette-layout {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 18px;
+    align-items: start;
+}
+
+.wheel-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.roulette-wheel {
+    position: relative;
+    width: min(380px, 90vw);
+    height: min(380px, 90vw);
+    margin: 0 auto 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.wheel-inner {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 10px solid #1f2937;
+    background: conic-gradient(
+        #dc3545 0deg 9.73deg,
+        #000 9.73deg 19.46deg,
+        #dc3545 19.46deg 29.19deg,
+        #000 29.19deg 38.92deg,
+        #dc3545 38.92deg 48.65deg,
+        #000 48.65deg 58.38deg,
+        #dc3545 58.38deg 68.11deg,
+        #000 68.11deg 77.84deg,
+        #dc3545 77.84deg 87.57deg,
+        #000 87.57deg 97.3deg,
+        #00ff00 97.3deg 106.03deg,
+        #dc3545 106.03deg 115.76deg,
+        #000 115.76deg 125.49deg,
+        #dc3545 125.49deg 135.22deg,
+        #000 135.22deg 144.95deg,
+        #dc3545 144.95deg 154.68deg,
+        #000 154.68deg 164.41deg,
+        #dc3545 164.41deg 174.14deg,
+        #000 174.14deg 183.87deg,
+        #dc3545 183.87deg 193.6deg,
+        #000 193.6deg 203.33deg,
+        #dc3545 203.33deg 213.06deg,
+        #000 213.06deg 222.79deg,
+        #dc3545 222.79deg 232.52deg,
+        #000 232.52deg 242.25deg,
+        #dc3545 242.25deg 251.98deg,
+        #000 251.98deg 261.71deg,
+        #dc3545 261.71deg 271.44deg,
+        #000 271.44deg 281.17deg,
+        #dc3545 281.17deg 290.9deg,
+        #000 290.9deg 300.63deg,
+        #dc3545 300.63deg 310.36deg,
+        #000 310.36deg 320.09deg,
+        #dc3545 320.09deg 329.82deg,
+        #000 329.82deg 339.55deg,
+        #dc3545 339.55deg 349.28deg,
+        #000 349.28deg 360deg
+    );
+    position: relative;
+    animation: spinWheel 2s ease-out;
+    transform: rotate(var(--spin-angle, 0deg));
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+}
+
+.wheel-gradient {
+    position: absolute;
+    inset: 18px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,0,0,0.15) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.wheel-pointer {
+    position: absolute;
+    top: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 22px;
+    color: #ffd700;
+    text-shadow: 0 0 8px rgba(255,215,0,0.7);
+}
+
+.result-number {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 92px;
+    height: 92px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.78);
+    border: 4px solid #ffd700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 42px;
+    font-weight: 800;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+}
+
+.legend {
+    text-align: center;
+    color: #e5e7eb;
+    font-size: 14px;
+    margin-top: 6px;
+}
+
+.legend-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+.dot-red { background: #dc3545; }
+.dot-black { background: #111827; border: 1px solid #1f2937; }
+.dot-green { background: #22c55e; }
+
+.control-card .helper-text {
+    font-size: 13px;
+    color: #94a3b8;
+    margin-top: 8px;
+}
+
+.game-footer-links {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    font-size: 14px;
+}
+
+@keyframes spinWheel {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(var(--spin-angle, 0deg)); }
+}
+
+@media (max-width: 900px) {
+    .roulette-layout {
+        grid-template-columns: 1fr;
+    }
+    .roulette-wheel {
+        width: min(320px, 90vw);
+        height: min(320px, 90vw);
+    }
+}
+
+
