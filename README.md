@@ -1,4 +1,4 @@
-# TX – Trò chơi giải trí mô phỏng (Phi thương mại)
+# GTLMANH – Trò chơi giải trí lành mạnh
 
 ![Status](https://img.shields.io/badge/status-learning-blue)
 ![Type](https://img.shields.io/badge/type-simulation-success)
@@ -20,7 +20,7 @@ Tất cả giá trị trong trò chơi đều là **giá trị ảo**, dùng cho
 - Thực hành **HTML, CSS, JavaScript**
 - Rèn luyện **tư duy logic và xử lý ngẫu nhiên**
 - Phục vụ **bài tập học tập / dự án cá nhân**
-- Xây dựng một sản phẩm **giải trí an toàn, phi thương mại**
+- Xây dựng một sản phẩm **giải trí an toàn**
 
 ---
 
@@ -29,8 +29,7 @@ Tất cả giá trị trong trò chơi đều là **giá trị ảo**, dùng cho
 - Giao diện đơn giản, dễ sử dụng
 - Mô phỏng kết quả ngẫu nhiên
 - Chạy hoàn toàn phía trình duyệt (client-side)
-- Không lưu dữ liệu người dùng
-- Không yêu cầu đăng nhập
+
 
 ---
 
