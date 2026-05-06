@@ -34,7 +34,7 @@ class GameUIEnhanced {
 
         // Disable buttons khi đang loading
         document.querySelectorAll('.game-btn-enhanced').forEach(btn => {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function () {
                 if (this.classList.contains('btn-loading')) {
                     return false;
                 }
@@ -47,7 +47,7 @@ class GameUIEnhanced {
      */
     showButtonLoading(button) {
         if (!button) return;
-        
+
         button.classList.add('btn-loading');
         button.disabled = true;
         const originalText = button.innerHTML;
@@ -60,7 +60,7 @@ class GameUIEnhanced {
      */
     hideButtonLoading(button) {
         if (!button) return;
-        
+
         button.classList.remove('btn-loading');
         button.disabled = false;
         if (button.dataset.originalText) {
@@ -75,20 +75,20 @@ class GameUIEnhanced {
     setupButtonAnimations() {
         document.querySelectorAll('.game-btn-enhanced').forEach(btn => {
             // Ripple effect
-            btn.addEventListener('click', function(e) {
+            btn.addEventListener('click', function (e) {
                 const ripple = document.createElement('span');
                 const rect = this.getBoundingClientRect();
                 const size = Math.max(rect.width, rect.height);
                 const x = e.clientX - rect.left - size / 2;
                 const y = e.clientY - rect.top - size / 2;
-                
+
                 ripple.style.width = ripple.style.height = size + 'px';
                 ripple.style.left = x + 'px';
                 ripple.style.top = y + 'px';
                 ripple.classList.add('ripple');
-                
+
                 this.appendChild(ripple);
-                
+
                 setTimeout(() => {
                     ripple.remove();
                 }, 600);
@@ -100,9 +100,9 @@ class GameUIEnhanced {
      * Setup input enhancements
      */
     setupInputEnhancements() {
-        // Format số tiền khi nhập
+        // Format số Gtlm khi nhập
         document.querySelectorAll('.control-input-enhanced[type="number"], .bet-amount-input').forEach(input => {
-            input.addEventListener('input', function() {
+            input.addEventListener('input', function () {
                 const value = this.value.replace(/,/g, '');
                 if (value && !isNaN(value)) {
                     // Format với dấu phẩy
@@ -115,7 +115,7 @@ class GameUIEnhanced {
             });
 
             // Format khi blur
-            input.addEventListener('blur', function() {
+            input.addEventListener('blur', function () {
                 const value = this.value.replace(/,/g, '');
                 if (value && !isNaN(value)) {
                     this.value = parseInt(value).toLocaleString('vi-VN');
@@ -212,13 +212,13 @@ class GameUIEnhanced {
      */
     setupQuickAmountButtons() {
         document.querySelectorAll('.bet-quick-btn-enhanced').forEach(btn => {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function () {
                 const amount = this.dataset.amount || this.textContent.replace(/[^\d]/g, '');
                 const input = document.querySelector('.control-input-enhanced[type="number"], .bet-amount-input');
                 if (input) {
                     input.value = parseInt(amount).toLocaleString('vi-VN');
                     input.dispatchEvent(new Event('input', { bubbles: true }));
-                    
+
                     // Highlight button
                     document.querySelectorAll('.bet-quick-btn-enhanced').forEach(b => {
                         b.classList.remove('active');
@@ -271,12 +271,12 @@ class GameUIEnhanced {
             `;
             document.body.appendChild(overlay);
         }
-        
+
         const textElement = overlay.querySelector('.game-loading-text-enhanced');
         if (textElement) {
             textElement.textContent = message;
         }
-        
+
         setTimeout(() => {
             overlay.classList.add('show');
         }, 10);
@@ -303,7 +303,7 @@ class GameUIEnhanced {
         if (!resultElement) return;
 
         resultElement.className = `game-result-enhanced game-result-${type}-enhanced`;
-        
+
         let content = '';
         if (emojis.length > 0) {
             content += '<div class="result-emojis">';
@@ -312,7 +312,7 @@ class GameUIEnhanced {
             });
             content += '</div>';
         }
-        
+
         content += `<div class="result-message-enhanced result-message-${type}-enhanced">${message}</div>`;
         resultElement.innerHTML = content;
 
@@ -338,13 +338,13 @@ class GameUIEnhanced {
         const animate = (currentTime) => {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
-            
+
             // Easing function
             const easeOutCubic = 1 - Math.pow(1 - progress, 3);
             const current = Math.floor(start + difference * easeOutCubic);
-            
+
             element.textContent = current.toLocaleString('vi-VN');
-            
+
             if (progress < 1) {
                 requestAnimationFrame(animate);
             } else {
@@ -374,9 +374,9 @@ class GameUIEnhanced {
             z-index: 10001;
             animation: slideInRight 0.3s ease-out;
         `;
-        
+
         document.body.appendChild(toast);
-        
+
         setTimeout(() => {
             toast.style.animation = 'slideOutRight 0.3s ease-out';
             setTimeout(() => toast.remove(), 300);

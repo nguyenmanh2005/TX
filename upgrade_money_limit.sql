@@ -1,5 +1,5 @@
--- Script nâng giới hạn số dư tiền từ BIGINT UNSIGNED sang DECIMAL
--- DECIMAL(30,2) cho phép lưu trữ số tiền lên đến 999,999,999,999,999,999,999,999,999,999.99 VNĐ
+-- Script nâng giới hạn số dư Gtlm từ BIGINT UNSIGNED sang DECIMAL
+-- DECIMAL(30,2) cho phép lưu trữ số Gtlm lên đến 999,999,999,999,999,999,999,999,999,999.99 VNĐ
 
 -- Backup dữ liệu trước khi thay đổi (khuyến nghị)
 -- CREATE TABLE users_backup AS SELECT * FROM users;

@@ -52,7 +52,7 @@ class SlotMachineEnhanced {
                 if (input) {
                     input.value = parseInt(amount).toLocaleString('vi-VN');
                     input.dispatchEvent(new Event('input', { bubbles: true }));
-                    
+
                     // Highlight button
                     quickButtons.forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
@@ -64,7 +64,7 @@ class SlotMachineEnhanced {
     setupAutoSpin() {
         const autoSpinCheckbox = document.getElementById('autoSpinCheckbox');
         const autoSpinCountInput = document.getElementById('autoSpinCount');
-        
+
         if (autoSpinCheckbox) {
             autoSpinCheckbox.addEventListener('change', (e) => {
                 if (e.target.checked && this.autoSpinCount < this.maxAutoSpins) {
@@ -93,7 +93,7 @@ class SlotMachineEnhanced {
 
         const betInput = document.getElementById('cuocInput');
         if (!betInput || !betInput.value) {
-            this.showError('Vui lòng nhập số tiền cược!');
+            this.showError('Vui lòng nhập số Gtlm cược!');
             return;
         }
 
@@ -164,7 +164,7 @@ class SlotMachineEnhanced {
 }
 
 // Initialize khi DOM ready
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     if (document.getElementById('gameForm')) {
         window.slotMachineEnhanced = new SlotMachineEnhanced();
     }

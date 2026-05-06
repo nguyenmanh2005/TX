@@ -26,10 +26,10 @@ class RockPaperScissorsGame {
                     // Trigger input event để validate
                     input.dispatchEvent(new Event('input', { bubbles: true }));
                 }
-                
+
                 quickButtons.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                
+
                 // Animation
                 btn.style.transform = 'scale(0.95)';
                 setTimeout(() => {
@@ -51,7 +51,7 @@ class RockPaperScissorsGame {
                         radio.dispatchEvent(new Event('change', { bubbles: true }));
                     }
                 });
-                
+
                 radio.addEventListener('change', () => {
                     choiceButtons.forEach(b => {
                         b.classList.remove('selected');
@@ -74,10 +74,10 @@ class RockPaperScissorsGame {
     setupFormValidation() {
         const form = document.getElementById('rpsForm');
         if (!form) return;
-        
+
         const cuocInput = document.getElementById('cuocInput');
         const playButton = form.querySelector('.play-button-rps-enhanced');
-        
+
         if (cuocInput) {
             cuocInput.addEventListener('input', () => {
                 const value = parseInt(cuocInput.value.replace(/[^\d]/g, ''));
@@ -86,24 +86,24 @@ class RockPaperScissorsGame {
                 }
             });
         }
-        
+
         form.addEventListener('submit', (e) => {
             const choice = form.querySelector('input[name="choice"]:checked');
             const cuoc = parseInt(cuocInput?.value || 0);
-            
+
             if (!choice) {
                 e.preventDefault();
                 this.showError('Vui lòng chọn Rock, Paper hoặc Scissors!');
                 return false;
             }
-            
+
             if (!cuoc || cuoc <= 0) {
                 e.preventDefault();
-                this.showError('Vui lòng nhập số tiền cược hợp lệ!');
+                this.showError('Vui lòng nhập số Gtlm cược hợp lệ!');
                 cuocInput?.focus();
                 return false;
             }
-            
+
             // Disable button và show loading
             if (playButton) {
                 playButton.disabled = true;
@@ -135,10 +135,10 @@ class RockPaperScissorsGame {
             `;
             document.body.appendChild(errorDiv);
         }
-        
+
         errorDiv.textContent = message;
         errorDiv.style.display = 'block';
-        
+
         setTimeout(() => {
             errorDiv.style.animation = 'slideUp 0.3s ease-out';
             setTimeout(() => {
@@ -159,7 +159,7 @@ class RockPaperScissorsGame {
                 battleArea.style.transform = 'translateY(0)';
             }, 100);
         }
-        
+
         // Animate result banner if exists
         const resultBanner = document.getElementById('resultBanner');
         if (resultBanner) {
@@ -170,13 +170,13 @@ class RockPaperScissorsGame {
                 resultBanner.style.opacity = '1';
                 resultBanner.style.transform = 'scale(1)';
             }, 300);
-            
+
             // Scroll to result
             setTimeout(() => {
                 resultBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 500);
         }
-        
+
         // Animate choice displays
         const choiceDisplays = document.querySelectorAll('.choice-display-rps');
         choiceDisplays.forEach((display, index) => {
@@ -234,7 +234,7 @@ style.textContent = `
 document.head.appendChild(style);
 
 // Initialize
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     if (document.getElementById('rpsForm')) {
         window.rpsGame = new RockPaperScissorsGame();
     }

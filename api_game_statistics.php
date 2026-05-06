@@ -36,7 +36,7 @@ if ($action === 'get_stats') {
         ]);
         exit();
     }
-    
+
     // Tổng số games
     $sqlTotal = "SELECT COUNT(*) as total FROM game_history WHERE user_id = ?";
     $stmtTotal = $conn->prepare($sqlTotal);
@@ -45,7 +45,7 @@ if ($action === 'get_stats') {
     $resultTotal = $stmtTotal->get_result();
     $totalGames = $resultTotal->fetch_assoc()['total'] ?? 0;
     $stmtTotal->close();
-    
+
     // Tổng số thắng/thua
     $sqlWinLoss = "SELECT 
         SUM(CASE WHEN is_win = 1 THEN 1 ELSE 0 END) as wins,
@@ -59,8 +59,8 @@ if ($action === 'get_stats') {
     $totalWins = $winLoss['wins'] ?? 0;
     $totalLosses = $winLoss['losses'] ?? 0;
     $stmtWinLoss->close();
-    
-    // Tổng tiền cược và thắng
+
+    // Tổng Gtlm cược và thắng
     $sqlMoney = "SELECT 
         SUM(bet_amount) as total_wagered,
         SUM(win_amount) as total_won
@@ -73,7 +73,7 @@ if ($action === 'get_stats') {
     $totalWagered = $money['total_wagered'] ?? 0;
     $totalWon = $money['total_won'] ?? 0;
     $stmtMoney->close();
-    
+
     // Game yêu thích (chơi nhiều nhất)
     $sqlFavorite = "SELECT game_name, COUNT(*) as play_count 
         FROM game_history 
@@ -88,7 +88,7 @@ if ($action === 'get_stats') {
     $favorite = $resultFavorite->fetch_assoc();
     $favoriteGame = $favorite ? $favorite['game_name'] : null;
     $stmtFavorite->close();
-    
+
     // Thắng lớn nhất
     $sqlBiggest = "SELECT MAX(win_amount) as biggest_win 
         FROM game_history 
@@ -100,21 +100,21 @@ if ($action === 'get_stats') {
     $biggest = $resultBiggest->fetch_assoc();
     $biggestWin = $biggest['biggest_win'] ?? 0;
     $stmtBiggest->close();
-    
+
     // Win rate
     $winRate = $totalGames > 0 ? ($totalWins / $totalGames) * 100 : 0;
-    
+
     echo json_encode([
         'status' => 'success',
         'stats' => [
-            'totalGames' => (int)$totalGames,
-            'totalWins' => (int)$totalWins,
-            'totalLosses' => (int)$totalLosses,
-            'totalWagered' => (float)$totalWagered,
-            'totalWon' => (float)$totalWon,
+            'totalGames' => (int) $totalGames,
+            'totalWins' => (int) $totalWins,
+            'totalLosses' => (int) $totalLosses,
+            'totalWagered' => (float) $totalWagered,
+            'totalWon' => (float) $totalWon,
             'favoriteGame' => $favoriteGame,
             'winRate' => round($winRate, 2),
-            'biggestWin' => (float)$biggestWin
+            'biggestWin' => (float) $biggestWin
         ]
     ]);
 } else {
@@ -123,4 +123,3 @@ if ($action === 'get_stats') {
 
 $conn->close();
 ?>
-

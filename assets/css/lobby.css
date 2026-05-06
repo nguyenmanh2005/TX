@@ -1,0 +1,249 @@
+/* Modern Lobby Design System */
+:root {
+    --lobby-bg: rgba(15, 15, 26, 0.8);
+    --card-bg: rgba(255, 255, 255, 0.05);
+    --card-hover-bg: rgba(255, 255, 255, 0.1);
+    --accent-gold: #ffcf4b;
+    --accent-blue: #00f2fe;
+    --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+/* Banner Slider */
+.hero-slider {
+    width: 100%;
+    height: 250px;
+    border-radius: 20px;
+    margin-bottom: 30px;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(45deg, #1a1a2e, #16213e);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.slide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 50px;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+.slide.active {
+    opacity: 1;
+}
+
+.slide-content h2 {
+    font-size: 32px;
+    color: var(--accent-gold);
+    margin-bottom: 10px;
+    text-shadow: 0 0 10px rgba(255, 207, 75, 0.5);
+}
+
+.slide-content p {
+    font-size: 18px;
+    color: #fff;
+    opacity: 0.9;
+}
+
+/* Tab Navigation */
+.lobby-tabs {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 25px;
+    padding: 5px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 15px;
+    width: fit-content;
+}
+
+.tab-btn {
+    padding: 10px 25px;
+    border-radius: 12px;
+    border: none;
+    background: transparent;
+    color: #fff;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.tab-btn.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 5px 15px rgba(118, 75, 162, 0.4);
+}
+
+/* Game Cards Grid */
+.game-grid-modern {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+}
+
+.game-card {
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 18px;
+    padding: 15px;
+    text-align: center;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    text-decoration: none !important;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(5px);
+}
+
+.game-card:hover {
+    transform: translateY(-10px) scale(1.02);
+    background: var(--card-hover-bg);
+    border-color: var(--accent-blue);
+    box-shadow: 0 15px 35px rgba(0, 242, 254, 0.2);
+}
+
+.game-icon {
+    font-size: 50px;
+    margin-bottom: 15px;
+    display: block;
+    transition: transform 0.3s ease;
+}
+
+.game-card:hover .game-icon {
+    transform: scale(1.2) rotate(5deg);
+}
+
+.game-name {
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    display: block;
+}
+
+.game-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.badge-hot {
+    background: #ff4b2b;
+    color: #fff;
+}
+
+.badge-new {
+    background: #00f2fe;
+    color: #000;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .game-grid-modern {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .hero-slider {
+        height: 180px;
+    }
+
+    .slide-content h2 {
+        font-size: 24px;
+    }
+}
+
+border-radius: 12px;
+padding: 12px 8px;
+text-align: center;
+text-decoration: none !important;
+transition: all 0.3s ease;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 5px;
+}
+
+.dashboard-item:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-3px);
+    border-color: var(--accent-blue);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.dashboard-icon {
+    font-size: 20px;
+    margin-bottom: 2px;
+}
+
+.dashboard-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #eee;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+}
+
+/* Sidebar Section Headers */
+.sidebar-section-title {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--accent-gold);
+    margin: 25px 0 10px 5px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sidebar-section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(255, 207, 75, 0.3), transparent);
+}
+
+/* Compact Stats Widget */
+.compact-user-card {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+/* Tabs for Daily/Giftcode */
+.sidebar-tabs {
+    display: flex;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    padding: 3px;
+    margin-bottom: 15px;
+}
+
+.sidebar-tab-btn {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    background: transparent;
+    color: #aaa;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: 0.3s;
+}
+
+.sidebar-tab-btn.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}

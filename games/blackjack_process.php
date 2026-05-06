@@ -6,7 +6,8 @@ ini_set('display_errors', 0);
 error_reporting(E_ALL);
 header('Content-Type: application/json');
 
-function logError($message) {
+function logError($message)
+{
     $logFile = '../php_errors.log';
     $timestamp = date('Y-m-d H:i:s');
     file_put_contents($logFile, "[$timestamp] Blackjack Error: $message" . PHP_EOL, FILE_APPEND);
@@ -24,7 +25,8 @@ try {
 
     if ($action === 'start') {
         $bet = intval($input['bet'] ?? 0);
-        if ($bet <= 0) throw new Exception("Mức thách đấu không hợp lệ");
+        if ($bet <= 0)
+            throw new Exception("Mức thách đấu không hợp lệ");
 
         // Check balance
         $sql = "SELECT Money FROM users WHERE Iduser = ?";
@@ -51,7 +53,8 @@ try {
         $suits = ['hearts', 'diamonds', 'clubs', 'spades'];
         for ($d = 0; $d < 6; $d++) {
             for ($v = 1; $v <= 13; $v++) {
-                foreach ($suits as $s) $deck[] = ['value' => $v, 'suit' => $s];
+                foreach ($suits as $s)
+                    $deck[] = ['value' => $v, 'suit' => $s];
             }
         }
         shuffle($deck);
@@ -74,18 +77,20 @@ try {
         ]);
 
     } elseif ($action === 'hit') {
-        if (!isset($_SESSION['bj_game']) || $_SESSION['bj_game']['status'] !== 'playing') throw new Exception("Không có ván đấu nào");
-        
+        if (!isset($_SESSION['bj_game']) || $_SESSION['bj_game']['status'] !== 'playing')
+            throw new Exception("Không có ván đấu nào");
+
         $card = array_pop($_SESSION['bj_game']['deck']);
         $_SESSION['bj_game']['player'][] = $card;
 
         echo json_encode(['success' => true, 'card' => $card]);
 
     } elseif ($action === 'double') {
-        if (!isset($_SESSION['bj_game']) || $_SESSION['bj_game']['status'] !== 'playing') throw new Exception("Không có ván đấu nào");
-        
+        if (!isset($_SESSION['bj_game']) || $_SESSION['bj_game']['status'] !== 'playing')
+            throw new Exception("Không có ván đấu nào");
+
         $bet = $_SESSION['bj_game']['bet'];
-        
+
         // Check if enough money for additional bet
         $sql = "SELECT Money FROM users WHERE Iduser = ?";
         $stmt = $conn->prepare($sql);
@@ -94,7 +99,7 @@ try {
         $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
 
         if ($userMoney < $bet) {
-            echo json_encode(['error' => 'Không đủ tiền để gấp đôi']);
+            echo json_encode(['error' => 'Không đủ Gtlm để gấp đôi']);
             exit();
         }
 
@@ -113,16 +118,17 @@ try {
         echo json_encode(['success' => true, 'card' => $card]);
 
     } elseif ($action === 'stand') {
-        if (!isset($_SESSION['bj_game']) || $_SESSION['bj_game']['status'] !== 'playing') throw new Exception("Không có ván đấu nào");
-        
+        if (!isset($_SESSION['bj_game']) || $_SESSION['bj_game']['status'] !== 'playing')
+            throw new Exception("Không có ván đấu nào");
+
         $game = &$_SESSION['bj_game'];
         $pScore = calculateBJScore($game['player']);
-        
+
         // King plays
         while (calculateBJScore($game['king']) < 17) {
             $game['king'][] = array_pop($game['deck']);
         }
-        
+
         $kScore = calculateBJScore($game['king']);
         $winStatus = 'lose';
         $payout = 0;
@@ -168,18 +174,24 @@ try {
     echo json_encode(['error' => 'Lỗi máy chủ hoàng gia: ' . $e->getMessage()]);
 }
 
-function calculateBJScore($cards) {
+function calculateBJScore($cards)
+{
     $score = 0;
     $aces = 0;
     foreach ($cards as $c) {
         $val = $c['value'];
-        if ($val === 1) $aces++;
-        elseif ($val >= 10) $score += 10;
-        else $score += $val;
+        if ($val === 1)
+            $aces++;
+        elseif ($val >= 10)
+            $score += 10;
+        else
+            $score += $val;
     }
     for ($i = 0; $i < $aces; $i++) {
-        if ($score + 11 <= 21) $score += 11;
-        else $score += 1;
+        if ($score + 11 <= 21)
+            $score += 11;
+        else
+            $score += 1;
     }
     return $score;
 }

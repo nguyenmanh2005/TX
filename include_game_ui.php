@@ -12,6 +12,7 @@ function getGameUICSSIncludes()
     <link rel="stylesheet" href="assets/css/game-ui-enhanced.css">
     <link rel="stylesheet" href="assets/css/game-ui-enhancements.css">
     <link rel="stylesheet" href="assets/css/game-effects.css">
+    <link rel="stylesheet" href="assets/css/sound-ui.css">
     ';
 }
 
@@ -22,6 +23,17 @@ function getGameUIJSIncludes()
     <!-- Game UI Enhanced JavaScript -->
     <script src="assets/js/game-ui-enhanced.js"></script>
     <script src="assets/js/game-confetti.js"></script>
+    <script src="assets/js/sound-manager.js"></script>
+    <script>
+        document.addEventListener(\'DOMContentLoaded\', () => {
+            // Tự động kích hoạt SoundManager khi có click trong game
+            document.addEventListener(\'click\', () => {
+                if(window.SoundManager && !window.SoundManager.bgMusic) {
+                    // Trong game có thể không cần nhạc nền sảnh, nhưng cần khởi tạo âm thanh
+                }
+            }, { once: true });
+        });
+    </script>
     ';
 }
 

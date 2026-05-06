@@ -180,6 +180,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/lobby.css">
+    <link rel="stylesheet" href="assets/css/sound-ui.css">
     <?php require_once 'include_css.php';
     echo getCSSIncludes(['special_effects' => true]); ?>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -687,9 +689,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
 
         /* Fix ranking table alignment */
         .ranking {
-            flex: 1.2 1 350px;
-            width: 100%;
+            flex: 0 0 auto;
+            width: fit-content;
+            min-width: fit-content;
+            display: block;
             overflow: visible;
+        }
+
+        .ranking h2 {
+            white-space: nowrap;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 18px;
         }
 
         .ranking table {
@@ -697,6 +708,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
             border-collapse: separate;
             border-spacing: 0;
             table-layout: auto;
+            margin: 0;
         }
 
         .ranking th,
@@ -742,8 +754,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
         .ranking td:nth-child(3) {
             text-align: left;
             padding-left: 4px;
-            word-break: break-all;
-            max-width: 80px;
+            white-space: nowrap;
         }
 
         .ranking th:nth-child(4),
@@ -752,23 +763,110 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
             padding-right: 4px;
             color: var(--success-color);
             font-weight: 700;
-            word-break: break-all;
+            white-space: nowrap;
         }
 
         /* Đảm bảo nội dung luôn hiển thị đủ */
         .ranking td {
-            white-space: normal;
+            white-space: nowrap;
         }
 
-        /* Đảm bảo container không tràn */
+        /* Fix dashboard layout alignment */
         .container {
-            overflow-x: hidden;
-            max-width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            /* Changed from stretch to avoid excessive vertical space */
+            gap: 25px;
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 30px 20px;
+            overflow: visible;
         }
 
         .info-column {
-            overflow-x: hidden;
-            max-width: 100%;
+            flex: 1.2;
+            /* Sidebar width balance */
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-width: 350px;
+        }
+
+        .info-column>.info,
+        .info-column>.gift {
+            flex: 0 0 auto;
+        }
+
+        .info {
+            flex: 2.2;
+            /* Main content width */
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Dashboard Menu Grid Styles */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .menu-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 15px 8px;
+            background: rgba(102, 126, 234, 0.05);
+            border: 1px solid rgba(102, 126, 234, 0.15);
+            border-radius: var(--border-radius);
+            text-decoration: none;
+            color: var(--primary-color);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            gap: 8px;
+        }
+
+        .menu-item:hover {
+            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--secondary-dark) 100%);
+            color: white !important;
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(52, 152, 219, 0.3);
+            border-color: transparent;
+        }
+
+        .menu-item .menu-icon {
+            font-size: 22px;
+            display: block;
+        }
+
+        .menu-category-title {
+            grid-column: span 2;
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 15px 0 5px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            text-align: left;
+        }
+
+        body.dark-mode .menu-item {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .menu-category-title {
+            color: #888;
+            border-bottom-color: rgba(255, 255, 255, 0.1);
         }
 
         body {
@@ -2423,6 +2521,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
             .header .welcome {
                 font-size: 1.2rem;
             }
+
+            .menu-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .menu-category-title {
+                grid-column: span 1;
+            }
         }
     </style>
 
@@ -2500,7 +2606,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
     </div>
 
     <div class="container">
-        <!-- Cột GIỚI THIỆU, Điểm danh và Giftcode -->
         <div class="info-column">
             <!-- Live Clock -->
             <div class="live-clock">
@@ -2570,89 +2675,126 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                 </div>
             </div>
 
-
+            <!-- Dashboard Menu Grid -->
             <div class="info">
-                <p><a href="about.php" class="btn tooltip" data-tooltip="Tìm hiểu thêm về trang web">📘 Giới thiệu</a>
-                </p>
-                <p><a href="shop.php" class="btn tooltip" data-tooltip="Mua theme và cursor đẹp">🛒 Cửa Hàng</a></p>
-                <p><a href="achievements.php" class="btn tooltip" data-tooltip="Xem tất cả danh hiệu">🏆 Danh Hiệu</a>
-                </p>
-                <p><a href="quests.php" class="btn tooltip" data-tooltip="Xem và hoàn thành nhiệm vụ hàng ngày/tuần">🎯
-                        Nhiệm Vụ</a></p>
-                <p><a href="daily_challenges.php" class="btn tooltip"
-                        data-tooltip="Thử thách hàng ngày với phần thưởng hấp dẫn">🎯 Thử Thách Hàng Ngày</a></p>
-                <p><a href="streak_system.php" class="btn tooltip"
-                        data-tooltip="Chuỗi ngày chơi game để nhận bonus multiplier">🔥 Hệ Thống Chuỗi (Streak)</a></p>
-                <p><a href="weekly_leaderboard.php" class="btn tooltip"
-                        data-tooltip="Bảng xếp hạng tuần với phần thưởng hấp dẫn">🏆 BXH Tuần</a></p>
-                <p><a href="achievement_notifications.php" class="btn tooltip"
-                        data-tooltip="Xem thông báo khi đạt danh hiệu mới">🔔 Thông Báo Danh Hiệu</a></p>
-                <p><a href="vip_system.php" class="btn tooltip"
-                        data-tooltip="Hệ thống VIP với nhiều đặc quyền và phần thưởng">👑 Hệ Thống VIP</a></p>
-                <p><a href="reward_points.php" class="btn tooltip"
-                        data-tooltip="Tích điểm khi chơi game và đổi lấy phần thưởng">⭐ Điểm Thưởng</a></p>
-                <p><a href="social_feed.php" class="btn tooltip" data-tooltip="Xem hoạt động của cộng đồng">📱 Bảng Tin
-                        Cộng Đồng</a></p>
-                <p><a href="statistics.php" class="btn tooltip"
-                        data-tooltip="Xem thống kê chi tiết về game và thành tích">📊 Thống Kê</a></p>
-                <p><a href="inventory.php" class="btn tooltip" data-tooltip="Xem và quản lý tất cả items đã mua">📦 Kho
-                        Đồ</a></p>
-                <p><a href="lucky_wheel.php" class="btn tooltip"
-                        data-tooltip="Quay wheel may mắn hàng ngày để nhận phần thưởng">🎡 Lucky Wheel</a></p>
-                <p><a href="gift.php" class="btn tooltip" data-tooltip="Tặng quà (gtlm, items) cho người dùng khác">🎁
-                        Tặng Quà</a></p>
-                <p><a href="guilds.php" class="btn tooltip"
-                        data-tooltip="Tạo hoặc tham gia guild để cùng nhau phát triển">🏆 Guild</a></p>
-                <p><a href="guild_leaderboard.php" class="btn tooltip" data-tooltip="Xem bảng xếp hạng các guild">🏅
-                        Guild Leaderboard</a></p>
-                <p><a href="tournament.php" class="btn tooltip"
-                        data-tooltip="Tham gia giải đấu và giành phần thưởng lớn">🎯 Giải Đấu</a></p>
-                <p><a href="trivia.php" class="btn tooltip"
-                        data-tooltip="Kiểm tra kiến thức với các câu hỏi trắc nghiệm">📚 Trivia Quiz</a></p>
-                <p><a href="events.php" class="btn tooltip"
-                        data-tooltip="Tham gia các sự kiện đặc biệt để nhận phần thưởng độc quyền">🎉 Sự Kiện</a></p>
-                <p><a href="pvp_challenge.php" class="btn tooltip"
-                        data-tooltip="Thách đấu và đấu 1-1 với người chơi khác">⚔️ Thách Đấu PvP</a></p>
-                <p><a href="notifications.php" class="btn tooltip" id="notificationsLink"
-                        data-tooltip="Xem tất cả thông báo của bạn">🔔 Thông Báo <span id="notificationsBadge"
-                            style="display:none; margin-left:6px; padding:2px 6px; border-radius:999px; background:#e74c3c; color:#fff; font-size:11px; font-weight:700;">0</span></a>
-                </p>
-                <p><a href="daily_login.php" class="btn tooltip" data-tooltip="Nhận phần thưởng đăng nhập hàng ngày">🎁
-                        Đăng Nhập Hàng Ngày</a></p>
-                <p><a href="leaderboard.php" class="btn tooltip" data-tooltip="Xem bảng xếp hạng người chơi">🏆 Bảng Xếp
-                        Hạng</a></p>
-                <p><a href="profile.php" class="btn tooltip" data-tooltip="Xem và chỉnh sửa hồ sơ của bạn">👤 Hồ Sơ</a>
-                </p>
-                <p><a href="marketplace.php" class="btn tooltip" data-tooltip="Mua bán và trao đổi items">🛒 Chợ Trao
-                        Đổi</a></p>
-                <p><a href="select_title.php" class="btn tooltip" data-tooltip="Chọn danh hiệu để hiển thị">👑 Chọn Danh
-                        Hiệu</a></p>
-                <p><a href="addimg.php" class="btn tooltip" data-tooltip="Thay đổi ảnh đại diện của bạn">📸 Cập Nhật Ảnh
-                        Đại Diện</a></p>
-                <h1 style="font-size: 22px; margin: 20px 0; color: var(--warning-color);">⚠️ Mấy con lợn vui lòng đọc
-                    trước khi chơi</h1>
-                <p><a href="chat.php" class="btn tooltip" data-tooltip="Trò chuyện với mọi người">💬 Chat Tổng</a></p>
-                <p><a href="khungchat.php" class="btn tooltip" data-tooltip="Chọn khung chat">🎨 Chọn Khung Chat</a></p>
-                <p><a href="khungavatar.php" class="btn tooltip" data-tooltip="Chọn khung avatar">🖼️ Chọn Khung
-                        Avatar</a></p>
+                <h3>🛠️ Tiện Ích & Hệ Thống</h3>
+
+                <div class="menu-grid">
+                    <div class="menu-category-title">Khám phá</div>
+                    <a href="about.php" class="menu-item tooltip" data-tooltip="Tìm hiểu thêm về trang web">
+                        <span class="menu-icon">📘</span> Giới thiệu
+                    </a>
+                    <a href="social_feed.php" class="menu-item tooltip" data-tooltip="Xem hoạt động của cộng đồng">
+                        <span class="menu-icon">📱</span> Bảng Tin
+                    </a>
+                    <a href="statistics.php" class="menu-item tooltip" data-tooltip="Xem thống kê chi tiết">
+                        <span class="menu-icon">📊</span> Thống Kê
+                    </a>
+                    <a href="events.php" class="menu-item tooltip" data-tooltip="Tham gia các sự kiện đặc biệt">
+                        <span class="menu-icon">🎉</span> Sự Kiện
+                    </a>
+
+                    <div class="menu-category-title">Nhiệm vụ & Thưởng</div>
+                    <a href="quests.php" class="menu-item tooltip" data-tooltip="Hoàn thành nhiệm vụ">
+                        <span class="menu-icon">🎯</span> Nhiệm Vụ
+                    </a>
+                    <a href="daily_challenges.php" class="menu-item tooltip" data-tooltip="Thử thách hàng ngày">
+                        <span class="menu-icon">🎯</span> Thử Thách
+                    </a>
+                    <a href="streak_system.php" class="menu-item tooltip" data-tooltip="Chuỗi ngày chơi game">
+                        <span class="menu-icon">🔥</span> Chuỗi
+                    </a>
+                    <a href="reward_points.php" class="menu-item tooltip" data-tooltip="Tích điểm đổi quà">
+                        <span class="menu-icon">⭐</span> Điểm Thưởng
+                    </a>
+                    <a href="lucky_wheel.php" class="menu-item tooltip" data-tooltip="Quay wheel may mắn">
+                        <span class="menu-icon">🎡</span> Lucky Wheel
+                    </a>
+                    <a href="daily_login.php" class="menu-item tooltip" data-tooltip="Nhận quà đăng nhập">
+                        <span class="menu-icon">🎁</span> Điểm Danh
+                    </a>
+
+                    <div class="menu-category-title">Cửa hàng & Items</div>
+                    <a href="shop.php" class="menu-item tooltip" data-tooltip="Mua theme và cursor đẹp">
+                        <span class="menu-icon">🛒</span> Cửa Hàng
+                    </a>
+                    <a href="inventory.php" class="menu-item tooltip" data-tooltip="Quản lý items của bạn">
+                        <span class="menu-icon">📦</span> Kho Đồ
+                    </a>
+                    <a href="marketplace.php" class="menu-item tooltip" data-tooltip="Mua bán và trao đổi items">
+                        <span class="menu-icon">💼</span> Chợ
+                    </a>
+                    <a href="gift.php" class="menu-item tooltip" data-tooltip="Tặng quà cho người khác">
+                        <span class="menu-icon">🎁</span> Tặng Quà
+                    </a>
+
+                    <div class="menu-category-title">Xã hội & Cạnh tranh</div>
+                    <a href="chat.php" class="menu-item tooltip" data-tooltip="Trò chuyện với mọi người">
+                        <span class="menu-icon">💬</span> Chat Tổng
+                    </a>
+                    <a href="guilds.php" class="menu-item tooltip" data-tooltip="Tham gia guild">
+                        <span class="menu-icon">🏆</span> Guild
+                    </a>
+                    <a href="pvp_challenge.php" class="menu-item tooltip" data-tooltip="Thách đấu PvP">
+                        <span class="menu-icon">⚔️</span> Đấu PvP
+                    </a>
+                    <a href="leaderboard.php" class="menu-item tooltip" data-tooltip="Bảng xếp hạng người chơi">
+                        <span class="menu-icon">🏆</span> Xếp Hạng
+                    </a>
+                    <a href="tournament.php" class="menu-item tooltip" data-tooltip="Tham gia giải đấu">
+                        <span class="menu-icon">🎯</span> Giải Đấu
+                    </a>
+                    <a href="trivia.php" class="menu-item tooltip" data-tooltip="Trắc nghiệm kiến thức">
+                        <span class="menu-icon">📚</span> Trivia
+                    </a>
+
+                    <div class="menu-category-title">Tài khoản & Tùy chỉnh</div>
+                    <a href="profile.php" class="menu-item tooltip" data-tooltip="Xem hồ sơ của bạn">
+                        <span class="menu-icon">👤</span> Hồ Sơ
+                    </a>
+                    <a href="select_title.php" class="menu-item tooltip" data-tooltip="Chọn danh hiệu">
+                        <span class="menu-icon">👑</span> Danh Hiệu
+                    </a>
+                    <a href="khungchat.php" class="menu-item tooltip" data-tooltip="Chọn khung chat">
+                        <span class="menu-icon">🎨</span> Khung Chat
+                    </a>
+                    <a href="khungavatar.php" class="menu-item tooltip" data-tooltip="Chọn khung avatar">
+                        <span class="menu-icon">🖼️</span> Khung Avatar
+                    </a>
+                    <a href="addimg.php" class="menu-item tooltip" data-tooltip="Đổi ảnh đại diện">
+                        <span class="menu-icon">📸</span> Đổi Ảnh
+                    </a>
+                    <a href="notifications.php" class="menu-item tooltip" id="notificationsLink"
+                        data-tooltip="Xem thông báo">
+                        <span class="menu-icon">🔔</span> Thông Báo <span id="notificationsBadge"
+                            style="display:none; padding:2px 6px; border-radius:999px; background:#e74c3c; color:#fff; font-size:11px; font-weight:700;">0</span>
+                    </a>
+                </div>
+
+                <h1 style="font-size: 18px; margin: 30px 0 10px; color: var(--warning-color); text-align: center;">⚠️
+                    Vui lòng đọc kỹ trước khi chơi</h1>
             </div>
+
+            <!-- Checkin and Mini Events -->
             <div class="info">
                 <div class="daily-checkin">
                     <h2>📅 Điểm danh mỗi ngày nhận quà!</h2>
                     <form method="post" action="diemdanh.php">
                         <button type="submit">✅ Điểm danh ngay</button>
-
                     </form>
                     <?php if (isset($_SESSION['msg'])): ?>
-                        <p style="color: green; font-weight: bold;">
+                        <p style="color: green; font-weight: bold; margin-top: 10px;">
                             <?php echo htmlspecialchars($_SESSION['msg'], ENT_QUOTES, 'UTF-8');
                             unset($_SESSION['msg']); ?>
                         </p>
                     <?php endif; ?>
-                    <h2>Cào Thẻ Test Nhân Phẩm Hằng Ngày!</h2>
-                    <p><a href="caothe.php">Cào nhẹ tay, quà đầy tay!</a></p>
+                    <h2 style="margin-top: 20px;">Cào Thẻ Test Nhân Phẩm Hằng Ngày!</h2>
+                    <p><a href="caothe.php" class="btn" style="width: 100%; text-align: center;">Cào nhẹ tay, quà đầy
+                            tay!</a></p>
                 </div>
             </div>
+
+            <!-- Giftcode Section -->
             <div class="gift">
                 <h3>🎁 Nhập Giftcode Nhận Quà</h3>
                 <form method="post">
@@ -2775,61 +2917,229 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
             <?php endif; ?>
 
 
-            <h3 style="margin-top: 20px; color: var(--primary-color);">🎮 Danh sách game</h3>
-            <div class="game-grid">
-                <!-- Original Games -->
-                <a href="games/baucua.php" class="game-link"><span>🎲 Bầu Cua</span></a>
-                <a href="games/blackjack.php" class="game-link"><span>👑 Xì Dách Royale</span></a>
-                <a href="games/xocdia.php" class="game-link"><span>🎲 Xóc Đĩa</span></a>
-                <a href="games/vq.php" class="game-link"><span>🎡 Vòng Quay</span></a>
-                <a href="games/vietlott.php" class="game-link"><span>🎫 Vietlott</span></a>
-                <a href="games/duangua.php" class="game-link"><span>🐎 Đua Thú</span></a>
-                <a href="games/minesweeper.php" class="game-link"><span>💣 Dò Mìn</span></a>
-                <a href="games/bingo.php" class="game-link"><span>🎱 Bingo</span></a>
-                <a href="bot.php" class="game-link"><span>🎴 Đoán màu bài</span></a>
-                <a href="games/slot.php" class="game-link"><span>🎰 Slot Machine</span></a>
-                <a href="games/roulette.php" class="game-link"><span>🎡 Roulette</span></a>
-                <a href="games/poker.php" class="game-link"><span>🃏 Poker (Texas)</span></a>
+            <!-- Modern Game Lobby -->
+            <div class="hero-slider">
+                <div class="slide active">
+                    <div class="slide-content">
+                        <h2>🎡 Vòng Quay May Mắn</h2>
+                        <p>Thử vận may mỗi ngày để nhận hàng triệu GTLM!</p>
+                        <a href="lucky_wheel.php" class="btn"
+                            style="margin-top: 15px; background: var(--accent-gold); color: #000;">Chơi Ngay</a>
+                    </div>
+                    <div class="slide-img" style="font-size: 100px;">🎡</div>
+                </div>
+                <div class="slide">
+                    <div class="slide-content">
+                        <h2>🏆 Giải Đấu Ranking</h2>
+                        <p>Đua top nhận danh hiệu và khung avatar độc quyền.</p>
+                        <a href="tournament.php" class="btn"
+                            style="margin-top: 15px; background: var(--accent-blue); color: #000;">Tham Gia</a>
+                    </div>
+                    <div class="slide-img" style="font-size: 100px;">🏅</div>
+                </div>
+            </div>
 
-                <a href="games/ac.php" class="game-link"><span>🎯 Arcade</span></a>
-                <a href="games/cs.php" class="game-link"><span>💎 Cơ hội triệu phú</span></a>
-                <a href="games/hopmu.php" class="game-link"><span>🎁 Hộp Mú</span></a>
-                <a href="games/ruttham.php" class="game-link"><span>🎟️ Rút Thăm</span></a>
-                <a href="games/dice.php" class="game-link"><span>🎲 Lắc Xí Ngầu</span></a>
-                <a href="games/coinflip.php" class="game-link"><span>🪙 Tung Đồng Xu</span></a>
-                <a href="games/rps.php" class="game-link"><span>✌️ Oẳn Tù Tì</span></a>
-                <a href="games/number.php" class="game-link"><span>🎯 Đoán Số</span></a>
+            <div class="lobby-tabs">
+                <button class="tab-btn active" data-category="all">Tất cả</button>
+                <button class="tab-btn" data-category="card">Game Bài</button>
+                <button class="tab-btn" data-category="slots">Slots & Quay Số</button>
+                <button class="tab-btn" data-category="mini">Mini Games</button>
+            </div>
 
-                <!-- New Games Integrated -->
-                <a href="games/war.php" class="game-link"><span>🃏 Casino War</span></a>
-                <a href="games/dragontiger.php" class="game-link"><span>🐉 Long Hổ (Dragon Tiger)</span></a>
-                <a href="games/baccarat.php" class="game-link"><span>🃏 Baccarat Premium</span></a>
-                <a href="games/threecard.php" class="game-link"><span>🃏 Three Card Poker</span></a>
-                <a href="games/letitride.php" class="game-link"><span>🃏 Let It Ride</span></a>
-                <a href="games/paigow.php" class="game-link"><span>🃏 Pai Gow Poker</span></a>
-                <a href="games/sicbo.php" class="game-link"><span>🎲 Sic Bo </span></a>
-                <a href="games/craps.php" class="game-link"><span>🎲 Craps (Xúc Xắc)</span></a>
-                <a href="games/videopoker.php" class="game-link"><span>🎰 Video Poker</span></a>
-                <a href="games/fantan.php" class="game-link"><span>🔘 Fan-Tan</span></a>
-                <a href="games/mahjong.php" class="game-link"><span>🀄 Mahjong Clash</span></a>
-                <!-- Game moi -->
-                <a href="games/hilo.php" class="game-link"><span>📈 Hi-Lo Higher/Lower</span></a>
-                <a href="games/keno.php" class="game-link"><span>🎱 Keno Premium</span></a>
-                <a href="games/yahtzee.php" class="game-link"><span>🎲 Yahtzee Royale</span></a>
+            <div class="game-grid-modern">
+                <!-- Game Bài (Card Games) -->
+                <a href="games/blackjack.php" class="game-card" data-category="card">
+                    <span class="game-badge badge-hot">Hot</span>
+                    <span class="game-icon">👑</span>
+                    <span class="game-name">Xì Dách Royale</span>
+                </a>
+                <a href="games/bjo.php" class="game-card" data-category="card">
+                    <span class="game-icon">👑</span>
+                    <span class="game-name">Bj Cũ</span>
+                </a>
+                <a href="games/poker.php" class="game-card" data-category="card">
+                    <span class="game-icon">🃏</span>
+                    <span class="game-name">Poker Texas</span>
+                </a>
+                <a href="games/baccarat.php" class="game-card" data-category="card">
+                    <span class="game-icon">🃏</span>
+                    <span class="game-name">Baccarat Premium</span>
+                </a>
+                <a href="games/dragontiger.php" class="game-card" data-category="card">
+                    <span class="game-icon">🐉</span>
+                    <span class="game-name">Long Hổ</span>
+                </a>
+                <a href="games/threecard.php" class="game-card" data-category="card">
+                    <span class="game-icon">🃏</span>
+                    <span class="game-name">Three Card Poker</span>
+                </a>
+                <a href="games/war.php" class="game-card" data-category="card">
+                    <span class="game-icon">⚔️</span>
+                    <span class="game-name">Casino War</span>
+                </a>
+                <a href="games/letitride.php" class="game-card" data-category="card">
+                    <span class="game-icon">🃏</span>
+                    <span class="game-name">Let It Ride</span>
+                </a>
+                <a href="games/paigow.php" class="game-card" data-category="card">
+                    <span class="game-icon">🃏</span>
+                    <span class="game-name">Pai Gow Poker</span>
+                </a>
+                <a href="games/caribbean.php" class="game-card" data-category="card">
+                    <span class="game-icon">🏖️</span>
+                    <span class="game-name">Caribbean Stud</span>
+                </a>
+                <a href="games/holdem.php" class="game-card" data-category="card">
+                    <span class="game-icon">🃏</span>
+                    <span class="game-name">Casino Hold'em</span>
+                </a>
+                <a href="games/pontoon.php" class="game-card" data-category="card">
+                    <span class="game-icon">🃏</span>
+                    <span class="game-name">Pontoon Royale</span>
+                </a>
+                <a href="games/reddog.php" class="game-card" data-category="card">
+                    <span class="game-icon">🐕</span>
+                    <span class="game-name">Red Dog Poker</span>
+                </a>
+                <a href="games/videopoker.php" class="game-card" data-category="card">
+                    <span class="game-icon">🎰</span>
+                    <span class="game-name">Video Poker</span>
+                </a>
+                <a href="games/bj.php" class="game-card" data-category="card">
+                    <span class="game-icon">🃏</span>
+                    <span class="game-name">Xì Dách Classic</span>
+                </a>
 
-                <!-- Game moi2: Casino Classics -->
-                <a href="games/caribbean.php" class="game-link"><span>🃏 Caribbean Stud</span></a>
-                <a href="games/holdem.php" class="game-link"><span>🃏 Casino Hold'em</span></a>
-                <a href="games/pontoon.php" class="game-link"><span>🃏 Pontoon Royale</span></a>
-                <a href="games/reddog.php" class="game-link"><span>🃏 Red Dog Poker</span></a>
-                <!-- Game moi 3: Mini Games / Casual -->
-                <a href="games/mines.php" class="game-link"><span>💣 Minesweeper Premium</span></a>
-                <a href="games/limbo.php" class="game-link"><span>🚀 Limbo Rocket</span></a>
-                <a href="games/tower.php" class="game-link"><span>🗼 Tower Climb</span></a>
-                <a href="games/scratch.php" class="game-link"><span>🎫 Scratch Card</span></a>
-                <a href="games/plinko.php" class="game-link"><span>🔴 Plinko Royale</span></a>
-                <a href="games/crash.php" class="game-link"><span>🛫 Crash Flight</span></a>
+                <!-- Slots & Quay Số (Slots & Luck) -->
+                <a href="games/slot.php" class="game-card" data-category="slots">
+                    <span class="game-badge badge-new">New</span>
+                    <span class="game-icon">🎰</span>
+                    <span class="game-name">Slot Machine</span>
+                </a>
+                <a href="games/roulette.php" class="game-card" data-category="slots">
+                    <span class="game-icon">🎡</span>
+                    <span class="game-name">Roulette</span>
+                </a>
+                <a href="games/vq.php" class="game-card" data-category="slots">
+                    <span class="game-icon">🎡</span>
+                    <span class="game-name">Vòng Quay</span>
+                </a>
+                <a href="games/vietlott.php" class="game-card" data-category="slots">
+                    <span class="game-icon">🎫</span>
+                    <span class="game-name">Vietlott</span>
+                </a>
+                <a href="games/keno.php" class="game-card" data-category="slots">
+                    <span class="game-icon">🎱</span>
+                    <span class="game-name">Keno Premium</span>
+                </a>
+                <a href="games/bingo.php" class="game-card" data-category="slots">
+                    <span class="game-icon">🎱</span>
+                    <span class="game-name">Bingo Club</span>
+                </a>
+                <a href="games/ruttham.php" class="game-card" data-category="slots">
+                    <span class="game-icon">🎟️</span>
+                    <span class="game-name">Rút Thăm</span>
+                </a>
 
+                <!-- Mini Games & Casual -->
+                <a href="games/baucua.php" class="game-card" data-category="mini">
+                    <span class="game-badge badge-hot">Hot</span>
+                    <span class="game-icon">🎲</span>
+                    <span class="game-name">CYBER PETS</span>
+                </a>
+                <a href="games/xocdia.php" class="game-card" data-category="mini">
+                    <span class="game-icon">🎲</span>
+                    <span class="game-name">QUANTUM PULSE</span>
+                </a>
+                <a href="games/crash.php" class="game-card" data-category="mini">
+                    <span class="game-badge badge-hot">Hot</span>
+                    <span class="game-icon">🛫</span>
+                    <span class="game-name">Crash Flight</span>
+                </a>
+                <a href="games/plinko.php" class="game-card" data-category="mini">
+                    <span class="game-icon">🔴</span>
+                    <span class="game-name">Plinko Royale</span>
+                </a>
+                <a href="games/limbo.php" class="game-card" data-category="mini">
+                    <span class="game-icon">🚀</span>
+                    <span class="game-name">Limbo Rocket</span>
+                </a>
+                <a href="games/mines.php" class="game-card" data-category="mini">
+                    <span class="game-icon">💣</span>
+                    <span class="game-name">Mines Premium</span>
+                </a>
+                <a href="games/minesweeper.php" class="game-card" data-category="mini">
+                    <span class="game-icon">💣</span>
+                    <span class="game-name">Dò Mìn Classic</span>
+                </a>
+                <a href="games/tower.php" class="game-card" data-category="mini">
+                    <span class="game-icon">🗼</span>
+                    <span class="game-name">Tower Climb</span>
+                </a>
+                <a href="games/scratch.php" class="game-card" data-category="mini">
+                    <span class="game-icon">🎫</span>
+                    <span class="game-name">Cào Thẻ</span>
+                </a>
+                <a href="games/dice.php" class="game-card" data-category="mini">
+                    <span class="game-icon">🎲</span>
+                    <span class="game-name">Lắc Xí Ngầu</span>
+                </a>
+                <a href="games/sicbo.php" class="game-card" data-category="mini">
+                    <span class="game-icon">🎲</span>
+                    <span class="game-name">Sic Bo</span>
+                </a>
+                <a href="games/craps.php" class="game-card" data-category="mini">
+                    <span class="game-icon">🎲</span>
+                    <span class="game-name">Craps</span>
+                </a>
+                <a href="games/fantan.php" class="game-card" data-category="mini">
+                    <span class="game-icon">🔘</span>
+                    <span class="game-name">Fan-Tan</span>
+                </a>
+                <a href="games/mahjong.php" class="game-card" data-category="mini">
+                    <span class="game-icon">🀄</span>
+                    <span class="game-name">Mahjong</span>
+                </a>
+                <a href="games/hilo.php" class="game-card" data-category="mini">
+                    <span class="game-icon">📈</span>
+                    <span class="game-name">Hi-Lo</span>
+                </a>
+                <a href="games/yahtzee.php" class="game-card" data-category="mini">
+                    <span class="game-icon">🎲</span>
+                    <span class="game-name">Yahtzee</span>
+                </a>
+                <a href="games/coinflip.php" class="game-card" data-category="mini">
+                    <span class="game-icon">🪙</span>
+                    <span class="game-name">Tung Đồng Xu</span>
+                </a>
+                <a href="games/rps.php" class="game-card" data-category="mini">
+                    <span class="game-icon">✌️</span>
+                    <span class="game-name">Oẳn Tù Tì</span>
+                </a>
+                <a href="games/number.php" class="game-card" data-category="mini">
+                    <span class="game-icon">🎯</span>
+                    <span class="game-name">Đoán Số</span>
+                </a>
+                <a href="games/duangua.php" class="game-card" data-category="mini">
+                    <span class="game-icon">🐎</span>
+                    <span class="game-name">Đua Thú</span>
+                </a>
+                <a href="bot.php" class="game-card" data-category="mini">
+                    <span class="game-icon">🎴</span>
+                    <span class="game-name">Đoán Màu Bài</span>
+                </a>
+                <a href="games/ac.php" class="game-card" data-category="mini">
+                    <span class="game-icon">🎯</span>
+                    <span class="game-name">Arcade</span>
+                </a>
+                <a href="games/cs.php" class="game-card" data-category="mini">
+                    <span class="game-icon">💎</span>
+                    <span class="game-name">Triệu Phú</span>
+                </a>
+                <a href="games/hopmu.php" class="game-card" data-category="mini">
+                    <span class="game-icon">🎁</span>
+                    <span class="game-name">Hộp Mú</span>
+                </a>
             </div>
         </div>
 
@@ -2992,6 +3302,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
 
     <!-- Premium Effects System -->
     <canvas id="threejs-background"></canvas>
+    <script src="assets/js/sound-manager.js"></script>
+    <script src="assets/js/lobby.js"></script>
     <script>
         (function () {
             window.themeConfig = {

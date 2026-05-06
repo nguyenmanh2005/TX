@@ -84,6 +84,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin') {
 <head>
     <meta charset="UTF-8">
     <title>Slot Machine Premium - Neon Fortune</title>
+    <script src="slot-sounds.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <link rel="stylesheet" href="../assets/css/main.css">
@@ -380,21 +381,39 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin') {
 
         async function spin() {
             if (spinning) return;
+
             const bet = parseInt(document.getElementById('bet-amount').value);
             if (isNaN(bet) || bet < 1000) {
                 Swal.fire('Lỗi', 'Cược tối thiểu 1.000 gtlm!', 'error');
                 return;
             }
 
+            // 🪙 Bỏ coin vào máy
+            SlotSounds.insertCoin();
+
             spinning = true;
             document.getElementById('spin-trigger').disabled = true;
             document.getElementById('status-bar').textContent = "🎰 ĐANG QUAY... CHỜ ĐỢI VẬN MAY MỈM CƯỜI!";
 
-            const reelWindows = [document.getElementById('reel-0'), document.getElementById('reel-1'), document.getElementById('reel-2')];
+            const reelWindows = [
+                document.getElementById('reel-0'),
+                document.getElementById('reel-1'),
+                document.getElementById('reel-2')
+            ];
 
-            // Bắt đầu hiệu ứng quay ảo
-            const intervals = reelWindows.map((rw, idx) => {
+            // 🎰 Tiếng lever sau khi bỏ coin 150ms
+            setTimeout(() => SlotSounds.spin(), 150);
+
+            // Bắt đầu hiệu ứng quay ảo + loop tick sound mỗi cột
+            const reelLoops = reelWindows.map((rw) => {
                 rw.classList.add('rolling');
+                // Mỗi cột tick speed hơi khác nhau cho sinh động
+                const speedMs = 75 + Math.floor(Math.random() * 20);
+                return SlotSounds.startReelLoop(speedMs);
+            });
+
+            // Đồng thời đổi symbol ngẫu nhiên trên màn hình
+            const visualIntervals = reelWindows.map((rw) => {
                 return setInterval(() => {
                     rw.textContent = symbols[Math.floor(Math.random() * symbols.length)];
                 }, 80);
@@ -405,50 +424,88 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin') {
                 const data = await res.json();
 
                 if (data.success) {
-                    // Dừng từng cột theo thứ tự
+                    // Dừng từng cột theo thứ tự, mỗi cột cách nhau 500ms
                     for (let i = 0; i < 3; i++) {
-                        await new Promise(r => setTimeout(r, 600 + (i * 400)));
-                        clearInterval(intervals[i]);
+                        await new Promise(r => setTimeout(r, i === 0 ? 600 : 500));
+
+                        // Dừng loop tick + visual của cột này
+                        reelLoops[i].stop();
+                        clearInterval(visualIntervals[i]);
                         reelWindows[i].classList.remove('rolling');
                         reelWindows[i].textContent = data.reels[i];
-                        // Hiệu ứng "pop" khi dừng
+
+                        // 🛑 Tiếng "thụp" dừng cột
+                        SlotSounds.reelStop(i);
+
+                        // Hiệu ứng pop nhỏ
                         reelWindows[i].style.transform = "scale(1.2)";
-                        setTimeout(() => reelWindows[i].style.transform = "scale(1)", 100);
+                        setTimeout(() => reelWindows[i].style.transform = "scale(1)", 120);
                     }
 
-                    setTimeout(() => {
-                        document.getElementById('balance-txt').textContent = data.newBalance;
-                        document.getElementById('status-bar').textContent = data.message;
+                    // Chờ hiệu ứng pop xong rồi xử lý kết quả
+                    await new Promise(r => setTimeout(r, 400));
 
-                        if (data.winAmount > 0) {
-                            if (typeof confetti === 'function') {
-                                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-                                if (data.winAmount >= bet * 5) {
-                                    confetti({ particleCount: 300, spread: 160, origin: { y: 0.6 }, colors: ['#ffd700', '#ffffff', '#bc13fe'] });
-                                }
-                            }
-                            Swal.fire({ title: '🎊 CHIẾN THẮNG!', text: data.message, icon: 'success', confirmButtonColor: '#ffd700', confirmButtonText: 'TUYỆT VỜI' });
+                    document.getElementById('balance-txt').textContent = data.newBalance;
+                    document.getElementById('status-bar').textContent = data.message;
+
+                    if (data.winAmount > 0) {
+                        const isBigWin = data.winAmount >= bet * 5;
+
+                        if (isBigWin) {
+                            // 💰 Big Win / Jackpot
+                            SlotSounds.bigWin();
+                        } else {
+                            // 🎉 Thắng thường
+                            SlotSounds.win();
                         }
 
-                        spinning = false;
-                        document.getElementById('spin-trigger').disabled = false;
-                    }, 300);
+                        // 💵 Gtlm đổ ra sau 300ms
+                        setTimeout(() => SlotSounds.coinDrop(), 300);
+
+                        // Confetti
+                        if (typeof confetti === 'function') {
+                            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                            if (isBigWin) {
+                                setTimeout(() => {
+                                    confetti({ particleCount: 300, spread: 160, origin: { y: 0.6 }, colors: ['#ffd700', '#ffffff', '#bc13fe'] });
+                                }, 400);
+                            }
+                        }
+
+                        Swal.fire({
+                            title: isBigWin ? '💰 JACKPOT!!!' : '🎊 CHIẾN THẮNG!',
+                            text: data.message,
+                            icon: 'success',
+                            confirmButtonColor: '#ffd700',
+                            confirmButtonText: 'TUYỆT VỜI'
+                        });
+
+                    } else {
+                        // 😞 Thua
+                        SlotSounds.lose();
+                    }
 
                 } else {
-                    intervals.forEach(clearInterval);
-                    reelWindows.forEach(rw => rw.classList.remove('rolling'));
+                    // Lỗi từ server — dừng hết
+                    reelLoops.forEach(loop => loop.stop());
+                    visualIntervals.forEach(clearInterval);
+                    reelWindows.forEach(rw => {
+                        rw.classList.remove('rolling');
+                    });
                     Swal.fire('Lỗi', data.message, 'error');
-                    spinning = false;
-                    document.getElementById('spin-trigger').disabled = false;
                     document.getElementById('status-bar').textContent = "HÃY THỬ LẠI!";
                 }
+
             } catch (e) {
                 console.error(e);
-                intervals.forEach(clearInterval);
+                reelLoops.forEach(loop => loop.stop());
+                visualIntervals.forEach(clearInterval);
                 reelWindows.forEach(rw => rw.classList.remove('rolling'));
-                spinning = false;
-                document.getElementById('spin-trigger').disabled = false;
+                document.getElementById('status-bar').textContent = "Lỗi kết nối, thử lại nhé!";
             }
+
+            spinning = false;
+            document.getElementById('spin-trigger').disabled = false;
         }
 
         document.getElementById('spin-trigger').onclick = spin;

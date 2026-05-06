@@ -24,10 +24,10 @@ class NumberGuessingGame {
                     // Trigger input event để validate
                     input.dispatchEvent(new Event('input', { bubbles: true }));
                 }
-                
+
                 quickButtons.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                
+
                 // Animation
                 btn.style.transform = 'scale(0.95)';
                 setTimeout(() => {
@@ -40,11 +40,11 @@ class NumberGuessingGame {
     setupFormValidation() {
         const form = document.getElementById('numberForm');
         if (!form) return;
-        
+
         const soInput = document.getElementById('soInput');
         const cuocInput = document.getElementById('cuocInput');
         const submitBtn = form.querySelector('.guess-button-number-enhanced');
-        
+
         // Validate số đoán
         if (soInput) {
             soInput.addEventListener('input', () => {
@@ -56,8 +56,8 @@ class NumberGuessingGame {
                 }
             });
         }
-        
-        // Validate số tiền cược
+
+        // Validate số Gtlm cược
         if (cuocInput) {
             cuocInput.addEventListener('input', () => {
                 const value = parseInt(cuocInput.value.replace(/[^\d]/g, ''));
@@ -68,32 +68,32 @@ class NumberGuessingGame {
                 }
             });
         }
-        
+
         form.addEventListener('submit', (e) => {
             const action = e.submitter?.value;
-            
+
             // Nếu là new_game, không cần validate
             if (action === 'new_game') {
                 return true;
             }
-            
+
             const so = parseInt(soInput?.value || 0);
             const cuoc = parseInt(cuocInput?.value || 0);
-            
+
             if (!so || so < 1 || so > 100) {
                 e.preventDefault();
                 this.showError('Vui lòng nhập số từ 1 đến 100!');
                 soInput?.focus();
                 return false;
             }
-            
+
             if (!cuoc || cuoc <= 0) {
                 e.preventDefault();
-                this.showError('Vui lòng nhập số tiền cược hợp lệ!');
+                this.showError('Vui lòng nhập số Gtlm cược hợp lệ!');
                 cuocInput?.focus();
                 return false;
             }
-            
+
             // Disable button và show loading
             if (submitBtn) {
                 submitBtn.disabled = true;
@@ -125,10 +125,10 @@ class NumberGuessingGame {
             `;
             document.body.appendChild(errorDiv);
         }
-        
+
         errorDiv.textContent = message;
         errorDiv.style.display = 'block';
-        
+
         setTimeout(() => {
             errorDiv.style.animation = 'slideUp 0.3s ease-out';
             setTimeout(() => {
@@ -149,7 +149,7 @@ class NumberGuessingGame {
                 gameArea.style.transform = 'translateY(0)';
             }, 100);
         }
-        
+
         // Animate result banner if exists
         const resultBanner = document.getElementById('resultBanner');
         if (resultBanner) {
@@ -160,13 +160,13 @@ class NumberGuessingGame {
                 resultBanner.style.opacity = '1';
                 resultBanner.style.transform = 'scale(1)';
             }, 300);
-            
+
             // Scroll to result
             setTimeout(() => {
                 resultBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 500);
         }
-        
+
         // Animate hint box
         const hintBox = document.querySelector('.number-hint-box');
         if (hintBox) {
@@ -209,7 +209,7 @@ style.textContent = `
 document.head.appendChild(style);
 
 // Initialize
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     if (document.getElementById('numberForm')) {
         window.numberGuessingGame = new NumberGuessingGame();
     }

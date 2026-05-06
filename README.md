@@ -10,7 +10,7 @@
 
 **TX** là một **trò chơi giải trí mô phỏng trên nền tảng web**, được xây dựng nhằm phục vụ **mục đích học tập, thực hành lập trình và giải trí lành mạnh**.
 
-Dự án **không phải trò chơi cờ bạc**, **không có cá cược**, **không sử dụng tiền thật** và **không có giao dịch tài chính** dưới bất kỳ hình thức nào.  
+Dự án **không phải trò chơi cờ bạc**, **không có cá cược**, **không sử dụng Gtlm thật** và **không có giao dịch tài chính** dưới bất kỳ hình thức nào.  
 Tất cả giá trị trong trò chơi đều là **giá trị ảo**, dùng cho mô phỏng.
 
 ---

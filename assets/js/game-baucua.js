@@ -50,7 +50,7 @@ class BaucuaEnhanced {
                 if (input) {
                     input.value = parseInt(amount).toLocaleString('vi-VN');
                     input.dispatchEvent(new Event('input', { bubbles: true }));
-                    
+
                     // Highlight button
                     quickButtons.forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
@@ -65,11 +65,11 @@ class BaucuaEnhanced {
             card.addEventListener('click', () => {
                 // Remove previous selection
                 animalCards.forEach(c => c.classList.remove('selected'));
-                
+
                 // Add selection to clicked card
                 card.classList.add('selected');
                 this.selectedAnimal = card.dataset.animal || card.querySelector('.animal-name-enhanced')?.textContent.trim();
-                
+
                 // Update select dropdown
                 const select = document.getElementById('chonSelect');
                 if (select && this.selectedAnimal) {
@@ -101,9 +101,9 @@ class BaucuaEnhanced {
 
         const betInput = document.getElementById('cuocInput');
         const select = document.getElementById('chonSelect');
-        
+
         if (!betInput || !betInput.value) {
-            this.showError('Vui lòng nhập số tiền cược!');
+            this.showError('Vui lòng nhập số Gtlm cược!');
             return;
         }
 
@@ -143,7 +143,7 @@ class BaucuaEnhanced {
 }
 
 // Initialize khi DOM ready
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     if (document.getElementById('gameForm')) {
         window.baucuaEnhanced = new BaucuaEnhanced();
     }

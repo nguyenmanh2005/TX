@@ -12,7 +12,7 @@ if (!isset($_SESSION['Iduser'])) {
 $userId = $_SESSION['Iduser'];
 require_once '../load_theme.php'; // Nạp thông số theme
 
-// Lấy thông tin người chơi để hiển thị tiền
+// Lấy thông tin người chơi để hiển thị Gtlm
 $sql = "SELECT * FROM users WHERE Iduser = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $userId);
@@ -23,12 +23,13 @@ $gameTitle = "Xì Dách Royale";
 ?>
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $gameTitle ?> - Sòng Bài Hoàng Gia</title>
     <link rel="stylesheet" href="../assets/css/blackjack.css">
-    
+
     <!-- Theme Config for Three.js Background -->
     <script>
         window.themeConfig = {
@@ -45,15 +46,28 @@ $gameTitle = "Xì Dách Royale";
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/gsap.min.js"></script>
     <style>
-        html, body.blackjack-theme {
-            background: <?= $bgGradientCSS ?>;
+        html,
+        body.blackjack-theme {
+            background:
+                <?= $bgGradientCSS ?>
+            ;
             background-attachment: fixed;
             cursor: url('../chuot.png'), auto !important;
         }
-        * { cursor: inherit !important; }
-        button, a, .chip, input { cursor: url('../img/tay.png'), pointer !important; }
+
+        * {
+            cursor: inherit !important;
+        }
+
+        button,
+        a,
+        .chip,
+        input {
+            cursor: url('../img/tay.png'), pointer !important;
+        }
     </style>
 </head>
+
 <body class="game-page blackjack-theme">
     <!-- Canvas nền Three.js của hệ thống -->
     <canvas id="threejs-background"></canvas>
@@ -120,7 +134,8 @@ $gameTitle = "Xì Dách Royale";
                 <div class="guide-sections">
                     <section>
                         <h3>✨ Mục tiêu</h3>
-                        <p>Đạt tổng điểm gần <strong>21</strong> nhất nhưng không được vượt quá. Bạn cần cao điểm hơn <strong>THE KING</strong> để thắng.</p>
+                        <p>Đạt tổng điểm gần <strong>21</strong> nhất nhưng không được vượt quá. Bạn cần cao điểm hơn
+                            <strong>THE KING</strong> để thắng.</p>
                     </section>
                     <section>
                         <h3>🃏 Cách tính điểm</h3>
@@ -135,7 +150,7 @@ $gameTitle = "Xì Dách Royale";
                         <ul>
                             <li><strong>RÚT THÊM</strong>: Nhận thêm 1 lá bài.</li>
                             <li><strong>DẰN BÀI</strong>: Giữ nguyên điểm và so bài.</li>
-                            <li><strong>GẤP ĐÔI</strong>: Tăng gấp đôi tiền cược và chỉ được rút thêm đúng 1 lá.</li>
+                            <li><strong>GẤP ĐÔI</strong>: Tăng gấp đôi Gtlm cược và chỉ được rút thêm đúng 1 lá.</li>
                         </ul>
                     </section>
                 </div>
@@ -160,4 +175,5 @@ $gameTitle = "Xì Dách Royale";
         })();
     </script>
 </body>
+
 </html>
