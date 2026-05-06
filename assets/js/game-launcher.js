@@ -23,7 +23,7 @@ class GameLauncher {
             { id: 'roulette', name: 'Roulette', icon: '🎡', url: 'roulette.php', category: 'casino', new: false },
             { id: 'slot', name: 'Slot Machine', icon: '🎰', url: 'slot.php', category: 'casino', new: false },
             { id: 'lucky_wheel', name: 'Lucky Wheel', icon: '🎡', url: 'lucky_wheel.php', category: 'casino', new: false },
-            { id: 'baucua', name: 'Bầu Cua', icon: '🎲', url: 'baucua.php', category: 'casino', new: false },
+            { id: 'baucua', name: 'CYBER PETS', icon: '🎲', url: 'baucua.php', category: 'casino', new: false },
             { id: 'plinko', name: 'Plinko', icon: '⚪', url: 'plinko.php', category: 'mini', new: true },
             { id: 'mines', name: 'Mines', icon: '💣', url: 'mines.php', category: 'mini', new: true },
             { id: 'wheel', name: 'Wheel', icon: '🎡', url: 'wheel.php', category: 'mini', new: true },
@@ -112,7 +112,7 @@ class GameLauncher {
 
     filterGames(searchTerm) {
         const term = searchTerm.toLowerCase();
-        const filtered = this.games.filter(game => 
+        const filtered = this.games.filter(game =>
             game.name.toLowerCase().includes(term) ||
             game.category.toLowerCase().includes(term)
         );
@@ -202,7 +202,7 @@ class GameLauncher {
 
 // Initialize
 let gameLauncher;
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     gameLauncher = new GameLauncher();
     gameLauncher.render();
 });

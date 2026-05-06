@@ -1,6 +1,6 @@
 /**
- * Game Bầu Cua - JavaScript Enhanced
- * Nâng cấp UI/UX cho Bầu Cua
+ * Game CYBER PETS - JavaScript Enhanced
+ * Nâng cấp UI/UX cho CYBER PETS
  */
 
 class BaucuaEnhanced {

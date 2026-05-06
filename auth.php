@@ -967,11 +967,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <div class="particles-container" id="particlesContainer"></div>
 
     <div class="auth-container">
-        <div class="landing-banner" onclick="window.location.href='landing.php'">
-            <span>🚀 Khám phá Landing UI mới:</span>
-            <span>Preview quest, Lucky Wheel & statistics realtime trước khi đăng ký.</span>
-            <i class="fas fa-arrow-right"></i>
-        </div>
         <div class="register-card">
             <!-- Logo -->
             <div class="logo-container">

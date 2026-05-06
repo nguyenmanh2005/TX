@@ -69,7 +69,7 @@ if (isset($_GET['action'])) {
             $his = $conn->prepare("INSERT INTO history_baucua (Iduser,Bet,Result,WinAmount,Time) VALUES (?,?,?,?,NOW())");
             $his->bind_param("idss", $userId, $totalBet, $resStr, $profit);
             $his->execute();
-            logGameHistoryWithAll($conn, $userId, 'Bầu Cua', $totalBet, $totalWin, $totalWin > 0);
+            logGameHistoryWithAll($conn, $userId, 'CYBER PETS', $totalBet, $totalWin, $totalWin > 0);
 
             $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
             $response = [
@@ -90,7 +90,7 @@ if (isset($_GET['action'])) {
 
 <head>
     <meta charset="UTF-8">
-    <title>Cyber Bầu Cua - Premium</title>
+    <title>Cyber CYBER PETS - Premium</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

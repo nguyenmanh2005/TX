@@ -8,7 +8,7 @@
  * Ghi lại lịch sử chơi game
  * @param mysqli $conn Database connection
  * @param int $userId ID người dùng
- * @param string $gameName Tên game (ví dụ: 'Blackjack', 'Bầu Cua', 'Slot')
+ * @param string $gameName Tên game (ví dụ: 'Blackjack', 'CYBER PETS', 'Slot')
  * @param float $betAmount Số gtlm cược
  * @param float $winAmount Số gtlm thắng (0 nếu thua)
  * @param bool $isWin Có thắng không

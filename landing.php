@@ -488,10 +488,11 @@ function formatStat(int $value): string
             </div>
             <div class="hero-visual">
                 <div class="hero-preview">
-                    <img src="1.png" alt="Preview games">
+                    <img src="uploads/1746200527_world-of-warcraft-lich-king-wallpaper-1920x1080_48.jpg"
+                        alt="Preview games">
                 </div>
                 <div class="chip chip-quests">
-                    🎯 Quest tự động cập nhật tiến độ
+                    🎯 Quest tự động cập nhật tiến độ   
                 </div>
                 <div class="chip chip-lucky">
                     🎡 Lucky Wheel & Gift System cho mọi người
@@ -506,13 +507,14 @@ function formatStat(int $value): string
                 <div class="feature-card">
                     <div class="feature-icon">🎮</div>
                     <h3>20+ mini game</h3>
-                    <p>Bầu cua, Blackjack, Coin Flip, Bingo, Roulette... tất cả đều dùng chung ví gtlm ảo với giao diện
+                    <p>CYBER PETS, Blackjack, Coin Flip, Bingo, Roulette... tất cả đều dùng chung ví gtlm ảo với giao
+                        diện
                         cao cấp.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">🎯</div>
                     <h3>Nhiệm vụ thông minh</h3>
-                    <p>Quest hàng ngày/tuần, tự ghi nhận log qua `logGameHistory()` giúp người chơi tiến bộ tự nhiên.
+                    <p>Quest hàng ngày/tuần, tự ghi nhận log qua lịch sử chơi giúp người chơi tiến bộ tự nhiên.
                     </p>
                 </div>
                 <div class="feature-card">
@@ -523,7 +525,7 @@ function formatStat(int $value): string
                 <div class="feature-card">
                     <div class="feature-icon">📊</div>
                     <h3>Statistics realtime</h3>
-                    <p>Trang thống kê mới với API realtime (`api_statistics.php`) cho phép người chơi xem win-rate tức
+                    <p>Trang thống kê mới với API realtime cho phép người chơi xem win-rate tức
                         thì.</p>
                 </div>
                 <div class="feature-card">
@@ -569,7 +571,8 @@ function formatStat(int $value): string
             <div class="community">
                 <div class="community-card">
                     <h4>Thành viên #5798</h4>
-                    <p>“Quest tracking cực tiện, chơi bầu cua xong thấy nhiệm vụ hoàn thành liền. Giao diện mới nhìn đã
+                    <p>“Quest tracking cực tiện, chơi CYBER PETS xong thấy nhiệm vụ hoàn thành liền. Giao diện mới nhìn
+                        đã
                         phê.”</p>
                 </div>
                 <div class="community-card">

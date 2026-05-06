@@ -7,7 +7,7 @@
 function initQuickActions() {
     const quickActionsContainer = document.getElementById('quickActionsContainer');
     if (!quickActionsContainer) return;
-    
+
     // Quick actions data - Mở rộng với nhiều actions hơn
     const quickActions = [
         {
@@ -75,13 +75,13 @@ function initQuickActions() {
             shortcut: '8'
         }
     ];
-    
+
     // Load recent actions from localStorage
     const recentActions = JSON.parse(localStorage.getItem('recentActions') || '[]');
-    
+
     // Merge recent actions với quick actions (ưu tiên recent)
     const allActions = [...recentActions.slice(0, 2), ...quickActions].slice(0, 8);
-    
+
     // Render quick actions
     quickActionsContainer.innerHTML = '';
     allActions.forEach((action, index) => {
@@ -90,12 +90,12 @@ function initQuickActions() {
         actionCard.className = 'quick-action-card';
         actionCard.setAttribute('data-action', action.title);
         actionCard.style.animationDelay = (index * 0.1) + 's';
-        
+
         const isRecent = recentActions.some(ra => ra.title === action.title);
         if (isRecent) {
             actionCard.classList.add('recent-action');
         }
-        
+
         actionCard.innerHTML = `
             <div class="quick-action-icon" style="background: linear-gradient(135deg, ${action.color}, ${action.color}dd);">
                 ${action.icon}
@@ -109,12 +109,12 @@ function initQuickActions() {
                 <div class="quick-action-arrow">→</div>
             </div>
         `;
-        
+
         // Track click để lưu vào recent
-        actionCard.addEventListener('click', function() {
+        actionCard.addEventListener('click', function () {
             saveRecentAction(action);
         });
-        
+
         quickActionsContainer.appendChild(actionCard);
     });
 }
@@ -122,33 +122,33 @@ function initQuickActions() {
 // Save recent action
 function saveRecentAction(action) {
     let recentActions = JSON.parse(localStorage.getItem('recentActions') || '[]');
-    
+
     // Remove if exists
     recentActions = recentActions.filter(ra => ra.title !== action.title);
-    
+
     // Add to beginning
     recentActions.unshift(action);
-    
+
     // Keep only last 5
     recentActions = recentActions.slice(0, 5);
-    
+
     localStorage.setItem('recentActions', JSON.stringify(recentActions));
 }
 
 // Keyboard Shortcuts
 function initKeyboardShortcuts() {
-    document.addEventListener('keydown', function(e) {
+    document.addEventListener('keydown', function (e) {
         // Ctrl/Cmd + K: Quick search
         if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
             e.preventDefault();
             openQuickSearch();
         }
-        
+
         // Escape: Close modals/overlays
         if (e.key === 'Escape') {
             closeAllModals();
         }
-        
+
         // Number keys: Quick actions (1-8)
         if (e.key >= '1' && e.key <= '8' && !e.ctrlKey && !e.metaKey && !e.altKey) {
             // Check if input/textarea is focused
@@ -156,7 +156,7 @@ function initKeyboardShortcuts() {
             if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
                 return; // Don't trigger if typing in input
             }
-            
+
             const quickActions = document.querySelectorAll('.quick-action-card');
             const index = parseInt(e.key) - 1;
             if (quickActions[index]) {
@@ -169,7 +169,7 @@ function initKeyboardShortcuts() {
 // Quick Search Modal
 function openQuickSearch() {
     let searchModal = document.getElementById('quickSearchModal');
-    
+
     if (!searchModal) {
         searchModal = document.createElement('div');
         searchModal.id = 'quickSearchModal';
@@ -190,24 +190,24 @@ function openQuickSearch() {
             </div>
         `;
         document.body.appendChild(searchModal);
-        
+
         // Focus input
         setTimeout(() => {
             document.getElementById('quickSearchInput').focus();
         }, 100);
-        
+
         // Search functionality
         const searchInput = document.getElementById('quickSearchInput');
         searchInput.addEventListener('input', performQuickSearch);
-        
+
         // Close on overlay click
-        searchModal.addEventListener('click', function(e) {
+        searchModal.addEventListener('click', function (e) {
             if (e.target === searchModal) {
                 closeQuickSearch();
             }
         });
     }
-    
+
     searchModal.style.display = 'flex';
     document.getElementById('quickSearchInput').value = '';
     document.getElementById('quickSearchInput').focus();
@@ -231,14 +231,14 @@ function closeAllModals() {
 // Quick Search Data - Mở rộng với nhiều items hơn
 const searchData = [
     // Games
-    { name: 'Bầu Cua', url: 'baucua.php', icon: '🎲', category: 'Game', keywords: ['baucua', 'bầu cua', 'game'] },
+    { name: 'CYBER PETS', url: 'baucua.php', icon: '🎲', category: 'Game', keywords: ['baucua', 'CYBER PETS', 'game'] },
     { name: 'Blackjack', url: 'bj.php', icon: '🃏', category: 'Game', keywords: ['blackjack', 'bj', 'bài'] },
     { name: 'Slot Machine', url: 'slot.php', icon: '🎰', category: 'Game', keywords: ['slot', 'máy đánh bạc'] },
     { name: 'Roulette', url: 'roulette.php', icon: '🎡', category: 'Game', keywords: ['roulette', 'vòng quay'] },
     { name: 'Dice', url: 'dice.php', icon: '🎲', category: 'Game', keywords: ['dice', 'xí ngầu', 'xúc xắc'] },
     { name: 'Coin Flip', url: 'coinflip.php', icon: '🪙', category: 'Game', keywords: ['coin', 'flip', 'đồng xu'] },
     { name: 'RPS', url: 'rps.php', icon: '✌️', category: 'Game', keywords: ['rps', 'oẳn tù tì', 'kéo búa bao'] },
-    { name: 'Xóc Đĩa', url: 'xocdia.php', icon: '🎲', category: 'Game', keywords: ['xóc đĩa', 'xocdia'] },
+    { name: 'Đồng xu diệu kỳ', url: 'xocdia.php', icon: '🎲', category: 'Game', keywords: ['Đồng xu diệu kỳ', 'xocdia'] },
     { name: 'Poker', url: 'poker.php', icon: '🃏', category: 'Game', keywords: ['poker', 'bài tây'] },
     { name: 'Bingo', url: 'bingo.php', icon: '🎱', category: 'Game', keywords: ['bingo'] },
     // Pages
@@ -262,7 +262,7 @@ let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
 function performQuickSearch() {
     const query = document.getElementById('quickSearchInput').value.toLowerCase().trim();
     const resultsContainer = document.getElementById('quickSearchResults');
-    
+
     if (!query) {
         // Show search history
         if (searchHistory.length > 0) {
@@ -289,7 +289,7 @@ function performQuickSearch() {
         }
         return;
     }
-    
+
     // Search with keywords
     const results = searchData.filter(item => {
         const nameMatch = item.name.toLowerCase().includes(query);
@@ -304,19 +304,19 @@ function performQuickSearch() {
         if (!aNameMatch && bNameMatch) return 1;
         return 0;
     });
-    
+
     // Save to history
     if (query && !searchHistory.includes(query)) {
         searchHistory.unshift(query);
         searchHistory = searchHistory.slice(0, 10); // Keep last 10
         localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
     }
-    
+
     if (results.length === 0) {
         resultsContainer.innerHTML = '<div class="empty-state"><div class="empty-state-icon">😕</div><div class="empty-state-title">Không tìm thấy kết quả</div><div class="empty-state-description">Thử với từ khóa khác</div></div>';
         return;
     }
-    
+
     resultsContainer.innerHTML = '';
     results.forEach(result => {
         const resultItem = document.createElement('a');
@@ -363,7 +363,7 @@ function fallbackCopyToClipboard(text, showNotification) {
     document.body.appendChild(textArea);
     textArea.focus();
     textArea.select();
-    
+
     try {
         document.execCommand('copy');
         if (showNotification) {
@@ -375,7 +375,7 @@ function fallbackCopyToClipboard(text, showNotification) {
             showToast('❌ Không thể sao chép!', 'error');
         }
     }
-    
+
     document.body.removeChild(textArea);
 }
 
@@ -385,11 +385,11 @@ function showToast(message, type = 'info') {
     toast.className = `toast toast-${type}`;
     toast.textContent = message;
     document.body.appendChild(toast);
-    
+
     setTimeout(() => {
         toast.classList.add('show');
     }, 10);
-    
+
     setTimeout(() => {
         toast.classList.remove('show');
         setTimeout(() => {
@@ -399,10 +399,10 @@ function showToast(message, type = 'info') {
 }
 
 // Initialize on DOM ready
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     initQuickActions();
     initKeyboardShortcuts();
-    
+
     // Add copy buttons to code elements
     document.querySelectorAll('code, .copyable').forEach(el => {
         if (!el.querySelector('.copy-btn')) {

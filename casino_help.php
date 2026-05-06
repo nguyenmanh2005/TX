@@ -508,7 +508,7 @@
             ]
         },
         'baucua': {
-            title: 'Bầu Cua Tôm Cá',
+            title: 'CYBER PETS Tôm Cá',
             icon: '🎲',
             steps: [
                 'Đặt cược vào một hoặc nhiều linh vật: Bầu, Cua, Tôm, Cá, Gà, Nai.',
@@ -517,7 +517,7 @@
             ]
         },
         'xocdia': {
-            title: 'Xóc Đĩa',
+            title: 'Đồng xu diệu kỳ',
             icon: '🔘',
             steps: [
                 'Dự đoán kết quả của 4 nút (đồng xu) sau khi xóc.',
