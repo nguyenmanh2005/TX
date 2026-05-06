@@ -612,37 +612,152 @@ $result = $stmt->get_result();
 
 
 
-    <div class="bottom-section">
-        <div class="history-box">
-            <h3>📋 Lịch sử chơi (10 lần gần nhất)</h3>
-            <table border="1" cellpadding="10" id="historyTable">
-                <thead>
-                    <tr style="background: rgba(255, 255, 255, 0.1);">
-                        <th style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); color: #ffd700;">ID</th>
-                        <th style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); color: #ffd700;">Cược</th>
-                        <th style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); color: #ffd700;">Kết quả
-                        </th>
-                        <th style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); color: #ffd700;">Thắng</th>
-                        <th style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); color: #ffd700;">Thời gian
-                        </th>
-                    </tr>
-                </thead>
-                <tbody id="historyBody">
-                    <tr>
-                        <td colspan="5" style="text-align: center; padding: 15px; color: #aaa;">Chưa có lượt chơi nào
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+    
 
-        <div class="chart-box">
-            <h3>📊 Thống kê</h3>
-            <div class="stats-container">
-                <div class="stat-item wins">
-                    <div class="label">Lần Thắng</div>
-                    <div class="value"><?= $gameThang ?></div>
-                </div>
+
+
+
+
+
+
+
+
+
+
+<div class="bottom-section">
+    <div class="history-box">
+        <h3>📋 Lịch sử chơi (10 lần gần nhất)</h3>
+        <table border="1" cellpadding="10" id="historyTable">
+            <thead>
+                <tr style="background: rgba(255, 255, 255, 0.1);">
+                    <th style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); color: #ffd700;">ID</th>
+                    <th style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); color: #ffd700;">Cược</th>
+                    <th style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); color: #ffd700;">Kết quả</th>
+                    <th style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); color: #ffd700;">Thắng</th>
+                    <th style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); color: #ffd700;">Thời gian</th>
+                </tr>
+            </thead>
+            <tbody id="historyBody">
+                <tr><td colspan="5" style="text-align: center; padding: 15px; color: #aaa;">Chưa có lượt chơi nào</td></tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="chart-box">
+        <h3>📊 Thống kê</h3>
+        <div class="stats-container">
+            <div class="stat-item wins">
+                <div class="label">Lần Thắng</div>
+                <div class="value"><?= $gameThang ?></div>
+            </div>
+            <div class="stat-item losses">
+                <div class="label">Lần Thua</div>
+                <div class="value"><?= $gameThua ?></div>
+            </div>
+        </div>
+        <canvas id="gameChart" style="max-height: 300px;"></canvas>
+    </div>
+</div>
+
+            <div class="stat-item losses">
+                <div class="label">Lần Thua</div>
+                <div class="value"><?= $gameThua ?></div>
+            </div>
+        </div>
+        <canvas id="gameChart" style="max-height: 300px;"></canvas>
+    </div>
+</div>
+
+            <div class="stat-item losses">
+                <div class="label">Lần Thua</div>
+                <div class="value"><?= $gameThua ?></div>
+            </div>
+        </div>
+        <canvas id="gameChart" style="max-height: 300px;"></canvas>
+    </div>
+</div>
+
+            <div class="stat-item losses">
+                <div class="label">Lần Thua</div>
+                <div class="value"><?= $gameThua ?></div>
+            </div>
+        </div>
+        <canvas id="gameChart" style="max-height: 300px;"></canvas>
+    </div>
+</div>
+
+            <div class="stat-item losses">
+                <div class="label">Lần Thua</div>
+                <div class="value"><?= $gameThua ?></div>
+            </div>
+        </div>
+        <canvas id="gameChart" style="max-height: 300px;"></canvas>
+    </div>
+</div>
+
+            <div class="stat-item losses">
+                <div class="label">Lần Thua</div>
+                <div class="value"><?= $gameThua ?></div>
+            </div>
+        </div>
+        <canvas id="gameChart" style="max-height: 300px;"></canvas>
+    </div>
+</div>
+
+            <div class="stat-item losses">
+                <div class="label">Lần Thua</div>
+                <div class="value"><?= $gameThua ?></div>
+            </div>
+        </div>
+        <canvas id="gameChart" style="max-height: 300px;"></canvas>
+    </div>
+</div>
+
+            <div class="stat-item losses">
+                <div class="label">Lần Thua</div>
+                <div class="value"><?= $gameThua ?></div>
+            </div>
+        </div>
+        <canvas id="gameChart" style="max-height: 300px;"></canvas>
+    </div>
+</div>
+
+            <div class="stat-item losses">
+                <div class="label">Lần Thua</div>
+                <div class="value"><?= $gameThua ?></div>
+            </div>
+        </div>
+        <canvas id="gameChart" style="max-height: 300px;"></canvas>
+    </div>
+</div>
+
+            <div class="stat-item losses">
+                <div class="label">Lần Thua</div>
+                <div class="value"><?= $gameThua ?></div>
+            </div>
+        </div>
+        <canvas id="gameChart" style="max-height: 300px;"></canvas>
+    </div>
+</div>
+
+            <div class="stat-item losses">
+                <div class="label">Lần Thua</div>
+                <div class="value"><?= $gameThua ?></div>
+            </div>
+        </div>
+        <canvas id="gameChart" style="max-height: 300px;"></canvas>
+    </div>
+</div>
+
+            <div class="stat-item losses">
+                <div class="label">Lần Thua</div>
+                <div class="value"><?= $gameThua ?></div>
+            </div>
+        </div>
+        <canvas id="gameChart" style="max-height: 300px;"></canvas>
+    </div>
+</div>
+
                 <div class="stat-item losses">
                     <div class="label">Lần Thua</div>
                     <div class="value"><?= $gameThua ?></div>
@@ -942,12 +1057,7 @@ $result = $stmt->get_result();
 
 
         // Improved history loading function
-        async function loadAcHistory() {
-            try {
-                const response = await fetch('ac.php?action=get_history', {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
+        
                 });
 
                 if (!response.ok) return;
@@ -1098,7 +1208,1428 @@ $result = $stmt->get_result();
                 document.head.appendChild(s);
             });
         })();
-    </script>
+    
+
+    // Improved history loading function
+    
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for ac game
+    const ctxAc = document.getElementById('gameChart');
+    if (ctxAc) {
+        const gameChart = new Chart(ctxAc.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadAcHistory);
+
+
+
+    // Improved history loading function
+    
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for ac game
+    const ctxAc = document.getElementById('gameChart');
+    if (ctxAc) {
+        const gameChart = new Chart(ctxAc.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadAcHistory);
+
+
+
+    // Improved history loading function
+    
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for ac game
+    const ctxAc = document.getElementById('gameChart');
+    if (ctxAc) {
+        const gameChart = new Chart(ctxAc.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadAcHistory);
+
+
+
+    // Improved history loading function
+    
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for ac game
+    const ctxAc = document.getElementById('gameChart');
+    if (ctxAc) {
+        const gameChart = new Chart(ctxAc.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadAcHistory);
+
+
+
+    // Improved history loading function
+    
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for ac game
+    const ctxAc = document.getElementById('gameChart');
+    if (ctxAc) {
+        const gameChart = new Chart(ctxAc.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadAcHistory);
+
+
+
+    // Improved history loading function
+    
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for ac game
+    const ctxAc = document.getElementById('gameChart');
+    if (ctxAc) {
+        const gameChart = new Chart(ctxAc.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadAcHistory);
+
+
+
+    // Improved history loading function
+    
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for ac game
+    const ctxAc = document.getElementById('gameChart');
+    if (ctxAc) {
+        const gameChart = new Chart(ctxAc.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadAcHistory);
+
+
+
+    // Improved history loading function
+    
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for ac game
+    const ctxAc = document.getElementById('gameChart');
+    if (ctxAc) {
+        const gameChart = new Chart(ctxAc.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadAcHistory);
+
+
+
+    // Improved history loading function
+    
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for ac game
+    const ctxAc = document.getElementById('gameChart');
+    if (ctxAc) {
+        const gameChart = new Chart(ctxAc.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadAcHistory);
+
+
+
+    // Improved history loading function
+    
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for ac game
+    const ctxAc = document.getElementById('gameChart');
+    if (ctxAc) {
+        const gameChart = new Chart(ctxAc.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadAcHistory);
+
+
+
+    // Improved history loading function
+    
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for ac game
+    const ctxAc = document.getElementById('gameChart');
+    if (ctxAc) {
+        const gameChart = new Chart(ctxAc.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadAcHistory);
+
+
+
+    // Improved history loading function
+    async function loadAcHistory() {
+        try {
+            const response = await fetch('ac.php?action=get_history', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for ac game
+    const ctxAc = document.getElementById('gameChart');
+    if (ctxAc) {
+        const gameChart = new Chart(ctxAc.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadAcHistory);
+
+</script>
 
 </body>
 

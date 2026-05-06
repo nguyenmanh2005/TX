@@ -10,6 +10,10 @@ require 'db_connect.php';
 
 // Load theme
 require_once 'load_theme.php';
+// Đảm bảo $bgGradientCSS có giá trị
+if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
+    $bgGradientCSS = 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%)';
+}
 
 // Load admin helper
 require_once 'admin_helper.php';
@@ -372,7 +376,7 @@ if ($stmt) {
         }
 
         .btn-secondary {
-            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
         }
 
         .message {
@@ -456,12 +460,12 @@ if ($stmt) {
         }
 
         .role-badge.admin {
-            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
             color: white;
         }
 
         .role-badge.user {
-            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
             color: white;
         }
 
@@ -486,7 +490,7 @@ if ($stmt) {
         }
 
         .btn-success {
-            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
         }
 
         .pagination {

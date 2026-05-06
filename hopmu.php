@@ -8,6 +8,13 @@ if (!isset($_SESSION['Iduser'])) {
 }
 require 'db_connect.php';
 
+// Load theme
+require_once 'load_theme.php';
+// Đảm bảo $bgGradientCSS có giá trị
+if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
+    $bgGradientCSS = 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%)';
+}
+
 $userId = $_SESSION['Iduser'];
 $sql = "SELECT Money, Name FROM users WHERE Iduser = ?";
 $stmt = $conn->prepare($sql);
@@ -85,6 +92,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <!DOCTYPE html>
 <html lang="vi">
 <head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <meta charset="UTF-8">
   <title>Bóc Túi Mù</title>
       <link rel="stylesheet" href="assets/css/main.css">
@@ -92,15 +100,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <link rel="stylesheet" href="assets/css/responsive.css">
     <link rel="stylesheet" href="assets/css/loading.css">
     <link rel="stylesheet" href="assets/css/animations.css">
-        <link rel="stylesheet" href="assets/css/game-effects.css">
-        <link rel="stylesheet" href="assets/css/game-ui-enhancements.css">
-        <link rel="stylesheet" href="assets/css/game-effects.css">
-        <link rel="stylesheet" href="assets/css/game-ui-enhancements.css">
+                                        <link rel="stylesheet" href="assets/css/game-effects.css">
+                                        <link rel="stylesheet" href="assets/css/game-ui-enhancements.css">
+                                        <link rel="stylesheet" href="assets/css/game-effects.css">
+                                        <link rel="stylesheet" href="assets/css/game-ui-enhancements.css">
   <style>
     body {
         cursor: url('chuot.png'), url('../chuot.png'), auto !important;
         font-family: 'Segoe UI', sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%);
+        background: <?= $bgGradientCSS ?>; background-attachment: fixed;
         text-align: center;
         padding: 40px 20px;
         min-height: 100vh;
@@ -155,7 +163,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
     
     button {
-        background: linear-gradient(135deg, #00796b 0%, #004d40 100%);
+        background: <?= $bgGradientCSS ?>; background-attachment: fixed;
         color: white;
         font-size: 20px;
         font-weight: 700;
@@ -191,7 +199,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     button:hover:not(:disabled) {
         transform: translateY(-4px) scale(1.05);
         box-shadow: 0 8px 25px rgba(0, 121, 107, 0.6);
-        background: linear-gradient(135deg, #004d40 0%, #00796b 100%);
+        background: <?= $bgGradientCSS ?>; background-attachment: fixed;
     }
     
     button:disabled {
@@ -283,9 +291,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             transform: translateY(-10px) rotate(5deg);
         }
     }
-  </style>
+  
+        /* Three.js canvas background */
+        #threejs-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+    </style>
 </head>
 <body>
+    <canvas id="threejs-background"></canvas>
   <div class="game-container">
     <h1>🎁 Bóc Túi Mù</h1>
     <p style="font-size: 18px; margin: 10px 0;">Xin chào <strong><?= htmlspecialchars($userName, ENT_QUOTES, 'UTF-8') ?></strong></p>
@@ -335,12 +356,37 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <script src="assets/js/game-effects-auto.js"></script>
 
-        <script src="assets/js/game-enhancements.js"></script>
+                                        <script src="assets/js/game-enhancements.js"></script>
 <script>
     // Auto initialize game effects
     if (typeof GameEffectsAuto !== 'undefined') {
         GameEffectsAuto.init();
     }
 </script>
+
+    // Initialize Three.js Background
+    (function() {
+        // Pass theme config từ PHP sang JavaScript
+        window.themeConfig = {
+            particleCount: <?= isset($particleCount) ? $particleCount : 800 ?>,
+            particleSize: <?= isset($particleSize) ? $particleSize : 0.05 ?>,
+            particleColor: '<?= isset($particleColor) ? htmlspecialchars($particleColor, ENT_QUOTES) : "#ffffff" ?>',
+            particleOpacity: <?= isset($particleOpacity) ? $particleOpacity : 0.6 ?>,
+            shapeCount: <?= isset($shapeCount) ? $shapeCount : 10 ?>,
+            shapeColors: <?= isset($shapeColors) ? json_encode($shapeColors) : json_encode(['#667eea', '#764ba2', '#4facfe', '#00f2fe']) ?>,
+            shapeOpacity: <?= isset($shapeOpacity) ? $shapeOpacity : 0.3 ?>,
+            bgGradient: <?= isset($bgGradient) ? json_encode($bgGradient) : json_encode(['#667eea', '#764ba2', '#4facfe']) ?>
+        };
+        
+        // Load Three.js background script
+        const script = document.createElement('script');
+        script.src = 'threejs-background.js';
+        script.onload = function() {
+            console.log('Three.js background loaded');
+        };
+        document.head.appendChild(script);
+    })();
+
+
 </body>
 </html>

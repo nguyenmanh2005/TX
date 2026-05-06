@@ -105,7 +105,7 @@ if (!$giftsTableExists) {
 
         h1 {
             text-align: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -147,7 +147,7 @@ if (!$giftsTableExists) {
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
             transition: left 0.3s ease;
             z-index: -1;
         }
@@ -268,12 +268,12 @@ if (!$giftsTableExists) {
         }
 
         .user-list::-webkit-scrollbar-thumb {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
             border-radius: 10px;
         }
 
         .user-list::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
         }
 
         .user-item {
@@ -295,7 +295,7 @@ if (!$giftsTableExists) {
             top: 0;
             height: 100%;
             width: 4px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
             transform: scaleY(0);
             transition: transform 0.3s ease;
             transform-origin: bottom;
@@ -322,7 +322,7 @@ if (!$giftsTableExists) {
 
         .btn {
             padding: 16px 40px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
             color: white;
             border: none;
             border-radius: 12px;
@@ -374,7 +374,7 @@ if (!$giftsTableExists) {
             transform: translateY(-3px) scale(1.02);
             box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5),
                 0 0 20px rgba(102, 126, 234, 0.3);
-            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
         }
 
         .btn:active {
@@ -601,7 +601,7 @@ if (!$giftsTableExists) {
         }
 
         .money-display span {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -635,6 +635,18 @@ if (!$giftsTableExists) {
         }
 
         \n
+    
+        /* Three.js canvas background */
+        #threejs-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
     </style>
 </head>
 

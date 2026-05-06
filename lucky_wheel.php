@@ -123,7 +123,7 @@ $wheelExists = $checkRewardsTable && $checkRewardsTable->num_rows > 0;
             padding: 20px 60px;
             font-size: 24px;
             font-weight: 700;
-            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
             color: white;
             border: none;
             border-radius: var(--border-radius-lg);
@@ -284,6 +284,18 @@ $wheelExists = $checkRewardsTable && $checkRewardsTable->num_rows > 0;
             font-weight: 600;
         }
             \n
+    
+        /* Three.js canvas background */
+        #threejs-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
     </style>
 </head>
 

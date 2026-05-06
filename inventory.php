@@ -616,6 +616,18 @@ if (
             box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
         }
             \n
+    
+        /* Three.js canvas background */
+        #threejs-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
     </style>
 </head>
 

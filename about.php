@@ -5,6 +5,10 @@ require 'db_connect.php';
 // Load theme (chỉ nếu đã đăng nhập)
 if (isset($_SESSION['Iduser'])) {
     require_once 'load_theme.php';
+// Đảm bảo $bgGradientCSS có giá trị
+if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
+    $bgGradientCSS = 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%)';
+}
 } else {
     // Default theme nếu chưa đăng nhập
     $bgGradientCSS = 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%)';
@@ -270,6 +274,18 @@ $userName = isset($_SESSION['Name']) ? $_SESSION['Name'] : "Khách";
       border-top: 2px solid rgba(0, 0, 0, 0.1);
     }
           \n
+    
+        /* Three.js canvas background */
+        #threejs-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
     </style>
 </head>
 <body>

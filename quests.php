@@ -9,6 +9,10 @@ if (!isset($_SESSION['Iduser'])) {
 
 // Load theme
 require_once 'load_theme.php';
+// Đảm bảo $bgGradientCSS có giá trị
+if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
+    $bgGradientCSS = 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%)';
+}
 
 $userId = $_SESSION['Iduser'];
 
@@ -130,7 +134,7 @@ $questsTableExists = $checkQuestsTable && $checkQuestsTable->num_rows > 0;
         }
 
         .header-quests h1 {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -171,7 +175,7 @@ $questsTableExists = $checkQuestsTable && $checkQuestsTable->num_rows > 0;
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
             transition: left 0.3s ease;
             z-index: -1;
         }
@@ -416,6 +420,18 @@ $questsTableExists = $checkQuestsTable && $checkQuestsTable->num_rows > 0;
         }
 
         \n
+    
+        /* Three.js canvas background */
+        #threejs-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
     </style>
 </head>
 

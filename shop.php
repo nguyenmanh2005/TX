@@ -10,6 +10,10 @@ require 'db_connect.php';
 
 // Load theme
 require_once 'load_theme.php';
+// Đảm bảo $bgGradientCSS có giá trị
+if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
+    $bgGradientCSS = 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%)';
+}
 
 $userId = $_SESSION['Iduser'];
 
@@ -638,7 +642,7 @@ if ($currentStmt) {
         .item-preview {
             width: 100%;
             height: 150px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
             border-radius: var(--border-radius);
             margin-bottom: 15px;
             display: flex;
@@ -807,6 +811,18 @@ if ($currentStmt) {
         }
 
         \n
+    
+        /* Three.js canvas background */
+        #threejs-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
     </style>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>

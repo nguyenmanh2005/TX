@@ -225,7 +225,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action']) && $_POST['
             font-size: 18px;
             font-weight: 600;
             border: none;
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
             color: white;
             border-radius: var(--border-radius);
             margin: 15px;

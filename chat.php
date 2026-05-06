@@ -8,6 +8,10 @@ require 'db_connect.php';
 
 // Load theme
 require_once 'load_theme.php';
+// Đảm bảo $bgGradientCSS có giá trị
+if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
+    $bgGradientCSS = 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%)';
+}
 
 $userId = $_SESSION['Iduser'];
 $stmt = $conn->prepare("SELECT ImageURL, chat_frame_id, avatar_frame_id FROM users WHERE Iduser = ?");
@@ -377,6 +381,18 @@ if (isset($_GET['action']) && $_GET['action'] === 'load') {
         box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
     }
           \n
+    
+        /* Three.js canvas background */
+        #threejs-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
     </style>
 </head>
 <body>

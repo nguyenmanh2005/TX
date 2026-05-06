@@ -51,6 +51,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     // Đăng nhập trực tiếp, không cần OTP
     $_SESSION['Iduser'] = $row['Iduser'];
     $_SESSION['Name'] = $row['Name'];
+    $_SESSION['Role'] = $row['Role'];
 
     // Cập nhật streak + thưởng ngày + XP sau khi đăng nhập thành công
     $loginBonus = up_handle_successful_login($conn, (int)$row['Iduser']);

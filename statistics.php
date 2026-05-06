@@ -9,6 +9,10 @@ if (!isset($_SESSION['Iduser'])) {
 
 // Load theme
 require_once 'load_theme.php';
+// Đảm bảo $bgGradientCSS có giá trị
+if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
+    $bgGradientCSS = 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%)';
+}
 
 $userId = $_SESSION['Iduser'];
 
@@ -251,7 +255,7 @@ if ($checkQuestsTable && $checkQuestsTable->num_rows > 0) {
         }
 
         .header-stats h1 {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -340,7 +344,7 @@ if ($checkQuestsTable && $checkQuestsTable->num_rows > 0) {
         .stat-value {
             font-size: 36px;
             font-weight: 800;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -370,7 +374,7 @@ if ($checkQuestsTable && $checkQuestsTable->num_rows > 0) {
         .chart-title {
             font-size: 24px;
             font-weight: 800;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -529,7 +533,7 @@ if ($checkQuestsTable && $checkQuestsTable->num_rows > 0) {
             padding: 12px 28px;
             border: none;
             border-radius: 999px;
-            background: linear-gradient(135deg, #20c997 0%, #28a745 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
             color: #fff;
             font-weight: 700;
             font-size: 16px;
@@ -563,6 +567,18 @@ if ($checkQuestsTable && $checkQuestsTable->num_rows > 0) {
             color: var(--success-color);
         }
             \n
+    
+        /* Three.js canvas background */
+        #threejs-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
     </style>
 </head>
 

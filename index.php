@@ -48,6 +48,10 @@ $referralCode = ref_get_or_create_code($conn, (int) $userId);
 
 // Load theme (sử dụng load_theme.php để đồng nhất)
 require_once 'load_theme.php';
+// Đảm bảo $bgGradientCSS có giá trị
+if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
+    $bgGradientCSS = 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%)';
+}
 
 // Parse theme config cho Three.js (lấy từ load_theme.php hoặc mặc định)
 $particleCount = $themeConfig['particle_count'] ?? 1000;
@@ -1815,7 +1819,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
             top: 80px;
             left: 50%;
             transform: translateX(-50%);
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 50%, #c44569 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
             color: white;
             padding: 20px 40px;
             border-radius: var(--border-radius-lg);
@@ -1948,7 +1952,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
         .quest-claim-btn {
             margin-top: 10px;
             padding: 8px 16px;
-            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
             color: white;
             border: none;
             border-radius: var(--border-radius);

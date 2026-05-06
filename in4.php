@@ -11,6 +11,10 @@ require 'db_connect.php';
 
 // Load theme & helper tiến trình
 require_once 'load_theme.php';
+// Đảm bảo $bgGradientCSS có giá trị
+if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
+    $bgGradientCSS = 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%)';
+}
 require_once 'user_progress_helper.php';
 
 // Lấy thông tin người dùng hiện tại từ bảng users
@@ -302,6 +306,18 @@ switch ($user['Role']) {
         }
 
         \n
+    
+        /* Three.js canvas background */
+        #threejs-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
     </style>
 </head>
 

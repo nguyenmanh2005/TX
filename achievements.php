@@ -15,6 +15,10 @@ if (!$conn || $conn->connect_error) {
 
 // Load theme
 require_once 'load_theme.php';
+// Đảm bảo $bgGradientCSS có giá trị
+if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
+    $bgGradientCSS = 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%)';
+}
 
 $userId = $_SESSION['Iduser'];
 
@@ -557,6 +561,18 @@ unset($achievement);
             box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
         }
             \n
+    
+        /* Three.js canvas background */
+        #threejs-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
     </style>
 </head>
 
