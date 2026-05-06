@@ -1,0 +1,392 @@
+/* ============================================
+   GAME HI-LO - CSS
+   ============================================ */
+
+.hilo-container-enhanced {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+.game-box-hilo-enhanced {
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 40px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.game-header-hilo-enhanced {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid rgba(102, 126, 234, 0.1);
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.game-title-hilo-enhanced {
+    font-size: 36px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0;
+}
+
+.balance-hilo-enhanced {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px 25px;
+    background: linear-gradient(135deg, rgba(46, 204, 113, 0.15), rgba(39, 174, 96, 0.15));
+    border: 2px solid rgba(46, 204, 113, 0.3);
+    border-radius: 16px;
+    font-weight: 700;
+    font-size: 20px;
+    box-shadow: 0 4px 15px rgba(46, 204, 113, 0.2);
+}
+
+/* Hi-Lo Display */
+.hilo-display-enhanced {
+    margin: 40px 0;
+    text-align: center;
+}
+
+.current-card-display {
+    margin: 30px 0;
+}
+
+.card-label {
+    font-size: 16px;
+    color: #7f8c8d;
+    font-weight: 600;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.hilo-card {
+    display: inline-block;
+    width: 150px;
+    height: 220px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 4px solid #2c3e50;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 72px;
+    font-weight: 900;
+    color: #2c3e50;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+    margin: 20px;
+}
+
+.hilo-card.current {
+    border-color: #667eea;
+    box-shadow: 0 0 30px rgba(102, 126, 234, 0.5);
+}
+
+.hilo-card.next {
+    border-color: #e74c3c;
+    box-shadow: 0 0 30px rgba(231, 76, 60, 0.5);
+}
+
+.streak-display-hilo {
+    margin: 30px 0;
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(243, 156, 18, 0.1), rgba(230, 126, 34, 0.1));
+    border: 2px solid rgba(243, 156, 18, 0.3);
+    border-radius: 16px;
+    display: inline-block;
+}
+
+.streak-label {
+    font-size: 14px;
+    color: #7f8c8d;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.streak-value {
+    font-size: 48px;
+    font-weight: 900;
+    color: #f39c12;
+}
+
+.start-prompt {
+    padding: 60px;
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    border: 2px dashed rgba(102, 126, 234, 0.3);
+}
+
+.prompt-text {
+    font-size: 24px;
+    color: #7f8c8d;
+    font-weight: 600;
+}
+
+/* Controls */
+.game-controls-hilo-enhanced {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 30px;
+    margin: 25px 0;
+    border: 2px solid rgba(102, 126, 234, 0.15);
+}
+
+.control-group-hilo-enhanced {
+    margin-bottom: 25px;
+}
+
+.control-label-hilo-enhanced {
+    display: block;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 12px;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.control-input-hilo-enhanced {
+    width: 100%;
+    padding: 16px 20px;
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.control-input-hilo-enhanced:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+    transform: translateY(-2px);
+}
+
+.bet-quick-amounts-hilo-enhanced {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+}
+
+.bet-quick-btn-hilo-enhanced {
+    padding: 12px 24px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+    border: 2px solid rgba(102, 126, 234, 0.3);
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #667eea;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.bet-quick-btn-hilo-enhanced:hover {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+    border-color: #667eea;
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.bet-quick-btn-hilo-enhanced.active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+}
+
+.guess-buttons-hilo {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.guess-btn-hilo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 25px;
+    border: 3px solid transparent;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.8);
+    font-weight: 700;
+}
+
+.guess-btn-hilo.lower {
+    border-color: rgba(231, 76, 60, 0.3);
+}
+
+.guess-btn-hilo.lower:hover {
+    border-color: #e74c3c;
+    background: rgba(231, 76, 60, 0.1);
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 8px 25px rgba(231, 76, 60, 0.3);
+}
+
+.guess-btn-hilo.same {
+    border-color: rgba(243, 156, 18, 0.3);
+}
+
+.guess-btn-hilo.same:hover {
+    border-color: #f39c12;
+    background: rgba(243, 156, 18, 0.1);
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 8px 25px rgba(243, 156, 18, 0.3);
+}
+
+.guess-btn-hilo.higher {
+    border-color: rgba(46, 204, 113, 0.3);
+}
+
+.guess-btn-hilo.higher:hover {
+    border-color: #2ecc71;
+    background: rgba(46, 204, 113, 0.1);
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 8px 25px rgba(46, 204, 113, 0.3);
+}
+
+.guess-icon {
+    font-size: 48px;
+}
+
+.guess-label {
+    font-size: 18px;
+    color: #2c3e50;
+}
+
+.guess-multiplier {
+    font-size: 14px;
+    color: #7f8c8d;
+    font-weight: 600;
+}
+
+.start-button-hilo-enhanced,
+.cashout-button-hilo-enhanced {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 20px 50px;
+    font-size: 24px;
+    font-weight: 800;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 20px 0;
+    width: 100%;
+}
+
+.start-button-hilo-enhanced:hover:not(:disabled),
+.cashout-button-hilo-enhanced:hover:not(:disabled) {
+    transform: translateY(-8px) scale(1.05);
+    box-shadow: 0 12px 35px rgba(102, 126, 234, 0.6);
+}
+
+.cashout-button-hilo-enhanced {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+}
+
+.result-banner-hilo-enhanced {
+    margin: 25px 0;
+    font-size: 22px;
+    font-weight: 700;
+    padding: 20px 30px;
+    border-radius: 16px;
+    text-align: center;
+}
+
+.result-banner-hilo-enhanced.win {
+    color: #00ff00;
+    background: rgba(40, 167, 69, 0.3);
+    border: 2px solid #28a745;
+    box-shadow: 0 0 30px rgba(40, 167, 69, 0.5);
+}
+
+.result-banner-hilo-enhanced.lose {
+    color: #ff6b6b;
+    background: rgba(220, 53, 69, 0.3);
+    border: 2px solid #dc3545;
+}
+
+.next-card-reveal {
+    margin: 30px 0;
+    text-align: center;
+}
+
+.hilo-info-enhanced {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 25px;
+    margin: 25px 0;
+    border: 2px solid rgba(102, 126, 234, 0.15);
+}
+
+.hilo-info-enhanced h3 {
+    font-size: 20px;
+    font-weight: 800;
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+.hilo-info-enhanced ul {
+    list-style: none;
+    padding: 0;
+}
+
+.hilo-info-enhanced li {
+    padding: 10px 0;
+    padding-left: 25px;
+    position: relative;
+    color: #2c3e50;
+}
+
+.hilo-info-enhanced li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: #28a745;
+    font-weight: 800;
+}
+
+@media (max-width: 768px) {
+    .game-box-hilo-enhanced {
+        padding: 25px;
+    }
+    
+    .hilo-card {
+        width: 120px;
+        height: 180px;
+        font-size: 56px;
+    }
+    
+    .guess-buttons-hilo {
+        grid-template-columns: 1fr;
+    }
+}
+

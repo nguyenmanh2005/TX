@@ -1,0 +1,113 @@
+/* ============================================
+   PERFORMANCE OPTIMIZATIONS - CSS
+   ============================================ */
+
+/* Will-change for animated elements */
+.animate-fade-in,
+.animate-bounce,
+.animate-pulse,
+.animate-scale-in {
+    will-change: transform, opacity;
+}
+
+/* Contain layout for better performance */
+.game-container-enhanced,
+.game-box-enhanced,
+.dashboard-widget {
+    contain: layout style paint;
+}
+
+/* GPU acceleration */
+.game-card,
+.dice-face,
+.card-poker-enhanced {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+
+/* Reduce repaints */
+.fixed-element,
+.sticky-element {
+    position: fixed;
+    will-change: transform;
+}
+
+/* Optimize font loading */
+@font-face {
+    font-family: 'GameFont';
+    font-display: swap; /* Show fallback immediately */
+}
+
+/* Reduce animations on low-end devices */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Lazy load images */
+img[data-src] {
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+img[data-src].loaded {
+    opacity: 1;
+}
+
+/* Virtual scrolling container */
+.virtual-scroll-container {
+    overflow-y: auto;
+    overflow-x: hidden;
+    contain: layout style paint;
+}
+
+.virtual-scroll-item {
+    contain: layout style paint;
+}
+
+/* Loading states */
+.skeleton-loader {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Optimize rendering */
+.game-grid,
+.games-grid-launcher {
+    contain: layout style;
+}
+
+/* Reduce layout shifts */
+img,
+video {
+    aspect-ratio: attr(width) / attr(height);
+}
+
+/* Optimize transforms */
+.transform-optimized {
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+}
+
+/* Critical rendering path optimization */
+.critical-content {
+    content-visibility: auto;
+    contain-intrinsic-size: 200px;
+}
+

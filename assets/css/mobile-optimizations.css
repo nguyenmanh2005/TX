@@ -1,0 +1,189 @@
+/* ============================================
+   MOBILE OPTIMIZATIONS - Responsive Enhancements
+   ============================================ */
+
+/* Touch-friendly buttons */
+@media (max-width: 768px) {
+    button, a, .btn, input[type="button"], input[type="submit"] {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 12px 20px;
+        font-size: 16px;
+    }
+    
+    /* Larger tap targets */
+    .game-link, .quick-game-item {
+        padding: 20px;
+        min-height: 60px;
+    }
+    
+    /* Better spacing */
+    .container {
+        padding: 15px;
+    }
+    
+    /* Stack columns */
+    .info-column, .game-column {
+        width: 100%;
+        margin-bottom: 20px;
+    }
+    
+    /* Optimize tables */
+    table {
+        font-size: 14px;
+    }
+    
+    table th, table td {
+        padding: 8px 4px;
+    }
+    
+    /* Hide less important elements */
+    .tooltip {
+        display: none;
+    }
+    
+    /* Full width inputs */
+    input, select, textarea {
+        width: 100%;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    /* Optimize modals */
+    .modal {
+        width: 95%;
+        max-width: 95%;
+        margin: 10px auto;
+        padding: 20px;
+    }
+    
+    /* Better navigation */
+    .header, header {
+        padding: 10px;
+    }
+    
+    nav ul {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    /* Dashboard widgets stack */
+    #dashboard-widgets {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Game cards */
+    .game-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Statistics grid */
+    .stats-grid, .statistics-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    
+    /* Cards */
+    .card, .card-poker-enhanced, .card-poker-enhanced {
+        width: 60px;
+        height: 85px;
+        font-size: 24px;
+    }
+}
+
+/* Landscape mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+    .game-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Very small screens */
+@media (max-width: 480px) {
+    h1 {
+        font-size: 24px;
+    }
+    
+    h2 {
+        font-size: 20px;
+    }
+    
+    .balance-display {
+        font-size: 18px;
+        padding: 15px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Compact widgets */
+    .dashboard-widget {
+        padding: 15px;
+    }
+    
+    .widget-header h3 {
+        font-size: 18px;
+    }
+}
+
+/* Performance optimizations for mobile */
+@media (max-width: 768px) {
+    /* Reduce animations */
+    * {
+        animation-duration: 0.3s !important;
+        transition-duration: 0.2s !important;
+    }
+    
+    /* Disable heavy effects */
+    .threejs-background,
+    #threejs-background {
+        display: none;
+    }
+    
+    /* Optimize images */
+    img {
+        max-width: 100%;
+        height: auto;
+    }
+    
+    /* Reduce shadows */
+    .card, .game-box, .dashboard-widget {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+}
+
+/* Touch gestures */
+@media (hover: none) and (pointer: coarse) {
+    /* Remove hover effects on touch devices */
+    .game-link:hover,
+    .quick-game-item:hover,
+    .stat-item:hover {
+        transform: none;
+    }
+    
+    /* Add active states instead */
+    .game-link:active,
+    .quick-game-item:active {
+        transform: scale(0.95);
+        opacity: 0.8;
+    }
+}
+
+/* Prevent text selection on buttons */
+button, .btn, .game-link {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    user-select: none;
+}
+
+/* Better scrolling */
+@media (max-width: 768px) {
+    body {
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .container {
+        overflow-x: hidden;
+    }
+}
+

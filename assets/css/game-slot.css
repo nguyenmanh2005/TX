@@ -1,0 +1,464 @@
+/* ============================================
+   GAME SLOT MACHINE - CSS Nâng Cấp UI/UX
+   ============================================ */
+
+/* ========== Slot Container Enhanced ========== */
+.slot-container-enhanced {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+/* ========== Game Box Enhanced ========== */
+.game-box-enhanced {
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 40px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15),
+                0 0 0 1px rgba(102, 126, 234, 0.2);
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    position: relative;
+    overflow: hidden;
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.game-box-enhanced::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
+    animation: float 8s ease-in-out infinite;
+    pointer-events: none;
+}
+
+/* ========== Game Header Enhanced ========== */
+.game-header-slot-enhanced {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid rgba(102, 126, 234, 0.1);
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.game-title-slot-enhanced {
+    font-size: 36px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0;
+}
+
+.balance-slot-enhanced {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px 25px;
+    background: linear-gradient(135deg, rgba(46, 204, 113, 0.15), rgba(39, 174, 96, 0.15));
+    border: 2px solid rgba(46, 204, 113, 0.3);
+    border-radius: 16px;
+    font-weight: 700;
+    font-size: 20px;
+    box-shadow: 0 4px 15px rgba(46, 204, 113, 0.2);
+}
+
+/* ========== Slot Machine Enhanced ========== */
+.slot-machine-enhanced {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    border: 6px solid #ffd700;
+    border-radius: 24px;
+    padding: 40px;
+    margin: 30px 0;
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.5),
+                inset 0 0 30px rgba(255, 215, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.slot-machine-enhanced::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.1), transparent);
+    animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+/* ========== Reels Enhanced ========== */
+.reels-enhanced {
+    display: flex;
+    justify-content: center;
+    gap: 25px;
+    margin: 30px 0;
+    perspective: 1000px;
+}
+
+.reel-enhanced {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 20px;
+    padding: 30px;
+    min-width: 140px;
+    min-height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 120px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3),
+                inset 0 2px 10px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    border: 3px solid rgba(102, 126, 234, 0.2);
+}
+
+.reel-enhanced::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.3), transparent);
+    transition: left 0.6s ease;
+}
+
+.reel-enhanced:hover::before {
+    left: 100%;
+}
+
+.reel-enhanced:hover {
+    transform: scale(1.1) rotateY(10deg);
+    box-shadow: 0 12px 35px rgba(102, 126, 234, 0.4);
+    border-color: rgba(102, 126, 234, 0.5);
+}
+
+.reel-enhanced.spinning {
+    animation: spinReelEnhanced 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes spinReelEnhanced {
+    0% { 
+        transform: translateY(-300px) rotateX(360deg) scale(0.5); 
+        opacity: 0; 
+    }
+    50% {
+        transform: translateY(-50px) rotateX(180deg) scale(1.15);
+        opacity: 0.8;
+    }
+    100% { 
+        transform: translateY(0) rotateX(0deg) scale(1); 
+        opacity: 1; 
+    }
+}
+
+.reel-enhanced.win {
+    animation: winPulse 0.6s ease-in-out 3;
+    box-shadow: 0 0 30px rgba(46, 204, 113, 0.8);
+    border-color: #28a745;
+}
+
+@keyframes winPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+
+/* ========== Controls Enhanced ========== */
+.game-controls-slot-enhanced {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 30px;
+    margin: 25px 0;
+    border: 2px solid rgba(102, 126, 234, 0.15);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+}
+
+.control-group-slot-enhanced {
+    margin-bottom: 25px;
+}
+
+.control-label-slot-enhanced {
+    display: block;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 12px;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.control-input-slot-enhanced {
+    width: 100%;
+    padding: 16px 20px;
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.control-input-slot-enhanced:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15),
+                0 4px 12px rgba(102, 126, 234, 0.2);
+    transform: translateY(-2px);
+}
+
+/* ========== Quick Bet Buttons ========== */
+.bet-quick-amounts-slot-enhanced {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+}
+
+.bet-quick-btn-slot-enhanced {
+    padding: 12px 24px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+    border: 2px solid rgba(102, 126, 234, 0.3);
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #667eea;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.bet-quick-btn-slot-enhanced:hover {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+    border-color: #667eea;
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.bet-quick-btn-slot-enhanced.active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-color: #667eea;
+}
+
+/* ========== Spin Button Enhanced ========== */
+.spin-button-slot-enhanced {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 20px 50px;
+    font-size: 24px;
+    font-weight: 800;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    margin: 20px 0;
+}
+
+.spin-button-slot-enhanced::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.spin-button-slot-enhanced:hover::before {
+    width: 400px;
+    height: 400px;
+}
+
+.spin-button-slot-enhanced:hover:not(:disabled) {
+    transform: translateY(-8px) scale(1.08);
+    box-shadow: 0 12px 35px rgba(40, 167, 69, 0.6);
+}
+
+.spin-button-slot-enhanced:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ========== Result Banner Enhanced ========== */
+.result-banner-slot-enhanced {
+    margin-top: 25px;
+    font-size: 22px;
+    font-weight: 700;
+    padding: 20px 30px;
+    border-radius: 16px;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeInUp 0.6s ease-out;
+    position: relative;
+    overflow: hidden;
+}
+
+.result-banner-slot-enhanced::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: shimmer 2s infinite;
+}
+
+.result-banner-slot-enhanced.win {
+    color: #00ff00;
+    background: rgba(40, 167, 69, 0.3);
+    border: 2px solid #28a745;
+    box-shadow: 0 0 30px rgba(40, 167, 69, 0.5);
+    animation: fadeInUp 0.6s ease-out, glow 2s ease-in-out infinite;
+}
+
+.result-banner-slot-enhanced.lose {
+    color: #ff6b6b;
+    background: rgba(220, 53, 69, 0.3);
+    border: 2px solid #dc3545;
+    animation: fadeInUp 0.6s ease-out, shake 0.5s ease;
+}
+
+@keyframes glow {
+    0%, 100% { box-shadow: 0 0 30px rgba(40, 167, 69, 0.5); }
+    50% { box-shadow: 0 0 50px rgba(40, 167, 69, 0.8); }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+}
+
+/* ========== Payout Table ========== */
+.payout-table-enhanced {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 25px;
+    margin: 25px 0;
+    border: 2px solid rgba(102, 126, 234, 0.15);
+}
+
+.payout-title-enhanced {
+    font-size: 20px;
+    font-weight: 800;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.payout-grid-enhanced {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.payout-item-enhanced {
+    background: rgba(102, 126, 234, 0.1);
+    padding: 15px;
+    border-radius: 12px;
+    text-align: center;
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    transition: all 0.3s ease;
+}
+
+.payout-item-enhanced:hover {
+    transform: translateY(-5px);
+    background: rgba(102, 126, 234, 0.2);
+    border-color: rgba(102, 126, 234, 0.4);
+}
+
+.payout-symbols-enhanced {
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
+.payout-multiplier-enhanced {
+    font-size: 18px;
+    font-weight: 700;
+    color: #667eea;
+}
+
+/* ========== Animations ========== */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes float {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    33% { transform: translate(30px, -30px) rotate(120deg); }
+    66% { transform: translate(-20px, 20px) rotate(240deg); }
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 768px) {
+    .game-box-enhanced {
+        padding: 25px;
+    }
+    
+    .game-header-slot-enhanced {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .reels-enhanced {
+        gap: 15px;
+    }
+    
+    .reel-enhanced {
+        min-width: 100px;
+        min-height: 100px;
+        font-size: 80px;
+        padding: 20px;
+    }
+    
+    .spin-button-slot-enhanced {
+        padding: 18px 40px;
+        font-size: 20px;
+    }
+    
+    .payout-grid-enhanced {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+

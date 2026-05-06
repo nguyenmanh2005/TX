@@ -1,0 +1,361 @@
+/* ============================================
+   GAME COIN FLIP - CSS Nâng Cấp UI/UX
+   ============================================ */
+
+.coinflip-container-enhanced {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+.game-box-coinflip-enhanced {
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 40px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    border: 2px solid rgba(241, 196, 15, 0.2);
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.game-header-coinflip-enhanced {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid rgba(241, 196, 15, 0.1);
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.game-title-coinflip-enhanced {
+    font-size: 36px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #f1c40f 0%, #f39c12 50%, #e67e22 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0;
+}
+
+.balance-coinflip-enhanced {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px 25px;
+    background: linear-gradient(135deg, rgba(46, 204, 113, 0.15), rgba(39, 174, 96, 0.15));
+    border: 2px solid rgba(46, 204, 113, 0.3);
+    border-radius: 16px;
+    font-weight: 700;
+    font-size: 20px;
+    box-shadow: 0 4px 15px rgba(46, 204, 113, 0.2);
+}
+
+/* Coin Display */
+.coin-display-enhanced {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 40px 0;
+    perspective: 1000px;
+}
+
+.coin-enhanced {
+    width: 200px;
+    height: 200px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.6s;
+}
+
+.coin-enhanced.flipping {
+    animation: coinFlip 1s ease-in-out;
+}
+
+@keyframes coinFlip {
+    0% { transform: rotateY(0deg); }
+    50% { transform: rotateY(900deg) scale(1.2); }
+    100% { transform: rotateY(1800deg); }
+}
+
+.coin-face-enhanced {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 80px;
+    font-weight: 800;
+    backface-visibility: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    border: 8px solid #f1c40f;
+}
+
+.coin-face-enhanced.front {
+    background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%);
+    transform: rotateY(0deg);
+}
+
+.coin-face-enhanced.back {
+    background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+    transform: rotateY(180deg);
+}
+
+.coin-enhanced.show-back .coin-face-enhanced.front {
+    transform: rotateY(180deg);
+}
+
+.coin-enhanced.show-back .coin-face-enhanced.back {
+    transform: rotateY(0deg);
+}
+
+/* Choice Buttons */
+.choice-buttons-enhanced {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin: 40px 0;
+    flex-wrap: wrap;
+}
+
+.choice-btn-enhanced {
+    flex: 1;
+    min-width: 200px;
+    max-width: 300px;
+    padding: 25px;
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(10px);
+    border: 3px solid rgba(241, 196, 15, 0.3);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.choice-btn-enhanced::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(241, 196, 15, 0.2);
+    transform: translate(-50%, -50%);
+    transition: width 0.4s, height 0.4s;
+}
+
+.choice-btn-enhanced:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.choice-btn-enhanced:hover {
+    transform: translateY(-8px) scale(1.05);
+    border-color: #f1c40f;
+    box-shadow: 0 12px 30px rgba(241, 196, 15, 0.4);
+}
+
+.choice-btn-enhanced.selected {
+    background: linear-gradient(135deg, rgba(241, 196, 15, 0.2), rgba(243, 156, 18, 0.2));
+    border-color: #f1c40f;
+    box-shadow: 0 0 30px rgba(241, 196, 15, 0.6);
+    transform: scale(1.1);
+}
+
+.choice-icon-enhanced {
+    font-size: 64px;
+    margin-bottom: 15px;
+    display: block;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+.choice-label-enhanced {
+    font-size: 24px;
+    font-weight: 800;
+    color: #2c3e50;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.choice-multiplier-enhanced {
+    font-size: 16px;
+    color: #7f8c8d;
+    margin-top: 8px;
+}
+
+/* Controls */
+.game-controls-coinflip-enhanced {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 30px;
+    margin: 25px 0;
+    border: 2px solid rgba(241, 196, 15, 0.15);
+}
+
+.control-group-coinflip-enhanced {
+    margin-bottom: 25px;
+}
+
+.control-label-coinflip-enhanced {
+    display: block;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 12px;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.control-input-coinflip-enhanced {
+    width: 100%;
+    padding: 16px 20px;
+    border: 2px solid rgba(241, 196, 15, 0.2);
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.control-input-coinflip-enhanced:focus {
+    outline: none;
+    border-color: #f1c40f;
+    box-shadow: 0 0 0 4px rgba(241, 196, 15, 0.15);
+    transform: translateY(-2px);
+}
+
+.bet-quick-amounts-coinflip-enhanced {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+}
+
+.bet-quick-btn-coinflip-enhanced {
+    padding: 12px 24px;
+    background: linear-gradient(135deg, rgba(241, 196, 15, 0.1), rgba(243, 156, 18, 0.1));
+    border: 2px solid rgba(241, 196, 15, 0.3);
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #f39c12;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.bet-quick-btn-coinflip-enhanced:hover {
+    background: linear-gradient(135deg, rgba(241, 196, 15, 0.2), rgba(243, 156, 18, 0.2));
+    border-color: #f1c40f;
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 4px 12px rgba(241, 196, 15, 0.3);
+}
+
+.bet-quick-btn-coinflip-enhanced.active {
+    background: linear-gradient(135deg, #f1c40f, #f39c12);
+    color: white;
+}
+
+.flip-button-coinflip-enhanced {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 20px 50px;
+    font-size: 24px;
+    font-weight: 800;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%);
+    color: white;
+    box-shadow: 0 8px 25px rgba(241, 196, 15, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 20px 0;
+    width: 100%;
+}
+
+.flip-button-coinflip-enhanced:hover:not(:disabled) {
+    transform: translateY(-8px) scale(1.05);
+    box-shadow: 0 12px 35px rgba(241, 196, 15, 0.6);
+}
+
+.flip-button-coinflip-enhanced:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.result-banner-coinflip-enhanced {
+    margin: 25px 0;
+    font-size: 22px;
+    font-weight: 700;
+    padding: 20px 30px;
+    border-radius: 16px;
+    text-align: center;
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.result-banner-coinflip-enhanced.win {
+    color: #00ff00;
+    background: rgba(40, 167, 69, 0.3);
+    border: 2px solid #28a745;
+    box-shadow: 0 0 30px rgba(40, 167, 69, 0.5);
+}
+
+.result-banner-coinflip-enhanced.lose {
+    color: #ff6b6b;
+    background: rgba(220, 53, 69, 0.3);
+    border: 2px solid #dc3545;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .game-box-coinflip-enhanced {
+        padding: 25px;
+    }
+    
+    .game-header-coinflip-enhanced {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .coin-enhanced {
+        width: 150px;
+        height: 150px;
+    }
+    
+    .coin-face-enhanced {
+        font-size: 60px;
+    }
+    
+    .choice-buttons-enhanced {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .choice-btn-enhanced {
+        max-width: 100%;
+    }
+}
+

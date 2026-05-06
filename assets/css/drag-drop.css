@@ -1,0 +1,62 @@
+/* Drag & Drop Styles */
+[data-drop-zone] {
+    border: 2px dashed rgba(102, 126, 234, 0.3);
+    border-radius: var(--border-radius-lg);
+    padding: 40px;
+    text-align: center;
+    transition: all 0.3s ease;
+    background: rgba(102, 126, 234, 0.05);
+    cursor: pointer;
+}
+
+[data-drop-zone]:hover {
+    border-color: var(--primary-color);
+    background: rgba(102, 126, 234, 0.1);
+}
+
+[data-drop-zone].drag-over {
+    border-color: var(--primary-color);
+    background: rgba(102, 126, 234, 0.15);
+    transform: scale(1.02);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+}
+
+[data-draggable] {
+    cursor: move;
+    transition: all 0.2s ease;
+}
+
+[data-draggable].dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+}
+
+.uploaded-file {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.98);
+    border-radius: var(--border-radius);
+    border: 2px solid rgba(102, 126, 234, 0.2);
+}
+
+.file-icon {
+    font-size: 32px;
+}
+
+.file-info {
+    flex: 1;
+}
+
+.file-name {
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 4px;
+}
+
+.file-size {
+    font-size: 12px;
+    color: var(--text-light);
+}
+
