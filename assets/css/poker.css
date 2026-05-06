@@ -1,0 +1,307 @@
+:root {
+    --primary-color: #2a9d8f;
+    --secondary-color: #264653;
+    --accent-color: #e9c46a;
+    --danger-color: #e76f51;
+    --felt-color: radial-gradient(circle, #1a4d2e 0%, #0d2b1a 100%);
+    --card-width: 80px;
+    --card-height: 112px;
+    --glass: rgba(255, 255, 255, 0.1);
+    --glass-border: rgba(255, 255, 255, 0.2);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', 'Outfit', sans-serif;
+    background: #0a0a0a;
+    color: white;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+}
+
+#game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.table-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #121212 0%, #1a1a1a 100%);
+    z-index: -2;
+}
+
+/* Poker Table */
+.poker-table {
+    position: relative;
+    width: 90%;
+    max-width: 1000px;
+    height: 60%;
+    max-height: 600px;
+    background: var(--felt-color);
+    border-radius: 200px;
+    border: 15px solid #332111;
+    box-shadow: 0 0 50px rgba(0,0,0,0.8), inset 0 0 100px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 40px;
+}
+
+.felt {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 185px;
+    pointer-events: none;
+    border: 2px solid rgba(255,255,255,0.05);
+}
+
+/* Player Areas */
+.player-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    position: relative;
+    z-index: 10;
+}
+
+.ai-area { top: -20px; }
+.player-own-area { bottom: -20px; }
+
+.player-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--glass);
+    backdrop-filter: blur(10px);
+    padding: 8px 16px;
+    border-radius: 50px;
+    border: 1px solid var(--glass-border);
+}
+
+.avatar {
+    font-size: 24px;
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.details {
+    display: flex;
+    flex-direction: column;
+}
+
+.details .name { font-weight: 800; font-size: 0.9rem; color: #ccc; }
+.details .chips { font-weight: 800; color: var(--accent-color); font-size: 1.1rem; }
+
+/* Hand & Cards */
+.hand {
+    display: flex;
+    gap: 10px;
+    perspective: 1000px;
+}
+
+.card {
+    width: var(--card-width);
+    height: var(--card-height);
+    background: white;
+    border-radius: 8px;
+    position: relative;
+    transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    transform-style: preserve-3d;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+.card.back {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    border: 3px solid white;
+}
+
+/* Card Content Styling */
+.card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    color: black;
+    background: white;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+.card-face.red { color: #d63031; }
+.card-face.black { color: #2d3436; }
+
+.card-value-top { font-size: 1.2rem; align-self: flex-start; }
+.card-value-bottom { font-size: 1.2rem; align-self: flex-end; transform: rotate(180deg); }
+.card-suit-center { font-size: 2.2rem; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+.card.hidden .card-face { display: none; }
+.card.hidden { background: linear-gradient(135deg, #2c3e50 0%, #000000 100%); border: 3px solid #555; }
+
+/* Community Cards */
+.community-cards {
+    display: flex;
+    gap: 15px;
+    height: var(--card-height);
+    border: 2px dashed rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 10px;
+    min-width: 480px;
+    align-items: center;
+    justify-content: center;
+}
+
+/* HUD & Pot */
+.hud {
+    position: absolute;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+}
+
+.pot-container {
+    background: rgba(0, 0, 0, 0.6);
+    padding: 10px 30px;
+    border-radius: 30px;
+    border: 2px solid var(--accent-color);
+    text-align: center;
+}
+
+.pot-label { font-size: 0.8rem; color: #aaa; letter-spacing: 2px; }
+#pot-amount { display: block; font-size: 1.8rem; font-weight: 900; color: var(--accent-color); }
+
+/* Controls Overlay */
+.controls-overlay {
+    width: 90%;
+    max-width: 1000px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 50px;
+    padding: 20px;
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    border-radius: 30px;
+    border: 1px solid var(--glass-border);
+}
+
+.game-log {
+    flex: 1;
+    height: 100px;
+    overflow-y: auto;
+    padding: 10px;
+    font-size: 0.85rem;
+    color: #bbb;
+}
+
+.log-entry { margin-bottom: 5px; border-left: 2px solid var(--primary-color); padding-left: 8px; }
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    font-family: 'Outfit';
+    letter-spacing: 1px;
+}
+
+.btn:active { transform: scale(0.95); }
+.btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.btn-danger { background: var(--danger-color); color: white; }
+.btn-secondary { background: #636e72; color: white; }
+.btn-primary { background: var(--primary-color); color: white; }
+.btn-success { background: #27ae60; color: white; }
+.btn-accent { background: var(--accent-color); color: #222; }
+
+/* Action Bubbles */
+.action-bubble {
+    position: absolute;
+    background: white;
+    color: #222;
+    padding: 6px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.8rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.player-own-area .action-bubble { top: -40px; }
+.ai-area .action-bubble { bottom: -40px; }
+.action-bubble.show { opacity: 1; }
+
+/* Modal Overlay */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    transition: opacity 0.4s;
+}
+
+.hidden { display: none; opacity: 0; }
+
+.result-modal {
+    background: #1e272e;
+    padding: 40px;
+    border-radius: 30px;
+    text-align: center;
+    border: 2px solid var(--primary-color);
+    max-width: 400px;
+}
+
+.result-modal h1 { font-size: 3rem; margin-bottom: 10px; }
+.result-modal p { color: #aaa; margin-bottom: 30px; font-size: 1.2rem; }
+
+/* Responsive adjustments */
+@media (max-width: 800px) {
+    .poker-table { width: 95%; height: 50%; }
+    .community-cards { min-width: 300px; transform: scale(0.8); }
+    .controls-overlay { flex-direction: column; height: auto; gap: 20px; }
+    .card { --card-width: 60px; --card-height: 84px; }
+}

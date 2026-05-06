@@ -1,0 +1,391 @@
+<?php
+session_start();
+
+if (!isset($_SESSION['Iduser'])) {
+    header("Location: login.php");
+    exit();
+}
+
+require '../db_connect.php';
+require_once '../load_theme.php';
+
+$userId = $_SESSION['Iduser'];
+$sql = "SELECT Money, Name FROM users WHERE Iduser = ?";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+
+$soDu = $user['Money'];
+$tenNguoiChoi = $user['Name'];
+
+// --- AJAX HANDLER ---
+if (isset($_GET['action']) && $_GET['action'] === 'rut_tham') {
+    header('Content-Type: application/json');
+    $cost = 50000;
+
+    if ($soDu < $cost) {
+        echo json_encode(['success' => false, 'message' => '⚠️ Số Gtlm không đủ! Cần ' . number_format($cost) . ' gtlm.']);
+        exit;
+    }
+
+    $bags = [
+        ["label" => "Trượt!", "reward" => 0, "chance" => 50],
+        ["label" => "10.000 gtlm", "reward" => 10000, "chance" => 20],
+        ["label" => "50.000 gtlm", "reward" => 50000, "chance" => 12],
+        ["label" => "100.000 gtlm", "reward" => 100000, "chance" => 12],
+        ["label" => "200.000 gtlm", "reward" => 270000, "chance" => 3],
+        ["label" => "500.000 gtlm", "reward" => 500000, "chance" => 2],
+        ["label" => "1.000.000 gtlm", "reward" => 1000000, "chance" => 1],
+    ];
+
+    $rand = mt_rand(1, 100);
+    $sum = 0;
+    $finalBag = $bags[0];
+    foreach ($bags as $bag) {
+        $sum += $bag['chance'];
+        if ($rand <= $sum) {
+            $finalBag = $bag;
+            break;
+        }
+    }
+
+    $rewardAmount = $finalBag['reward'];
+    $newBalance = $soDu - $cost + $rewardAmount;
+
+    $conn->query("UPDATE users SET Money = $newBalance WHERE Iduser = $userId");
+
+    if (file_exists('../game_history_helper.php')) {
+        require_once '../game_history_helper.php';
+        logGameHistoryWithAll($conn, $userId, 'Rút Thăm', $cost, ($rewardAmount > 0 ? $rewardAmount : 0), $rewardAmount > 0);
+    }
+
+    echo json_encode([
+        'success' => true,
+        'rewardLabel' => $finalBag['label'],
+        'rewardAmount' => $rewardAmount,
+        'newBalance' => number_format($newBalance) . ' gtlm',
+        'message' => $rewardAmount > 0 ? "🎉 CHÚC MỪNG! Bạn nhận được " . $finalBag['label'] . "!" : "😢 Rất tiếc, túi này không có gì!"
+    ]);
+    exit;
+}
+?>
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Lucky Draw Premium - Săn Kho Báu</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/game-ui-enhancements.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Poppins:wght@400;600;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --gold: #ffd700;
+            --emerald: #27ae60;
+            --dark-bg: #072a1a;
+        }
+
+        body {
+            margin: 0;
+            cursor: url('../img/chuot.png'), auto !important;
+            font-family: 'Poppins', sans-serif;
+            background:
+                <?= $bgGradientCSS ?>
+            ;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        #threejs-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .header-bar {
+            width: 100%;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+            box-sizing: border-box;
+        }
+
+        .logo {
+            font-family: 'Cinzel', serif;
+            font-size: 26px;
+            color: var(--gold);
+            letter-spacing: 4px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+        }
+
+        .token-val {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 8px 25px;
+            border-radius: 30px;
+            border: 1px solid var(--gold);
+            color: var(--gold);
+            font-weight: 800;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.1);
+        }
+
+        .game-zone {
+            margin-top: 50px;
+            text-align: center;
+            max-width: 1000px;
+            width: 100%;
+            padding: 0 20px;
+        }
+
+        .cost-tag {
+            font-size: 16px;
+            color: #aaa;
+            margin-bottom: 30px;
+            letter-spacing: 2px;
+        }
+
+        .cost-tag b {
+            color: var(--gold);
+        }
+
+        .bags-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin: 40px 0;
+        }
+
+        .bag-box {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 30px;
+            padding: 40px;
+            cursor: pointer;
+            transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .bag-box:hover {
+            transform: translateY(-15px) scale(1.05);
+            border-color: var(--gold);
+            background: rgba(255, 215, 0, 0.1);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .bag-icon {
+            font-size: 70px;
+            margin-bottom: 15px;
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.3));
+            transition: 0.3s;
+        }
+
+        .bag-label {
+            font-size: 14px;
+            font-weight: 800;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .bag-box.opening .bag-icon {
+            animation: shake 0.5s infinite;
+        }
+
+        @keyframes shake {
+            0% {
+                transform: rotate(0);
+            }
+
+            25% {
+                transform: rotate(10deg);
+            }
+
+            50% {
+                transform: rotate(0);
+            }
+
+            75% {
+                transform: rotate(-10deg);
+            }
+
+            100% {
+                transform: rotate(0);
+            }
+        }
+
+        .status-marquee {
+            position: fixed;
+            bottom: 30px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--gold);
+            color: var(--gold);
+            padding: 10px 40px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 14px;
+            letter-spacing: 1px;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
+        }
+
+        .btn-home {
+            color: rgba(255, 255, 255, 0.4);
+            text-decoration: none;
+            font-size: 14px;
+            margin-top: 40px;
+            display: inline-block;
+            transition: 0.3s;
+        }
+
+        .btn-home:hover {
+            color: var(--gold);
+        }
+    </style>
+</head>
+
+<body>
+
+
+    <header class="header-bar">
+        <div class="logo">LUCKY DRAW PREMIUM</div>
+        <div class="token-val">💰 <span id="balance-val"><?= number_format($soDu) ?> gtlm</span></div>
+        <div style="font-size: 13px; color: #666;">PLAYER: <b><?= htmlspecialchars($tenNguoiChoi) ?></b></div>
+    </header>
+
+    <div class="game-zone">
+        <div class="cost-tag">CHI PHÍ MỖI LẦN MỞ: <b>50.000 gtlm</b></div>
+
+        <div class="bags-grid" id="bags-container">
+            <?php for ($i = 1; $i <= 6; $i++): ?>
+                <div class="bag-box" onclick="drawBag(this, <?= $i ?>)">
+                    <div class="bag-icon">🎁</div>
+                    <div class="bag-label">Túi số <?= $i ?></div>
+                </div>
+            <?php endfor; ?>
+        </div>
+
+        <a href="../index.php" class="btn-home">🏠 QUAY LẠI SẢNH CHỜ</a>
+    </div>
+
+    <div class="status-marquee" id="status-msg">CHỌN MỘT TÚI QUÀ BẤT KỲ ĐỂ THỬ VẬN MAY CỦA BẠN!</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        (function () {
+            window.themeConfig = { particleCount: <?= $particleCount ?>, particleSize: <?= $particleSize ?>, particleColor: '<?= $particleColor ?>', particleOpacity: <?= $particleOpacity ?>, shapeCount: <?= $shapeCount ?>, shapeColors: <?= json_encode($shapeColors) ?>, shapeOpacity: <?= $shapeOpacity ?>, bgGradient: <?= json_encode($bgGradient) ?> };
+            const script = document.createElement('script'); script.src = '../threejs-background.js'; document.head.appendChild(script);
+        })();
+
+        let isLocked = false;
+
+        async function drawBag(box, num) {
+            if (isLocked) return;
+            isLocked = true;
+
+            const icon = box.querySelector('.bag-icon');
+            const status = document.getElementById('status-msg');
+
+            box.classList.add('opening');
+            status.textContent = `ĐANG KIỂM TRA TÚI SỐ ${num}... CHỜ CHÚT NHÉ!`;
+
+            try {
+                const res = await fetch('ruttham.php?action=rut_tham');
+                const data = await res.json();
+
+                if (data.success) {
+                    setTimeout(() => {
+                        box.classList.remove('opening');
+
+                        if (data.rewardAmount > 0) {
+                            icon.textContent = "💰";
+                            if (typeof confetti === 'function') {
+                                confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 }, colors: ['#ffd700', '#ffffff'] });
+                            }
+                            Swal.fire({ title: '🎉 CHIẾN THẮNG!', text: data.message, icon: 'success', confirmButtonColor: '#27ae60' });
+                        } else {
+                            icon.textContent = "💨";
+                            Swal.fire({ title: 'Rất tiếc', text: data.message, icon: 'error', confirmButtonColor: '#e74c3c' });
+                        }
+
+                        document.getElementById('balance-val').textContent = data.newBalance;
+                        status.textContent = data.message;
+
+                        // Reset túi sau 3 giây
+                        setTimeout(() => {
+                            icon.textContent = "🎁";
+                            isLocked = false;
+                            status.textContent = 'CHỌN MỘT TÚI QUÀ BẤT KỲ ĐỂ THỬ VẬN MAY CỦA BẠN!';
+                        }, 3000);
+
+                    }, 2000);
+                } else {
+                    Swal.fire('Lỗi', data.message, 'error');
+                    box.classList.remove('opening');
+                    isLocked = false;
+                    status.textContent = 'CHỌN MẢNG CƯỢC KHÁC HOẶC NẠP THÊM VÀNG.';
+                }
+            } catch (e) {
+                console.error(e);
+                box.classList.remove('opening');
+                isLocked = false;
+            }
+        }
+    </script>
+
+
+
+
+
+
+
+
+
+
+
+    <!-- Premium Effects System -->
+    <canvas id="threejs-background"></canvas>
+    <script>
+        (function () {
+            window.themeConfig = {
+                particleCount: <?= $particleCount ?? 800 ?>,
+                particleSize: <?= $particleSize ?? 0.05 ?>,
+                particleColor: '<?= $particleColor ?? "#ffffff" ?>',
+                particleOpacity: <?= $particleOpacity ?? 0.6 ?>,
+                shapeCount: <?= $shapeCount ?? 10 ?>,
+                shapeColors: <?= json_encode($shapeColors ?? ["#667eea", "#764ba2", "#4facfe", "#00f2fe"]) ?>,
+                shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>,
+                bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>
+            };
+            const prefix = window.location.pathname.includes('/games/') ? '../' : '';
+            const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
+
+            scripts.forEach(src => {
+                const s = document.createElement('script');
+                s.src = prefix + src;
+                s.async = false;
+                document.head.appendChild(s);
+            });
+        })();
+    </script>
+
+</body>
+
+</html>

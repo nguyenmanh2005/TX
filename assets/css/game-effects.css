@@ -1,0 +1,83 @@
+/* Premium Game Effects & Cash Styles */
+.balance-pill, .game-balance-enhanced, .balance-display {
+    position: relative;
+    background: rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(15px) !important;
+    -webkit-backdrop-filter: blur(15px) !important;
+    border: 1px solid rgba(255, 215, 0, 0.3) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 0 15px rgba(255, 215, 0, 0.1) !important;
+    border-radius: 50px !important;
+    padding: 10px 25px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+
+.balance-pill:hover, .game-balance-enhanced:hover, .balance-display:hover {
+    transform: translateY(-2px) scale(1.02);
+    border-color: rgba(255, 215, 0, 0.6) !important;
+    box-shadow: 0 12px 40px rgba(255, 215, 0, 0.2), inset 0 0 20px rgba(255, 215, 0, 0.2) !important;
+}
+
+.balance-value {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    color: #f1c40f !important;
+    text-shadow: 0 0 10px rgba(241, 196, 15, 0.5) !important;
+    letter-spacing: 0.5px;
+}
+
+.balance-icon {
+    font-size: 1.2em;
+    filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.5));
+    animation: coinRotate 3s linear infinite;
+}
+
+@keyframes coinRotate {
+    0% { transform: rotateY(0deg); }
+    100% { transform: rotateY(360deg); }
+}
+
+/* Floating Text Enhancements */
+.premium-win-text {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 900;
+    font-size: 4rem;
+    background: linear-gradient(to bottom, #fff 20%, #f1c40f 50%, #d35400 80%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 20px rgba(241, 196, 15, 0.8));
+    animation: winPop 1.5s cubic-bezier(0.17, 0.89, 0.32, 1.49) forwards;
+}
+
+@keyframes winPop {
+    0% { transform: scale(0) rotate(-20deg); opacity: 0; }
+    30% { transform: scale(1.2) rotate(10deg); opacity: 1; }
+    50% { transform: scale(1) rotate(0deg); }
+    100% { transform: translateY(-150px) scale(0.8); opacity: 0; }
+}
+
+.glitter-effect {
+    position: absolute;
+    pointer-events: none;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 0 10px white;
+    z-index: 1000;
+}
+
+.result-win {
+    color: #ffd700;
+    text-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+    animation: winPulse 1s ease-in-out infinite;
+}
+
+.result-lose {
+    color: #ff4b2b;
+    filter: grayscale(0.5);
+}
+
+.shake-on-lose {
+    animation: loseShake 0.5s ease;
+}

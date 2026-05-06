@@ -1,0 +1,4 @@
+ErrorDocument 404 /1/Shared/404/404_GTLM_page.php
+
+Options -Indexes
+RewriteEngine On

@@ -1,0 +1,10 @@
+# Ignore large files and logs
+123.zip
+php_errors.log
+uploads/
+*.tmp
+*.log
+.vscode/
+.idea/
+node_modules/
+vendor/

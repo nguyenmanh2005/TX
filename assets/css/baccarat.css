@@ -1,0 +1,439 @@
+:root {
+    --baccarat-green: #0a3d2e;
+    --baccarat-gold: #d4af37;
+    --player-blue: #2196f3;
+    --banker-red: #f44336;
+    --tie-green: #4caf50;
+    --glass-bg: rgba(0, 0, 0, 0.6);
+}
+
+body.baccarat-theme {
+    background: #050505;
+    color: white;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+.game-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+.game-header {
+    background: linear-gradient(to bottom, #1a1a1a, #000);
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--baccarat-gold);
+    z-index: 100;
+}
+
+.back-btn {
+    color: var(--baccarat-gold);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: transform 0.2s;
+}
+
+.back-btn:hover {
+    transform: translateX(-5px);
+}
+
+.game-info h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    background: linear-gradient(45deg, #fff, var(--baccarat-gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.balance-box {
+    font-size: 1.1rem;
+    color: #ccc;
+}
+
+.balance-box strong {
+    color: var(--baccarat-gold);
+}
+
+/* World & Canvas */
+.baccarat-world {
+    flex: 1;
+    position: relative;
+    background: radial-gradient(circle at center, #0a4d3c 0%, #051a14 100%);
+}
+
+#threejs-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* UI Overlay */
+.baccarat-ui {
+    position: relative;
+    z-index: 10;
+    height: 100%;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 40px;
+}
+
+.baccarat-ui * {
+    pointer-events: auto;
+}
+
+/* Card Zones */
+.cards-layout {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 50px;
+}
+
+.card-zone {
+    text-align: center;
+    width: 250px;
+    position: relative;
+}
+
+.card-zone h3 {
+    font-size: 1.2rem;
+    letter-spacing: 3px;
+    margin-bottom: 20px;
+}
+
+.player-zone h3 { color: var(--player-blue); }
+.banker-zone h3 { color: var(--banker-red); }
+
+.score-badge {
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--baccarat-gold);
+    color: black;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+}
+
+.cards-row {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    min-height: 140px;
+}
+
+/* Betting Board */
+.betting-board {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-bottom: 100px;
+}
+
+.bet-option {
+    width: 220px;
+    height: 120px;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-radius: 60px 60px 10px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(5px);
+}
+
+.bet-option:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-5px);
+    border-color: var(--baccarat-gold);
+}
+
+.bet-option .label {
+    font-size: 1.4rem;
+    font-weight: 800;
+}
+
+.bet-option .payout {
+    font-size: 0.9rem;
+    opacity: 0.7;
+}
+
+.bet-option.player { color: var(--player-blue); }
+.bet-option.banker { color: var(--banker-red); }
+.bet-option.tie { color: var(--tie-green); }
+
+.bet-amount {
+    margin-top: 10px;
+    background: gold;
+    color: black;
+    padding: 2px 15px;
+    border-radius: 15px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    min-width: 40px;
+    text-align: center;
+    display: none;
+}
+
+/* Controls */
+.controls {
+    background: var(--glass-bg);
+    padding: 20px;
+    border-radius: 20px 20px 0 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chip-selector {
+    display: flex;
+    gap: 15px;
+}
+
+.chip {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 4px dashed white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: #444;
+    font-size: 0.9rem;
+}
+
+.chip:hover { transform: scale(1.1); }
+.chip.active {
+    transform: scale(1.2);
+    border-style: solid;
+    border-color: var(--baccarat-gold);
+    box-shadow: 0 0 15px var(--baccarat-gold);
+}
+
+.chip[data-value="1000"] { background: #3498db; }
+.chip[data-value="5000"] { background: #e67e22; }
+.chip[data-value="10000"] { background: #9b59b6; }
+.chip[data-value="50000"] { background: #2ecc71; }
+.chip[data-value="100000"] { background: #e74c3c; }
+
+.action-btns {
+    display: flex;
+    gap: 20px;
+}
+
+.btn {
+    padding: 12px 40px;
+    border-radius: 30px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-success {
+    background: linear-gradient(to bottom, #2ecc71, #27ae60);
+    border: none;
+    box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
+}
+
+.btn-success.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(1);
+}
+
+/* Roadmap */
+.baccarat-roadmap {
+    height: 150px;
+    background: white;
+    color: black;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+}
+
+.roadmap-header {
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+    opacity: 0.6;
+}
+
+.roadmap-grid {
+    flex: 1;
+    display: grid;
+    grid-template-rows: repeat(6, 1fr);
+    grid-auto-columns: 20px;
+    grid-auto-flow: column;
+    gap: 2px;
+}
+
+.bead {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: white;
+    font-weight: bold;
+}
+
+.bead-player { background: var(--player-blue); }
+.bead-banker { background: var(--banker-red); }
+.bead-tie { background: var(--tie-green); }
+
+/* Animations */
+@keyframes announce {
+    0% { transform: scale(0.5) translateY(50px); opacity: 0; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.result-announcement {
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 4rem;
+    font-weight: 900;
+    text-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+    z-index: 100;
+    display: none;
+}
+
+/* Help Button */
+.help-btn {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: transparent;
+    border: 2px solid var(--baccarat-gold);
+    color: var(--baccarat-gold);
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.help-btn:hover {
+    background: var(--baccarat-gold);
+    color: black;
+    box-shadow: 0 0 10px var(--baccarat-gold);
+}
+
+/* Guide Modal */
+.guide-modal {
+    display: none;
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+}
+
+.guide-content {
+    background: linear-gradient(135deg, #1a1a1a, #0a0a0a);
+    margin: 5% auto;
+    padding: 40px;
+    border: 2px solid var(--baccarat-gold);
+    width: 600px;
+    max-width: 90%;
+    border-radius: 20px;
+    position: relative;
+    color: #eee;
+    box-shadow: 0 0 30px rgba(212, 175, 55, 0.2);
+}
+
+.close-guide {
+    position: absolute;
+    right: 25px;
+    top: 15px;
+    color: #aaa;
+    font-size: 35px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.guide-content h2 {
+    color: var(--baccarat-gold);
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 1.6rem;
+    letter-spacing: 1px;
+}
+
+.guide-sections section {
+    margin-bottom: 25px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 15px;
+}
+
+.guide-sections h3 {
+    color: var(--baccarat-gold);
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+}
+
+.guide-sections ul, .guide-sections ol {
+    padding-left: 20px;
+}
+
+.guide-sections li {
+    margin-bottom: 8px;
+}
+
+.reward-table {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 15px;
+}
+
+.reward-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+}
+
+.reward-row span:last-child {
+    color: var(--baccarat-gold);
+    font-weight: bold;
+}
+
+.guide-footer {
+    text-align: center;
+    font-style: italic;
+    font-size: 0.9rem;
+    color: #888;
+    margin-top: 20px;
+}
