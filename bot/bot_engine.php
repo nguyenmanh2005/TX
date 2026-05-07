@@ -101,10 +101,18 @@ foreach ($activeBots as $email) {
         // --- MODULE 1: Maintenance & Tasks ---
         $todayStr = date('Y-m-d');
         if (($state['last_maintenance'] ?? '') !== $todayStr) {
-            echo "🔧 <span style='color:#fbbf24; font-size:13px;'>Bảo trì: Daily Check-in, Lucky Wheel, Quests...</span><br>";
+            echo "🔧 <span style='color:#fbbf24; font-size:13px;'>Bảo trì: Daily Tasks, Quests, Notifications...</span><br>";
             executeBotAction($baseUrl . "/api_daily_login.php", ['action' => 'claim_reward'], $cFile);
             executeBotAction($baseUrl . "/api_lucky_wheel.php", ['action' => 'spin'], $cFile);
             
+            // Chấp nhận tất cả lời mời kết bạn
+            $pendingFriends = executeBotAction($baseUrl . "/api_friends.php", ['action' => 'get_pending_requests'], $cFile);
+            if (isset($pendingFriends['requests'])) {
+                foreach($pendingFriends['requests'] as $req) {
+                    executeBotAction($baseUrl . "/api_friends.php", ['action' => 'accept_friend_request', 'friend_id' => $req['Iduser']], $cFile);
+                }
+            }
+
             // Nhận thưởng nhiệm vụ ngày
             $missionRes = executeBotAction($baseUrl . "/api_daily_missions.php", ['action' => 'get_missions'], $cFile);
             if (isset($missionRes['missions'])) {
@@ -141,38 +149,53 @@ foreach ($activeBots as $email) {
         }
 
         // --- MODULE 3: Social & Interaction ---
-        if (rand(1, 100) <= 70) {
-            // Mention bot khác
-            $otherBots = array_filter($botNameMap, function($info) use ($email) { return $info['name'] !== $email; });
-            if (!empty($otherBots)) {
-                $target = $otherBots[array_rand($otherBots)];
-                $msg = "@{$target['name']} $msg";
-                
-                // Thỉnh thoảng kết bạn
-                if (rand(1, 100) <= 10) {
-                    executeBotAction($baseUrl . "/api_friends.php", ['action' => 'send_friend_request', 'friend_id' => $target['id']], $cFile);
+        if (rand(1, 100) <= 75) {
+            $chatMessages = executeBotAction($baseUrl . "/chat.php?action=load", null, $cFile);
+            $isReplied = false;
+
+            // 1. Logic Phản hồi (Reply)
+            if (!empty($chatMessages) && is_array($chatMessages) && rand(1, 100) <= 40) {
+                $recent = array_slice($chatMessages, -10); // Lấy 10 tin mới nhất
+                foreach ($recent as $chat) {
+                    if ($chat['username'] !== $userName) { // Không trả lời chính mình
+                        $msg = "@{$chat['username']} " . $msg;
+                        $isReplied = true;
+                        break;
+                    }
+                }
+            }
+
+            // 2. Logic Mention ngẫu nhiên (nếu chưa reply ai)
+            if (!$isReplied) {
+                $otherBots = array_filter($botNameMap, function($otherEmail) use ($email) { 
+                    return $otherEmail !== $email; 
+                }, ARRAY_FILTER_USE_KEY);
+
+                if (!empty($otherBots)) {
+                    $target = $otherBots[array_rand($otherBots)];
+                    $msg = "@{$target['name']} $msg";
+                    if (rand(1, 100) <= 10) {
+                        executeBotAction($baseUrl . "/api_friends.php", ['action' => 'send_friend_request', 'friend_id' => $target['id']], $cFile);
+                    }
                 }
             }
             
-            // Tương tác Social Feed (Thả tim ngẫu nhiên)
-            $feedRes = executeBotAction($baseUrl . "/api_social_feed.php", ['action' => 'get_feed'], $cFile);
+            // 3. Tương tác Social Feed
+            $feedRes = executeBotAction($baseUrl . "/api_social_feed.php?action=get_feed", null, $cFile);
             if (isset($feedRes['data']) && !empty($feedRes['data'])) {
                 $randomPost = $feedRes['data'][array_rand($feedRes['data'])];
                 executeBotAction($baseUrl . "/api_social_feed.php", ['action' => 'toggle_like', 'feed_id' => $randomPost['id']], $cFile);
                 if (rand(1, 100) <= 20) {
-                    executeBotAction($baseUrl . "/api_social_feed.php", ['action' => 'add_comment', 'feed_id' => $randomPost['id'], 'comment_text' => 'Quá đỉnh! 🔥'], $cFile);
+                    executeBotAction($baseUrl . "/api_social_feed.php", ['action' => 'add_comment', 'feed_id' => $randomPost['id'], 'comment_text' => 'Bác này đỉnh thế!'], $cFile);
                 }
             }
 
-            // Đăng Feed & Chat
+            // 4. Đăng Feed & Chat
             executeBotAction($baseUrl . "/api_social_feed.php", ['action' => 'create_post', 'content' => $msg], $cFile);
-            if (rand(1, 100) <= 50) {
+            if (rand(1, 100) <= 60) {
                 executeBotAction($baseUrl . "/chat.php", ['message' => $msg], $cFile);
-                echo "💬 <span style='color:#38bdf8;'>Đã tương tác Social & Chat.</span><br>";
-                // Đảm bảo recent_messages tồn tại
-                if (!isset($state['recent_messages']) || !is_array($state['recent_messages'])) {
-                    $state['recent_messages'] = [];
-                }
+                echo "💬 <span style='color:#38bdf8;'>Đã " . ($isReplied ? "phản hồi" : "tương tác") . " Social & Chat.</span><br>";
+                if (!isset($state['recent_messages']) || !is_array($state['recent_messages'])) $state['recent_messages'] = [];
                 array_unshift($state['recent_messages'], $msg);
                 $state['recent_messages'] = array_slice($state['recent_messages'], 0, 5);
             }

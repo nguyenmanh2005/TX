@@ -15,5 +15,5 @@ echo ------------------------------------------------------
 
 echo ------------------------------------------------------
 echo Cycle Complete. Waiting 50 seconds for next wave...
-timeout /t 10 /nobreak > nul
+timeout /t 30 /nobreak > nul
 goto loop

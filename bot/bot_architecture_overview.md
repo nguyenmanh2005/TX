@@ -1,4 +1,4 @@
-# 🛡️ Hệ Thống Bot Army - Tài Liệu Tổng Quan (v15.8)
+# 🛡️ Hệ Thống Bot Army - Tài Liệu Tổng Quan (v16.2)
 
 Tài liệu này mô tả chi tiết cấu trúc, chức năng và các luồng hoạt động của quân đoàn Bot tự động trong hệ thống.
 
@@ -7,11 +7,11 @@ Tài liệu này mô tả chi tiết cấu trúc, chức năng và các luồng 
 ## 📂 Danh Sách Các File & Vai Trò
 
 ### 1. Nhân Nhân & Điều Khiển (Core Logic)
-*   **`bot_engine.php`**: ⚡ **Trái tim của hệ thống (v15.8).** 
+*   **`bot_engine.php`**: ⚡ **Trái tim của hệ thống (v16.2 Deep-Social).** 
     *   Thực hiện vòng lặp (cycle) cho từng bot.
-    *   Sử dụng cURL để giả lập hành động người dùng: Đăng nhập, Chơi game, Đăng bài Social, Chat Tổng.
-    *   **Tương tác Social**: Tự động chọn mục tiêu (Bot khác) để mention bằng `@` trong tin nhắn.
-    *   Tính toán tiền cược dựa trên % tài sản và tính cách.
+    *   Sử dụng cURL để giả lập hành động người dùng: Đăng nhập, Chơi game, Social Feed, Chat Tổng.
+    *   **Phản hồi thông minh (Reply)**: Bot đọc 10 tin nhắn mới nhất để trả lời trực tiếp người chơi khác.
+    *   **Tự động kết bạn**: Chấp nhận lời mời kết bạn và chủ động gửi lời mời mới.
 *   **`bot_brain.php`**: 🧠 **Bộ não quyết định.**
     *   Quản lý tính cách (Aggressive, Shy, Balanced, Random).
     *   Tạo dự đoán (Predictions) riêng biệt cho từng loại game.
@@ -43,14 +43,13 @@ Tài liệu này mô tả chi tiết cấu trúc, chức năng và các luồng 
 1.  **Khởi động**: Engine lấy danh sách Bot từ `config.php` và xáo trộn ngẫu nhiên.
 2.  **Đăng nhập**: Sử dụng cURL gửi request tới `login.php`, lưu Cookie vào thư mục `sessions/`.
 3.  **Phân tích trạng thái**: Đọc file `.state.json` để biết Mood và lịch sử thắng thua.
-4.  **Hành động Social**:
-    *   Nếu là Bot mới: Đăng bài chào sân trên Social Feed.
-    *   Nếu vừa thắng/thua: Đăng bài gáy hoặc than vãn.
-5.  **Chơi Game**:
-    *   Chọn ngẫu nhiên game (Xì Dách, Poker, Baccarat...).
-    *   `BotBrain` đưa ra dự đoán.
-    *   Đặt cược % theo tính cách (Aggressive cược nhiều hơn).
-6.  **Tương tác Chat**: Tỉ lệ 70% Bot sẽ nhảy vào Chat Tổng để bình luận về ván đấu.
+4.  **Bảo trì (Module 1)**: Nhận quà điểm danh, quay vòng quay, nhận thưởng nhiệm vụ, chấp nhận kết bạn và dọn dẹp thông báo.
+5.  **Chơi Game (Module 2)**: Chọn game ngẫu nhiên và đặt cược dựa trên tính cách.
+6.  **Tương tác Xã hội (Module 3)**:
+    *   Đọc Chat Thế giới để thực hiện **Phản hồi (Reply)**.
+    *   Nếu không có ai để reply, sẽ **Mention** đồng đội.
+    *   Thả tim và bình luận trên Social Feed.
+    *   Gửi tin nhắn chat và đăng bài feed.
 7.  **Lưu trữ**: Cập nhật lại file State và ghi Log vào thư mục `logs/`.
 
 ---
