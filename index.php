@@ -2590,6 +2590,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
             </div>
             <div class="dropdown-menu">
                 <a href="in4.php"><i class="fa-solid fa-user icon"></i> Hồ sơ</a>
+                <?php if (isset($user['Role']) && $user['Role'] == 1): ?>
+                    <a href="admin_analytics.php"><i class="fa-solid fa-chart-line icon"></i> Thống Kê Website</a>
+                    <a href="bot/index.php"><i class="fa-solid fa-robot icon"></i> Quản Lý Bot Army</a>
+                <?php endif; ?>
                 <a href="shop.php"><i class="fa-solid fa-store icon"></i> Cửa Hàng</a>
                 <a href="achievements.php"><i class="fa-solid fa-trophy icon"></i> Danh Hiệu</a>
                 <a href="select_title.php"><i class="fa-solid fa-crown icon"></i> Chọn Danh Hiệu</a>

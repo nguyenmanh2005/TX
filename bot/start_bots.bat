@@ -14,6 +14,6 @@ echo ------------------------------------------------------
 "C:\xampp\php\php.exe" bot_engine.php
 
 echo ------------------------------------------------------
-echo Cycle Complete. Waiting 30 seconds for next wave...
-timeout /t 30 /nobreak > nul
+echo Cycle Complete. Waiting 50 seconds for next wave...
+timeout /t 10 /nobreak > nul
 goto loop

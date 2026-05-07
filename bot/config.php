@@ -1,30 +1,23 @@
 <?php
 /**
- * Bot Army Configuration - Keep this secure
+ * 🛡️ Bot Army Configuration v3.0
+ * Dynamic loading from Database
  */
+require_once __DIR__ . '/../db_connect.php';
+
+// Tự động lấy danh sách bot từ DB
+$botEmails = [];
+$res = $conn->query("SELECT Email FROM users WHERE Email LIKE '%bot%' ORDER BY Iduser DESC");
+while($row = $res->fetch_assoc()) {
+    $botEmails[] = $row['Email'];
+}
 
 return [
-    'bot_password' => '12345678@@A', // Standard password for all bots
-    'bot_emails' => [
-        'bot01@gmail.com',
-        'bot02@gmail.com',
-        'bot03@gmail.com',
-        'bot04@gmail.com',
-        'bot05@gmail.com',
-        'bot06@gmail.com',
-        'bot07@gmail.com',
-        'bot08@gmail.com',
-        'bot09@gmail.com',
-        'bot10@gmail.com',
-        'bot11@gmail.com',
-        'bot12@gmail.com',
-        'bot13@gmail.com',
-        'bot14@gmail.com',
-        'bot15@gmail.com'
-    ],
+    'bot_password' => '12345678@@A',
+    'bot_emails' => $botEmails, // Luôn cập nhật mới nhất từ DB
     'settings' => [
-        'max_bots_per_cycle' => 8, // Balanced for stability
-        'session_lifetime' => 86400, // 24 hours
-        'timeout' => 600 // 10 minutes
+        'max_bots_per_cycle' => 25,
+        'session_lifetime' => 86400,
+        'timeout' => 600
     ]
 ];

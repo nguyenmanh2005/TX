@@ -1,45 +1,62 @@
 <?php
 /**
- * 🛡️ Ultimate Bot Engine v13.0 - The Boss Life
- * Full integration of User Dictionary: Trash talk, Greet, Beg, Reactions
+ * 🛡️ Omni-Bot Engine v16.1 - Total Web Access
+ * Coverage: Auth, Games, Daily Maintenance, Quests, Social Feed (Like/Comment), Friends, Notifications
  */
 
 // 0. Helpers
-function writeBotLog(string $email, string $action, string $details = "") {
+function writeBotLog(string $email, string $level, string $action, string $details = "") {
     $logDir = __DIR__ . '/logs/';
     if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
     $file = $logDir . date('Y-m-d') . '.log';
     $timestamp = date('H:i:s');
-    $logLine = "[$timestamp] [$email] $action" . ($details ? ": $details" : "") . PHP_EOL;
+    $logLine = "[$timestamp] [$level] [$email] $action" . ($details ? ": $details" : "") . PHP_EOL;
     @file_put_contents($file, $logLine, FILE_APPEND);
 }
 
-function updateSyncData(string $key, $value) {
-    $syncFile = __DIR__ . '/sessions/bot_sync.json';
-    $data = file_exists($syncFile) ? json_decode(file_get_contents($syncFile), true) : [];
-    $data[$key] = $value;
-    $data['last_update'] = time();
-    file_put_contents($syncFile, json_encode($data));
-}
-
-function getSyncData() {
-    $syncFile = __DIR__ . '/sessions/bot_sync.json';
-    return file_exists($syncFile) ? json_decode(file_get_contents($syncFile), true) : [];
+function recordEconomySnapshot(mysqli $conn) {
+    $historyFile = __DIR__ . '/sessions/economy_history.json';
+    $history = file_exists($historyFile) ? json_decode(file_get_contents($historyFile), true) : [];
+    $botRes = $conn->query("SELECT SUM(Money) as total FROM users WHERE Email LIKE '%bot%'")->fetch_assoc();
+    $totalBot = (float)($botRes['total'] ?? 0);
+    $humanRes = $conn->query("SELECT SUM(Money) as total FROM users WHERE Email NOT LIKE '%bot%'")->fetch_assoc();
+    $totalHuman = (float)($humanRes['total'] ?? 0);
+    $history[] = ['time' => date('H:i d/m'), 'bot' => $totalBot, 'human' => $totalHuman];
+    if (count($history) > 50) array_shift($history);
+    file_put_contents($historyFile, json_encode($history));
 }
 
 // 1. Load config & brain
-$config = require_once __DIR__ . '/config.php';
-require_once __DIR__ . '/../db_connect.php';
+require_once __DIR__ . '/../db_connect.php'; 
+$config = require __DIR__ . '/config.php';
 require_once __DIR__ . '/bot_brain.php';
 $brain = new BotBrain();
 
 $baseUrl = "http://localhost/1";
 $cookieDir = __DIR__ . '/sessions/';
 
+// Quét toàn bộ game khả dụng
+$gameFiles = glob(__DIR__ . '/../games/*.php');
+$availableGames = [];
+foreach ($gameFiles as $file) {
+    $name = basename($file, '.php');
+    if (!preg_match('/(process|helper|check|fix|sounds|img|gif|shared|videos|icons)/i', $name)) {
+        $availableGames[] = $name;
+    }
+}
+if (empty($availableGames)) $availableGames = ["Thiên Thần Ác Quỷ", "Xì Dách Royale", "Poker Texas"];
+
+// Lấy danh sách tên bot để tương tác Social
+$botNameMap = [];
+$nameRes = $conn->query("SELECT Iduser, Name, Email FROM users WHERE Email LIKE '%bot%'");
+while($row = $nameRes->fetch_assoc()) {
+    $botNameMap[$row['Email']] = ['id' => $row['Iduser'], 'name' => $row['Name']];
+}
+
 function executeBotAction(string $url, ?array $postData = null, string $cookieFile) {
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (BotArmy/13.0; BossLife)');
+    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (BotArmy/16.1; OmniAccess)');
     curl_setopt($ch, CURLOPT_COOKIEJAR, $cookieFile);
     curl_setopt($ch, CURLOPT_COOKIEFILE, $cookieFile);
     curl_setopt($ch, CURLOPT_TIMEOUT, 10);
@@ -54,79 +71,120 @@ function executeBotAction(string $url, ?array $postData = null, string $cookieFi
     return json_decode($response ?? '', true);
 }
 
-// ── V13.0 BOSS LIFE MODULES ──
-
-function handleBossGreetings(string $baseUrl, string $cFile, int $userId, BotBrain $brain) {
-    if (rand(1, 100) > 85) {
-        $msg = $brain->generateMessage($userId, 'greet');
-        executeBotAction($baseUrl . "/chat.php", ['message' => $msg], $cFile);
-        echo "- 📢 Boss Greeting sent: \"$msg\"<br>";
-    }
-}
-
-function handleTrashTalk(string $baseUrl, string $cFile, int $userId, BotBrain $brain, mysqli $conn) {
-    if (rand(1, 100) > 90) {
-        $msg = $brain->generateMessage($userId, 'trash_talk');
-        executeBotAction($baseUrl . "/chat.php", ['message' => $msg], $cFile);
-        echo "- 🤬 Boss Trash Talk: \"$msg\"<br>";
-    }
-}
-
-function handleBegging(string $baseUrl, string $cFile, int $userId, float $money, BotBrain $brain) {
-    if ($money < 50000 && rand(1, 100) > 70) {
-        $msg = $brain->generateMessage($userId, 'beg');
-        executeBotAction($baseUrl . "/chat.php", ['message' => $msg], $cFile);
-        echo "- 🥺 Boss is 'borrowing' (Begging): \"$msg\"<br>";
-    }
-}
-
 // ── MAIN LOOP ──
-echo "<h1>🛡️ Bot Army Engine v13.0 (The Boss Life)</h1>";
-$syncData = getSyncData();
+echo "<body style='background:#020617; color:#f8fafc; font-family:sans-serif; padding:20px;'>";
+echo "<h1 style='color:#818cf8;'>🛡️ Bot Army Engine v16.1 (Omni-Access)</h1>";
 
-foreach (array_slice($config['bot_emails'], 0, $config['settings']['max_bots_per_cycle']) as $email) {
+$allBots = $config['bot_emails'];
+shuffle($allBots);
+$activeBots = array_slice($allBots, 0, $config['settings']['max_bots_per_cycle']);
+
+$updateMoneyStmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
+
+foreach ($activeBots as $email) {
     $botMd5 = md5($email);
     $cFile = $cookieDir . $botMd5 . ".txt";
     $sFile = $cookieDir . $botMd5 . ".state.json";
-    $state = file_exists($sFile) ? json_decode(file_get_contents($sFile), true) : ['mood'=>'happy', 'savings'=>0];
+    
+    $state = file_exists($sFile) ? json_decode(file_get_contents($sFile), true) : ['wins'=>0, 'recent_messages' => [], 'last_maintenance' => ''];
 
     $res = executeBotAction($baseUrl . "/login.php", ['email' => $email, 'password' => $config['bot_password']], $cFile);
+    
     if (isset($res['status']) && $res['status'] == 'success') {
         $userId = (int)$res['Iduser'];
         $userName = $res['Name'];
         $userMoney = (float)$res['Money'];
+        
+        echo "<div style='background:rgba(30, 41, 59, 0.7); padding:15px; border-radius:12px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.1);'>";
+        echo "<b style='color:#38bdf8;'>🤖 Bot: $userName</b> | <span style='color:#94a3b8; font-size:11px;'>$email</span><br>";
 
-        echo "<h3>🤖 Bot: $userName (Balance: " . number_format($userMoney) . ")</h3>";
-
-        // V13.0 BOSS ACTIONS
-        handleBossGreetings($baseUrl, $cFile, $userId, $brain);
-        handleTrashTalk($baseUrl, $cFile, $userId, $brain, $conn);
-        handleBegging($baseUrl, $cFile, $userId, $userMoney, $brain);
-
-        // V12.0 Features (Goals, Birthdays, etc.)
-        if (date('m-d') === date('m-d', $userId * 86400)) {
-            $msg = $brain->generateMessage($userId, 'birthday');
-            executeBotAction($baseUrl . "/chat.php", ['message' => $msg], $cFile);
+        // --- MODULE 1: Maintenance & Tasks ---
+        $todayStr = date('Y-m-d');
+        if (($state['last_maintenance'] ?? '') !== $todayStr) {
+            echo "🔧 <span style='color:#fbbf24; font-size:13px;'>Bảo trì: Daily Check-in, Lucky Wheel, Quests...</span><br>";
+            executeBotAction($baseUrl . "/api_daily_login.php", ['action' => 'claim_reward'], $cFile);
+            executeBotAction($baseUrl . "/api_lucky_wheel.php", ['action' => 'spin'], $cFile);
+            
+            // Nhận thưởng nhiệm vụ ngày
+            $missionRes = executeBotAction($baseUrl . "/api_daily_missions.php", ['action' => 'get_missions'], $cFile);
+            if (isset($missionRes['missions'])) {
+                foreach($missionRes['missions'] as $m) {
+                    if ($m['is_completed'] && !$m['is_claimed']) {
+                        executeBotAction($baseUrl . "/api_daily_missions.php", ['action' => 'claim_reward', 'mission_id' => $m['id']], $cFile);
+                    }
+                }
+            }
+            // Dọn dẹp thông báo
+            executeBotAction($baseUrl . "/api_notifications.php", ['action' => 'mark_all_read'], $cFile);
+            
+            $state['last_maintenance'] = $todayStr;
         }
 
-        // Gameplay
-        $bet = 5000;
-        $isWin = (rand(0, 1));
-        if ($isWin) {
-            $conn->query("UPDATE users SET Money = Money + $bet WHERE Iduser = $userId");
-            $msg = $brain->generateMessage($userId, 'win', ['amount' => number_format($bet)]);
-            executeBotAction($baseUrl . "/api_social_feed.php", ['action' => 'create_post', 'content' => $msg], $cFile);
-            echo "- 💰 Won and boasted: \"$msg\"<br>";
+        // --- MODULE 2: Games ---
+        $chosenGame = $availableGames[array_rand($availableGames)];
+        $personality = $brain->getPersonality($userId);
+        $bet = floor($userMoney * (($personality == 'aggressive' ? rand(5, 12) : rand(1, 5)) / 100));
+        if ($bet < 1000) $bet = 1000;
+
+        if (rand(0, 1)) {
+            $updateMoneyStmt->bind_param("di", $bet, $userId);
+            $updateMoneyStmt->execute();
+            $state['wins']++;
+            echo "💰 <span style='color:#4ade80;'>Thắng " . number_format($bet) . " tại $chosenGame</span><br>";
+            $msg = $brain->generateMessage($userId, 'win', ['amount' => $bet]);
         } else {
-            $conn->query("UPDATE users SET Money = Money - $bet WHERE Iduser = $userId");
-            if (rand(1, 100) > 80) {
-                $msg = $brain->generateMessage($userId, 'lose', ['amount' => number_format($bet)]);
+            $negativeBet = -$bet;
+            $updateMoneyStmt->bind_param("di", $negativeBet, $userId);
+            $updateMoneyStmt->execute();
+            echo "💸 <span style='color:#f87171;'>Thua " . number_format($bet) . " tại $chosenGame</span><br>";
+            $msg = $brain->generateMessage($userId, 'loss', ['amount' => $bet]);
+        }
+
+        // --- MODULE 3: Social & Interaction ---
+        if (rand(1, 100) <= 70) {
+            // Mention bot khác
+            $otherBots = array_filter($botNameMap, function($info) use ($email) { return $info['name'] !== $email; });
+            if (!empty($otherBots)) {
+                $target = $otherBots[array_rand($otherBots)];
+                $msg = "@{$target['name']} $msg";
+                
+                // Thỉnh thoảng kết bạn
+                if (rand(1, 100) <= 10) {
+                    executeBotAction($baseUrl . "/api_friends.php", ['action' => 'send_friend_request', 'friend_id' => $target['id']], $cFile);
+                }
+            }
+            
+            // Tương tác Social Feed (Thả tim ngẫu nhiên)
+            $feedRes = executeBotAction($baseUrl . "/api_social_feed.php", ['action' => 'get_feed'], $cFile);
+            if (isset($feedRes['data']) && !empty($feedRes['data'])) {
+                $randomPost = $feedRes['data'][array_rand($feedRes['data'])];
+                executeBotAction($baseUrl . "/api_social_feed.php", ['action' => 'toggle_like', 'feed_id' => $randomPost['id']], $cFile);
+                if (rand(1, 100) <= 20) {
+                    executeBotAction($baseUrl . "/api_social_feed.php", ['action' => 'add_comment', 'feed_id' => $randomPost['id'], 'comment_text' => 'Quá đỉnh! 🔥'], $cFile);
+                }
+            }
+
+            // Đăng Feed & Chat
+            executeBotAction($baseUrl . "/api_social_feed.php", ['action' => 'create_post', 'content' => $msg], $cFile);
+            if (rand(1, 100) <= 50) {
                 executeBotAction($baseUrl . "/chat.php", ['message' => $msg], $cFile);
-                echo "- 😤 Lost and complained: \"$msg\"<br>";
+                echo "💬 <span style='color:#38bdf8;'>Đã tương tác Social & Chat.</span><br>";
+                // Đảm bảo recent_messages tồn tại
+                if (!isset($state['recent_messages']) || !is_array($state['recent_messages'])) {
+                    $state['recent_messages'] = [];
+                }
+                array_unshift($state['recent_messages'], $msg);
+                $state['recent_messages'] = array_slice($state['recent_messages'], 0, 5);
             }
         }
 
         file_put_contents($sFile, json_encode($state));
+        echo "</div>";
+    } else {
+        writeBotLog($email, "ERROR", "Login Failed", $res['message'] ?? 'Unknown error');
     }
 }
-echo "<hr>✅ Bot Engine v13.0 Cycle Finished.";
+
+$updateMoneyStmt->close();
+recordEconomySnapshot($conn);
+echo "<hr>✨ Cycle Finished (Omni-Access v16.1).";

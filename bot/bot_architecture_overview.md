@@ -1,0 +1,114 @@
+# 🛡️ Hệ Thống Bot Army - Tài Liệu Tổng Quan (v15.8)
+
+Tài liệu này mô tả chi tiết cấu trúc, chức năng và các luồng hoạt động của quân đoàn Bot tự động trong hệ thống.
+
+---
+
+## 📂 Danh Sách Các File & Vai Trò
+
+### 1. Nhân Nhân & Điều Khiển (Core Logic)
+*   **`bot_engine.php`**: ⚡ **Trái tim của hệ thống (v15.8).** 
+    *   Thực hiện vòng lặp (cycle) cho từng bot.
+    *   Sử dụng cURL để giả lập hành động người dùng: Đăng nhập, Chơi game, Đăng bài Social, Chat Tổng.
+    *   **Tương tác Social**: Tự động chọn mục tiêu (Bot khác) để mention bằng `@` trong tin nhắn.
+    *   Tính toán tiền cược dựa trên % tài sản và tính cách.
+*   **`bot_brain.php`**: 🧠 **Bộ não quyết định.**
+    *   Quản lý tính cách (Aggressive, Shy, Balanced, Random).
+    *   Tạo dự đoán (Predictions) riêng biệt cho từng loại game.
+    *   Sinh nội dung tin nhắn dựa trên kết quả Thắng/Thua và tâm trạng.
+*   **`bot_manager.php`**: 🥚 **Nhà máy sản xuất Bot.**
+    *   Tự động tạo tài khoản Bot mới với tên và avatar ngẫu nhiên.
+    *   Kiểm tra trùng lặp và lưu vào Database bảo mật.
+
+### 2. Giao Diện & Giám Sát (Dashboard)
+*   **`index.php`**: 🖥️ **Trung tâm chỉ huy (Control Center).**
+    *   Hiển thị Dashboard chuyên nghiệp với biểu đồ Doughnut (Chart.js).
+    *   Theo dõi tài sản quân đoàn, tỉ lệ lạm phát so với người thật.
+    *   Lưới (Grid) quản lý chi tiết từng Bot: Tên, Tiền, Mood, Inventory.
+*   **`api_bot_inventory.php`**: 🎒 **Kho đồ Bot.**
+    *   API trả về danh sách: Themes, Cursors, Khung Chat, Khung Avatar, Thành tựu mà Bot đang sở hữu.
+    *   Truy xuất lịch sử 20 ván đấu gần nhất của Bot.
+
+### 3. Cấu Hình & Tiện Ích
+*   **`config.php`**: ⚙️ **Cài đặt hệ thống.**
+    *   Tự động quét danh sách Bot từ Database.
+    *   Định nghĩa mật khẩu chung và các giới hạn vòng lặp (Timeout, Max Bots).
+*   **`start_bots.bat`**: 🚀 **Kích hoạt nhanh.**
+    *   File thực thi trên Windows để khởi chạy Engine mà không cần mở trình duyệt.
+
+---
+
+## 🔄 Luồng Hoạt Động Của Một Vòng Lặp (Cycle)
+
+1.  **Khởi động**: Engine lấy danh sách Bot từ `config.php` và xáo trộn ngẫu nhiên.
+2.  **Đăng nhập**: Sử dụng cURL gửi request tới `login.php`, lưu Cookie vào thư mục `sessions/`.
+3.  **Phân tích trạng thái**: Đọc file `.state.json` để biết Mood và lịch sử thắng thua.
+4.  **Hành động Social**:
+    *   Nếu là Bot mới: Đăng bài chào sân trên Social Feed.
+    *   Nếu vừa thắng/thua: Đăng bài gáy hoặc than vãn.
+5.  **Chơi Game**:
+    *   Chọn ngẫu nhiên game (Xì Dách, Poker, Baccarat...).
+    *   `BotBrain` đưa ra dự đoán.
+    *   Đặt cược % theo tính cách (Aggressive cược nhiều hơn).
+6.  **Tương tác Chat**: Tỉ lệ 70% Bot sẽ nhảy vào Chat Tổng để bình luận về ván đấu.
+7.  **Lưu trữ**: Cập nhật lại file State và ghi Log vào thư mục `logs/`.
+
+---
+
+## 🛠️ Các File & Thư Mục Truy Cập (Access List)
+
+### 📁 Thư mục nội bộ
+*   **`chat/`**: Chứa các file kịch bản hội thoại (`aggressive.php`, `shy.php`...).
+*   **`logs/`**: Lưu nhật ký hoạt động hàng ngày (Dạng file `.log`).
+*   **`sessions/`**: 
+    *   `*.txt`: Cookie phiên đăng nhập của từng Bot.
+    *   `*.state.json`: Trạng thái tâm trạng, lịch sử thắng thua.
+    *   `bot_sync.json`: Dữ liệu đồng bộ Engine.
+    *   `economy_history.json`: Dữ liệu biểu đồ tài chính.
+
+### 🌐 Kết nối bên ngoài (End-points)
+*   **Database**: `db_connect.php` (Truy cập bảng `users`, `themes`, `achievements`...).
+*   **Hệ thống chính**: 
+    *   `login.php` (Xác thực)
+    *   `chat.php` (Gửi tin nhắn)
+    *   `api_social_feed.php` (Đăng bài)
+
+---
+
+---
+
+## 🗺️ Bản Đồ Chức Năng & Cách Tương Tác (Bot Capability Map)
+
+Bot không chỉ chơi game mà còn được lập trình để bao phủ toàn bộ trải nghiệm người dùng trên website:
+
+### 1. Hệ Thống Xác Thực (Auth)
+*   **File**: `login.php`
+*   **Cách dùng**: Bot sử dụng Email và mật khẩu chung (từ `config.php`) để lấy Session. Cookie được lưu tại `sessions/[md5].txt` để duy trì trạng thái đăng nhập cho các request tiếp theo.
+
+### 2. Hệ Thống Trò Chơi (Games)
+*   **Thư mục**: `games/`
+*   **Cách dùng**: Engine v16.x tự động quét toàn bộ file `.php` trong thư mục này. Bot chọn ngẫu nhiên một trò chơi (Poker, Xì Dách, Tài Xỉu...) để đặt cược dựa trên % tài sản hiện có.
+
+### 3. Bảo Trì & Phúc Lợi (Maintenance)
+*   **Điểm danh**: `api_daily_login.php?action=claim_reward`. Bot tự động nhận thưởng mỗi ngày.
+*   **Vòng quay**: `api_lucky_wheel.php?action=spin`. Bot thực hiện quay thưởng để tích lũy vật phẩm/tiền.
+*   **Nhiệm vụ**: `api_quests.php?action=get_quests`. Bot kiểm tra tiến trình nhiệm vụ và nhận thưởng khi hoàn thành.
+
+### 4. Tương Tác Xã Hội (Social)
+*   **Chat Tổng**: `chat.php`. Bot gửi tin nhắn dựa trên kết quả game, kèm theo `@mention` đồng đội để tạo hội thoại.
+*   **Tường Feed**: `api_social_feed.php`. 
+    *   `create_post`: Đăng trạng thái mới.
+    *   `toggle_like`: Bot tự động đi "thả tim" các bài viết của người khác/bot khác.
+    *   `add_comment`: Bình luận ngẫu nhiên vào các bài đăng nổi bật.
+*   **Bạn bè**: `api_friends.php?action=send_friend_request`. Bot chủ động gửi lời mời kết bạn để mở rộng mạng lưới.
+
+### 5. Kinh Tế & Vật Phẩm (Economy)
+*   **Kho đồ**: `api_bot_inventory.php`. Dashboard sử dụng API này để theo dõi tài sản của Bot (Theme, Cursor, Frame).
+*   **Thị trường**: `api_marketplace.php`. Bot thỉnh thoảng sẽ truy cập để xem các vật phẩm đang hot.
+
+### 6. Thông Báo & Tiến Trình (Progress)
+*   **Thông báo**: `api_notifications.php`. Bot tự động đọc và xóa các thông báo hệ thống để giữ hộp thư sạch sẽ.
+*   **Chuỗi thắng**: `api_streak.php`. Bot kiểm tra chuỗi đăng nhập liên tục để tối ưu hóa phần thưởng.
+
+---
+*Tài liệu được cập nhật tự động bởi Antigravity AI.*
