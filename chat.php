@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message'])) {
 
 if (isset($_GET['action']) && $_GET['action'] === 'load') {
     $result = $conn->query("
-        SELECT cm.username, cm.message, cm.created_at, cm.avatar, cm.chat_frame_id, 
+        SELECT cm.id, cm.username, cm.message, cm.created_at, cm.avatar, cm.chat_frame_id, 
                cf.ImageURL AS frame_image,
                u.active_title_id, u.avatar_frame_id,
                a.icon as title_icon, a.name as title_name,
@@ -408,6 +408,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'load') {
   </div>
   <div style="text-align:center; margin-top: 20px;">
     <a href="index.php" class="nav-button">🏠 Trang chủ</a>
+    <a href="chat2.php" class="nav-button">💬 Chat 2</a>
     <a href="khungchat.php" class="nav-button">🎨 Chọn khung chat</a>
     <a href="khungavatar.php" class="nav-button">🖼️ Chọn khung avatar</a>
   </div>
@@ -446,60 +447,83 @@ if (isset($_GET['action']) && $_GET['action'] === 'load') {
         });
     });
     
+    let lastMessageId = 0;
+    let isInitialLoad = true;
+
     function loadMessages() {
       fetch("chat.php?action=load")
         .then(res => res.json())
         .then(data => {
+          if (!data || data.length === 0) return;
+          
           const chatBox = document.getElementById("chat-box");
-          chatBox.innerHTML = '';
-          data.forEach((msg, index) => {
-            const avatarUrl = msg.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(msg.username);
-            const frameImage = msg.frame_image || null;
-            const avatarFrameImage = msg.avatar_frame_image || null;
+          let newMessages = [];
+          
+          let isFirst = false;
+          if (isInitialLoad) {
+            // Lần đầu load: hiển thị tất cả và lưu lastMessageId
+            chatBox.innerHTML = '';
+            newMessages = data;
+            isFirst = true;
+          } else {
+            // Các lần sau: chỉ lấy tin nhắn có ID lớn hơn lastMessageId
+            newMessages = data.filter(msg => msg.id > lastMessageId);
+          }
+          
+          if (newMessages.length > 0) {
+            newMessages.forEach((msg, index) => {
+              const avatarUrl = msg.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(msg.username);
+              const frameImage = msg.frame_image || null;
+              const avatarFrameImage = msg.avatar_frame_image || null;
+              
+              const safeUsername = msg.username.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+              const safeMessage = msg.message.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+              const titleIcon = msg.title_icon ? msg.title_icon.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+              const titleName = msg.title_name ? msg.title_name.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+              const titleDisplay = titleIcon ? `<span style="font-size: 18px; margin-right: 5px;" title="${titleName}">${titleIcon}</span>` : '';
+
+              let avatarHtml = `<div class="avatar-frame">`;
+              if (avatarFrameImage && avatarFrameImage.trim() !== '') {
+                avatarHtml += `<div class="frame-overlay" style="pointer-events: none !important;"><img src="${avatarFrameImage.replace(/</g, '&lt;').replace(/>/g, '&gt;')}" alt="Frame" style="pointer-events: none !important;" onerror="this.style.display='none'"></div>`;
+              }
+              avatarHtml += `<img src="${avatarUrl}" alt="${safeUsername}" style="pointer-events: auto;" onerror="this.src='images.ico'"></div>`;
+
+              let messageDiv = document.createElement('div');
+              // Nếu là load lần đầu thì mới dùng animation delay theo index
+              const delay = isFirst ? (index * 0.05) : 0;
+              
+              if (frameImage && frameImage.startsWith('uploads/')) {
+                messageDiv.className = 'chat-message';
+                messageDiv.style.backgroundImage = `url('${frameImage.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, "\\'")}')`;
+                messageDiv.style.backgroundSize = 'cover';
+                messageDiv.style.backgroundRepeat = 'no-repeat';
+                messageDiv.style.backgroundPosition = 'center';
+                messageDiv.style.animationDelay = `${delay}s`;
+              } else {
+                messageDiv.className = 'chat-message default-frame';
+                messageDiv.style.animationDelay = `${delay}s`;
+              }
+
+              messageDiv.innerHTML = `
+                ${avatarHtml}
+                <div class="message-content">
+                  <strong>${titleDisplay}${safeUsername}</strong>
+                  <p>${safeMessage}</p>
+                  <small>(${msg.created_at})</small>
+                </div>
+              `;
+              
+              chatBox.appendChild(messageDiv);
+              
+              // Cập nhật lastMessageId
+              if (parseInt(msg.id) > lastMessageId) {
+                lastMessageId = parseInt(msg.id);
+              }
+            });
             
-            // Escape HTML để tránh XSS
-            const safeUsername = msg.username.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            const safeMessage = msg.message.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            const titleIcon = msg.title_icon ? msg.title_icon.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
-            const titleName = msg.title_name ? msg.title_name.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
-            const titleDisplay = titleIcon ? `<span style="font-size: 18px; margin-right: 5px;" title="${titleName}">${titleIcon}</span>` : '';
-
-            // Tạo avatar với frame nếu có
-            let avatarHtml = `<div class="avatar-frame">`;
-            if (avatarFrameImage && avatarFrameImage.trim() !== '') {
-              avatarHtml += `<div class="frame-overlay" style="pointer-events: none !important;"><img src="${avatarFrameImage.replace(/</g, '&lt;').replace(/>/g, '&gt;')}" alt="Frame" style="pointer-events: none !important;" onerror="this.style.display='none'"></div>`;
-            }
-            avatarHtml += `<img src="${avatarUrl}" alt="${safeUsername}" style="pointer-events: auto;" onerror="this.src='images.ico'"></div>`;
-
-            let messageDiv = '';
-            if (frameImage && frameImage.startsWith('uploads/')) {
-              messageDiv = `
-                <div class="chat-message" style="background-image: url('${frameImage.replace(/</g, '&lt;').replace(/>/g, '&gt;')}');
-                background-size: cover; background-repeat: no-repeat; background-position: center; animation-delay: ${index * 0.05}s;">
-                  ${avatarHtml}
-                  <div class="message-content">
-                    <strong>${titleDisplay}${safeUsername}</strong>
-                    <p>${safeMessage}</p>
-                    <small>(${msg.created_at})</small>
-                  </div>
-                </div>
-               `;
-            } else {
-              messageDiv = `
-                <div class="chat-message default-frame" style="animation-delay: ${index * 0.05}s;">
-                  ${avatarHtml}
-                  <div class="message-content">
-                    <strong>${titleDisplay}${safeUsername}</strong>
-                    <p>${safeMessage}</p>
-                    <small>(${msg.created_at})</small>
-                  </div>
-                </div>
-               `;
-            }
-
-            chatBox.innerHTML += messageDiv;
-          });
-          chatBox.scrollTop = chatBox.scrollHeight;
+            chatBox.scrollTop = chatBox.scrollHeight;
+            isInitialLoad = false;
+          }
         })
         .catch(err => console.error('Error loading messages:', err));
     }

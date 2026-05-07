@@ -6,7 +6,7 @@ ini_set('display_errors', 1);
 /**
  * CẤU HÌNH DATABASE TỰ ĐỘNG (LOCAL & HOSTING)
  */
-if ($_SERVER['SERVER_NAME'] == 'localhost' || $_SERVER['SERVER_ADDR'] == '127.0.0.1') {
+if (php_sapi_name() === 'cli' || (isset($_SERVER['SERVER_NAME']) && $_SERVER['SERVER_NAME'] == 'localhost') || (isset($_SERVER['SERVER_ADDR']) && $_SERVER['SERVER_ADDR'] == '127.0.0.1')) {
     // --- CẤU HÌNH LOCAL (XAMPP) ---
     $servername = "localhost";
     $db_username = "root";
@@ -30,6 +30,8 @@ if ($conn->connect_error) {
 
 $conn->set_charset("utf8mb4");
 
-// Website Tracking System
-require_once 'tracking.php';
+// Website Tracking System (Chỉ chạy khi trên Web, không chạy khi dùng Bot .bat)
+if (php_sapi_name() !== 'cli') {
+    require_once 'tracking.php';
+}
 ?>

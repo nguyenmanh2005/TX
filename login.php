@@ -27,7 +27,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         jsonResponse(["status" => "error", "message" => "Email không hợp lệ! 📧"]);
     }
 
-    $sql = "SELECT Iduser, Name, Pass, Role FROM users WHERE Email = ?";
+    $sql = "SELECT Iduser, Name, Pass, Role, Money FROM users WHERE Email = ?";
     $stmt = $conn->prepare($sql);
 
     if (!$stmt) {
@@ -65,6 +65,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         "message" => $successMessage,
         "redirect" => "index.php",
         "login_bonus" => $loginBonus,
+        "Iduser" => $row['Iduser'],
+        "Name" => $row['Name'],
+        "Money" => $row['Money']
     ]);
 }
 ?>

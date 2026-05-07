@@ -8,3 +8,5 @@ uploads/
 .idea/
 node_modules/
 vendor/
+bot/config.php
+bot/sessions/

@@ -23,6 +23,6 @@ echo.
 echo  Nhan Ctrl+C de dung Bot.
 
 :: Cho 30 giay
-timeout /t 30 > nul
+timeout /t 60 > nul
 
 goto loop

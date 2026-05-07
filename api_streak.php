@@ -95,6 +95,21 @@ if ($action === 'claim_milestone') {
         $conn->rollback();
         echo json_encode(['status' => 'error', 'message' => 'Lỗi: ' . $e->getMessage()]);
     }
+} elseif ($action === 'get_info') {
+    $sql = "SELECT us.*, 
+            (SELECT COUNT(*) FROM streak_milestone_rewards WHERE user_id = us.user_id) as milestones_claimed
+            FROM user_streaks us WHERE user_id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $streakData = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$streakData) {
+        echo json_encode(['status' => 'success', 'data' => ['current_streak' => 0, 'milestones_claimed' => 0]]);
+    } else {
+        echo json_encode(['status' => 'success', 'data' => $streakData]);
+    }
 } else {
     echo json_encode(['status' => 'error', 'message' => 'Action không hợp lệ!']);
 }

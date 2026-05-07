@@ -98,6 +98,20 @@ if ($action === 'toggle_like') {
     
     echo json_encode(['status' => 'success', 'message' => 'Đã thêm bình luận!']);
     
+} elseif ($action === 'get_feed') {
+    $sql = "SELECT sf.*, u.Name 
+            FROM social_feed sf
+            JOIN users u ON sf.user_id = u.Iduser
+            WHERE sf.is_public = 1
+            ORDER BY sf.created_at DESC
+            LIMIT 20";
+    $result = $conn->query($sql);
+    $feed = [];
+    while ($row = $result->fetch_assoc()) {
+        $feed[] = $row;
+    }
+    echo json_encode(['status' => 'success', 'data' => $feed]);
+
 } else {
     echo json_encode(['status' => 'error', 'message' => 'Action không hợp lệ!']);
 }

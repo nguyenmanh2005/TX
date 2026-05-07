@@ -70,6 +70,22 @@ if ($action === 'claim_daily_bonus') {
         $conn->rollback();
         echo json_encode(['status' => 'error', 'message' => 'Lỗi: ' . $e->getMessage()]);
     }
+} elseif ($action === 'get_info') {
+    $sql = "SELECT uv.*, vl.name as level_name, vl.daily_bonus 
+            FROM user_vip uv
+            LEFT JOIN vip_levels vl ON uv.vip_level = vl.level
+            WHERE uv.user_id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $vipData = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$vipData) {
+        echo json_encode(['status' => 'success', 'data' => ['vip_level' => 0, 'level_name' => 'Member']]);
+    } else {
+        echo json_encode(['status' => 'success', 'data' => $vipData]);
+    }
 } else {
     echo json_encode(['status' => 'error', 'message' => 'Action không hợp lệ!']);
 }
