@@ -1,12 +1,38 @@
-# Ignore large files and logs
-123.zip
+# Logs & Sessions
 php_errors.log
-uploads/
-*.tmp
 *.log
+bot/sessions/
+bot/cycle_logs/
+
+# Sensitive Config
+
+bot/cycle_logs/
+bot/logs/
+bot/sessions/
+
+# Large Assets & Uploads
+cursors/
+uploads/
+123.zip
+
+# Image Exclusion Rules
+# Ignore common image formats globally
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.gif
+**/*.cur
+**/*.ani
+
+# EXCEPT Shared/img directory
+!Shared/img/
+!Shared/img/**
+
+# OS & IDE Files
+.DS_Store
+Thumbs.db
 .vscode/
 .idea/
 node_modules/
 vendor/
-bot/config.php
-bot/sessions/
+*.tmp

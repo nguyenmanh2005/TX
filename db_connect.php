@@ -6,7 +6,10 @@ ini_set('display_errors', 1);
 /**
  * CẤU HÌNH DATABASE TỰ ĐỘNG (LOCAL & HOSTING)
  */
-if (php_sapi_name() === 'cli' || (isset($_SERVER['SERVER_NAME']) && $_SERVER['SERVER_NAME'] == 'localhost') || (isset($_SERVER['SERVER_ADDR']) && $_SERVER['SERVER_ADDR'] == '127.0.0.1')) {
+if (php_sapi_name() === 'cli' || 
+    (isset($_SERVER['SERVER_NAME']) && $_SERVER['SERVER_NAME'] == 'localhost') || 
+    (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'ngrok') !== false) ||
+    (isset($_SERVER['SERVER_ADDR']) && $_SERVER['SERVER_ADDR'] == '127.0.0.1')) {
     // --- CẤU HÌNH LOCAL (XAMPP) ---
     $servername = "localhost";
     $db_username = "root";

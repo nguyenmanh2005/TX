@@ -659,14 +659,32 @@ if ($currentStmt) {
             margin-bottom: 15px;
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: space-evenly;
             position: relative;
+            transition: background 0.3s ease;
+        }
+
+        .cursor-preview .preview-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
         }
 
         .cursor-preview img {
-            max-width: 80px;
-            max-height: 80px;
+            max-width: 32px;
+            max-height: 32px;
+            object-fit: contain;
         }
+
+        .cursor-preview .label {
+            font-size: 10px;
+            color: #888;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        
 
         .item-name {
             font-size: 20px;
@@ -823,7 +841,19 @@ if ($currentStmt) {
             pointer-events: none;
         }
 
-    </style>
+    
+        /* CSS hỗ trợ xem thử con trỏ */
+        body.previewing-cursor {
+            cursor: var(--preview-default), auto !important;
+        }
+        body.previewing-cursor button, 
+        body.previewing-cursor a, 
+        body.previewing-cursor input, 
+        body.previewing-cursor select,
+        body.previewing-cursor .buy-button {
+            cursor: var(--preview-pointer), pointer !important;
+        }
+</style>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 
@@ -937,10 +967,22 @@ if ($currentStmt) {
             <div class="items-grid">
                 <?php foreach ($cursors as $cursor): ?>
                     <div
-                        class="item-card <?= $cursor['owned'] > 0 ? 'owned' : '' ?> <?= $current['current_cursor_id'] == $cursor['id'] ? 'active' : '' ?>">
+                        class="item-card <?= $cursor['owned'] > 0 ? 'owned' : '' ?> <?= $current['current_cursor_id'] == $cursor['id'] ? 'active' : '' ?>"
+                        onmouseenter="previewCursor(this, '<?= htmlspecialchars($cursor['cursor_image']) ?>', '<?= htmlspecialchars($cursor['pointer_image'] ?? $cursor['cursor_image']) ?>')"
+                        onmouseleave="resetCursor()">
                         <div class="cursor-preview">
-                            <img src="<?= htmlspecialchars($cursor['cursor_image']) ?>"
-                                alt="<?= htmlspecialchars($cursor['name']) ?>" onerror="this.src='chuot.png'">
+                            <div class="preview-item">
+                                <img src="<?= htmlspecialchars($cursor['cursor_image']) ?>"
+                                    alt="Default" onerror="this.src='chuot.png'">
+                                <span class="label">Mặc định</span>
+                            </div>
+                            <?php if (!empty($cursor['pointer_image'])): ?>
+                            <div class="preview-item">
+                                <img src="<?= htmlspecialchars($cursor['pointer_image']) ?>"
+                                    alt="Pointer" onerror="this.src='img/tay.png'">
+                                <span class="label">Bàn tay</span>
+                            </div>
+                            <?php endif; ?>
                         </div>
                         <div class="item-name"><?= htmlspecialchars($cursor['name']) ?></div>
                         <div class="item-description"><?= htmlspecialchars($cursor['description']) ?></div>
@@ -1082,6 +1124,39 @@ if ($currentStmt) {
 
             // Re-apply filters when switching tabs
             filterItems();
+        }
+
+                        function previewCursor(element, cursorUrl, pointerUrl) {
+            function getResizedCursor(url, callback) {
+                const img = new Image();
+                img.crossOrigin = "Anonymous";
+                img.onload = function() {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = 32; canvas.height = 32;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, 32, 32);
+                    callback(canvas.toDataURL("image/png"));
+                };
+                img.src = url;
+            }
+
+            // Lấy cả 2 ảnh đã resize
+            getResizedCursor(cursorUrl, function(resDefault) {
+                getResizedCursor(pointerUrl, function(resPointer) {
+                    document.body.style.setProperty('--preview-default', `url('${resDefault}')`);
+                    document.body.style.setProperty('--preview-pointer', `url('${resPointer}')`);
+                    document.body.classList.add('previewing-cursor');
+                });
+            });
+
+            element.style.background = "rgba(102, 126, 234, 0.1)";
+        }
+
+        function resetCursor() {
+            document.body.classList.remove('previewing-cursor');
+            document.body.style.removeProperty('--preview-default');
+            document.body.style.removeProperty('--preview-pointer');
+            document.querySelectorAll('.item-card').forEach(el => el.style.background = "");
         }
 
         function filterItems() {

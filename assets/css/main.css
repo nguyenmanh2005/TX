@@ -54,7 +54,12 @@ input[type="button"],
 input[type="submit"],
 label,
 select,
-.clickable {
+.clickable,
+.item-card,
+.ranking tr,
+.dropdown-menu a,
+.social-feed-item,
+.btn {
     cursor: url('../../img/tay.png'), pointer !important;
 }
 

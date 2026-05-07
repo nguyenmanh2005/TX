@@ -36,7 +36,7 @@ if (!$checkTournaments || $checkTournaments->num_rows == 0) {
 /**
  * Tính điểm số cho game
  */
-function calculateScore($betAmount, $winAmount, $isWin)
+function calculateScore(float $betAmount, float $winAmount, int $isWin)
 {
     if ($isWin) {
         // Thắng: điểm = gtlm thắng * 0.1 + gtlm cược * 0.05
@@ -50,7 +50,7 @@ function calculateScore($betAmount, $winAmount, $isWin)
 /**
  * Cập nhật xếp hạng cho giải đấu
  */
-function updateTournamentRanking($conn, $tournamentId)
+function updateTournamentRanking(mysqli $conn, int $tournamentId)
 {
     $sql = "UPDATE tournament_participants tp1
             JOIN (
@@ -70,7 +70,7 @@ function updateTournamentRanking($conn, $tournamentId)
 /**
  * Lấy phần thưởng theo rank
  */
-function getRewardByRank($rewardStructure, $rank)
+function getRewardByRank(string $rewardStructure, int $rank)
 {
     $rewards = json_decode($rewardStructure, true);
     if (!$rewards)
@@ -106,12 +106,13 @@ switch ($action) {
 
         $sql = "SELECT t.*, 
                 (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id) as participant_count,
-                (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id AND user_id = ?) as is_registered
+                (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id AND user_id = ?) as is_joined,
+                (SELECT is_claimed FROM tournament_participants WHERE tournament_id = t.id AND user_id = ?) as is_claimed
                 FROM tournaments t
                 WHERE 1=1";
 
-        $params = [$userId];
-        $types = 'i';
+        $params = [$userId, $userId];
+        $types = 'ii';
 
         if ($status !== 'all') {
             $sql .= " AND t.status = ?";
