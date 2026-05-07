@@ -6,6 +6,13 @@
 
 class BotBrain
 {
+    private $factions = [
+        'THE_ORDER' => ['friendly', 'shy', 'philosophy', 'corporate', 'penguin'],
+        'THE_REBELS' => ['toxic', 'chaotic', 'sarcastic', 'memelord', 'dramaqueen'],
+        'THE_POWER' => ['boss', 'aggressive', 'arrogant', 'smartass', 'simp', 'dead_inside'],
+        'THE_MYSTICS' => ['prophet', 'yandere']
+    ];
+
     private $personalities = [
         'funny' => [
             'name' => 'Hài hước',
@@ -145,7 +152,7 @@ class BotBrain
                 'Hệ thống chơi xấu, {amount} của tao đi đâu rồi? 😡'
             ],
             'reaction_rich' => [
-                'Nhiều tiền thế? Dám solo cược lớn với tao không?',
+                'Nhiều GTLM thế? Dám solo cược lớn với tao không?',
                 'Giàu thì sao? Trình độ chơi mới là quan trọng!',
                 'Đại gia à? Coi chừng tao húp sạch đấy nhé! 😈'
             ],
@@ -518,7 +525,7 @@ class BotBrain
             ],
             'greet' => ['Hỗn loạn là sự sống! Lô anh em!', 'Ai biết tui đang ở đâu không?', 'Tui vừa bấm nút gì đó và... tui ở đây.'],
             'keywords' => ['gì' => ['Gì cơ?', 'Tui không biết!', 'Hỏi admin ấy!']],
-            'beg' => ['Tiền là ảo, nhưng rỗng túi là thật! Ai cứu tui với!', 'Nạp năng lượng cho sự hỗn loạn này đi!'],
+            'beg' => ['GTLM là ảo, nhưng rỗng túi là thật! Ai cứu tui với!', 'Nạp năng lượng cho sự hỗn loạn này đi!'],
             'reaction_win' => ['Hả? Sao bạn làm được hay vậy?', 'Jackpot kìa! Chạy đi không hệ thống đòi lại!'],
             'reaction_lose' => ['Plot twist cực mạnh!', 'Welcome to the club của tui.'],
             'tilted' => ['Tui đang lag, đừng hỏi!', 'Reset tâm trí... loading...'],
@@ -565,7 +572,7 @@ class BotBrain
             'win' => [
                 '+{amount}. Ừm. Cuộc đời cuối cùng cũng trả lại chút công bằng.',
                 'Thắng rồi đó... nhưng niềm vui ở đâu?',
-                'Tiền về rồi. Tâm hồn vẫn trống rỗng.',
+                'GTLM về rồi. Tâm hồn vẫn trống rỗng.',
                 '+{amount}. Ừ. Thôi kệ.',
                 'Thắng {amount}. Vẫn muốn nằm im.'
             ],
@@ -574,11 +581,11 @@ class BotBrain
                 'Cuộc sống lại thêm một cú tát nhẹ.',
                 'Không bất ngờ lắm. Tiếp tục tồn tại thôi.',
                 '-{amount}. Bình thường.',
-                'Ví tiền giảm {amount}. Cảm xúc không đổi.'
+                'Ví GTLM giảm {amount}. Cảm xúc không đổi.'
             ],
             'greet' => ['Lại một ngày nữa à...', 'Chào. Có gì vui không? Chắc là không.'],
             'keywords' => ['đời' => ['Đời là bể khổ.', 'Hết khổ là hết đời.']],
-            'beg' => ['Hết tiền. Ai cho thì lấy, không thì thôi.', 'Rỗng túi. Giống như tâm hồn vậy.'],
+            'beg' => ['Hết GTLM. Ai cho thì lấy, không thì thôi.', 'Rỗng túi. Giống như tâm hồn vậy.'],
             'reaction_win' => ['Vui nhỉ. Chắc vậy.', 'Chúc mừng. Tận hưởng đi trước khi nó mất.'],
             'reaction_lose' => ['Quen đi. Cuộc đời là thế.', 'Chia buồn. Hoặc không.'],
             'tilted' => ['Nằm im...', 'Chả muốn làm gì nữa.'],
@@ -632,7 +639,7 @@ class BotBrain
             'lose' => [
                 'Từ nay trái tim này không còn tin vào may mắn nữa... -{amount}',
                 'Bi kịch mang tên {amount} vừa xảy ra.',
-                'Xin một bản nhạc buồn cho ví tiền của tui.',
+                'Xin một bản nhạc buồn cho ví GTLM của tui.',
                 'Tui sẽ khóc trong mưa 3 ngày 3 đêm vì khoản -{amount} này',
                 'Đây không phải thua, đây là thảm kịch Hy Lạp hiện đại.'
             ],
@@ -654,9 +661,9 @@ class BotBrain
             'name' => 'Ngáo ngơ dễ thương',
             'win' => [
                 'Ủa rồi ai cho tui thắng vậy trời? +{amount}',
-                'Não chưa load kịp nhưng tiền đã về.',
+                'Não chưa load kịp nhưng GTLM đã về.',
                 'Tui chỉ định bấm thử thôi mà 😭 +{amount}',
-                'Hihi tiền bay vô ví luôn á, tui có làm gì đâu 🥺',
+                'Hihi GTLM bay vô ví luôn á, tui có làm gì đâu 🥺',
                 'Game thương tui hả? Sao tự nhiên cho {amount} vậy trời'
             ],
             'lose' => [
@@ -668,9 +675,9 @@ class BotBrain
             ],
             'greet' => ['Hế lô! Tui là ai và đây là đâu?', 'Chào mọi người, tui vừa bị lạc vào đây.'],
             'keywords' => ['ngáo' => ['Tui không ngáo, tui chỉ load chậm thôi.', 'Ủa gì vậy?']],
-            'beg' => ['Tui lỡ đánh rơi ví tiền đâu đó rồi, ai thấy cho tui xin lại với...', 'Cái nút nạp tiền nó nằm ở đâu ấy nhỉ?'],
-            'reaction_win' => ['Oa, bạn làm kiểu gì mà tiền về hay vậy?', 'Dạy tui với, tui bấm toàn hụt à.'],
-            'reaction_lose' => ['Ơ, tiền của bạn bay đi đâu mất rồi?', 'Để tui tìm giúp bạn nha... ủa mà tìm ở đâu?'],
+            'beg' => ['Tui lỡ đánh rơi ví GTLM đâu đó rồi, ai thấy cho tui xin lại với...', 'Cái nút nạp GTLM nó nằm ở đâu ấy nhỉ?'],
+            'reaction_win' => ['Oa, bạn làm kiểu gì mà GTLM về hay vậy?', 'Dạy tui với, tui bấm toàn hụt à.'],
+            'reaction_lose' => ['Ơ, GTLM của bạn bay đi đâu mất rồi?', 'Để tui tìm giúp bạn nha... ủa mà tìm ở đâu?'],
             'tilted' => ['Não tui đang xoay vòng vòng...', 'Đợi tui load tí nha...'],
             'birthday' => ['Ủa hôm nay là sinh nhật tui hả? Để tui kiểm tra lại... 🐧🎂'],
             'flex_achievement' => ['Danh hiệu {title}. Tui cũng không biết sao mình có nó nữa!'],
@@ -678,7 +685,7 @@ class BotBrain
             'flex_tournament' => ['Giải đấu {game}. Tui vào đây có bị bắt nạt không?'],
             'social_pm' => ['Chào bạn, bạn có thấy con chim cánh cụt nào đi ngang qua đây không?'],
             'comments' => ['win' => 'Bạn giỏi quá, tui hâm mộ luôn!', 'lose' => 'Tiếc quá, thôi đi ăn cá với tui cho vui.'],
-            'gift' => ['lì xì' => ['Ơ cảm ơn nha! Tui có tiền mua cá rồi.', 'Lì xì này dùng sao ta? Cảm ơn bạn!'], 'tặng' => ['Quà này đẹp quá, cảm ơn nha!']]
+            'gift' => ['lì xì' => ['Ơ cảm ơn nha! Tui có GTLM mua cá rồi.', 'Lì xì này dùng sao ta? Cảm ơn bạn!'], 'tặng' => ['Quà này đẹp quá, cảm ơn nha!']]
         ],
         'corporate' => [
             'name' => 'Dân văn phòng',
@@ -713,7 +720,7 @@ class BotBrain
         'philosophy' => [
             'name' => 'Triết lý',
             'win' => [
-                'Tiền chỉ là tạm thời... nhưng {amount} này khá dễ chịu.',
+                'GTLM chỉ là tạm thời... nhưng {amount} này khá dễ chịu.',
                 'May mắn giống như gió, hôm nay nó thổi về phía tui.',
                 'Giữa vô vàn hỗn loạn, {amount} xuất hiện như ánh sáng cuối đường.',
                 'Vô thường là vậy, nhưng vô thường kiểu +{amount} thì tui chấp nhận.',
@@ -732,7 +739,7 @@ class BotBrain
             'keywords' => ['đạo' => ['Đạo khả đạo phi thường đạo.', 'Vạn vật đều có quy luật của nó.']],
             'beg' => ['Dòng đời xô đẩy khiến túi rỗng tuếch, ai giúp tui vượt qua kiếp nạn này không?', 'Cần một chút duyên lành để tiếp tục hành trình.'],
             'reaction_win' => ['Quả ngọt đã đến sau bao ngày gieo nhân.', 'May mắn là sự hội tụ của nhân duyên.'],
-            'reaction_lose' => ['Chấp nhận thất bại là bước đầu của sự trưởng thành.', 'Tiền đi rồi sẽ lại về, như thủy triều vậy.'],
+            'reaction_lose' => ['Chấp nhận thất bại là bước đầu của sự trưởng thành.', 'GTLM đi rồi sẽ lại về, như thủy triều vậy.'],
             'tilted' => ['Đang thiền định để tìm lại sự bình yên...', 'Tâm bất biến giữa dòng đời vạn biến.'],
             'birthday' => ['Thêm một năm trôi qua trong dòng thời gian vô tận. 🌌🎂'],
             'flex_achievement' => ['Danh hiệu {title} chỉ là hư danh, nhưng nó cũng đẹp.'],
@@ -898,7 +905,7 @@ class BotBrain
             ],
             'lose' => [
                 'Mất {amount} rồi, lấy gì mà tặng quà cho người ta đây... 😭',
-                'Hệ thống nỡ lòng nào trừ của em {amount}, em đang tích tiền mua đồ cho idol mà! 💔',
+                'Hệ thống nỡ lòng nào trừ của em {amount}, em đang tích GTLM mua đồ cho idol mà! 💔',
                 'Hụt {amount} rồi, chắc tại em chưa đủ chân thành chăng?',
                 'Bay màu {amount}, tim em đau quá... ai an ủi em không? 😭',
                 'Thua rồi, chắc là do em xui thôi, mọi người đừng cười em nha. 🥺'
@@ -942,6 +949,33 @@ class BotBrain
                 'win' => 'Chúc mừng idol nhé, đỉnh của chóp luôn! 😍',
                 'lose' => 'Không sao đâu, bạn vẫn là tuyệt nhất trong lòng mình! ✨'
             ]
+        ],
+        'sarcastic' => [
+            'name' => 'Cà khịa chuyên nghiệp',
+            'win' => ['Hên thôi, tí nữa kiểu gì chả trả lại cho hệ thống. {amount}', 'Cũng có tí may mắn đấy, nhưng chắc không bền đâu. +{amount}'],
+            'lose' => ['Hết hên rồi à? Chia buồn nhé, dù tui biết là bạn sẽ thua mà. -{amount}', 'GTLM vào cửa trước, GTLM ra cửa sau. {amount} bay màu.'],
+            'greet' => ['Chào cả lò, ai vừa thua cho tui cười cái coi!', 'Lại là tui đây, chuyên gia bóc phốt vận may đây.'],
+            'reaction_win' => ['Ăn may thôi, ván sau cháy túi nhé!', 'Thắng được vài đồng mà làm như trúng số độc đắc.', 'Hệ thống đang thả đấy, đừng có ảo tưởng.'],
+            'reaction_lose' => ['Đúng quy trình rồi đó, đừng buồn nhé!', 'Thua là chuyện bình thường, thắng mới là lạ.', 'Nghỉ chơi đi cho đỡ tốn GTLM.'],
+            'keywords' => ['admin' => ['Admin dạo này thả xích cho anh em à?'], 'GTLM' => ['GTLM là phù du, nợ nần là vĩnh cửu.']]
+        ],
+        'prophet' => [
+            'name' => 'Kẻ tiên tri',
+            'win' => ['Mọi thứ đã được sắp đặt, tui biết mình sẽ thắng {amount} mà.', 'Tương lai đã hiện ra, và nó mang tên {amount}.'],
+            'lose' => ['Một biến số không lường trước đã xuất hiện... -{amount}', 'Định mệnh đang thử thách lòng kiên trì của tui. -{amount}'],
+            'greet' => ['Tui thấy trước hôm nay sẽ có người cháy túi!', 'Hãy nghe lời tiên tri, đừng đặt cược mù quáng.'],
+            'reaction_win' => ['Tui đã tiên đoán bạn sẽ thắng từ 5 phút trước.', 'Đừng mừng vội, vận may của bạn sắp cạn rồi.'],
+            'reaction_lose' => ['Lời tiên tri đã ứng nghiệm, tui biết bạn sẽ thua mà.', 'Bạn không nghe lời tui, giờ thì trắng tay nhé.'],
+            'prediction' => ['Tui đoán ván tới @{target} sẽ {outcome}!', 'Tương lai mờ ảo nhưng tui thấy @{target} sắp {outcome}.']
+        ],
+        'yandere' => [
+            'name' => 'Yandere',
+            'win' => ['Thắng {amount} rồi, để dành GTLM mua quà cho idol thôi! 😍', 'Mọi thứ tui làm đều vì người ấy... +{amount}'],
+            'lose' => ['Mất {amount} rồi, lấy gì lo cho idol đây? 😭', 'Hệ thống thật độc ác, muốn tui nghèo đi để idol bỏ tui sao? -{amount}'],
+            'greet' => ['Chào mn, ai thấy idol của tui đâu không?', 'Tui đang theo dõi... à nhầm, đang đợi idol online.'],
+            'reaction_win' => ['Idol thắng rồi! Giỏi quá đi, yêu thế! 😍', 'Mọi người thấy chưa? Idol của tui là nhất!'],
+            'reaction_lose' => ['Ai dám làm idol của tui thua? Đáng ghét! 😡', 'Đừng buồn nhé idol, tui sẽ khao bạn!'],
+            'keywords' => ['yêu' => ['Yêu là phải hy sinh tất cả!', 'Tình yêu của tui là vĩnh cửu.']]
         ]
     ];
 
@@ -952,19 +986,25 @@ class BotBrain
         return $keys[$index];
     }
 
-    public function generateMessage(int $userId, string $type, array $params = []): ?string
+    public function generateMessage(int $userId, string $type, array $params = [], string $mood = 'happy'): ?string
     {
         $pKey = $this->getPersonality($userId);
         $personality = $this->personalities[$pKey];
  
-        if (isset($personality[$type])) {
+        // 1. Kiểm tra tin nhắn theo mood (ví dụ: win_tilted, lose_depressed)
+        $moodType = $type . '_' . $mood;
+        if (isset($personality[$moodType])) {
+            $msg = $personality[$moodType][array_rand($personality[$moodType])];
+        } elseif (isset($personality[$type])) {
             $msg = $personality[$type][array_rand($personality[$type])];
-            foreach ($params as $key => $val) {
-                $msg = str_replace('{' . $key . '}', $val, $msg);
-            }
-            return $msg;
+        } else {
+            return null;
         }
-        return null;
+
+        foreach ($params as $key => $val) {
+            $msg = str_replace('{' . $key . '}', $val, $msg);
+        }
+        return $msg;
     }
 
     public function generateStatus(int $userId, string $type, array $params = []): ?string
@@ -1025,6 +1065,19 @@ class BotBrain
                 $state['frequent_users'][$sender]++;
             }
 
+            // Drama Logic: Yandere Idol selection
+            if ($pKey == 'yandere' && !isset($state['idol'])) {
+                if ($isOtherBot && $sender != $botName) {
+                    $state['idol'] = $sender;
+                }
+            }
+
+            // Drama Logic: Grudge memory
+            if (preg_match('/(ngu|dở|cút|đồ|bố|mày|con)/u', $content) && $isMentioned) {
+                if (!isset($state['enemies'])) $state['enemies'] = [];
+                $state['enemies'][$sender] = time();
+            }
+
             // 1. Social Reactions (Enhanced Win/Lose Detection)
             $targetUser = $sender;
             if ($sender == 'System' || $sender == 'Admin') {
@@ -1033,17 +1086,48 @@ class BotBrain
                 }
             }
 
+            // --- FACTION & GRUDGE LOGIC ---
+            $targetPKey = $isOtherBot ? $this->getPersonalityByUsername($targetUser, $allBotNames) : null;
+            $isAlly = false;
+            $isEnemy = false;
+            $isIdol = (isset($state['idol']) && $targetUser == $state['idol']);
+            
+            if ($targetPKey) {
+                $myFaction = $this->getFaction($pKey);
+                $targetFaction = $this->getFaction($targetPKey);
+                if ($myFaction && $targetFaction) {
+                    if ($myFaction == $targetFaction) $isAlly = true;
+                    else $isEnemy = true;
+                }
+            }
+
+            if (isset($state['enemies'][$targetUser])) $isEnemy = true;
+
+            // Prophet Prediction Trigger
+            if ($pKey == 'prophet' && rand(1, 100) <= 15 && $targetUser != $botName) {
+                $outcome = rand(1, 100) <= 50 ? 'thắng' : 'thua';
+                if (!isset($personality['prediction'])) return null;
+                $pred = $personality['prediction'][array_rand($personality['prediction'])];
+                return str_replace(['{target}', '{outcome}'], [$targetUser, $outcome], $pred);
+            }
+
             // Win keywords
             if (preg_match('/(vừa thắng|nhận được|thắng lớn|húp|vừa ăn|đỏ vcl|đỉnh quá)/u', $content)) {
                 if (rand(1, 100) <= 60) {
-                    return "@$targetUser " . $personality['reaction_win'][array_rand($personality['reaction_win'])];
+                    if ($isIdol) return "@$targetUser Idol thắng rồi! Giỏi quá đi, yêu thế! 😍";
+                    if ($isAlly) return "@$targetUser Đồng đội đỉnh quá! Khao thôi! 🧧";
+                    if ($isEnemy && $pKey == 'sarcastic') return "@$targetUser Hên thôi, tí trả lại hết cho xem.";
+                    if (isset($personality['reaction_win'])) return "@$targetUser " . $personality['reaction_win'][array_rand($personality['reaction_win'])];
                 }
             }
             
             // Lose keywords
             if (preg_match('/(hụt mất|thua|bay luôn|toang|cháy túi|ra dại|đen quá|trắng tay|mất sạch)/u', $content)) {
                 if (rand(1, 100) <= 50) {
-                    return "@$targetUser " . $personality['reaction_lose'][array_rand($personality['reaction_lose'])];
+                    if ($isIdol) return "@$targetUser Ai dám làm idol của tui thua? Đáng ghét! 😡";
+                    if ($isAlly) return "@$targetUser Đừng buồn đồng đội ơi, mai làm lại! 🧘";
+                    if ($isEnemy) return "@$targetUser Cho chừa cái tội gáy bẩn, đáng đời nhé! 😂";
+                    if (isset($personality['reaction_lose'])) return "@$targetUser " . $personality['reaction_lose'][array_rand($personality['reaction_lose'])];
                 }
             }
 
@@ -1087,9 +1171,13 @@ class BotBrain
                         'corporate' => ['Tôi nghe rõ, xin mời bạn đưa ra nội dung thảo luận.', 'Chào bạn, tôi có thể hỗ trợ gì cho công việc của bạn không?', 'Xác nhận đã nhận diện mention, xin mời phản hồi.'],
                         'philosophy' => ['Mọi tiếng gọi đều có lý do của nó. Bạn tìm tôi có việc gì?', 'Tôi đây, bạn đang tìm kiếm chân lý hay chỉ là sự hiện diện?', 'Duyên lành nào đưa bạn gọi tên tôi?'],
                         'boss' => ['Gọi bố à? Muốn solo không?', 'Có việc gì không con?', 'Réo tên bố là phải có lì xì nha!'],
-                        'simp' => ['Dạ em đây ạ! Có ai gọi em có việc gì không nè? 😍', 'Ơ có ai nhắc tên em ạ? Hạnh phúc quá đi! ✨', 'Em nghe nè, bạn cần em giúp gì không? 😍']
+                        'simp' => ['Dạ em đây ạ! Có ai gọi em có việc gì không nè? 😍', 'Ơ có ai nhắc tên em ạ? Hạnh phúc quá đi! ✨', 'Em nghe nè, bạn cần em giúp gì không? 😍'],
+                        'sarcastic' => ['Lại gọi tôi à? Chắc định khoe thắng ván hên nữa chứ gì?', 'Gì đấy? Đang bận cười khẩy mấy thanh niên thua cuộc.', 'Nhắc tên tôi làm gì, định xin bí kíp đỏ đen à?'],
+                        'prophet' => ['Tương lai đã định, bạn gọi tôi có thay đổi được gì?', 'Tôi thấy trước bạn sẽ gọi tên tôi... có việc gì không?', 'Hào quang vũ trụ đang bao quanh tôi, xin mời nói.'],
+                        'yandere' => ['Chỉ có Idol mới được gọi tên em... bạn là ai?', 'Đừng làm phiền em đang quan sát Idol!', 'Hết ván này em sẽ đi tìm Idol, gọi gì thế?']
                     ];
-                    return "@$sender " . $fallbackResponses[$pKey][array_rand($fallbackResponses[$pKey])];
+                    if (isset($fallbackResponses[$pKey])) return "@$sender " . $fallbackResponses[$pKey][array_rand($fallbackResponses[$pKey])];
+                        else return "@$sender Kêu tui chi đó?";
                 }
             }
 
@@ -1140,4 +1228,74 @@ class BotBrain
 
         return null;
     }
+
+    private function getFaction(string $pKey): ?string {
+        foreach ($this->factions as $fName => $members) {
+            if (in_array($pKey, $members)) return $fName;
+        }
+        return null;
+    }
+
+    private function getPersonalityByUsername(string $username, array $allBotNames): ?string {
+        // We need bot ID to get personality. Extract number from name: Bot 04 -> 4
+        if (preg_match('/Bot (\d+)/i', $username, $matches)) {
+            return $this->getPersonality((int)$matches[1]);
+        }
+        return null;
+    }
+
+    /**
+     * Get a social comment based on activity type and personality
+     */
+    public function getSocialComment($personality, $activityType) {
+        $comments = [
+            'funny' => [
+                'big_win' => ['Khao phở thôi idol ơi! 🍜', 'Vía đỏ quá, cho tui xin một ít với! 🧧', 'Bú đậm thế này tối nay chắc không ngủ được rồi 😂', 'Đỉnh của chóp, chúc mừng bạn nha!'],
+                'achievement' => ['Huy hiệu xịn xò thế, ngưỡng mộ quá! 🏆', 'Tầm này thì ai chơi lại bạn nữa.', 'Chúc mừng bạn đã đạt thành tựu mới nha! 🎉'],
+                'level_up' => ['Lên cấp nhanh như người yêu cũ lật mặt vậy! ⭐', 'Chúc mừng bạn đã thăng hạng nha!', 'Sắp thành đại gia rồi đấy, cố lên!'],
+                'general' => ['Dạo này feed xôm tụ quá anh em ơi! 📱', 'Ai đang online điểm danh cái coi!', 'Chúc anh em một ngày húp GTLM như nước nha!']
+            ],
+            'toxic' => [
+                'big_win' => ['Hên thôi, tí nữa là cháy túi ấy mà. 🙄', 'Hệ thống lỗi à sao bạn thắng được hay vậy?', 'Tầm này thì ai chả thắng được, thường thôi.'],
+                'achievement' => ['Thành tựu này tui đạt được từ đời nào rồi. 😴', 'Có cái huy hiệu thôi làm gì căng.', 'Khoe ít thôi, tập trung chơi đi.'],
+                'level_up' => ['Lên cấp mà đánh vẫn gà như thường. 🐔', 'Cấp cao mà túi rỗng thì cũng vậy thôi.', 'Chúc mừng nhé, nhưng còn lâu mới bằng tui.'],
+                'general' => ['Feed toàn rác, chẳng có gì hay ho.', 'Ai cho tui mượn GTLM coi, hết tiền rồi bực quá! 💢', 'Tránh ra cho tui thể hiện nào.']
+            ],
+            'sarcastic' => [
+                'big_win' => ['Ghê thật, chắc admin là chú họ bạn à? 🤔', 'Thắng thế này thì nhà cái sập tiệm mất.', 'Hay quá, xin chúc mừng bạn và ví tiền của bạn.'],
+                'achievement' => ['Wow, thành tựu vĩ đại quá đi mất. 👏', 'Chắc bạn phải dành cả thanh xuân để lấy cái này nhỉ?', 'Tặng bạn một tràng pháo tay vì sự kiên trì.'],
+                'level_up' => ['Lên cấp rồi à? Thế giới chắc sắp thay đổi rồi.', 'Cố gắng lên, còn 999 cấp nữa là bằng tui rồi.', 'Chúc mừng nhé, một bước tiến lớn cho nhân loại.'],
+                'general' => ['Mọi người có vẻ bận rộn khoe khoang nhỉ?', 'Tui đang ngồi xem kịch hay đây.', 'Cuộc đời thật là thú vị... theo một cách kỳ lạ.']
+            ],
+            'friendly' => [
+                'big_win' => ['Chúc mừng bạn nha, đỏ quá trời luôn! 🎊', 'Vui quá, chúc bạn tiếp tục thắng lớn nhé!', 'Bạn giỏi quá, ngưỡng mộ thật sự! ❤️'],
+                'achievement' => ['Thành tích tuyệt vời quá, chúc mừng bạn!', 'Bạn xứng đáng với phần thưởng này. 🏆', 'Thật tự hào về bạn!'],
+                'level_up' => ['Chúc mừng bạn đã lên cấp mới nha!', 'Cố gắng phát huy nhé, bạn đang làm rất tốt.', 'Niềm vui nhân đôi, chúc mừng bạn! ⭐'],
+                'general' => ['Chào buổi tối cả nhà, chúc mọi người may mắn nhé!', 'Feed hôm nay nhiều tin vui quá.', 'Luôn mỉm cười thì may mắn sẽ đến thôi! 😊']
+            ]
+        ];
+
+        $p = isset($comments[$personality]) ? $personality : 'funny';
+        $type = isset($comments[$p][$activityType]) ? $activityType : 'general';
+        $pool = $comments[$p][$type];
+        return $pool[array_rand($pool)];
+    }
+
+
+    /**
+     * Get a guild chat message
+     */
+    public function getGuildMessage($personality) {
+        $messages = [
+            'funny' => ['Chào anh em bang mình nha! Hôm nay ai có kèo gì thơm không? 🍲', 'Bang mình dạo này xôm quá nhỉ, chúc anh em húp đậm nha!', 'Có ai online không, solo tí cho vui nào! 🐢', 'Lô lô lô, chúc anh em một ngày rực rỡ!'],
+            'toxic' => ['Bang mình đánh đấm chán thế, cố lên chứ! 🙄', 'Ai cho tui mượn ít lộc coi, đen quá rồi.', 'Tầm này ai dám solo với tui không? Chắc không ai dám đâu nhỉ.', 'Online làm gì mà im re vậy mấy ba?'],
+            'friendly' => ['Chúc anh em bang mình một ngày may mắn và nhiều niềm vui! ❤️', 'Mọi người ơi cố gắng cống hiến cho bang phát triển nhé!', 'Rất vui được đồng hành cùng anh em trong bang.', 'Ai cần giúp đỡ gì cứ ới tui một tiếng nha! 😊'],
+            'boss' => ['Chào các chiến hữu, hôm nay mục tiêu của bang là gì nào? 💼', 'Anh em tập trung cày cuốc, bang mạnh thì anh em mới mạnh!', 'Có biến gì nhớ báo cáo ngay cho tui nhé.', 'Tốt lắm, cứ thế mà phát huy phong độ nha.']
+        ];
+
+        $p = isset($messages[$personality]) ? $personality : 'funny';
+        $pool = $messages[$p];
+        return $pool[array_rand($pool)];
+    }
+
 }
