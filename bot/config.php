@@ -16,7 +16,7 @@ return [
     'bot_password' => '12345678@@A',
     'bot_emails' => $botEmails, // Luôn cập nhật mới nhất từ DB
     'settings' => [
-        'max_bots_per_cycle' => 25,
+        'max_bots_per_cycle' => 100,
         'session_lifetime' => 86400,
         'timeout' => 600
     ]

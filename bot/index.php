@@ -5,6 +5,7 @@
  */
 session_start();
 require_once '../db_connect.php';
+$config = require 'config.php';
 
 $syncFile = 'sessions/bot_sync.json';
 $historyFile = 'sessions/economy_history.json';
@@ -109,6 +110,10 @@ while($row = $res->fetch_assoc()) {
 $humanRes = $conn->query("SELECT SUM(Money) as total FROM users WHERE Email NOT LIKE '%bot%'")->fetch_assoc();
 $stats['total_human_money'] = (float)($humanRes['total'] ?? 0);
 
+// 5. Kiểm tra sức khỏe Bot
+require_once 'bot_health.php';
+$healthSummary = getBotHealthSummary($conn, $config);
+
 // Lấy dữ liệu biểu đồ
 $chartLabels = []; $chartBotData = []; $chartHumanData = [];
 $moodHistory = ['happy' => [], 'excited' => [], 'tilted' => [], 'depressed' => []];
@@ -145,7 +150,8 @@ if (isset($_GET['ajax'])) {
         'chartHumanData' => $chartHumanData,
         'moodHistory' => $moodHistory,
         'recentLogs' => $recentLogs,
-        'botsList' => $botsList
+        'botsList' => $botsList,
+        'healthSummary' => $healthSummary
     ]);
     exit;
 }
@@ -227,7 +233,7 @@ if (isset($_GET['ajax'])) {
                 <span style="color: var(--success); font-size: 12px;">● Đang giám sát <?= $stats['total'] ?> thành viên Thiên Thần & Ác Quỷ</span>
             </div>
             <div style="display: flex; gap: 10px;">
-                <a href="bot_engine.php" target="_blank" class="btn" style="background: var(--success)">⚡ Kích hoạt Engine</a>
+                <a href="bot_runner.php" class="btn" style="background: linear-gradient(135deg, #6366f1, #a855f7)">🚀 Trình Điều Khiển Web</a>
                 <a href="bot_manager.php?action=spawn" class="btn" style="background: var(--warning)">➕ Sinh Bot</a>
             </div>
         </div>
@@ -316,6 +322,39 @@ if (isset($_GET['ajax'])) {
                                 <?php endforeach; ?>
                             <?php endif; ?>
                         </ul>
+                    </div>
+                </div>
+                <div class="panel" style="margin-bottom: 20px;">
+                    <h2 style="font-size: 18px; margin-top:0; color: #22c55e;">🏥 Sức Khỏe Quân Đoàn</h2>
+                    <div id="healthSummarySection">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 15px; text-align: center;">
+                            <div style="flex:1;">
+                                <div style="font-size: 18px; font-weight: 800; color: #22c55e;"><?= $healthSummary['healthy'] ?></div>
+                                <div style="font-size: 10px; color: #94a3b8;">Khỏe mạnh</div>
+                            </div>
+                            <div style="flex:1; border-left: 1px solid rgba(255,255,255,0.05); border-right: 1px solid rgba(255,255,255,0.05);">
+                                <div style="font-size: 18px; font-weight: 800; color: #fbbf24;"><?= $healthSummary['warning'] ?></div>
+                                <div style="font-size: 10px; color: #94a3b8;">Cảnh báo</div>
+                            </div>
+                            <div style="flex:1;">
+                                <div style="font-size: 18px; font-weight: 800; color: #ef4444;"><?= $healthSummary['critical'] ?></div>
+                                <div style="font-size: 10px; color: #94a3b8;">Lỗi nặng</div>
+                            </div>
+                        </div>
+                        <div id="healthDetailsList" style="max-height: 150px; overflow-y: auto;">
+                            <?php if (empty($healthSummary['details'])): ?>
+                                <div style="font-size: 11px; color: #64748b; text-align: center; padding: 10px; border: 1px dashed rgba(255,255,255,0.1); border-radius: 10px;">
+                                    Tất cả bot đều đang hoạt động tốt. ✨
+                                </div>
+                            <?php else: ?>
+                                <?php foreach ($healthSummary['details'] as $detail): ?>
+                                    <div style="font-size: 10px; padding: 8px; background: rgba(255,255,255,0.02); border-radius: 8px; margin-bottom: 5px; border-left: 3px solid <?= $detail['status'] == 'critical' ? '#ef4444' : '#fbbf24' ?>;">
+                                        <div style="font-weight: 800;"><?= $detail['email'] ?></div>
+                                        <div style="color: #94a3b8;"><?= implode(', ', $detail['issues']) ?></div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
 
@@ -501,7 +540,7 @@ if (isset($_GET['ajax'])) {
                 labels: <?= json_encode($chartLabels) ?>,
                 datasets: [
                     {
-                        label: 'Bot Army Wealth',
+                        label: 'Tài sản Quân đoàn Bot',
                         data: <?= json_encode($chartBotData) ?>,
                         borderColor: '#6366f1',
                         backgroundColor: 'rgba(99, 102, 241, 0.1)',
@@ -509,7 +548,7 @@ if (isset($_GET['ajax'])) {
                         tension: 0.4
                     },
                     {
-                        label: 'Human Wealth',
+                        label: 'Tài sản Người thật',
                         data: <?= json_encode($chartHumanData) ?>,
                         borderColor: '#22c55e',
                         backgroundColor: 'rgba(34, 197, 94, 0.1)',
@@ -536,10 +575,10 @@ if (isset($_GET['ajax'])) {
             data: {
                 labels: <?= json_encode($chartLabels) ?>,
                 datasets: [
-                    { label: 'Happy', data: <?= json_encode($moodHistory['happy']) ?>, borderColor: '#22c55e', tension: 0.4 },
-                    { label: 'Excited', data: <?= json_encode($moodHistory['excited']) ?>, borderColor: '#f59e0b', tension: 0.4 },
-                    { label: 'Tilted', data: <?= json_encode($moodHistory['tilted']) ?>, borderColor: '#ef4444', tension: 0.4 },
-                    { label: 'Depressed', data: <?= json_encode($moodHistory['depressed']) ?>, borderColor: '#64748b', tension: 0.4 }
+                    { label: 'Hạnh phúc', data: <?= json_encode($moodHistory['happy']) ?>, borderColor: '#22c55e', tension: 0.4 },
+                    { label: 'Hưng phấn', data: <?= json_encode($moodHistory['excited']) ?>, borderColor: '#f59e0b', tension: 0.4 },
+                    { label: 'Cay cú', data: <?= json_encode($moodHistory['tilted']) ?>, borderColor: '#ef4444', tension: 0.4 },
+                    { label: 'Thất vọng', data: <?= json_encode($moodHistory['depressed']) ?>, borderColor: '#64748b', tension: 0.4 }
                 ]
             },
             options: {
@@ -579,7 +618,7 @@ if (isset($_GET['ajax'])) {
         let moodChart = new Chart(moodCtx, {
             type: 'doughnut',
             data: {
-                labels: ['Hạnh phúc', 'Hưng phấn', 'Cay cú', 'Trầm cảm'],
+                labels: ['Hạnh phúc', 'Hưng phấn', 'Cay cú', 'Thất vọng'],
                 datasets: [{ 
                     data: [<?= $stats['moods']['happy'] ?>, <?= $stats['moods']['excited'] ?>, <?= $stats['moods']['tilted'] ?>, <?= $stats['moods']['depressed'] ?>], 
                     backgroundColor: ['#22c55e', '#f59e0b', '#ef4444', '#64748b'], 
@@ -662,6 +701,42 @@ if (isset($_GET['ajax'])) {
                             </div>
                         `).join('');
                     }
+                }
+
+                // Update Health Summary
+                const healthEl = document.getElementById('healthSummarySection');
+                if (healthEl && data.healthSummary) {
+                    let detailsHtml = '';
+                    if (data.healthSummary.details.length === 0) {
+                        detailsHtml = '<div style="font-size: 11px; color: #64748b; text-align: center; padding: 10px; border: 1px dashed rgba(255,255,255,0.1); border-radius: 10px;">Tất cả bot đều đang hoạt động tốt. ✨</div>';
+                    } else {
+                        detailsHtml = data.healthSummary.details.map(d => `
+                            <div style="font-size: 10px; padding: 8px; background: rgba(255,255,255,0.02); border-radius: 8px; margin-bottom: 5px; border-left: 3px solid ${d.status === 'critical' ? '#ef4444' : '#fbbf24'};">
+                                <div style="font-weight: 800;">${d.email}</div>
+                                <div style="color: #94a3b8;">${d.issues.join(', ')}</div>
+                            </div>
+                        `).join('');
+                    }
+
+                    healthEl.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 15px; text-align: center;">
+                            <div style="flex:1;">
+                                <div style="font-size: 18px; font-weight: 800; color: #22c55e;">${data.healthSummary.healthy}</div>
+                                <div style="font-size: 10px; color: #94a3b8;">Khỏe mạnh</div>
+                            </div>
+                            <div style="flex:1; border-left: 1px solid rgba(255,255,255,0.05); border-right: 1px solid rgba(255,255,255,0.05);">
+                                <div style="font-size: 18px; font-weight: 800; color: #fbbf24;">${data.healthSummary.warning}</div>
+                                <div style="font-size: 10px; color: #94a3b8;">Cảnh báo</div>
+                            </div>
+                            <div style="flex:1;">
+                                <div style="font-size: 18px; font-weight: 800; color: #ef4444;">${data.healthSummary.critical}</div>
+                                <div style="font-size: 10px; color: #94a3b8;">Lỗi nặng</div>
+                            </div>
+                        </div>
+                        <div id="healthDetailsList" style="max-height: 150px; overflow-y: auto;">
+                            ${detailsHtml}
+                        </div>
+                    `;
                 }
 
             } catch (error) {

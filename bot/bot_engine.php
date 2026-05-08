@@ -44,7 +44,7 @@ function writeBotLog(string $email, string $level, string $action, string $detai
     $logDir = __DIR__ . '/logs/';
     if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
     $file = $logDir . date('Y-m-d') . '.log';
-    $timestamp = date('H:i:s');
+    $timestamp = date('H:i:s d/m');
     $logLine = "[$timestamp] [$level] [$email] $action" . ($details ? ": $details" : "") . PHP_EOL;
     @file_put_contents($file, $logLine, FILE_APPEND);
 }
@@ -83,6 +83,7 @@ function recordEconomySnapshot(mysqli $conn) {
 require_once __DIR__ . '/../db_connect.php'; 
 $config = require __DIR__ . '/config.php';
 require_once __DIR__ . '/bot_brain.php';
+require_once __DIR__ . '/../game_history_helper.php';
 $brain = new BotBrain();
 
 $baseUrl = "http://localhost/1";
@@ -127,12 +128,14 @@ function executeBotAction(string $url, ?array $postData = null, string $cookieFi
 }
 
 // ── MAIN LOOP ──
+header('X-Accel-Buffering: no'); // Disable buffering for real-time streaming
 echo "<body style='background:#020617; color:#f8fafc; font-family:sans-serif; padding:20px;'>";
 echo "<h1 style='color:#818cf8;'>🛡️ Bot Army Engine v16.1 (Omni-Access)</h1>";
 
 $allBots = $config['bot_emails'];
 shuffle($allBots);
-$activeBots = array_slice($allBots, 0, $config['settings']['max_bots_per_cycle']);
+$maxBots = isset($_GET['max_bots']) ? (int)$_GET['max_bots'] : $config['settings']['max_bots_per_cycle'];
+$activeBots = array_slice($allBots, 0, $maxBots);
 
 $updateMoneyStmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
 
@@ -141,6 +144,10 @@ $onlineRes = $conn->query("SELECT COUNT(*) as count FROM users WHERE last_active
 $userCount = $onlineRes ? (int)$onlineRes->fetch_assoc()['count'] : 0;
 
 foreach ($activeBots as $email) {
+    // Enable flushing for real-time output
+    if (ob_get_level() > 0) ob_end_flush();
+    ob_start();
+    
     $currentBotEmail = $email;
     $botMd5 = md5($email);
     $cFile = $cookieDir . $botMd5 . ".txt";
@@ -158,6 +165,7 @@ foreach ($activeBots as $email) {
     $state['mood'] = $state['mood'] ?? 'happy';
     $state['is_bad_day'] = $state['is_bad_day'] ?? false;
     $state['last_mood_update'] = $state['last_mood_update'] ?? '';
+    $state['history'] = $state['history'] ?? [];
 
     // --- MODULE 0: Login with Retry ---
     $res = null;
@@ -288,6 +296,18 @@ foreach ($activeBots as $email) {
             $msgType = ($state['lose_streak'] >= 3) ? 'streak_lose' : 'lose';
             $msg = $brain->generateMessage($userId, $msgType, ['amount' => $bet]);
         }
+
+        // --- RECORD HISTORY ---
+        logGameHistory($conn, $userId, $chosenGame, $bet, $winAmount, $isWin);
+        
+        // Cập nhật history vào state (tối đa 10 ván)
+        array_unshift($state['history'], [
+            'game' => $chosenGame,
+            'bet' => $bet,
+            'result' => $isWin ? 'win' : 'lose',
+            'time' => date('H:i d/m')
+        ]);
+        $state['history'] = array_slice($state['history'], 0, 10);
 
         // --- MODULE 3: Social & Interaction ---
         if (rand(1, 100) <= 75) {
@@ -704,6 +724,8 @@ foreach ($activeBots as $email) {
         // --- MODULE 11: Cleanup & Logout ---
         executeBotAction($baseUrl . "/api_logout.php", null, $cFile);
         echo "</div>";
+        ob_flush();
+        flush();
     }
 
 $updateMoneyStmt->close();
