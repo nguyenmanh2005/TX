@@ -6,7 +6,7 @@
 require_once __DIR__ . '/../db_connect.php';
 $config = require __DIR__ . '/config.php';
 
-function getBotHealthSummary($conn, $config) {
+function getBotHealthSummary(mysqli $conn, array $config) {
     $sessionDir = __DIR__ . '/sessions/';
     $logFile = __DIR__ . '/logs/' . date('Y-m-d') . '.log';
     
@@ -85,6 +85,19 @@ function getBotHealthSummary($conn, $config) {
 
 // Nếu gọi trực tiếp
 if (basename($_SERVER['PHP_SELF']) == 'bot_health.php') {
+    $action = $_GET['action'] ?? '';
+    
+    if ($action === 'clear_logs') {
+        $logFile = __DIR__ . '/logs/' . date('Y-m-d') . '.log';
+        if (file_exists($logFile)) {
+            file_put_contents($logFile, ""); // Truncate file
+            echo json_encode(['status' => 'success', 'message' => 'Logs cleared']);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'No log file to clear']);
+        }
+        exit;
+    }
+
     if ($_SERVER['REMOTE_ADDR'] !== '127.0.0.1' && php_sapi_name() !== 'cli') die('Forbidden');
     header('Content-Type: application/json');
     echo json_encode(getBotHealthSummary($conn, $config));

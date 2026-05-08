@@ -114,16 +114,43 @@ $stats['total_human_money'] = (float)($humanRes['total'] ?? 0);
 require_once 'bot_health.php';
 $healthSummary = getBotHealthSummary($conn, $config);
 
-// Lấy dữ liệu biểu đồ
+// Lọc dữ liệu biểu đồ theo Range
+$range = $_GET['range'] ?? '1d';
+$filteredHistory = [];
+$now = time();
+
+foreach ($history as $point) {
+    $pTime = isset($point['full_date']) ? strtotime($point['full_date']) : strtotime(str_replace('/', '-', $point['time'] . '/' . date('Y')));
+    
+    $include = false;
+    if ($range === '1d' && ($now - $pTime) <= 86400) $include = true;
+    else if ($range === '7d' && ($now - $pTime) <= 86400 * 7) $include = true;
+    else if ($range === '30d' && ($now - $pTime) <= 86400 * 30) $include = true;
+    else if ($range === 'all') $include = true;
+
+    if ($include) {
+        $filteredHistory[] = $point;
+    }
+}
+
+// Downsampling cho các range dài để tránh lag biểu đồ
+if (count($filteredHistory) > 100) {
+    $step = ceil(count($filteredHistory) / 50);
+    $downsampled = [];
+    for ($i = 0; $i < count($filteredHistory); $i += $step) {
+        $downsampled[] = $filteredHistory[$i];
+    }
+    $filteredHistory = $downsampled;
+}
+
 $chartLabels = []; $chartBotData = []; $chartHumanData = [];
 $moodHistory = ['happy' => [], 'excited' => [], 'tilted' => [], 'depressed' => []];
 
-foreach ($history as $point) {
+foreach ($filteredHistory as $point) {
     $chartLabels[] = $point['time'];
     $chartBotData[] = $point['bot'];
     $chartHumanData[] = $point['human'];
     
-    // Mood history
     if (isset($point['moods'])) {
         foreach ($moodHistory as $m => &$vals) {
             $vals[] = $point['moods'][$m] ?? 0;
@@ -223,6 +250,11 @@ if (isset($_GET['ajax'])) {
         .inventory-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px; }
         .tag { font-size: 9px; background: rgba(99, 102, 241, 0.1); color: #a5b4fc; padding: 2px 6px; border-radius: 4px; }
         .btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 12px; cursor: pointer; text-decoration: none; display: inline-block; font-weight: 600; }
+        
+        .range-selector { display: flex; gap: 5px; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 10px; }
+        .range-btn { background: transparent; border: none; color: #94a3b8; font-size: 10px; font-weight: 600; padding: 5px 10px; border-radius: 7px; cursor: pointer; transition: all 0.2s; }
+        .range-btn.active { background: var(--primary); color: white; }
+        .range-btn:hover:not(.active) { background: rgba(255,255,255,0.05); }
     </style>
 </head>
 <body>
@@ -233,9 +265,20 @@ if (isset($_GET['ajax'])) {
                 <span style="color: var(--success); font-size: 12px;">● Đang giám sát <?= $stats['total'] ?> thành viên Thiên Thần & Ác Quỷ</span>
             </div>
             <div style="display: flex; gap: 10px;">
+                <a href="bot_buff.php" class="btn" style="background: #1e293b; border: 1px solid rgba(255,255,255,0.1)">💰 Buff Tiền</a>
                 <a href="bot_runner.php" class="btn" style="background: linear-gradient(135deg, #6366f1, #a855f7)">🚀 Trình Điều Khiển Web</a>
-                <a href="bot_manager.php?action=spawn" class="btn" style="background: var(--warning)">➕ Sinh Bot</a>
+                <a href="javascript:void(0)" onclick="spawnBots()" class="btn" style="background: var(--warning)">➕ Sinh Bot</a>
             </div>
+        </div>
+
+        <script>
+        function spawnBots() {
+            let count = prompt("Bạn muốn sinh thêm bao nhiêu bot? (Tối đa 50)", "1");
+            if (count && !isNaN(count) && count > 0) {
+                window.location.href = "bot_manager.php?action=spawn&count=" + count;
+            }
+        }
+        </script>
         </div>
 
         <div class="grid-stats">
@@ -259,9 +302,17 @@ if (isset($_GET['ajax'])) {
         <div class="main-layout">
             <div class="left-col">
                 <div class="panel" style="margin-bottom: 20px;">
-                    <h2 style="font-size: 18px; margin-top:0;">📈 Biến Động Tài Sản (Lịch Sử)</h2>
-                    <div style="height: 250px;">
-                        <canvas id="wealthLineChart"></canvas>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h2 style="font-size: 18px; margin:0;">📊 Biến Động Tài Sản</h2>
+                        <div class="range-selector">
+                            <button onclick="setRange('1d')" class="range-btn active" id="btn-1d">1N</button>
+                            <button onclick="setRange('7d')" class="range-btn" id="btn-7d">7N</button>
+                            <button onclick="setRange('30d')" class="range-btn" id="btn-30d">1T</button>
+                            <button onclick="setRange('all')" class="range-btn" id="btn-all">Tất cả</button>
+                        </div>
+                    </div>
+                    <div style="height: 300px;">
+                        <canvas id="mainChart"></canvas>
                     </div>
                 </div>
                 <div class="panel" style="margin-bottom: 20px;">
@@ -325,7 +376,12 @@ if (isset($_GET['ajax'])) {
                     </div>
                 </div>
                 <div class="panel" style="margin-bottom: 20px;">
-                    <h2 style="font-size: 18px; margin-top:0; color: #22c55e;">🏥 Sức Khỏe Quân Đoàn</h2>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h2 style="font-size: 18px; margin:0;">🏥 Sức Khỏe Quân Đoàn</h2>
+                        <button onclick="clearLogs()" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(239, 68, 68, 0.2)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.1)'">
+                            🗑️ Clear lỗi
+                        </button>
+                    </div>
                     <div id="healthSummarySection">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 15px; text-align: center;">
                             <div style="flex:1;">
@@ -533,7 +589,7 @@ if (isset($_GET['ajax'])) {
         }
 
         // 📈 Wealth History Chart
-        const lineCtx = document.getElementById('wealthLineChart').getContext('2d');
+        const lineCtx = document.getElementById('mainChart').getContext('2d');
         let wealthChart = new Chart(lineCtx, {
             type: 'line',
             data: {
@@ -633,9 +689,30 @@ if (isset($_GET['ajax'])) {
         });
 
         // 🔄 Auto Refresh Logic
-        async function refreshDashboard() {
+        let currentRange = '1d';
+        function setRange(range) {
+            currentRange = range;
+            document.querySelectorAll('.range-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn-' + range).classList.add('active');
+            refreshData();
+        }
+
+        async function clearLogs() {
+            if (!confirm('Bạn có chắc chắn muốn xóa toàn bộ log lỗi hôm nay không?')) return;
             try {
-                const response = await fetch('index.php?ajax=1');
+                const response = await fetch('bot_health.php?action=clear_logs');
+                const res = await response.json();
+                if (res.status === 'success') {
+                    refreshData();
+                }
+            } catch (error) {
+                console.error('Clear logs failed:', error);
+            }
+        }
+
+        async function refreshData() {
+            try {
+                const response = await fetch('index.php?ajax=1&range=' + currentRange);
                 const data = await response.json();
 
                 // Update Stats
@@ -744,7 +821,7 @@ if (isset($_GET['ajax'])) {
             }
         }
 
-        setInterval(refreshDashboard, 10000); // Refresh every 10s
+        setInterval(refreshData, 10000); // Refresh every 10s
 
         // 🔍 Real-time Search Logic
         const searchInput = document.getElementById('searchBotInput');

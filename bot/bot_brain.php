@@ -17,7 +17,7 @@ class BotBrain {
         'genalpha' => ['chat_style' => 'genalpha']
     ];
 
-    public function getPersonality($userId) {
+    public function getPersonality(int $userId) {
         $types = array_keys($this->personalities);
         return $types[$userId % count($types)];
     }
@@ -40,7 +40,7 @@ class BotBrain {
     /**
      * 🔮 Logic Dự đoán chuyên sâu theo từng loại game
      */
-    public function generatePrediction($game) {
+    public function generatePrediction(string $game) {
         $gameSpecific = [
             'Thiên Thần Ác Quỷ' => [
                 "Địa trận này Ác Quỷ chắc chắn sẽ húp thế! 😈",
@@ -74,7 +74,7 @@ class BotBrain {
         return $list[array_rand($list)];
     }
 
-    public function generateMessage($userId, $type, $data = [], $state = []) {
+    public function generateMessage(int $userId, string $type, array $data = [], array $state = []) {
         $p = $this->getPersonality($userId);
         $style = $this->personalities[$p]['chat_style'];
         $dictionary = $this->loadChatFile($style);
@@ -138,16 +138,42 @@ class BotBrain {
         // 4. Broke & Tilted Special Overrides
         if ($type === 'begging') {
             $begMsgs = ["Em cháy túi rồi, bác nào tốt bụng cho em ít GTLM với! 🙏", "Hết GTLM rồi, ai cứu em phát...", "Trắng tay thật rồi, xin húp lộc từ các đại gia!", "Bác nào húp đậm cho em xin ít vốn ra chiêu với ạ."];
-            return $begMsgs[array_rand($begMsgs)];
-        }
-        if ($type === 'tilted_chat') {
+            $msg = $begMsgs[array_rand($begMsgs)];
+        } else if ($type === 'tilted_chat') {
             $tiltedMsgs = ["M* nó, lại thua! All-in ván này gỡ gạc! 🤬", "Cay quá rồi đấy, không tin là không húp được!", "Trò này bịp à? Thua 3 ván rồi đấy!", "Nghỉ hưu sớm mất thôi, sao mà đen thế!", "Ván này x2 GTLM cược, xem ai sợ ai! 🔥"];
-            return $tiltedMsgs[array_rand($tiltedMsgs)];
+            $msg = $tiltedMsgs[array_rand($tiltedMsgs)];
+        } else if ($type === 'teaching') {
+            $teachMsgs = ["Bí kíp húp là đây: Cứ tập trung vào {game} mà ra chiêu, tỉ lệ húp cực cao! 💎", "Anh em nào đang đen thì qua {game} quẩy với tôi, đảm bảo đổi vận!", "Chiến thuật của tôi ở {game} chưa bao giờ làm tôi thất vọng. Thử đi anh em!", "Đừng đánh lung tung, {game} đang vào dây đỏ đó! 🚀"];
+            $msg = $teachMsgs[array_rand($teachMsgs)];
+        } else if ($type === 'learning') {
+            $mentor = $data['mentor'] ?? 'tiền bối';
+            $learnMsgs = ["Nghe theo bác @$mentor, ván này tôi theo kèo {game}! Mong là húp lộc.", "Đang đen quá, mượn vía bác @$mentor ra chiêu {game} xem sao... 🙏", "Thấy bác @$mentor húp đậm quá, tôi cũng phải học hỏi theo thôi!", "Đệ tử theo chân sư phụ @$mentor đây, quất {game} thôi! 🔥"];
+            $msg = $learnMsgs[array_rand($learnMsgs)];
+        } else if ($type === 'reply_general') {
+            $replies = ["Ơi em đây bác {player_name}!", "Bác gọi em có việc gì thế bác {player_name}?", "Em đang bận húp tí GTLM, bác {player_name} gọi làm em giật cả mình! 😂", "Có mặt em! Đang định ra chiêu gì đây bác {player_name}?"];
+            $msg = $replies[array_rand($replies)];
+        } else if ($type === 'reply_question') {
+            $replies = ["Cái này em cũng đang phân vân bác ạ...", "Hỏi khó thế, em chỉ biết húp GTLM thôi! 😂", "Để em xem quẻ đã nhé bác {player_name}.", "Theo kinh nghiệm của em là cứ đánh đâu thắng đó! 🔥"];
+            $msg = $replies[array_rand($replies)];
         }
 
         // 3. Fanboy (Hambo) logic for Idol replacement
         if ($p === 'hambo' && isset($state['idol_name'])) {
             $msg = str_replace('{idol}', $state['idol_name'], $msg);
+        }
+
+        // 6. Memory-based personalization
+        $memLevel = $data['memory_level'] ?? 0;
+        $pName = $data['player_name'] ?? 'bạn';
+        
+        if ($memLevel >= 3 && $memLevel <= 10) {
+            // Quen mặt: Thêm tên vào câu chat
+            $msg = "Chào bác @{$pName}, " . ltrim($msg);
+        } else if ($memLevel > 10) {
+            // Bạn thân / Đối thủ
+            if ($p === 'shy') $msg = "Ô kìa bác {$pName} thân mến, lại gặp nhau rồi! " . $msg;
+            if ($p === 'aggressive') $msg = "Này {$pName}, hôm nay định nộp GTLM cho tôi tiếp à? 😂 " . $msg;
+            if ($p === 'simp') $msg = "Bác {$pName} ơi, húp được ván nào chưa? Nhìn bác chơi mà em mê quá! " . $msg;
         }
 
         foreach ($data as $key => $val) {
@@ -156,7 +182,7 @@ class BotBrain {
         return $msg;
     }
 
-    private function loadChatFile($style) {
+    private function loadChatFile(string $style) {
         $path = __DIR__ . "/chat/{$style}.php";
         return file_exists($path) ? require $path : [];
     }

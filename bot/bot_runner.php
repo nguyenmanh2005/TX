@@ -50,14 +50,7 @@ $totalBots = count($config['bot_emails']);
             margin-bottom: 30px;
         }
 
-        h1 {
-            font-weight: 800;
-            font-size: 28px;
-            margin: 0;
-            background: linear-gradient(to right, #818cf8, #c084fc);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+        h1 { font-weight: 800; text-align: center; margin-bottom: 30px; background: linear-gradient(135deg, #818cf8, #c084fc); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 
         .card {
             background: var(--panel);
@@ -170,11 +163,19 @@ $totalBots = count($config['bot_emails']);
         <div class="card">
             <div class="form-group">
                 <div style="flex: 1;">
-                    <label style="display: block; font-size: 12px; color: var(--text-dim); margin-bottom: 8px;">Số lượng Bot muốn chạy (Max: <?= $totalBots ?>)</label>
+                    <label style="display: block; font-size: 12px; color: var(--text-dim); margin-bottom: 8px;">Số lượng Bot (Max: <?= $totalBots ?>)</label>
                     <input type="number" id="maxBots" value="10" min="1" max="<?= $totalBots ?>">
                 </div>
+                <div style="flex: 1;">
+                    <label style="display: block; font-size: 12px; color: var(--text-dim); margin-bottom: 8px;">Nghỉ giữa chu kỳ (giây)</label>
+                    <input type="number" id="cooldown" value="5" min="1" max="300">
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-top: 20px;">
+                    <input type="checkbox" id="autoRun" style="width: 20px; height: 20px; accent-color: var(--primary);">
+                    <label for="autoRun" style="font-size: 14px; font-weight: 600;">Chạy liên tục</label>
+                </div>
                 <button id="startBtn" class="btn" onclick="startCycle()">
-                    <span>▶️ BẮT ĐẦU CHU KỲ</span>
+                    <span>▶️ BẮT ĐẦU</span>
                 </button>
                 <button id="stopBtn" class="btn" style="background: var(--danger);" onclick="stopCycle()" disabled>
                     <span>⏹️ DỪNG LẠI</span>
@@ -196,11 +197,15 @@ $totalBots = count($config['bot_emails']);
     <script>
         let isRunning = false;
         let controller = null;
+        let autoRunTimeout = null;
 
         async function startCycle() {
             if (isRunning) return;
+            clearTimeout(autoRunTimeout);
 
             const maxBots = document.getElementById('maxBots').value;
+            const cooldown = document.getElementById('cooldown').value;
+            const isAuto = document.getElementById('autoRun').checked;
             const consoleEl = document.getElementById('console');
             const startBtn = document.getElementById('startBtn');
             const stopBtn = document.getElementById('stopBtn');
@@ -212,7 +217,7 @@ $totalBots = count($config['bot_emails']);
             statusBadge.className = 'status-badge status-running';
             statusBadge.innerText = 'Đang chạy';
 
-            consoleEl.innerHTML = `<div style="color: var(--primary); margin-bottom: 10px;">[${new Date().toLocaleTimeString()}] Bắt đầu chu kỳ với ${maxBots} Bot...</div>`;
+            consoleEl.innerHTML += `<div style="color: var(--primary); margin: 15px 0 10px 0; border-top: 1px dashed rgba(99, 102, 241, 0.3); padding-top: 10px;">[${new Date().toLocaleTimeString()}] Bắt đầu chu kỳ mới (${maxBots} Bot)...</div>`;
 
             controller = new AbortController();
             const signal = controller.signal;
@@ -235,25 +240,39 @@ $totalBots = count($config['bot_emails']);
                     }
                     consoleEl.scrollTop = consoleEl.scrollHeight;
                 }
-
             } catch (err) {
                 if (err.name === 'AbortError') {
-                    consoleEl.innerHTML += `<div style="color: var(--warning);">[Hệ thống] Chu kỳ đã bị dừng bởi người dùng.</div>`;
+                    consoleEl.innerHTML += `<div style="color: var(--warning);">[Hệ thống] Đã dừng chu kỳ.</div>`;
+                    document.getElementById('autoRun').checked = false; // Tắt auto nếu bấm dừng
                 } else {
-                    consoleEl.innerHTML += `<div style="color: var(--danger);">[Lỗi] Không thể kết nối tới Engine: ${err.message}</div>`;
+                    consoleEl.innerHTML += `<div style="color: var(--danger);">[Lỗi] Engine: ${err.message}</div>`;
                 }
             } finally {
                 isRunning = false;
-                startBtn.disabled = false;
-                stopBtn.disabled = true;
-                statusBadge.className = 'status-badge status-idle';
-                statusBadge.innerText = 'Sẵn sàng';
-                consoleEl.innerHTML += `<div style="color: var(--success); margin-top: 10px;">[${new Date().toLocaleTimeString()}] Chu kỳ hoàn tất.</div>`;
+                if (!document.getElementById('autoRun').checked) {
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                    statusBadge.className = 'status-badge status-idle';
+                    statusBadge.innerText = 'Sẵn sàng';
+                }
+                
+                consoleEl.innerHTML += `<div style="color: var(--success); margin-top: 5px;">[${new Date().toLocaleTimeString()}] Chu kỳ hoàn tất.</div>`;
                 consoleEl.scrollTop = consoleEl.scrollHeight;
+
+                // Auto Run Logic
+                if (document.getElementById('autoRun').checked) {
+                    statusBadge.innerText = `Nghỉ (${cooldown}s)`;
+                    statusBadge.className = 'status-badge status-idle';
+                    autoRunTimeout = setTimeout(() => {
+                        startCycle();
+                    }, cooldown * 1000);
+                }
             }
         }
 
         function stopCycle() {
+            document.getElementById('autoRun').checked = false;
+            clearTimeout(autoRunTimeout);
             if (controller) {
                 controller.abort();
             }

@@ -38,8 +38,21 @@ function spawnNewBot(mysqli $conn) {
 // Handle Web Requests
 if (isset($_GET['action'])) {
     if ($_GET['action'] == 'spawn') {
-        $name = spawnNewBot($conn);
-        header("Location: index.php?msg=Result: " . urlencode($name));
+        $count = isset($_GET['count']) ? max(1, (int)$_GET['count']) : 1;
+        $count = min($count, 50); // Giới hạn tối đa 50 con mỗi lần để tránh treo server
+        
+        $spawned = [];
+        for ($i = 0; $i < $count; $i++) {
+            $name = spawnNewBot($conn);
+            if ($name && !str_contains($name, 'Duplicate')) {
+                $spawned[] = $name;
+            }
+        }
+        
+        $msg = "Đã sinh thành công " . count($spawned) . " bot.";
+        if (count($spawned) > 0) $msg .= " (Từ " . $spawned[0] . " đến " . end($spawned) . ")";
+        
+        header("Location: index.php?msg=" . urlencode($msg));
         exit;
     }
     

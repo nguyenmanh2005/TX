@@ -1,8 +1,13 @@
 <?php
 /**
- * 🛡️ Omni-Bot Engine v16.1 - Total Web Access
- * Coverage: Auth, Games, Daily Maintenance, Quests, Social Feed (Like/Comment), Friends, Notifications
+ * 🛡️ Omni-Bot Engine v16.2 - Total Web Access
  */
+
+// 1. Load config & brain (Moved to top for better IDE support)
+require_once __DIR__ . '/../db_connect.php'; 
+$config = require __DIR__ . '/config.php';
+require_once __DIR__ . '/bot_brain.php';
+require_once __DIR__ . '/../game_history_helper.php';
 
 // 0. Helpers & Error Handling
 $currentBotEmail = "SYSTEM";
@@ -70,20 +75,16 @@ function recordEconomySnapshot(mysqli $conn) {
 
     $history[] = [
         'time' => date('H:i d/m'), 
+        'full_date' => date('Y-m-d H:i:s'), // Thêm full_date để filter chính xác hơn
         'bot' => $totalBot, 
         'human' => $totalHuman,
         'moods' => $moodCounts
     ];
     
-    if (count($history) > 50) array_shift($history);
+    if (count($history) > 50000) array_shift($history);
     file_put_contents($historyFile, json_encode($history));
 }
 
-// 1. Load config & brain
-require_once __DIR__ . '/../db_connect.php'; 
-$config = require __DIR__ . '/config.php';
-require_once __DIR__ . '/bot_brain.php';
-require_once __DIR__ . '/../game_history_helper.php';
 $brain = new BotBrain();
 
 $baseUrl = "http://localhost/1";
@@ -137,6 +138,10 @@ shuffle($allBots);
 $maxBots = isset($_GET['max_bots']) ? (int)$_GET['max_bots'] : $config['settings']['max_bots_per_cycle'];
 $activeBots = array_slice($allBots, 0, $maxBots);
 
+// Load shared mentorship data
+$mentorFile = __DIR__ . '/sessions/mentorship.json';
+$mentors = file_exists($mentorFile) ? json_decode(file_get_contents($mentorFile), true) : [];
+
 $updateMoneyStmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
 
 // Lấy số lượng người chơi đang online (hoạt động trong 5 phút qua)
@@ -184,6 +189,8 @@ foreach ($activeBots as $email) {
     $userName = $res['Name'];
     $userMoney = (float)$res['Money'];
     $personality = $brain->getPersonality($userId);
+    $msg = "Đang dạo chơi quanh trận địa... 😊";
+    $chosenGame = "trận địa";
 
         // --- MODULE 0.1: Daily Mood & Idol ---
         $todayStr = date('Y-m-d');
@@ -257,50 +264,124 @@ foreach ($activeBots as $email) {
         $mood = $state['mood'] ?? 'happy';
         
         // --- BROKE CHECK (Cháy túi) ---
-        if ($userMoney < 100000) {
+        // Nâng ngưỡng cháy túi lên 500,000 để đảm bảo an toàn tài chính
+        if ($userMoney < 500000) {
             $state['mood'] = 'broke';
-            echo "💸 <span style='color:#fca5a5;'>Trạng thái: Cháy túi!</span> Đang đi lượm lặt & xin xỏ...<br>";
+            echo "💸 <span style='color:#fca5a5;'>Trạng thái: Cần tích lũy vốn (Dưới 500k)!</span> Nghỉ chơi game, đi lượm lặt...<br>";
             if (rand(1, 100) <= 60) {
                 $begMsg = $brain->generateMessage($userId, 'begging');
                 executeBotAction($baseUrl . "/chat.php", ['message' => $begMsg], $cFile);
             }
-            if (rand(1, 100) <= 30) {
+            if (rand(1, 100) <= 40) {
                 executeBotAction($baseUrl . "/api_giftcode.php", ['action' => 'claim_random'], $cFile);
             }
             goto social_module; // Bỏ qua Module Game
         }
         
-        // Mood-based game selection: Nếu đang tilted thì tránh Poker, Baccarat (game rủi ro cao)
+        // Mood-based game selection
         $filteredGames = $availableGames;
+        
+        // --- LOSE STREAK: Chuyển game nếu thua 2 ván liên tiếp ---
+        if ($state['lose_streak'] >= 2 && !empty($state['history'])) {
+            $lastGame = $state['history'][0]['game'];
+            $filteredGames = array_filter($availableGames, function($g) use ($lastGame) {
+                return $g !== $lastGame;
+            });
+            if (empty($filteredGames)) $filteredGames = $availableGames;
+            echo "🔄 <span style='color:#a78bfa;'>Đổi game:</span> Thua quá, chuyển từ $lastGame sang game khác...<br>";
+        }
+
         if ($mood === 'tilted') {
             $highRisk = ['Poker Texas', 'Baccarat Premium', 'Xì Dách Royale'];
-            $filteredGames = array_filter($availableGames, function($g) use ($highRisk) {
+            $filteredGames = array_filter($filteredGames, function($g) use ($highRisk) {
                 return !in_array($g, $highRisk);
             });
             if (empty($filteredGames)) $filteredGames = $availableGames;
         }
         
-        $chosenGame = $filteredGames[array_rand($filteredGames)];
-        $bet = floor($userMoney * (($personality == 'aggressive' ? rand(5, 12) : rand(1, 5)) / 100));
-        
-        // --- TILTED LOGIC (Cay cú) ---
-        if ($state['lose_streak'] >= 3) {
-            $state['mood'] = 'tilted';
-            if (rand(1, 100) <= 50) {
-                $bet = $userMoney; // All-in
-                echo "🔥 <span style='color:#ef4444; font-weight:800;'>ALL-IN!</span> Bot đang cực kỳ cay cú...<br>";
-            } else {
-                $bet = $bet * 2; // Martingale
-                echo "📈 <span style='color:#fbbf24; font-weight:800;'>Gấp thếp (Martingale)!</span> Quyết tâm gỡ gạc...<br>";
+        // --- MULTI-LEVEL BETTING STRATEGY (Cược theo cấp độ) ---
+        $probabilities = [
+            'light' => 50,  // 1-3%
+            'medium' => 35, // 5-10%
+            'heavy' => 13,  // 15-25%
+            'all_in' => 2   // 50-100%
+        ];
+
+        // Personality Adjustments
+        if ($personality === 'aggressive') {
+            $probabilities['light'] -= 10; $probabilities['medium'] += 5; $probabilities['heavy'] += 3; $probabilities['all_in'] += 2;
+        } else if ($personality === 'shy') {
+            $probabilities['light'] += 40; $probabilities['medium'] -= 25; $probabilities['heavy'] -= 13; $probabilities['all_in'] = 0;
+        } else if ($personality === 'danchoi') {
+            $probabilities['all_in'] += 8; $probabilities['light'] -= 8;
+        }
+
+        // Mood Adjustments
+        if ($mood === 'excited') {
+            $probabilities['heavy'] += 5; $probabilities['light'] -= 5;
+        } else if ($mood === 'tilted') {
+            $probabilities['all_in'] = max(0, $probabilities['all_in'] - 2);
+            $probabilities['medium'] += 2;
+        } else if ($mood === 'broke') {
+            $probabilities = ['light' => 100, 'medium' => 0, 'heavy' => 0, 'all_in' => 0];
+        }
+
+        // Determine Level
+        $rand = rand(1, 100);
+        $currentSum = 0;
+        $chosenLevel = 'light';
+        foreach ($probabilities as $level => $prob) {
+            $currentSum += $prob;
+            if ($rand <= $currentSum) {
+                $chosenLevel = $level;
+                break;
             }
-            if ($bet > $userMoney) $bet = $userMoney;
+        }
+
+        // Calculate Bet Percentage
+        switch ($chosenLevel) {
+            case 'light': $betPercent = rand(1, 3); break;
+            case 'medium': $betPercent = rand(5, 10); break;
+            case 'heavy': $betPercent = rand(15, 25); break;
+            case 'all_in': $betPercent = rand(50, 100); break;
+            default: $betPercent = 2;
+        }
+
+        $bet = floor($userMoney * ($betPercent / 100));
+        if ($bet < 1000) $bet = 1000;
+        if ($bet > $userMoney) $bet = $userMoney;
+
+        echo "🎲 <span style='color:#38bdf8;'>Mức cược:</span> " . strtoupper($chosenLevel) . " (" . $betPercent . "% - " . number_format($bet) . " GTLM)<br>";
+
+        // --- MENTORSHIP: Check for a mentor if losing ---
+        $learningFrom = null;
+        if ($state['lose_streak'] >= 3 && !empty($mentors)) {
+            $learningFrom = $mentors[array_rand($mentors)];
+            $chosenGame = $learningFrom['game'];
+            echo "🎓 <span style='color:#60a5fa;'>Đang học hỏi:</span> Theo chân tiền bối <b>{$learningFrom['name']}</b> tại ván $chosenGame...<br>";
+            
+            if (rand(1, 100) <= 40) {
+                $lMsg = $brain->generateMessage($userId, 'learning', ['mentor' => $learningFrom['name'], 'game' => $chosenGame]);
+                executeBotAction($baseUrl . "/chat.php", ['message' => $lMsg], $cFile);
+            }
+        } else {
+            $chosenGame = $filteredGames[array_rand($filteredGames)];
+        }
+
+        // --- TILTED LOGIC (Martingale fallback) ---
+        if ($state['lose_streak'] >= 3 && $chosenLevel !== 'all_in') {
+            $state['mood'] = 'tilted';
+            if (rand(1, 100) <= 30) {
+                $bet = min($userMoney, $bet * 2); // Martingale nhẹ
+                echo "📈 <span style='color:#fbbf24;'>Gấp thếp nhẹ:</span> Quyết tâm gỡ gạc...<br>";
+            }
+        }
             
             // Chat chửi thề / than vãn
             if (rand(1, 100) <= 70) {
                 $tMsg = $brain->generateMessage($userId, 'tilted_chat');
                 executeBotAction($baseUrl . "/chat.php", ['message' => $tMsg], $cFile);
             }
-        }
 
         if ($bet < 1000) $bet = 1000;
 
@@ -315,6 +396,19 @@ foreach ($activeBots as $email) {
             $state['mood'] = 'excited';
             echo "💰 <span style='color:#4ade80;'>Húp " . number_format($bet) . " GTLM tại $chosenGame</span><br>";
             
+            // --- MENTORSHIP: Become a mentor if winning big ---
+            if ($state['win_streak'] >= 5) {
+                $mentors[$userId] = ['name' => $userName, 'game' => $chosenGame, 'time' => time()];
+                // Giới hạn 5 mentor mới nhất
+                if (count($mentors) > 5) array_shift($mentors);
+                file_put_contents($mentorFile, json_encode($mentors));
+                
+                if (rand(1, 100) <= 30) {
+                    $tMsg = $brain->generateMessage($userId, 'teaching', ['game' => $chosenGame]);
+                    executeBotAction($baseUrl . "/chat.php", ['message' => $tMsg], $cFile);
+                }
+            }
+
             $msgType = ($state['win_streak'] >= 3) ? 'streak_win' : 'win';
             $msg = $brain->generateMessage($userId, $msgType, ['amount' => $bet]);
         } else {
@@ -348,42 +442,73 @@ foreach ($activeBots as $email) {
             $chatMessages = executeBotAction($baseUrl . "/chat.php?action=load", null, $cFile);
             $isReplied = false;
 
-            // 1. Logic Phản hồi, React & Keywords
+            // 1. Logic Phản hồi, React & Keywords (Smart Reply v2)
             if (!empty($chatMessages) && is_array($chatMessages)) {
                 $recent = array_slice($chatMessages, -10); // Lấy 10 tin mới nhất
                 foreach ($recent as $chat) {
                     if ($chat['username'] !== $userName) {
-                        // A. Keyword Reaction (Ưu tiên hàng đầu)
-                        $keywordResponse = $brain->generateMessage($userId, 'keyword', ['text' => $chat['message']]);
-                        if ($keywordResponse && rand(1, 100) <= 50) {
-                            executeBotAction($baseUrl . "/chat.php", ['message' => "@{$chat['username']} $keywordResponse"], $cFile);
-                            $isReplied = true;
-                            break;
-                        }
-
-                        // B. React to other's wins/losses
-                        $isWinMsg = (stripos($chat['message'], 'Thắng') !== false || stripos($chat['message'], 'Húp') !== false || stripos($chat['message'], 'ăn ngập mặt') !== false);
-                        $isLoseMsg = (stripos($chat['message'], 'Thua') !== false || stripos($chat['message'], 'bay màu') !== false || stripos($chat['message'], 'bốc hơi') !== false || stripos($chat['message'], 'về cõi') !== false);
-
-                        if ($isWinMsg && rand(1, 100) <= 20) {
-                            $reaction = $brain->generateMessage($userId, 'reaction_win');
-                            executeBotAction($baseUrl . "/chat.php", ['message' => "@{$chat['username']} $reaction"], $cFile);
-                            $isReplied = true;
-                            break;
-                        }
-                        if ($isLoseMsg && rand(1, 100) <= 15) {
-                            $reaction = $brain->generateMessage($userId, 'reaction_lose');
-                            executeBotAction($baseUrl . "/chat.php", ['message' => "@{$chat['username']} $reaction"], $cFile);
-                            $isReplied = true;
-                            break;
-                        }
+                        $pName = $chat['username'];
+                        $isBotParticipant = false;
+                        foreach($botNameMap as $b) { if($b['name'] === $pName) { $isBotParticipant = true; break; } }
                         
-                        // Normal Reply
-                        if (rand(1, 100) <= 30) {
-                            $msg = "@{$chat['username']} " . $msg;
-                            $isReplied = true;
-                            break;
+                        // Check memory level
+                        $memLevel = 0;
+                        if (!$isBotParticipant) {
+                            $mNameClean = $conn->real_escape_string($pName);
+                            $memRes = $conn->query("SELECT interaction_count FROM bot_memory WHERE bot_id = $userId AND player_name = '$mNameClean'");
+                            if ($memRes && $row = $memRes->fetch_assoc()) $memLevel = $row['interaction_count'];
                         }
+
+                        // Determine reply probability
+                        $replyChance = 30;
+                        $isTagged = (stripos($chat['message'], "@$userName") !== false);
+                        if ($isTagged) $replyChance = 100;
+                        else if ($memLevel > 10) $replyChance = 70;
+
+                        if (rand(1, 100) > $replyChance) continue;
+
+                        $replyData = ['player_name' => $pName, 'memory_level' => $memLevel];
+
+                        // A. Tagged direct reply
+                        if ($isTagged) {
+                            $msg = $brain->generateMessage($userId, 'reply_general', $replyData);
+                            executeBotAction($baseUrl . "/chat.php", ['message' => "@$pName $msg"], $cFile);
+                            $isReplied = true; break;
+                        }
+
+                        // B. Question detection
+                        $isQuestion = (strpos($chat['message'], '?') !== false || preg_match('/\b(ai|sao|đâu|nào)\b/i', $chat['message']) || stripos($chat['message'], 'có ai') !== false);
+                        if ($isQuestion) {
+                            $msg = $brain->generateMessage($userId, 'reply_question', $replyData);
+                            executeBotAction($baseUrl . "/chat.php", ['message' => "@$pName $msg"], $cFile);
+                            $isReplied = true; break;
+                        }
+
+                        // C. Win/Loss detection
+                        $isWinMsg = (stripos($chat['message'], 'Húp') !== false || stripos($chat['message'], 'thắng') !== false || stripos($chat['message'], 'ăn ngập') !== false);
+                        $isLoseMsg = (stripos($chat['message'], 'Thua') !== false || stripos($chat['message'], 'bay màu') !== false || stripos($chat['message'], 'về cõi') !== false);
+
+                        if ($isWinMsg) {
+                            $msg = $brain->generateMessage($userId, 'reaction_win', $replyData);
+                            executeBotAction($baseUrl . "/chat.php", ['message' => "@$pName $msg"], $cFile);
+                            $isReplied = true; break;
+                        }
+                        if ($isLoseMsg) {
+                            $msg = $brain->generateMessage($userId, 'reaction_lose', $replyData);
+                            executeBotAction($baseUrl . "/chat.php", ['message' => "@$pName $msg"], $cFile);
+                            $isReplied = true; break;
+                        }
+
+                        // D. Keyword fallback
+                        $keywordResponse = $brain->generateMessage($userId, 'keyword', ['text' => $chat['message']]);
+                        if ($keywordResponse) {
+                            executeBotAction($baseUrl . "/chat.php", ['message' => "@$pName $keywordResponse"], $cFile);
+                            $isReplied = true; break;
+                        }
+
+                        // E. Normal Reply fallback
+                        $msg = "@$pName " . $msg;
+                        $isReplied = true; break;
                     }
                 }
             }
@@ -706,10 +831,15 @@ foreach ($activeBots as $email) {
         if (!empty($chatMessages) && is_array($chatMessages)) {
             foreach ($chatMessages as $msgItem) {
                 $mUser = $msgItem['username'];
-                // Nếu người chơi không phải bot, lưu vào trí nhớ
-                $isBot = false;
-                foreach($botNameMap as $b) { if($b['name'] === $mUser) { $isBot = true; break; } }
-                if (!$isBot) {
+                // Nếu người chơi không phải bot, lưu vào trí nhớ MySQL
+                $isBotParticipant = false;
+                foreach($botNameMap as $b) { if($b['name'] === $mUser) { $isBotParticipant = true; break; } }
+                if (!$isBotParticipant) {
+                    $mNameClean = $conn->real_escape_string($mUser);
+                    $conn->query("INSERT INTO bot_memory (bot_id, player_name, interaction_count, last_met) 
+                                 VALUES ($userId, '$mNameClean', 1, NOW()) 
+                                 ON DUPLICATE KEY UPDATE interaction_count = interaction_count + 1, last_met = NOW()");
+                    
                     if (!isset($state['remembered_players'])) $state['remembered_players'] = [];
                     if (!in_array($mUser, $state['remembered_players'])) {
                         $state['remembered_players'][] = $mUser;
