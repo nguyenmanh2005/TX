@@ -11,7 +11,33 @@ if (!isset($_SESSION['Iduser'])) {
 }
 
 $userId = $_SESSION['Iduser'];
-$action = $_POST['action'] ?? '';
+$action = $_POST['action'] ?? $_GET['action'] ?? '';
+
+if ($action === 'get_info') {
+    // Lấy thông tin points của user
+    $sql = "SELECT * FROM reward_points WHERE user_id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $userPoints = $result->fetch_assoc();
+    $stmt->close();
+
+    if (!$userPoints) {
+        $userPoints = ['available_points' => 0, 'total_points' => 0];
+    }
+
+    // Lấy danh sách rewards
+    $sql = "SELECT * FROM reward_point_rewards WHERE is_active = 1 ORDER BY cost_points ASC";
+    $result = $conn->query($sql);
+    $rewards = [];
+    while ($row = $result->fetch_assoc()) {
+        $rewards[] = $row;
+    }
+
+    echo json_encode(['status' => 'success', 'points' => $userPoints, 'rewards' => $rewards]);
+    exit();
+}
 
 if ($action === 'redeem') {
     $rewardId = (int) ($_POST['reward_id'] ?? 0);

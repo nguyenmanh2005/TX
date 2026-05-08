@@ -67,7 +67,9 @@ function executeBotAction(string $url, ?array $postData = null, string $cookieFi
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postData));
     }
     $response = curl_exec($ch);
-    curl_close($ch);
+    if (PHP_VERSION_ID < 80500) {
+        curl_close($ch);
+    }
     return json_decode($response ?? '', true);
 }
 
@@ -86,7 +88,13 @@ foreach ($activeBots as $email) {
     $cFile = $cookieDir . $botMd5 . ".txt";
     $sFile = $cookieDir . $botMd5 . ".state.json";
     
-    $state = file_exists($sFile) ? json_decode(file_get_contents($sFile), true) : ['wins'=>0, 'recent_messages' => [], 'last_maintenance' => ''];
+    $state = file_exists($sFile) ? json_decode(file_get_contents($sFile), true) : [
+        'wins'=>0, 
+        'recent_messages' => [], 
+        'last_maintenance' => '',
+        'win_streak' => 0,
+        'lose_streak' => 0
+    ];
 
     $res = executeBotAction($baseUrl . "/login.php", ['email' => $email, 'password' => $config['bot_password']], $cFile);
     
@@ -128,6 +136,25 @@ foreach ($activeBots as $email) {
             $state['last_maintenance'] = $todayStr;
         }
 
+        // --- MODULE 1.5: Streaks & Achievements ---
+        // 1. Claim login streak
+        $streakInfo = executeBotAction($baseUrl . "/api_streak.php?action=get_info", null, $cFile);
+        if (isset($streakInfo['data'])) {
+            $currentStreak = $streakInfo['data']['current_streak'];
+            $milestones = [3, 7, 14, 30, 60, 100];
+            foreach ($milestones as $ms) {
+                if ($currentStreak >= $ms) {
+                    executeBotAction($baseUrl . "/api_streak.php", ['action' => 'claim_milestone', 'milestone_days' => $ms], $cFile);
+                }
+            }
+        }
+
+        // 2. Claim achievements
+        executeBotAction($baseUrl . "/api_achievements.php", ['action' => 'check_all'], $cFile);
+
+        // 3. Clear achievement notifications
+        executeBotAction($baseUrl . "/api_achievement_notifications.php", ['action' => 'mark_all_read'], $cFile);
+
         // --- MODULE 2: Games ---
         $chosenGame = $availableGames[array_rand($availableGames)];
         $personality = $brain->getPersonality($userId);
@@ -135,18 +162,27 @@ foreach ($activeBots as $email) {
         if ($bet < 1000) $bet = 1000;
 
         $isWin = (rand(0, 1) === 1);
+        $winAmount = $isWin ? $bet : 0;
         if ($isWin) {
             $updateMoneyStmt->bind_param("di", $bet, $userId);
             $updateMoneyStmt->execute();
             $state['wins']++;
-            echo "💰 <span style='color:#4ade80;'>Thắng " . number_format($bet) . " tại $chosenGame</span><br>";
-            $msg = $brain->generateMessage($userId, 'win', ['amount' => $bet]);
+            $state['win_streak']++;
+            $state['lose_streak'] = 0;
+            echo "💰 <span style='color:#4ade80;'>Húp " . number_format($bet) . " GTLM tại $chosenGame</span><br>";
+            
+            $msgType = ($state['win_streak'] >= 3) ? 'streak_win' : 'win';
+            $msg = $brain->generateMessage($userId, $msgType, ['amount' => $bet]);
         } else {
             $negativeBet = -$bet;
             $updateMoneyStmt->bind_param("di", $negativeBet, $userId);
             $updateMoneyStmt->execute();
-            echo "💸 <span style='color:#f87171;'>Thua " . number_format($bet) . " tại $chosenGame</span><br>";
-            $msg = $brain->generateMessage($userId, 'lose', ['amount' => $bet]);
+            $state['lose_streak']++;
+            $state['win_streak'] = 0;
+            echo "💸 <span style='color:#f87171;'>Bay màu " . number_format($bet) . " GTLM tại $chosenGame</span><br>";
+            
+            $msgType = ($state['lose_streak'] >= 3) ? 'streak_lose' : 'lose';
+            $msg = $brain->generateMessage($userId, $msgType, ['amount' => $bet]);
         }
 
         // --- MODULE 3: Social & Interaction ---
@@ -154,14 +190,34 @@ foreach ($activeBots as $email) {
             $chatMessages = executeBotAction($baseUrl . "/chat.php?action=load", null, $cFile);
             $isReplied = false;
 
-            // 1. Logic Phản hồi (Reply)
-            if (!empty($chatMessages) && is_array($chatMessages) && rand(1, 100) <= 40) {
+            // 1. Logic Phản hồi & React (Reply/Reaction)
+            if (!empty($chatMessages) && is_array($chatMessages)) {
                 $recent = array_slice($chatMessages, -10); // Lấy 10 tin mới nhất
                 foreach ($recent as $chat) {
-                    if ($chat['username'] !== $userName) { // Không trả lời chính mình
-                        $msg = "@{$chat['username']} " . $msg;
-                        $isReplied = true;
-                        break;
+                    if ($chat['username'] !== $userName) {
+                        // React to other's wins/losses (using colorful terms)
+                        $isWinMsg = (stripos($chat['message'], 'Thắng') !== false || stripos($chat['message'], 'Húp') !== false || stripos($chat['message'], 'ăn ngập mặt') !== false);
+                        $isLoseMsg = (stripos($chat['message'], 'Thua') !== false || stripos($chat['message'], 'bay màu') !== false || stripos($chat['message'], 'bốc hơi') !== false || stripos($chat['message'], 'về cõi') !== false);
+
+                        if ($isWinMsg && rand(1, 100) <= 20) {
+                            $reaction = $brain->generateMessage($userId, 'reaction_win');
+                            executeBotAction($baseUrl . "/chat.php", ['message' => "@{$chat['username']} $reaction"], $cFile);
+                            $isReplied = true;
+                            break;
+                        }
+                        if ($isLoseMsg && rand(1, 100) <= 15) {
+                            $reaction = $brain->generateMessage($userId, 'reaction_lose');
+                            executeBotAction($baseUrl . "/chat.php", ['message' => "@{$chat['username']} $reaction"], $cFile);
+                            $isReplied = true;
+                            break;
+                        }
+                        
+                        // Normal Reply
+                        if (rand(1, 100) <= 30) {
+                            $msg = "@{$chat['username']} " . $msg;
+                            $isReplied = true;
+                            break;
+                        }
                     }
                 }
             }
@@ -181,31 +237,228 @@ foreach ($activeBots as $email) {
                 }
             }
             
-            // 3. Tương tác Social Feed (Like/Comment dạo)
+            // 3. Tương tác Social Feed
             $feedRes = executeBotAction($baseUrl . "/api_social_feed.php?action=get_feed", null, $cFile);
             if (isset($feedRes['data']) && !empty($feedRes['data'])) {
                 $randomPost = $feedRes['data'][array_rand($feedRes['data'])];
                 executeBotAction($baseUrl . "/api_social_feed.php", ['action' => 'toggle_like', 'feed_id' => $randomPost['id']], $cFile);
-                if (rand(1, 100) <= 20) {
-                    executeBotAction($baseUrl . "/api_social_feed.php", ['action' => 'add_comment', 'feed_id' => $randomPost['id'], 'comment_text' => 'Bác này đỉnh thế!'], $cFile);
-                }
             }
 
-            // 4. Đăng Feed (Chỉ đăng khi thắng) & Chat
-            if ($isWin) {
-                executeBotAction($baseUrl . "/api_social_feed.php", ['action' => 'create_post', 'content' => $msg], $cFile);
-            }
-
+            // 4. Chat & Greet
             if (rand(1, 100) <= 60) {
+                if (rand(1, 100) <= 15) {
+                    $greetMsg = $brain->generateMessage($userId, $brain->getTimeKey());
+                    executeBotAction($baseUrl . "/chat.php", ['message' => $greetMsg], $cFile);
+                }
+
                 executeBotAction($baseUrl . "/chat.php", ['message' => $msg], $cFile);
-                echo "💬 <span style='color:#38bdf8;'>Đã " . ($isReplied ? "phản hồi" : "tương tác") . " Social & Chat.</span><br>";
-                if (!isset($state['recent_messages']) || !is_array($state['recent_messages'])) $state['recent_messages'] = [];
-                array_unshift($state['recent_messages'], $msg);
-                $state['recent_messages'] = array_slice($state['recent_messages'], 0, 5);
+                echo "💬 <span style='color:#38bdf8;'>Đã tương tác Social & Chat.</span><br>";
             }
         }
 
         file_put_contents($sFile, json_encode($state));
+        
+        // --- MODULE 4: Competitive Interactions ---
+        if (rand(1, 100) <= 40) {
+            // 1. Tournament Participation
+            $tournaments = executeBotAction($baseUrl . "/api_tournament.php?action=get_list&status=active", null, $cFile);
+            if (isset($tournaments['tournaments']) && !empty($tournaments['tournaments'])) {
+                foreach ($tournaments['tournaments'] as $t) {
+                    if (!$t['is_joined']) {
+                        executeBotAction($baseUrl . "/api_tournament.php", ['action' => 'register', 'tournament_id' => $t['id']], $cFile);
+                        writeBotLog($email, "INFO", "Tournament", "Joined tournament #{$t['id']}");
+                    }
+                    
+                    // Nếu đang active và bot vừa chơi game, log game vào tournament
+                    if ($t['status'] == 'active' && isset($chosenGame)) {
+                        executeBotAction($baseUrl . "/api_tournament.php", [
+                            'action' => 'log_game',
+                            'tournament_id' => $t['id'],
+                            'game_name' => $chosenGame,
+                            'bet_amount' => $bet,
+                            'win_amount' => $isWin ? $bet : 0,
+                            'is_win' => $isWin ? 1 : 0
+                        ], $cFile);
+                    }
+                }
+            }
+            
+            // Nhận thưởng tournament đã kết thúc
+            $endedTournaments = executeBotAction($baseUrl . "/api_tournament.php?action=get_list&status=ended", null, $cFile);
+            if (isset($endedTournaments['tournaments'])) {
+                foreach ($endedTournaments['tournaments'] as $et) {
+                    if ($et['is_joined'] && !$et['is_claimed']) {
+                        executeBotAction($baseUrl . "/api_tournament.php", ['action' => 'claim_reward', 'tournament_id' => $et['id']], $cFile);
+                    }
+                }
+            }
+
+            // 2. Guild Interactions
+            $guildInfo = executeBotAction($baseUrl . "/api_guilds.php?action=get_info&guild_id=1", null, $cFile); // Giả định guild ID 1 là guild chính
+            if (isset($guildInfo['guild'])) {
+                if (!$guildInfo['is_member']) {
+                    executeBotAction($baseUrl . "/api_guilds.php", ['action' => 'join', 'guild_id' => $guildInfo['guild']['id']], $cFile);
+                } else {
+                    // Chat trong guild
+                    if (rand(1, 100) <= 20) {
+                        $guildMsg = $isWin ? "Anh em ơi, tôi vừa ăn đậm!" : "Mới thua xong, ai cứu tôi với...";
+                        executeBotAction($baseUrl . "/api_guilds.php", ['action' => 'chat', 'guild_id' => $guildInfo['guild']['id'], 'message' => $guildMsg], $cFile);
+                    }
+                }
+            }
+
+            // 3. PVP Challenges
+            // Check incoming challenges
+            $pvpChallenges = executeBotAction($baseUrl . "/api_pvp_challenge.php?action=get_my_challenges&status=pending", null, $cFile);
+            if (isset($pvpChallenges['challenges'])) {
+                foreach ($pvpChallenges['challenges'] as $challenge) {
+                    if ($challenge['opponent_id'] == $userId) {
+                        // Chấp nhận thách đấu
+                        executeBotAction($baseUrl . "/api_pvp_challenge.php", ['action' => 'accept_challenge', 'challenge_id' => $challenge['id']], $cFile);
+                        writeBotLog($email, "INFO", "PVP", "Accepted challenge from #{$challenge['challenger_id']}");
+                    }
+                }
+            }
+            
+            // Submit choice for accepted challenges
+            $acceptedChallenges = executeBotAction($baseUrl . "/api_pvp_challenge.php?action=get_my_challenges&status=accepted", null, $cFile);
+            if (isset($acceptedChallenges['challenges'])) {
+                foreach ($acceptedChallenges['challenges'] as $ac) {
+                    $choice = 'heads';
+                    if ($ac['game_type'] == 'dice') $choice = rand(1, 6);
+                    if ($ac['game_type'] == 'rps') $choice = ['rock', 'paper', 'scissors'][rand(0, 2)];
+                    if ($ac['game_type'] == 'number') $choice = rand(1, 100);
+                    
+                    executeBotAction($baseUrl . "/api_pvp_challenge.php", ['action' => 'submit_choice', 'challenge_id' => $ac['id'], 'choice' => $choice], $cFile);
+                }
+            }
+            
+            // Chủ động thách đấu (chủ yếu bot aggressive và trietly thích đàm đạo võ nghệ)
+            if (($personality == 'aggressive' || $personality == 'trietly') && rand(1, 100) <= 15) {
+                $otherBots = array_values($botNameMap);
+                $target = $otherBots[array_rand($otherBots)];
+                $targetId = $target['id'];
+                
+                if ($targetId != $userId) {
+                    $gameType = ['coinflip', 'dice', 'rps', 'number'][rand(0, 3)];
+                    executeBotAction($baseUrl . "/api_pvp_challenge.php", [
+                        'action' => 'create_challenge',
+                        'opponent_id' => $targetId,
+                        'game_type' => $gameType,
+                        'bet_amount' => rand(5000, 20000)
+                    ], $cFile);
+                    writeBotLog($email, "INFO", "PVP", "Challenged bot #$targetId to $gameType");
+                }
+            }
+        }
+
+        // --- MODULE 5: Daily & Reward Systems ---
+        // 1. Daily Challenges
+        $dailyRes = executeBotAction($baseUrl . "/api_daily_challenges.php?action=get_list", null, $cFile);
+        if (isset($dailyRes['challenges'])) {
+            foreach ($dailyRes['challenges'] as $dc) {
+                if ($dc['is_completed'] && !$dc['claimed']) {
+                    executeBotAction($baseUrl . "/api_daily_challenges.php", ['action' => 'claim', 'challenge_id' => $dc['id']], $cFile);
+                }
+            }
+        }
+
+        // 2. Quests
+        $questRes = executeBotAction($baseUrl . "/api_quests.php?action=get_quests&type=daily", null, $cFile);
+        if (isset($questRes['quests'])) {
+            foreach ($questRes['quests'] as $q) {
+                if ($q['is_completed'] && !$q['is_claimed']) {
+                    executeBotAction($baseUrl . "/api_quests.php", ['action' => 'claim_reward', 'quest_id' => $q['id'], 'quest_type' => 'daily'], $cFile);
+                }
+            }
+        }
+
+        // 3. Reward Points
+        $rewardRes = executeBotAction($baseUrl . "/api_reward_points.php?action=get_info", null, $cFile);
+        if (isset($rewardRes['points']) && $rewardRes['points']['available_points'] > 500) {
+            foreach ($rewardRes['rewards'] as $rw) {
+                if ($rewardRes['points']['available_points'] >= $rw['cost_points']) {
+                    executeBotAction($baseUrl . "/api_reward_points.php", ['action' => 'redeem', 'reward_id' => $rw['id']], $cFile);
+                    break; // Chỉ redeem 1 cái mỗi lần
+                }
+            }
+        }
+
+        // --- MODULE 6: Social & Gifting ---
+        if (rand(1, 100) <= 15) {
+            // Tặng tiền cho bot khác
+            $otherBots = array_keys($botNameMap);
+            $targetBot = $otherBots[array_rand($otherBots)];
+            if ($targetBot != $email) {
+                executeBotAction($baseUrl . "/api_gift.php", [
+                    'action' => 'send_money',
+                    'to_user_id' => $botNameMap[$targetBot]['id'],
+                    'amount' => rand(1000, 5000),
+                    'message' => "Lộc lá cho ông bạn này!"
+                ], $cFile);
+            }
+        }
+        
+        // Check leaderboard (Browsing behavior)
+        if (rand(1, 100) <= 20) {
+            executeBotAction($baseUrl . "/api_leaderboard.php?action=get_overall", null, $cFile);
+        }
+
+        // --- MODULE 7: Marketplace & Events ---
+        // 1. Marketplace (Mua sắm & Bán hàng)
+        if (rand(1, 100) <= 15) {
+            // Xem chợ
+            $listings = executeBotAction($baseUrl . "/api_marketplace.php?action=get_listings&limit=5", null, $cFile);
+            
+            // Mua hàng (Nếu bot giàu)
+            if (isset($listings['listings']) && !empty($listings['listings']) && rand(1, 100) <= 30) {
+                $item = $listings['listings'][array_rand($listings['listings'])];
+                if ($item['seller_id'] != $userId && $userMoney > $item['price'] * 3) {
+                    executeBotAction($baseUrl . "/api_marketplace.php", ['action' => 'buy_item', 'listing_id' => $item['id']], $cFile);
+                    writeBotLog($email, "INFO", "Marketplace", "Bought {$item['item_name']} for " . number_format($item['price']));
+                }
+            }
+            
+            // Đăng bán hàng (Nếu bot có item dư thừa - giả lập bằng cách ngẫu nhiên lấy item sở hữu)
+            if (rand(1, 100) <= 10) {
+                $myItems = executeBotAction($baseUrl . "/api_gift.php?action=get_user_items&item_type=chat_frame", null, $cFile);
+                if (isset($myItems['items']) && !empty($myItems['items'])) {
+                    $itemToSell = $myItems['items'][array_rand($myItems['items'])];
+                    executeBotAction($baseUrl . "/api_marketplace.php", [
+                        'action' => 'list_item',
+                        'item_type' => 'chat_frame',
+                        'item_id' => $itemToSell['id'],
+                        'price' => rand(50000, 200000),
+                        'description' => 'Khung đẹp cần bán gấp!'
+                    ], $cFile);
+                }
+            }
+        }
+
+        // 2. Events
+        $eventRes = executeBotAction($baseUrl . "/api_events.php?action=get_list&status=active", null, $cFile);
+        if (isset($eventRes['events'])) {
+            foreach ($eventRes['events'] as $ev) {
+                if (!$ev['is_joined']) {
+                    executeBotAction($baseUrl . "/api_events.php", ['action' => 'join', 'event_id' => $ev['id']], $cFile);
+                }
+                if (isset($ev['user_completed']) && $ev['user_completed'] && isset($ev['user_claimed']) && !$ev['user_claimed']) {
+                    executeBotAction($baseUrl . "/api_events.php", ['action' => 'claim_reward', 'event_id' => $ev['id']], $cFile);
+                }
+            }
+        }
+
+        // --- MODULE 8: Game Statistics & Personal Monitoring ---
+        if (rand(1, 100) <= 30) {
+            executeBotAction($baseUrl . "/api_game_statistics.php?action=get_stats", null, $cFile);
+        }
+
+        // --- MODULE 9: Big Win Trigger ---
+        if (isset($isWin) && $isWin && $winAmount >= 10000000) {
+            executeBotAction($baseUrl . "/api_check_big_win.php", ['win_amount' => $winAmount], $cFile);
+            writeBotLog($email, "CELEBRATION", "Big Win", "Triggered server notification for " . number_format($winAmount) . " win!");
+        }
+
         echo "</div>";
     } else {
         writeBotLog($email, "ERROR", "Login Failed", $res['message'] ?? 'Unknown error');

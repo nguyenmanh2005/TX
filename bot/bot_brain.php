@@ -7,12 +7,20 @@ class BotBrain {
         'aggressive' => ['chat_style' => 'aggressive'],
         'shy' => ['chat_style' => 'shy'],
         'balanced' => ['chat_style' => 'balanced'],
+        'trietly' => ['chat_style' => 'trietly'],
         'random' => ['chat_style' => 'random']
     ];
 
     public function getPersonality($userId) {
         $types = array_keys($this->personalities);
         return $types[$userId % count($types)];
+    }
+
+    public function getTimeKey() {
+        $hour = (int)date('H');
+        if ($hour >= 5 && $hour < 12) return 'time_morning';
+        if ($hour >= 18 || $hour < 5) return 'time_night';
+        return 'greet';
     }
 
     /**

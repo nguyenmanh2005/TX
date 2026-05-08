@@ -59,12 +59,35 @@ while($row = $res->fetch_assoc()) {
 $humanRes = $conn->query("SELECT SUM(Money) as total FROM users WHERE Email NOT LIKE '%bot%'")->fetch_assoc();
 $stats['total_human_money'] = (float)($humanRes['total'] ?? 0);
 
-// Chuẩn bị dữ liệu biểu đồ
+// Lấy dữ liệu biểu đồ
 $chartLabels = []; $chartBotData = []; $chartHumanData = [];
 foreach ($history as $point) {
     $chartLabels[] = $point['time'];
     $chartBotData[] = $point['bot'];
     $chartHumanData[] = $point['human'];
+}
+
+// Lấy 20 dòng log mới nhất
+$logFile = 'logs/' . date('Y-m-d') . '.log';
+$recentLogs = [];
+if (file_exists($logFile)) {
+    $lines = file($logFile);
+    $recentLogs = array_slice($lines, -15);
+    $recentLogs = array_reverse($recentLogs);
+}
+
+// Kiểm tra xem có phải request AJAX không
+if (isset($_GET['ajax'])) {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'stats' => $stats,
+        'chartLabels' => $chartLabels,
+        'chartBotData' => $chartBotData,
+        'chartHumanData' => $chartHumanData,
+        'recentLogs' => $recentLogs,
+        'botsList' => $botsList
+    ]);
+    exit;
 }
 ?>
 <!DOCTYPE html>
@@ -165,15 +188,35 @@ foreach ($history as $point) {
         <div class="main-layout">
             <div class="left-col">
                 <div class="panel" style="margin-bottom: 20px;">
-                    <h2 style="font-size: 18px; margin-top:0;">💰 Cán Cân Tài Chính (Bot vs Người)</h2>
+                    <h2 style="font-size: 18px; margin-top:0;">📈 Biến Động Tài Sản (Lịch Sử)</h2>
                     <div style="height: 350px;">
-                        <canvas id="economyChart"></canvas>
+                        <canvas id="wealthLineChart"></canvas>
+                    </div>
+                </div>
+                <div class="panel">
+                    <h2 style="font-size: 18px; margin-top:0;">⚡ Hoạt Động Trực Tiếp (Live Logs)</h2>
+                    <div id="liveLogs" style="height: 250px; overflow-y: auto; font-family: monospace; font-size: 11px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 15px; line-height: 1.6;">
+                        <?php foreach ($recentLogs as $log): ?>
+                            <div style="margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 2px;">
+                                <?= htmlspecialchars($log) ?>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             </div>
-            <div class="panel">
-                <h2 style="font-size: 18px; margin-top:0;">🎭 Phân bổ Tâm trạng</h2>
-                <canvas id="moodChart" height="250"></canvas>
+            <div class="right-col">
+                <div class="panel" style="margin-bottom: 20px;">
+                    <h2 style="font-size: 18px; margin-top:0;">💰 Cán Cân Hiện Tại</h2>
+                    <div style="height: 250px;">
+                        <canvas id="economyChart"></canvas>
+                    </div>
+                </div>
+                <div class="panel">
+                    <h2 style="font-size: 18px; margin-top:0;">🎭 Phân bổ Tâm trạng</h2>
+                    <div style="height: 250px;">
+                        <canvas id="moodChart"></canvas>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -314,8 +357,44 @@ foreach ($history as $point) {
             if (event.target == modal) closeModal();
         }
 
+        // 📈 Wealth History Chart
+        const lineCtx = document.getElementById('wealthLineChart').getContext('2d');
+        let wealthChart = new Chart(lineCtx, {
+            type: 'line',
+            data: {
+                labels: <?= json_encode($chartLabels) ?>,
+                datasets: [
+                    {
+                        label: 'Bot Army Wealth',
+                        data: <?= json_encode($chartBotData) ?>,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Human Wealth',
+                        data: <?= json_encode($chartHumanData) ?>,
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: '#94a3b8' } } },
+                scales: {
+                    x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                }
+            }
+        });
+
         const ecoCtx = document.getElementById('economyChart').getContext('2d');
-        new Chart(ecoCtx, {
+        let ecoChart = new Chart(ecoCtx, {
             type: 'doughnut',
             data: {
                 labels: ['Tiền Bot', 'Tiền Người Thật'],
@@ -330,21 +409,67 @@ foreach ($history as $point) {
                 responsive: true, 
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Outfit', size: 14 } } }
+                    legend: { position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Outfit', size: 12 } } }
                 },
                 cutout: '70%'
             }
         });
 
         const moodCtx = document.getElementById('moodChart').getContext('2d');
-        new Chart(moodCtx, {
+        let moodChart = new Chart(moodCtx, {
             type: 'doughnut',
             data: {
                 labels: ['Hạnh phúc', 'Hưng phấn', 'Cay cú', 'Trầm cảm'],
-                datasets: [{ data: [<?= $stats['moods']['happy'] ?>, <?= $stats['moods']['excited'] ?>, <?= $stats['moods']['tilted'] ?>, <?= $stats['moods']['depressed'] ?>], backgroundColor: ['#22c55e', '#f59e0b', '#ef4444', '#64748b'], borderWidth: 0 }]
+                datasets: [{ 
+                    data: [<?= $stats['moods']['happy'] ?>, <?= $stats['moods']['excited'] ?>, <?= $stats['moods']['tilted'] ?>, <?= $stats['moods']['depressed'] ?>], 
+                    backgroundColor: ['#22c55e', '#f59e0b', '#ef4444', '#64748b'], 
+                    borderWidth: 0 
+                }]
             },
-            options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8' } } } }
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8' } } } 
+            }
         });
+
+        // 🔄 Auto Refresh Logic
+        async function refreshDashboard() {
+            try {
+                const response = await fetch('index.php?ajax=1');
+                const data = await response.json();
+
+                // Update Stats
+                document.querySelectorAll('.stat-value')[0].innerText = new Intl.NumberFormat().format(data.stats.total_bot_money) + ' GTLM';
+                const inflation = (data.stats.total_bot_money / (data.stats.total_human_money || 1)) * 100;
+                const inflEl = document.querySelectorAll('.stat-value')[1];
+                inflEl.innerText = inflation.toFixed(1) + '%';
+                inflEl.style.color = inflation > 100 ? 'var(--danger)' : 'var(--success)';
+
+                // Update Logs
+                const logEl = document.getElementById('liveLogs');
+                if (logEl) {
+                    logEl.innerHTML = data.recentLogs.map(log => `<div style="margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 2px;">${log}</div>`).join('');
+                }
+
+                // Update Charts
+                wealthChart.data.labels = data.chartLabels;
+                wealthChart.data.datasets[0].data = data.chartBotData;
+                wealthChart.data.datasets[1].data = data.chartHumanData;
+                wealthChart.update();
+
+                ecoChart.data.datasets[0].data = [data.stats.total_bot_money, data.stats.total_human_money];
+                ecoChart.update();
+
+                moodChart.data.datasets[0].data = [data.stats.moods.happy, data.stats.moods.excited, data.stats.moods.tilted, data.stats.moods.depressed];
+                moodChart.update();
+
+            } catch (error) {
+                console.error('Refresh failed:', error);
+            }
+        }
+
+        setInterval(refreshDashboard, 10000); // Refresh every 10s
 
         // 🔍 Real-time Search Logic
         const searchInput = document.getElementById('searchBotInput');

@@ -86,7 +86,7 @@ Bot không chỉ chơi game mà còn được lập trình để bao phủ toàn
 
 ### 2. Hệ Thống Trò Chơi (Games)
 *   **Thư mục**: `games/`
-*   **Cách dùng**: Engine v16.x tự động quét toàn bộ file `.php` trong thư mục này. Bot chọn ngẫu nhiên một trò chơi (Poker, Xì Dách, Tài Xỉu...) để đặt cược dựa trên % tài sản hiện có.
+*   **Cách dùng**: Engine v16.x tự động quét toàn bộ file `.php` trong thư mục này. Bot chọn ngẫu nhiên một trò chơi (Poker, Xì Dách, ...) để đặt cược dựa trên % tài sản hiện có.
 
 ### 3. Bảo Trì & Phúc Lợi (Maintenance)
 *   **Điểm danh**: `api_daily_login.php?action=claim_reward`. Bot tự động nhận thưởng mỗi ngày.

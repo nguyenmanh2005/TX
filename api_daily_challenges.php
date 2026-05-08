@@ -11,7 +11,30 @@ if (!isset($_SESSION['Iduser'])) {
 }
 
 $userId = $_SESSION['Iduser'];
-$action = $_POST['action'] ?? '';
+$action = $_POST['action'] ?? $_GET['action'] ?? '';
+
+if ($action === 'get_list') {
+    $today = date('Y-m-d');
+    $sql = "SELECT dc.*, 
+            COALESCE(dcp.progress, 0) as user_progress,
+            COALESCE(dcp.is_completed, 0) as is_completed,
+            COALESCE(dcp.claimed, 0) as claimed
+            FROM daily_challenges dc
+            LEFT JOIN daily_challenge_progress dcp ON dc.id = dcp.challenge_id AND dcp.user_id = ?
+            WHERE dc.challenge_date = ?
+            ORDER BY dc.id";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("is", $userId, $today);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $challenges = [];
+    while ($row = $result->fetch_assoc()) {
+        $challenges[] = $row;
+    }
+    $stmt->close();
+    echo json_encode(['status' => 'success', 'challenges' => $challenges]);
+    exit();
+}
 
 if ($action === 'claim') {
     $challengeId = (int) ($_POST['challenge_id'] ?? 0);
