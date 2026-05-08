@@ -254,8 +254,21 @@ foreach ($activeBots as $email) {
         executeBotAction($baseUrl . "/api_achievement_notifications.php", ['action' => 'mark_all_read'], $cFile);
 
         // --- MODULE 2: Games ---
-        $personality = $brain->getPersonality($userId);
         $mood = $state['mood'] ?? 'happy';
+        
+        // --- BROKE CHECK (Cháy túi) ---
+        if ($userMoney < 100000) {
+            $state['mood'] = 'broke';
+            echo "💸 <span style='color:#fca5a5;'>Trạng thái: Cháy túi!</span> Đang đi lượm lặt & xin xỏ...<br>";
+            if (rand(1, 100) <= 60) {
+                $begMsg = $brain->generateMessage($userId, 'begging');
+                executeBotAction($baseUrl . "/chat.php", ['message' => $begMsg], $cFile);
+            }
+            if (rand(1, 100) <= 30) {
+                executeBotAction($baseUrl . "/api_giftcode.php", ['action' => 'claim_random'], $cFile);
+            }
+            goto social_module; // Bỏ qua Module Game
+        }
         
         // Mood-based game selection: Nếu đang tilted thì tránh Poker, Baccarat (game rủi ro cao)
         $filteredGames = $availableGames;
@@ -269,6 +282,26 @@ foreach ($activeBots as $email) {
         
         $chosenGame = $filteredGames[array_rand($filteredGames)];
         $bet = floor($userMoney * (($personality == 'aggressive' ? rand(5, 12) : rand(1, 5)) / 100));
+        
+        // --- TILTED LOGIC (Cay cú) ---
+        if ($state['lose_streak'] >= 3) {
+            $state['mood'] = 'tilted';
+            if (rand(1, 100) <= 50) {
+                $bet = $userMoney; // All-in
+                echo "🔥 <span style='color:#ef4444; font-weight:800;'>ALL-IN!</span> Bot đang cực kỳ cay cú...<br>";
+            } else {
+                $bet = $bet * 2; // Martingale
+                echo "📈 <span style='color:#fbbf24; font-weight:800;'>Gấp thếp (Martingale)!</span> Quyết tâm gỡ gạc...<br>";
+            }
+            if ($bet > $userMoney) $bet = $userMoney;
+            
+            // Chat chửi thề / than vãn
+            if (rand(1, 100) <= 70) {
+                $tMsg = $brain->generateMessage($userId, 'tilted_chat');
+                executeBotAction($baseUrl . "/chat.php", ['message' => $tMsg], $cFile);
+            }
+        }
+
         if ($bet < 1000) $bet = 1000;
 
         $isWin = (rand(0, 1) === 1);
@@ -308,7 +341,8 @@ foreach ($activeBots as $email) {
             'time' => date('H:i d/m')
         ]);
         $state['history'] = array_slice($state['history'], 0, 10);
-
+        
+        social_module: 
         // --- MODULE 3: Social & Interaction ---
         if (rand(1, 100) <= 75) {
             $chatMessages = executeBotAction($baseUrl . "/chat.php?action=load", null, $cFile);

@@ -135,6 +135,16 @@ class BotBrain {
         if (empty($list)) $list = ["Đang tỉ thí..."];
         $msg = $list[array_rand($list)];
 
+        // 4. Broke & Tilted Special Overrides
+        if ($type === 'begging') {
+            $begMsgs = ["Em cháy túi rồi, bác nào tốt bụng cho em ít GTLM với! 🙏", "Hết GTLM rồi, ai cứu em phát...", "Trắng tay thật rồi, xin húp lộc từ các đại gia!", "Bác nào húp đậm cho em xin ít vốn ra chiêu với ạ."];
+            return $begMsgs[array_rand($begMsgs)];
+        }
+        if ($type === 'tilted_chat') {
+            $tiltedMsgs = ["M* nó, lại thua! All-in ván này gỡ gạc! 🤬", "Cay quá rồi đấy, không tin là không húp được!", "Trò này bịp à? Thua 3 ván rồi đấy!", "Nghỉ hưu sớm mất thôi, sao mà đen thế!", "Ván này x2 GTLM cược, xem ai sợ ai! 🔥"];
+            return $tiltedMsgs[array_rand($tiltedMsgs)];
+        }
+
         // 3. Fanboy (Hambo) logic for Idol replacement
         if ($p === 'hambo' && isset($state['idol_name'])) {
             $msg = str_replace('{idol}', $state['idol_name'], $msg);
