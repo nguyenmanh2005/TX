@@ -4,7 +4,42 @@
  * Coverage: Auth, Games, Daily Maintenance, Quests, Social Feed (Like/Comment), Friends, Notifications
  */
 
-// 0. Helpers
+// 0. Helpers & Error Handling
+$currentBotEmail = "SYSTEM";
+$currentCookieFile = __DIR__ . '/sessions/system.txt';
+
+$inError = false;
+
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    global $currentBotEmail, $baseUrl, $currentCookieFile, $inError;
+    if ($inError) return false;
+    $inError = true;
+    
+    $severity = ($errno & (E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR | E_USER_ERROR)) ? "CRITICAL" : "WARNING";
+    $msg = "[$severity] $errstr in " . basename($errfile) . ":$errline";
+    
+    writeBotLog($currentBotEmail, "ERROR", "PHP_SYSTEM", $msg);
+    if (isset($baseUrl) && file_exists($currentCookieFile)) {
+        executeBotAction($baseUrl . "/chat2.php", ['message' => "⚠️ ALERT: $msg"], $currentCookieFile);
+    }
+    
+    $inError = false;
+    return false; // Continue to internal PHP error handler
+});
+
+set_exception_handler(function($e) {
+    global $currentBotEmail, $baseUrl, $currentCookieFile, $inError;
+    if ($inError) return;
+    $inError = true;
+    
+    $msg = "[CRITICAL] " . $e->getMessage() . " in " . basename($e->getFile()) . ":" . $e->getLine();
+    writeBotLog($currentBotEmail, "ERROR", "PHP_EXCEPTION", $msg);
+    if (isset($baseUrl) && file_exists($currentCookieFile)) {
+        executeBotAction($baseUrl . "/chat2.php", ['message' => "🚨 EXCEPTION: $msg"], $currentCookieFile);
+    }
+    $inError = false;
+});
+
 function writeBotLog(string $email, string $level, string $action, string $details = "") {
     $logDir = __DIR__ . '/logs/';
     if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
@@ -106,17 +141,23 @@ $onlineRes = $conn->query("SELECT COUNT(*) as count FROM users WHERE last_active
 $userCount = $onlineRes ? (int)$onlineRes->fetch_assoc()['count'] : 0;
 
 foreach ($activeBots as $email) {
+    $currentBotEmail = $email;
     $botMd5 = md5($email);
     $cFile = $cookieDir . $botMd5 . ".txt";
+    $currentCookieFile = $cFile;
     $sFile = $cookieDir . $botMd5 . ".state.json";
     
-    $state = file_exists($sFile) ? json_decode(file_get_contents($sFile), true) : [
-        'wins'=>0, 
-        'recent_messages' => [], 
-        'last_maintenance' => '',
-        'win_streak' => 0,
-        'lose_streak' => 0
-    ];
+    $state = file_exists($sFile) ? json_decode(file_get_contents($sFile), true) : [];
+    
+    // Ensure all keys exist
+    $state['wins'] = $state['wins'] ?? 0;
+    $state['win_streak'] = $state['win_streak'] ?? 0;
+    $state['lose_streak'] = $state['lose_streak'] ?? 0;
+    $state['recent_messages'] = $state['recent_messages'] ?? [];
+    $state['last_maintenance'] = $state['last_maintenance'] ?? '';
+    $state['mood'] = $state['mood'] ?? 'happy';
+    $state['is_bad_day'] = $state['is_bad_day'] ?? false;
+    $state['last_mood_update'] = $state['last_mood_update'] ?? '';
 
     // --- MODULE 0: Login with Retry ---
     $res = null;
@@ -173,8 +214,8 @@ foreach ($activeBots as $email) {
             // Nhận thưởng nhiệm vụ ngày
             $missionRes = executeBotAction($baseUrl . "/api_daily_missions.php", ['action' => 'get_missions'], $cFile);
             if (isset($missionRes['missions'])) {
-                foreach($missionRes['missions'] as $m) {
-                    if ($m['is_completed'] && !$m['is_claimed']) {
+                foreach ($missionRes['missions'] as $m) {
+                    if (($m['is_completed'] ?? false) && !($m['is_claimed'] ?? false)) {
                         executeBotAction($baseUrl . "/api_daily_missions.php", ['action' => 'claim_reward', 'mission_id' => $m['id']], $cFile);
                     }
                 }
@@ -335,7 +376,7 @@ foreach ($activeBots as $email) {
             $tournaments = executeBotAction($baseUrl . "/api_tournament.php?action=get_list&status=active", null, $cFile);
             if (isset($tournaments['tournaments']) && !empty($tournaments['tournaments'])) {
                 foreach ($tournaments['tournaments'] as $t) {
-                    if (!$t['is_joined']) {
+                    if (!($t['is_joined'] ?? false)) {
                         executeBotAction($baseUrl . "/api_tournament.php", ['action' => 'register', 'tournament_id' => $t['id']], $cFile);
                         writeBotLog($email, "INFO", "Tournament", "Joined tournament #{$t['id']}");
                     }
@@ -358,7 +399,7 @@ foreach ($activeBots as $email) {
             $endedTournaments = executeBotAction($baseUrl . "/api_tournament.php?action=get_list&status=ended", null, $cFile);
             if (isset($endedTournaments['tournaments'])) {
                 foreach ($endedTournaments['tournaments'] as $et) {
-                    if ($et['is_joined'] && !$et['is_claimed']) {
+                    if (($et['is_joined'] ?? false) && !($et['is_claimed'] ?? false)) {
                         executeBotAction($baseUrl . "/api_tournament.php", ['action' => 'claim_reward', 'tournament_id' => $et['id']], $cFile);
                     }
                 }
@@ -367,7 +408,7 @@ foreach ($activeBots as $email) {
             // 2. Guild Interactions
             $guildInfo = executeBotAction($baseUrl . "/api_guilds.php?action=get_info&guild_id=1", null, $cFile); // Giả định guild ID 1 là guild chính
             if (isset($guildInfo['guild'])) {
-                if (!$guildInfo['is_member']) {
+                if (!($guildInfo['is_member'] ?? false)) {
                     executeBotAction($baseUrl . "/api_guilds.php", ['action' => 'join', 'guild_id' => $guildInfo['guild']['id']], $cFile);
                 } else {
                     // Chat trong guild
@@ -428,7 +469,7 @@ foreach ($activeBots as $email) {
         $dailyRes = executeBotAction($baseUrl . "/api_daily_challenges.php?action=get_list", null, $cFile);
         if (isset($dailyRes['challenges'])) {
             foreach ($dailyRes['challenges'] as $dc) {
-                if ($dc['is_completed'] && !$dc['claimed']) {
+                if (($dc['is_completed'] ?? false) && !($dc['claimed'] ?? false)) {
                     executeBotAction($baseUrl . "/api_daily_challenges.php", ['action' => 'claim', 'challenge_id' => $dc['id']], $cFile);
                 }
             }
@@ -438,7 +479,7 @@ foreach ($activeBots as $email) {
         $questRes = executeBotAction($baseUrl . "/api_quests.php?action=get_quests&type=daily", null, $cFile);
         if (isset($questRes['quests'])) {
             foreach ($questRes['quests'] as $q) {
-                if ($q['is_completed'] && !$q['is_claimed']) {
+                if (($q['is_completed'] ?? false) && !($q['is_claimed'] ?? false)) {
                     executeBotAction($baseUrl . "/api_quests.php", ['action' => 'claim_reward', 'quest_id' => $q['id'], 'quest_type' => 'daily'], $cFile);
                 }
             }

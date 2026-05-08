@@ -41,11 +41,12 @@ $apiFailures = [];
 $logFile = 'logs/' . date('Y-m-d') . '.log';
 if (file_exists($logFile)) {
     $logContent = file_get_contents($logFile);
-    preg_match_all('/\[ERROR\].*? (http.*?): (.*)/', $logContent, $matches);
-    if (!empty($matches[1])) {
-        foreach ($matches[1] as $index => $url) {
-            $apiUrl = parse_url($url, PHP_URL_PATH);
-            $apiFailures[$apiUrl] = ($apiFailures[$apiUrl] ?? 0) + 1;
+    preg_match_all('/\[ERROR\] \[(.*?)\] (.*?): (.*)/', $logContent, $matches);
+    if (!empty($matches[2])) {
+        foreach ($matches[2] as $index => $source) {
+            // Nếu là URL, rút gọn lại. Nếu là PHP_SYSTEM thì giữ nguyên.
+            $label = (strpos($source, 'http') === 0) ? parse_url($source, PHP_URL_PATH) : $source;
+            $apiFailures[$label] = ($apiFailures[$label] ?? 0) + 1;
         }
     }
     arsort($apiFailures);
