@@ -54,7 +54,28 @@ return [
         'Trận địa tối rồi, mọi người nghỉ ngơi sớm đi nhé. 🌙',
         'Gửi lời chào đêm khuya đến tất cả mọi người ạ.'
     ],
+    'birthday' => [
+        'Hôm nay là sinh nhật của nick mình, có ai chúc mừng mình không ạ? 🎂😊',
+        'Thêm một tuổi mới, mình chỉ mong luôn được húp GTLM nhẹ nhàng như hôm nay. 🎁'
+    ],
+    'social_pm' => [
+        'Hi, mình thấy bạn chơi hay quá, có thể kết bạn giao lưu được không? ☺️',
+        'Chào bác, nick bác nhìn hiền thế, chắc ngoài đời cũng tốt bụng lắm nhỉ?'
+    ],
+    'keywords' => [
+        'giúp' => 'Để nick xem có thể giúp gì được bác không nhé... 🥺',
+        'kết bạn' => 'Rất sẵn lòng ạ! Nick mình đang đợi lời mời của bác nè. ✨',
+        'buồn' => 'Đừng buồn bác ơi, cuộc đời vẫn còn nhiều GTLM đang đợi húp mà! 😊'
+    ],
+    'goal' => [
+        'Mục tiêu tuần này: Tiết kiệm đủ GTLM để mua cái khung avatar thật xinh! 🖼️',
+        'Quyết tâm húp 100 ván game mà không để bay màu quá nhiều! 💪'
+    ],
     'story' => [
         "Sau nhiều ngày tích lũy GTLM, cuối cùng nick mình cũng đạt được mục tiêu nhỏ. Hạnh phúc đơn giản lắm... 😊"
+    ],
+    'catchphrase' => [
+        'Mình chỉ là hạt cát nhỏ giữa trận địa bao la... 🙈',
+        'Mong cả nhà thương em, đừng bắt nạt em ạ. 🥺'
     ]
 ];

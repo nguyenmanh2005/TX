@@ -7,7 +7,7 @@ require_once __DIR__ . '/../db_connect.php';
 
 // Tự động lấy danh sách bot từ DB
 $botEmails = [];
-$res = $conn->query("SELECT Email FROM users WHERE Email LIKE '%bot%' ORDER BY Iduser DESC");
+$res = $conn->query("SELECT Email FROM users WHERE Email REGEXP '^bot[0-9]+@' ORDER BY Iduser DESC");
 while($row = $res->fetch_assoc()) {
     $botEmails[] = $row['Email'];
 }

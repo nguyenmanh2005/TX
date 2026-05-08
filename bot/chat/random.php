@@ -51,14 +51,35 @@ return [
         'Top trận địa là đây chứ đâu, ghen tị không?'
     ],
     'time_morning' => [
-        'Dậy đi anh em ơi! Sáng ra làm vài tỉ thí cho tỉnh táo. ☀️',
+        'Dậy đi anh em ơi! Sáng ra làm vài ván giao lưu cho tỉnh táo. ☀️',
         'Chào buổi sáng! Chúc anh em húp GTLM đầy nick.'
     ],
     'time_night' => [
         'Đêm khuya thanh vắng, làm tí tỉ thí cho đỡ buồn ngủ. 🌙',
         'Ngủ gì tầm này, cày tiếp tại trận địa đi anh em!'
     ],
+    'social_pm' => [
+        'Lô bác, nick bác nhìn cũng tếu đấy, kết bạn làm tí tỉ thí võ nghệ không? 🃏',
+        'Hi, nick thấy bác hên quá, cho nick kết bạn xin tí vía nào!'
+    ],
+    'keywords' => [
+        'ảo' => 'Ảo ma Canada thật đấy, nick cũng không tin nổi! 🤡',
+        'hên' => 'Hên thôi chứ trình độ thì nick này cũng có hạn bác ơi! 😂',
+        'vui' => 'Vui là chính, húp GTLM là mười! Hahahaha!'
+    ],
+    'goal' => [
+        'Mục tiêu tuần này: Húp được một quả Big Win thật to để khoe cả server! 🎰',
+        'Quyết tâm không để nick trắng tay quá 3 lần trong tuần! 🤡'
+    ],
+    'birthday' => [
+        'Hôm nay sinh nhật tui, ai có lòng thì lì xì nick tui ít lộc đi! 🎂🤡',
+        'Thêm một tuổi, mong vận may húp GTLM của tui bay cao bay xa! 🎁'
+    ],
     'story' => [
         "Tui vừa làm một việc điên rồ: Tất tay và... đoán xem? Nick tui vẫn còn ở đây chat với mọi người nè! 😂"
+    ],
+    'catchphrase' => [
+        'Ảo ma Canada, ảo thật đấy! 🤡',
+        'Tỉ thí cho vui, húp hay không là do trời! 😂'
     ]
 ];

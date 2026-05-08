@@ -7,7 +7,7 @@ require_once __DIR__ . '/../db_connect.php';
 
 function spawnNewBot(mysqli $conn) {
     // 1. Lấy số lượng bot hiện tại từ DB để tính số tiếp theo
-    $res = $conn->query("SELECT COUNT(*) as total FROM users WHERE Email LIKE '%bot%'");
+    $res = $conn->query("SELECT COUNT(*) as total FROM users WHERE Email REGEXP '^bot[0-9]+@'");
     $currentBotCount = $res->fetch_assoc()['total'];
     $nextNumber = $currentBotCount + 1;
     
@@ -46,7 +46,7 @@ if (isset($_GET['action'])) {
     if ($_GET['action'] == 'mass_spawn' && isset($_GET['target'])) {
         $target = (int)$_GET['target'];
         
-        $res = $conn->query("SELECT COUNT(*) as total FROM users WHERE Email LIKE '%bot%'");
+        $res = $conn->query("SELECT COUNT(*) as total FROM users WHERE Email REGEXP '^bot[0-9]+@'");
         $current = (int)$res->fetch_assoc()['total'];
         
         // Tối đa 10 bot mỗi đợt để tránh timeout

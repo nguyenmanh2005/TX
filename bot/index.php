@@ -10,13 +10,45 @@ $syncFile = 'sessions/bot_sync.json';
 $historyFile = 'sessions/economy_history.json';
 $syncData = file_exists($syncFile) ? json_decode(file_get_contents($syncFile), true) : [];
 $history = file_exists($historyFile) ? json_decode(file_get_contents($historyFile), true) : [];
+// 1. Logic Reset State
+if (isset($_GET['action']) && $_GET['action'] === 'reset_state' && isset($_GET['bot_id'])) {
+    $botId = (int)$_GET['bot_id'];
+    $botRes = $conn->query("SELECT Email FROM users WHERE Iduser = $botId")->fetch_assoc();
+    if ($botRes) {
+        $botMd5 = md5($botRes['Email']);
+        @unlink("sessions/$botMd5.state.json");
+        @unlink("sessions/$botMd5.txt");
+        header("Location: index.php?msg=Reset thành công bot #$botId");
+        exit;
+    }
+}
+
+$syncFile = 'sessions/bot_sync.json';
+$historyFile = 'sessions/economy_history.json';
+$syncData = file_exists($syncFile) ? json_decode(file_get_contents($syncFile), true) : [];
+$history = file_exists($historyFile) ? json_decode(file_get_contents($historyFile), true) : [];
 $sessionFiles = glob('sessions/*.state.json');
 
-// 1. Phân tích trạng thái bot từ Files
+// 2. Phân tích trạng thái bot từ Files
 $botStates = [];
 foreach ($sessionFiles as $file) {
     $emailMd5 = str_replace(['sessions/', '.state.json'], '', $file);
     $botStates[$emailMd5] = json_decode(file_get_contents($file), true);
+}
+
+// 3. Phân tích Log để tìm API Fail
+$apiFailures = [];
+$logFile = 'logs/' . date('Y-m-d') . '.log';
+if (file_exists($logFile)) {
+    $logContent = file_get_contents($logFile);
+    preg_match_all('/\[ERROR\].*? (http.*?): (.*)/', $logContent, $matches);
+    if (!empty($matches[1])) {
+        foreach ($matches[1] as $index => $url) {
+            $apiUrl = parse_url($url, PHP_URL_PATH);
+            $apiFailures[$apiUrl] = ($apiFailures[$apiUrl] ?? 0) + 1;
+        }
+    }
+    arsort($apiFailures);
 }
 
 $stats = [
@@ -25,9 +57,26 @@ $stats = [
     'moods' => ['happy' => 0, 'excited' => 0, 'tilted' => 0, 'depressed' => 0],
     'total_bot_money' => 0,
     'total_human_money' => 0,
+    'top_bots_today' => []
 ];
 
-// 2. Lấy dữ liệu Bot từ Database (Join Frames)
+// Lấy Top Bot thắng nhiều nhất hôm nay
+$today = date('Y-m-d');
+$sqlTop = "SELECT u.Name, u.ImageURL, SUM(gh.win_amount - gh.bet_amount) as total_profit
+           FROM users u
+           JOIN game_history gh ON u.Iduser = gh.user_id
+           WHERE gh.played_at >= '$today 00:00:00' AND u.Email REGEXP '^bot[0-9]+@'
+           GROUP BY u.Iduser
+           ORDER BY total_profit DESC
+           LIMIT 5";
+$topRes = $conn->query($sqlTop);
+if ($topRes) {
+    while($topRow = $topRes->fetch_assoc()) {
+        $stats['top_bots_today'][] = $topRow;
+    }
+}
+
+// 4. Lấy dữ liệu Bot từ Database (Join Frames)
 $botsList = [];
 $sql = "SELECT u.Iduser, u.Name, u.Email, u.Money, u.ImageURL, 
                cf.frame_name as chat_frame_name, 
@@ -37,7 +86,7 @@ $sql = "SELECT u.Iduser, u.Name, u.Email, u.Money, u.ImageURL,
         LEFT JOIN chat_frames cf ON u.chat_frame_id = cf.id 
         LEFT JOIN avatar_frames af ON u.avatar_frame_id = af.id
         LEFT JOIN achievements ach ON u.active_title_id = ach.id
-        WHERE u.Email LIKE '%bot%' 
+        WHERE u.Email REGEXP '^bot[0-9]+@' 
         ORDER BY u.Iduser ASC";
 $res = $conn->query($sql);
 
@@ -55,16 +104,25 @@ while($row = $res->fetch_assoc()) {
     $botsList[] = $row;
 }
 
-// Lấy tổng tiền người thật
+// Lấy tổng GTLM người thật
 $humanRes = $conn->query("SELECT SUM(Money) as total FROM users WHERE Email NOT LIKE '%bot%'")->fetch_assoc();
 $stats['total_human_money'] = (float)($humanRes['total'] ?? 0);
 
 // Lấy dữ liệu biểu đồ
 $chartLabels = []; $chartBotData = []; $chartHumanData = [];
+$moodHistory = ['happy' => [], 'excited' => [], 'tilted' => [], 'depressed' => []];
+
 foreach ($history as $point) {
     $chartLabels[] = $point['time'];
     $chartBotData[] = $point['bot'];
     $chartHumanData[] = $point['human'];
+    
+    // Mood history
+    if (isset($point['moods'])) {
+        foreach ($moodHistory as $m => &$vals) {
+            $vals[] = $point['moods'][$m] ?? 0;
+        }
+    }
 }
 
 // Lấy 20 dòng log mới nhất
@@ -84,6 +142,7 @@ if (isset($_GET['ajax'])) {
         'chartLabels' => $chartLabels,
         'chartBotData' => $chartBotData,
         'chartHumanData' => $chartHumanData,
+        'moodHistory' => $moodHistory,
         'recentLogs' => $recentLogs,
         'botsList' => $botsList
     ]);
@@ -148,6 +207,11 @@ if (isset($_GET['ajax'])) {
         .mood-happy { background: #22c55e; color: white; }
         .mood-excited { background: #f59e0b; color: white; }
         .mood-tilted { background: #ef4444; color: white; }
+        .mood-depressed { background: #64748b; color: white; }
+        
+        .api-fail-list { font-size: 11px; list-style: none; padding: 0; }
+        .api-fail-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .api-fail-count { color: var(--danger); font-weight: 700; }
         
         .inventory-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px; }
         .tag { font-size: 9px; background: rgba(99, 102, 241, 0.1); color: #a5b4fc; padding: 2px 6px; border-radius: 4px; }
@@ -189,8 +253,14 @@ if (isset($_GET['ajax'])) {
             <div class="left-col">
                 <div class="panel" style="margin-bottom: 20px;">
                     <h2 style="font-size: 18px; margin-top:0;">📈 Biến Động Tài Sản (Lịch Sử)</h2>
-                    <div style="height: 350px;">
+                    <div style="height: 250px;">
                         <canvas id="wealthLineChart"></canvas>
+                    </div>
+                </div>
+                <div class="panel" style="margin-bottom: 20px;">
+                    <h2 style="font-size: 18px; margin-top:0;">🎭 Biến Động Tâm Trạng (Lịch Sử)</h2>
+                    <div style="height: 250px;">
+                        <canvas id="moodLineChart"></canvas>
                     </div>
                 </div>
                 <div class="panel">
@@ -205,15 +275,73 @@ if (isset($_GET['ajax'])) {
                 </div>
             </div>
             <div class="right-col">
+                <div class="panel" style="margin-bottom: 20px; border: 2px solid var(--warning); background: rgba(245, 158, 11, 0.05);">
+                    <h2 style="font-size: 18px; margin-top:0; color: var(--warning); display: flex; align-items: center; gap: 10px;">
+                        <span>👑 OP BOT HÔM NAY</span>
+                        <span style="font-size: 10px; background: var(--warning); color: black; padding: 2px 6px; border-radius: 4px;">TOP PROFIT</span>
+                    </h2>
+                    <div id="opBotSection">
+                        <?php if (!empty($stats['top_bots_today'])): 
+                            $opBot = $stats['top_bots_today'][0]; ?>
+                            <div style="text-align: center; padding: 20px 10px;">
+                                <div style="position: relative; display: inline-block;">
+                                    <img src="<?= $opBot['ImageURL'] ?>" style="width: 80px; height: 80px; border-radius: 24px; border: 3px solid var(--warning); box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);">
+                                    <div style="position: absolute; bottom: -10px; right: -10px; background: var(--warning); color: black; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; border: 3px solid var(--bg);">1</div>
+                                </div>
+                                <h3 style="margin: 15px 0 5px; font-size: 20px;"><?= $opBot['Name'] ?></h3>
+                                <div style="color: var(--success); font-weight: 800; font-size: 18px;">+<?= number_format($opBot['total_profit']) ?> GTLM</div>
+                                <div style="font-size: 11px; color: #94a3b8; margin-top: 5px;">Húp mạnh nhất quân đoàn hôm nay! 🚀</div>
+                            </div>
+                        <?php else: ?>
+                            <div style="text-align: center; padding: 30px; color: #64748b; font-size: 12px;">Đang tìm kiếm OP Bot...</div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <div class="panel" style="margin-bottom: 20px;">
+                    <h2 style="font-size: 18px; margin-top:0; color: var(--danger);">🚨 Tổng Hợp API Fail</h2>
+                    <div style="background: rgba(239, 68, 68, 0.05); padding: 15px; border-radius: 15px; border: 1px solid rgba(239, 68, 68, 0.1);">
+                        <ul class="api-fail-list">
+                            <?php if (empty($apiFailures)): ?>
+                                <li style="color: #94a3b8; text-align: center; padding: 10px;">✨ Hệ thống ổn định, 0 lỗi API.</li>
+                            <?php else: ?>
+                                <?php foreach (array_slice($apiFailures, 0, 8) as $api => $count): 
+                                    $severity = $count > 10 ? 'var(--danger)' : ($count > 5 ? 'var(--warning)' : 'var(--success)');
+                                ?>
+                                    <li class="api-fail-item" style="border-color: rgba(255,255,255,0.03);">
+                                        <code style="color: #f8fafc; font-size: 10px;"><?= htmlspecialchars($api) ?></code>
+                                        <span style="color: <?= $severity ?>; font-weight: 800; font-size: 12px;"><?= $count ?> 🔥</span>
+                                    </li>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="panel" style="margin-bottom: 20px;">
+                    <h2 style="font-size: 18px; margin-top:0; color: var(--primary);">🏆 BXH Phụ</h2>
+                    <div id="topBotsToday">
+                        <?php foreach (array_slice($stats['top_bots_today'], 1) as $index => $bot): ?>
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; padding: 8px; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px solid rgba(255,255,255,0.03);">
+                                <span style="font-weight: 800; color: #94a3b8; min-width: 20px;">#<?= $index+2 ?></span>
+                                <img src="<?= $bot['ImageURL'] ?>" style="width: 30px; height: 30px; border-radius: 8px; opacity: 0.8;">
+                                <div style="flex: 1;">
+                                    <div style="font-size: 12px; font-weight: 600;"><?= $bot['Name'] ?></div>
+                                    <div style="font-size: 10px; color: var(--success);">+<?= number_format($bot['total_profit']) ?></div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
                 <div class="panel" style="margin-bottom: 20px;">
                     <h2 style="font-size: 18px; margin-top:0;">💰 Cán Cân Hiện Tại</h2>
-                    <div style="height: 250px;">
+                    <div style="height: 180px;">
                         <canvas id="economyChart"></canvas>
                     </div>
                 </div>
                 <div class="panel">
-                    <h2 style="font-size: 18px; margin-top:0;">🎭 Phân bổ Tâm trạng</h2>
-                    <div style="height: 250px;">
+                    <h2 style="font-size: 18px; margin-top:0;">🎭 Tâm trạng</h2>
+                    <div style="height: 180px;">
                         <canvas id="moodChart"></canvas>
                     </div>
                 </div>
@@ -258,10 +386,17 @@ if (isset($_GET['ajax'])) {
                                 <span class="tag">🖼️</span>
                             <?php endif; ?>
                         </div>
-                        <button class="btn" style="padding: 4px 10px; font-size: 10px; background: rgba(99,102,241,0.2); border: 1px solid var(--primary);" 
-                                onclick="showBotDetail(<?= $bot['Iduser'] ?>, '<?= $bot['Name'] ?>')">
-                            Soi Kho 🎒
-                        </button>
+                        <div style="display: flex; gap: 5px;">
+                            <button class="btn" style="padding: 4px 10px; font-size: 10px; background: rgba(99,102,241,0.2); border: 1px solid var(--primary);" 
+                                    onclick="showBotDetail(<?= $bot['Iduser'] ?>, '<?= $bot['Name'] ?>')">
+                                Soi Kho 🎒
+                            </button>
+                            <a href="index.php?action=reset_state&bot_id=<?= $bot['Iduser'] ?>" 
+                               class="btn" style="padding: 4px 10px; font-size: 10px; background: rgba(239,68,68,0.2); border: 1px solid var(--danger);"
+                               onclick="return confirm('Reset toàn bộ trạng thái và session của bot này?')">
+                                Reset 🔄
+                            </a>
+                        </div>
                     </div>
                 </div>
             <?php endforeach; ?>
@@ -320,7 +455,7 @@ if (isset($_GET['ajax'])) {
                                 <thead>
                                     <tr style="text-align: left; color: #94a3b8;">
                                         <th style="padding: 8px;">Game</th>
-                                        <th style="padding: 8px;">Tiền</th>
+                                        <th style="padding: 8px;">GTLM</th>
                                         <th style="padding: 8px;">Kết quả</th>
                                         <th style="padding: 8px;">Thời gian</th>
                                     </tr>
@@ -393,11 +528,35 @@ if (isset($_GET['ajax'])) {
             }
         });
 
+        // 🎭 Mood History Line Chart
+        const moodLineCtx = document.getElementById('moodLineChart').getContext('2d');
+        let moodLineChart = new Chart(moodLineCtx, {
+            type: 'line',
+            data: {
+                labels: <?= json_encode($chartLabels) ?>,
+                datasets: [
+                    { label: 'Happy', data: <?= json_encode($moodHistory['happy']) ?>, borderColor: '#22c55e', tension: 0.4 },
+                    { label: 'Excited', data: <?= json_encode($moodHistory['excited']) ?>, borderColor: '#f59e0b', tension: 0.4 },
+                    { label: 'Tilted', data: <?= json_encode($moodHistory['tilted']) ?>, borderColor: '#ef4444', tension: 0.4 },
+                    { label: 'Depressed', data: <?= json_encode($moodHistory['depressed']) ?>, borderColor: '#64748b', tension: 0.4 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 10 } } },
+                scales: {
+                    x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                }
+            }
+        });
+
         const ecoCtx = document.getElementById('economyChart').getContext('2d');
         let ecoChart = new Chart(ecoCtx, {
             type: 'doughnut',
             data: {
-                labels: ['Tiền Bot', 'Tiền Người Thật'],
+                labels: ['GTLM Bot', 'GTLM Người Thật'],
                 datasets: [{
                     data: [<?= $stats['total_bot_money'] ?>, <?= $stats['total_human_money'] ?>],
                     backgroundColor: ['#6366f1', '#22c55e'],
@@ -463,6 +622,46 @@ if (isset($_GET['ajax'])) {
 
                 moodChart.data.datasets[0].data = [data.stats.moods.happy, data.stats.moods.excited, data.stats.moods.tilted, data.stats.moods.depressed];
                 moodChart.update();
+
+                // Update Mood Line Chart
+                moodLineChart.data.labels = data.chartLabels;
+                moodLineChart.data.datasets[0].data = data.moodHistory.happy;
+                moodLineChart.data.datasets[1].data = data.moodHistory.excited;
+                moodLineChart.data.datasets[2].data = data.moodHistory.tilted;
+                moodLineChart.data.datasets[3].data = data.moodHistory.depressed;
+                moodLineChart.update();
+
+                // Update Top & OP Bots
+                const opBotEl = document.getElementById('opBotSection');
+                const topBotsEl = document.getElementById('topBotsToday');
+                if (data.stats.top_bots_today && data.stats.top_bots_today.length > 0) {
+                    const opBot = data.stats.top_bots_today[0];
+                    if (opBotEl) {
+                        opBotEl.innerHTML = `
+                            <div style="text-align: center; padding: 20px 10px;">
+                                <div style="position: relative; display: inline-block;">
+                                    <img src="${opBot.ImageURL}" style="width: 80px; height: 80px; border-radius: 24px; border: 3px solid var(--warning); box-shadow: 0 0 20px rgba(245,158,11,0.4);">
+                                    <div style="position: absolute; bottom: -10px; right: -10px; background: var(--warning); color: black; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; border: 3px solid var(--bg);">1</div>
+                                </div>
+                                <h3 style="margin: 15px 0 5px; font-size: 20px;">${opBot.Name}</h3>
+                                <div style="color: var(--success); font-weight: 800; font-size: 18px;">+${new Intl.NumberFormat().format(opBot.total_profit)} GTLM</div>
+                                <div style="font-size: 11px; color: #94a3b8; margin-top: 5px;">Húp mạnh nhất quân đoàn hôm nay! 🚀</div>
+                            </div>
+                        `;
+                    }
+                    if (topBotsEl) {
+                        topBotsEl.innerHTML = data.stats.top_bots_today.slice(1).map((bot, index) => `
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; padding: 8px; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px solid rgba(255,255,255,0.03);">
+                                <span style="font-weight: 800; color: #94a3b8; min-width: 20px;">#${index+2}</span>
+                                <img src="${bot.ImageURL}" style="width: 30px; height: 30px; border-radius: 8px; opacity: 0.8;">
+                                <div style="flex: 1;">
+                                    <div style="font-size: 12px; font-weight: 600;">${bot.Name}</div>
+                                    <div style="font-size: 10px; color: var(--success);">+${new Intl.NumberFormat().format(bot.total_profit)}</div>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                }
 
             } catch (error) {
                 console.error('Refresh failed:', error);

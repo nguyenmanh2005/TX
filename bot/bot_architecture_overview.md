@@ -24,7 +24,7 @@ Tài liệu này mô tả chi tiết cấu trúc, chức năng và các luồng 
 *   **`index.php`**: 🖥️ **Trung tâm chỉ huy (Control Center).**
     *   Hiển thị Dashboard chuyên nghiệp với biểu đồ Doughnut (Chart.js).
     *   Theo dõi tài sản quân đoàn, tỉ lệ lạm phát so với người thật.
-    *   Lưới (Grid) quản lý chi tiết từng Bot: Tên, Tiền, Mood, Inventory.
+    *   Lưới (Grid) quản lý chi tiết từng Bot: Tên, GTLM, Mood, Inventory.
 *   **`api_bot_inventory.php`**: 🎒 **Kho đồ Bot.**
     *   API trả về danh sách: Themes, Cursors, Khung Chat, Khung Avatar, Thành tựu mà Bot đang sở hữu.
     *   Truy xuất lịch sử 20 ván đấu gần nhất của Bot.
@@ -90,7 +90,7 @@ Bot không chỉ chơi game mà còn được lập trình để bao phủ toàn
 
 ### 3. Bảo Trì & Phúc Lợi (Maintenance)
 *   **Điểm danh**: `api_daily_login.php?action=claim_reward`. Bot tự động nhận thưởng mỗi ngày.
-*   **Vòng quay**: `api_lucky_wheel.php?action=spin`. Bot thực hiện quay thưởng để tích lũy vật phẩm/tiền.
+*   **Vòng quay**: `api_lucky_wheel.php?action=spin`. Bot thực hiện quay thưởng để tích lũy vật phẩm/GTLM.
 *   **Nhiệm vụ**: `api_quests.php?action=get_quests`. Bot kiểm tra tiến trình nhiệm vụ và nhận thưởng khi hoàn thành.
 
 ### 4. Tương Tác Xã Hội (Social)

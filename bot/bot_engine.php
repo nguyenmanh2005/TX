@@ -17,11 +17,29 @@ function writeBotLog(string $email, string $level, string $action, string $detai
 function recordEconomySnapshot(mysqli $conn) {
     $historyFile = __DIR__ . '/sessions/economy_history.json';
     $history = file_exists($historyFile) ? json_decode(file_get_contents($historyFile), true) : [];
-    $botRes = $conn->query("SELECT SUM(Money) as total FROM users WHERE Email LIKE '%bot%'")->fetch_assoc();
+    
+    // Tổng GTLM
+    $botRes = $conn->query("SELECT SUM(Money) as total FROM users WHERE Email REGEXP '^bot[0-9]+@'")->fetch_assoc();
     $totalBot = (float)($botRes['total'] ?? 0);
-    $humanRes = $conn->query("SELECT SUM(Money) as total FROM users WHERE Email NOT LIKE '%bot%'")->fetch_assoc();
+    $humanRes = $conn->query("SELECT SUM(Money) as total FROM users WHERE Email NOT REGEXP '^bot[0-9]+@'")->fetch_assoc();
     $totalHuman = (float)($humanRes['total'] ?? 0);
-    $history[] = ['time' => date('H:i d/m'), 'bot' => $totalBot, 'human' => $totalHuman];
+    
+    // Thống kê mood
+    $moodCounts = ['happy' => 0, 'excited' => 0, 'tilted' => 0, 'depressed' => 0];
+    $sessionFiles = glob(__DIR__ . '/sessions/*.state.json');
+    foreach ($sessionFiles as $file) {
+        $state = json_decode(file_get_contents($file), true);
+        $m = $state['mood'] ?? 'happy';
+        if (isset($moodCounts[$m])) $moodCounts[$m]++;
+    }
+
+    $history[] = [
+        'time' => date('H:i d/m'), 
+        'bot' => $totalBot, 
+        'human' => $totalHuman,
+        'moods' => $moodCounts
+    ];
+    
     if (count($history) > 50) array_shift($history);
     file_put_contents($historyFile, json_encode($history));
 }
@@ -48,7 +66,7 @@ if (empty($availableGames)) $availableGames = ["Thiên Thần Ác Quỷ", "Xì D
 
 // Lấy danh sách tên bot để tương tác Social
 $botNameMap = [];
-$nameRes = $conn->query("SELECT Iduser, Name, Email FROM users WHERE Email LIKE '%bot%'");
+$nameRes = $conn->query("SELECT Iduser, Name, Email FROM users WHERE Email REGEXP '^bot[0-9]+@'");
 while($row = $nameRes->fetch_assoc()) {
     $botNameMap[$row['Email']] = ['id' => $row['Iduser'], 'name' => $row['Name']];
 }
@@ -83,6 +101,10 @@ $activeBots = array_slice($allBots, 0, $config['settings']['max_bots_per_cycle']
 
 $updateMoneyStmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
 
+// Lấy số lượng người chơi đang online (hoạt động trong 5 phút qua)
+$onlineRes = $conn->query("SELECT COUNT(*) as count FROM users WHERE last_active > NOW() - INTERVAL 5 MINUTE");
+$userCount = $onlineRes ? (int)$onlineRes->fetch_assoc()['count'] : 0;
+
 foreach ($activeBots as $email) {
     $botMd5 = md5($email);
     $cFile = $cookieDir . $botMd5 . ".txt";
@@ -96,18 +118,45 @@ foreach ($activeBots as $email) {
         'lose_streak' => 0
     ];
 
-    $res = executeBotAction($baseUrl . "/login.php", ['email' => $email, 'password' => $config['bot_password']], $cFile);
+    // --- MODULE 0: Login with Retry ---
+    $res = null;
+    for ($attempt = 1; $attempt <= 3; $attempt++) {
+        $res = executeBotAction($baseUrl . "/login.php", ['email' => $email, 'password' => $config['bot_password']], $cFile);
+        if (isset($res['status']) && $res['status'] == 'success') break;
+        if ($attempt < 3) sleep(1);
+    }
     
-    if (isset($res['status']) && $res['status'] == 'success') {
-        $userId = (int)$res['Iduser'];
-        $userName = $res['Name'];
-        $userMoney = (float)$res['Money'];
-        
+    if (!isset($res['status']) || $res['status'] !== 'success') {
+        writeBotLog($email, "ERROR", "Login failed after 3 attempts");
+        continue;
+    }
+
+    $userId = (int)$res['Iduser'];
+    $userName = $res['Name'];
+    $userMoney = (float)$res['Money'];
+    $personality = $brain->getPersonality($userId);
+
+        // --- MODULE 0.1: Daily Mood & Idol ---
+        $todayStr = date('Y-m-d');
+        if (($state['last_mood_update'] ?? '') !== $todayStr) {
+            $state['is_bad_day'] = (rand(1, 100) <= 5); // 5% chance of a bad day
+            $state['last_mood_update'] = $todayStr;
+            
+            // Nếu là fanboy, chọn idol mới cho ngày hôm nay
+            if ($personality === 'hambo') {
+                $otherBots = array_values(array_filter($botNameMap, function($b) use ($userName) { 
+                    return $b['name'] !== $userName; 
+                }));
+                if (!empty($otherBots)) {
+                    $state['idol_name'] = $otherBots[array_rand($otherBots)]['name'];
+                }
+            }
+        }
+
         echo "<div style='background:rgba(30, 41, 59, 0.7); padding:15px; border-radius:12px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.1);'>";
-        echo "<b style='color:#38bdf8;'>🤖 Bot: $userName</b> | <span style='color:#94a3b8; font-size:11px;'>$email</span><br>";
+        echo "<b style='color:#38bdf8;'>🤖 Bot: $userName</b> <span style='font-size:10px; color:#64748b;'>($personality" . ($state['is_bad_day'] ? " - 🥀 Bad Day" : "") . ")</span><br>";
 
         // --- MODULE 1: Maintenance & Tasks ---
-        $todayStr = date('Y-m-d');
         if (($state['last_maintenance'] ?? '') !== $todayStr) {
             echo "🔧 <span style='color:#fbbf24; font-size:13px;'>Bảo trì: Daily Tasks, Quests, Notifications...</span><br>";
             executeBotAction($baseUrl . "/api_daily_login.php", ['action' => 'claim_reward'], $cFile);
@@ -156,8 +205,20 @@ foreach ($activeBots as $email) {
         executeBotAction($baseUrl . "/api_achievement_notifications.php", ['action' => 'mark_all_read'], $cFile);
 
         // --- MODULE 2: Games ---
-        $chosenGame = $availableGames[array_rand($availableGames)];
         $personality = $brain->getPersonality($userId);
+        $mood = $state['mood'] ?? 'happy';
+        
+        // Mood-based game selection: Nếu đang tilted thì tránh Poker, Baccarat (game rủi ro cao)
+        $filteredGames = $availableGames;
+        if ($mood === 'tilted') {
+            $highRisk = ['Poker Texas', 'Baccarat Premium', 'Xì Dách Royale'];
+            $filteredGames = array_filter($availableGames, function($g) use ($highRisk) {
+                return !in_array($g, $highRisk);
+            });
+            if (empty($filteredGames)) $filteredGames = $availableGames;
+        }
+        
+        $chosenGame = $filteredGames[array_rand($filteredGames)];
         $bet = floor($userMoney * (($personality == 'aggressive' ? rand(5, 12) : rand(1, 5)) / 100));
         if ($bet < 1000) $bet = 1000;
 
@@ -169,6 +230,7 @@ foreach ($activeBots as $email) {
             $state['wins']++;
             $state['win_streak']++;
             $state['lose_streak'] = 0;
+            $state['mood'] = 'excited';
             echo "💰 <span style='color:#4ade80;'>Húp " . number_format($bet) . " GTLM tại $chosenGame</span><br>";
             
             $msgType = ($state['win_streak'] >= 3) ? 'streak_win' : 'win';
@@ -179,6 +241,7 @@ foreach ($activeBots as $email) {
             $updateMoneyStmt->execute();
             $state['lose_streak']++;
             $state['win_streak'] = 0;
+            $state['mood'] = ($state['lose_streak'] >= 3) ? 'tilted' : 'depressed';
             echo "💸 <span style='color:#f87171;'>Bay màu " . number_format($bet) . " GTLM tại $chosenGame</span><br>";
             
             $msgType = ($state['lose_streak'] >= 3) ? 'streak_lose' : 'lose';
@@ -190,12 +253,20 @@ foreach ($activeBots as $email) {
             $chatMessages = executeBotAction($baseUrl . "/chat.php?action=load", null, $cFile);
             $isReplied = false;
 
-            // 1. Logic Phản hồi & React (Reply/Reaction)
+            // 1. Logic Phản hồi, React & Keywords
             if (!empty($chatMessages) && is_array($chatMessages)) {
                 $recent = array_slice($chatMessages, -10); // Lấy 10 tin mới nhất
                 foreach ($recent as $chat) {
                     if ($chat['username'] !== $userName) {
-                        // React to other's wins/losses (using colorful terms)
+                        // A. Keyword Reaction (Ưu tiên hàng đầu)
+                        $keywordResponse = $brain->generateMessage($userId, 'keyword', ['text' => $chat['message']]);
+                        if ($keywordResponse && rand(1, 100) <= 50) {
+                            executeBotAction($baseUrl . "/chat.php", ['message' => "@{$chat['username']} $keywordResponse"], $cFile);
+                            $isReplied = true;
+                            break;
+                        }
+
+                        // B. React to other's wins/losses
                         $isWinMsg = (stripos($chat['message'], 'Thắng') !== false || stripos($chat['message'], 'Húp') !== false || stripos($chat['message'], 'ăn ngập mặt') !== false);
                         $isLoseMsg = (stripos($chat['message'], 'Thua') !== false || stripos($chat['message'], 'bay màu') !== false || stripos($chat['message'], 'bốc hơi') !== false || stripos($chat['message'], 'về cõi') !== false);
 
@@ -247,7 +318,7 @@ foreach ($activeBots as $email) {
             // 4. Chat & Greet
             if (rand(1, 100) <= 60) {
                 if (rand(1, 100) <= 15) {
-                    $greetMsg = $brain->generateMessage($userId, $brain->getTimeKey());
+                    $greetMsg = $brain->generateMessage($userId, $brain->getTimeKey(), ['user_count' => $userCount], $state);
                     executeBotAction($baseUrl . "/chat.php", ['message' => $greetMsg], $cFile);
                 }
 
@@ -386,7 +457,7 @@ foreach ($activeBots as $email) {
 
         // --- MODULE 6: Social & Gifting ---
         if (rand(1, 100) <= 15) {
-            // Tặng tiền cho bot khác
+            // Tặng GTLM cho bot khác
             $otherBots = array_keys($botNameMap);
             $targetBot = $otherBots[array_rand($otherBots)];
             if ($targetBot != $email) {
@@ -399,6 +470,71 @@ foreach ($activeBots as $email) {
             }
         }
         
+        // --- MODULE 6.1: Mood Chain & Rivalry ---
+        $currentMood = $state['mood'] ?? 'happy';
+        
+        // 1. Mood Spreading (30% chance if excited)
+        if ($currentMood === 'excited' && rand(1, 100) <= 30) {
+            $otherBots = array_keys($botNameMap);
+            $targetBotEmail = $otherBots[array_rand($otherBots)];
+            if ($targetBotEmail != $email) {
+                $targetBotName = $botNameMap[$targetBotEmail]['name'];
+                $msg = "Anh em ơi, húp sướng quá! @$targetBotName quẩy cùng tôi không? 🔥";
+                executeBotAction($baseUrl . "/chat.php", ['message' => $msg], $cFile);
+                
+                // Spread mood
+                $targetMd5 = md5($targetBotEmail);
+                $targetStateFile = $cookieDir . $targetMd5 . ".state.json";
+                if (file_exists($targetStateFile)) {
+                    $targetSt = json_decode(file_get_contents($targetStateFile), true);
+                    $targetSt['mood'] = 'excited'; 
+                    file_put_contents($targetStateFile, json_encode($targetSt));
+                    writeBotLog($email, "SOCIAL", "Mood Spread", "Spread excitement to $targetBotName");
+                }
+            }
+        } elseif (($currentMood === 'happy') && rand(1, 100) <= 10) {
+            // General happiness spread (lower chance)
+            $otherBots = array_keys($botNameMap);
+            $targetBotEmail = $otherBots[array_rand($otherBots)];
+            if ($targetBotEmail != $email) {
+                $targetBotName = $botNameMap[$targetBotEmail]['name'];
+                $targetMd5 = md5($targetBotEmail);
+                $targetStateFile = $cookieDir . $targetMd5 . ".state.json";
+                if (file_exists($targetStateFile)) {
+                    $targetSt = json_decode(file_get_contents($targetStateFile), true);
+                    $targetSt['mood'] = 'happy'; 
+                    file_put_contents($targetStateFile, json_encode($targetSt));
+                }
+            }
+        }
+
+        // 2. Rival Memory (Aggressive bot "hates" a random bot)
+        if ($personality === 'aggressive') {
+            if (!isset($state['rival_id'])) {
+                $otherBots = array_values($botNameMap);
+                if (!empty($otherBots)) {
+                    $potentialRival = $otherBots[array_rand($otherBots)];
+                    if ($potentialRival['id'] != $userId) {
+                        $state['rival_id'] = $potentialRival['id'];
+                        $state['rival_name'] = $potentialRival['name'];
+                        writeBotLog($email, "INFO", "Rivalry", "Now targeting {$state['rival_name']} as a rival!");
+                    }
+                }
+            }
+            
+            if (isset($state['rival_name']) && rand(1, 100) <= 25) {
+                $rivalMsgs = [
+                    "Này @{$state['rival_name']}, nhìn tôi húp nè, bác còn non lắm! 😂",
+                    "Thách đấu bác @{$state['rival_name']} đó, dám không?",
+                    "Mỗi lần gặp bác @{$state['rival_name']} là tôi lại thấy mình đỏ. Cảm ơn nhé! 🔥",
+                    "Bác @{$state['rival_name']} hôm nay bay màu bao nhiêu rồi? Để tôi húp nốt cho."
+                ];
+                $rivalMsg = $rivalMsgs[array_rand($rivalMsgs)];
+                executeBotAction($baseUrl . "/chat.php", ['message' => $rivalMsg], $cFile);
+                echo "🤺 <span style='color:#f87171; font-size:12px;'>Đã khiêu khích đối thủ: {$state['rival_name']}</span><br>";
+            }
+        }
+
         // Check leaderboard (Browsing behavior)
         if (rand(1, 100) <= 20) {
             executeBotAction($baseUrl . "/api_leaderboard.php?action=get_overall", null, $cFile);
@@ -449,8 +585,20 @@ foreach ($activeBots as $email) {
         }
 
         // --- MODULE 8: Game Statistics & Personal Monitoring ---
-        if (rand(1, 100) <= 30) {
-            executeBotAction($baseUrl . "/api_game_statistics.php?action=get_stats", null, $cFile);
+        if (rand(1, 100) <= 20) {
+            $statsRes = executeBotAction($baseUrl . "/api_game_statistics.php?action=get_stats", null, $cFile);
+            if (isset($statsRes['stats']) && $statsRes['stats']['totalGames'] > 0) {
+                $s = $statsRes['stats'];
+                $summary = "Tổng kết tỉ thí: Đã tỉ thí {$s['totalGames']} ván, tỉ lệ húp {$s['winRate']}%. Tổng húp {$s['totalWon']} GTLM! 🚀 #ThốngKê #DânChơi";
+                executeBotAction($baseUrl . "/api_social_feed.php", ['action' => 'post', 'content' => $summary], $cFile);
+            }
+        }
+
+        // --- MODULE 8.5: Weekly Goal ---
+        if (date('w') == 1 && ($state['last_goal_post'] ?? '') !== $todayStr) {
+            $goalMsg = $brain->generateMessage($userId, 'goal');
+            executeBotAction($baseUrl . "/api_social_feed.php", ['action' => 'post', 'content' => $goalMsg], $cFile);
+            $state['last_goal_post'] = $todayStr;
         }
 
         // --- MODULE 9: Big Win Trigger ---
@@ -459,12 +607,64 @@ foreach ($activeBots as $email) {
             writeBotLog($email, "CELEBRATION", "Big Win", "Triggered server notification for " . number_format($winAmount) . " win!");
         }
 
+        // --- MODULE 10: Drama & Social Memory ---
+        if (!empty($chatMessages) && is_array($chatMessages)) {
+            foreach ($chatMessages as $msgItem) {
+                $mUser = $msgItem['username'];
+                // Nếu người chơi không phải bot, lưu vào trí nhớ
+                $isBot = false;
+                foreach($botNameMap as $b) { if($b['name'] === $mUser) { $isBot = true; break; } }
+                if (!$isBot) {
+                    if (!isset($state['remembered_players'])) $state['remembered_players'] = [];
+                    if (!in_array($mUser, $state['remembered_players'])) {
+                        $state['remembered_players'][] = $mUser;
+                        if (count($state['remembered_players']) > 10) array_shift($state['remembered_players']);
+                    }
+                }
+            }
+        }
+
+        // Drama: Aggressive bot cãi nhau với Shy bot (Gửi PM)
+        if ($personality === 'aggressive' && rand(1, 100) <= 5) {
+            foreach($botNameMap as $bEmail => $bData) {
+                $targetId = $bData['id'];
+                $targetPersonality = $brain->getPersonality($targetId);
+                if ($targetPersonality === 'shy') {
+                    $dramaMsg = "Này {$bData['name']}, ra chiêu kiểu gì mà nhát thế? Có húp được gì đâu! 😂";
+                    // Gửi tin nhắn riêng (Giả lập bằng chat hoặc hệ thống tin nhắn nếu có)
+                    executeBotAction($baseUrl . "/chat.php", ['message' => "@{$bData['name']} $dramaMsg"], $cFile);
+                    break;
+                }
+            }
+        }
+
+        // --- MODULE 10.5: Global Event Reactions ---
+        $globalStateFile = __DIR__ . '/sessions/global_events.json';
+        $globalState = file_exists($globalStateFile) ? json_decode(file_get_contents($globalStateFile), true) : ['top_1' => ''];
+        
+        if (rand(1, 100) <= 10) {
+            $lbRes = executeBotAction($baseUrl . "/api_leaderboard.php?action=get_overall&limit=1", null, $cFile);
+            if (isset($lbRes['leaderboard'][0])) {
+                $currentTop1 = $lbRes['leaderboard'][0]['Name'];
+                if ($currentTop1 !== $globalState['top_1'] && !empty($globalState['top_1'])) {
+                    $celebrateMsg = "Kinh vcl! Chúc mừng $currentTop1 vừa leo lên Top 1 BXH nhé! 🏆";
+                    executeBotAction($baseUrl . "/chat.php", ['message' => $celebrateMsg], $cFile);
+                    $globalState['top_1'] = $currentTop1;
+                    file_put_contents($globalStateFile, json_encode($globalState));
+                } elseif (empty($globalState['top_1'])) {
+                    $globalState['top_1'] = $currentTop1;
+                    file_put_contents($globalStateFile, json_encode($globalState));
+                }
+            }
+        }
+
+        file_put_contents($sFile, json_encode($state));
+        
+        // --- MODULE 11: Cleanup & Logout ---
+        executeBotAction($baseUrl . "/api_logout.php", null, $cFile);
         echo "</div>";
-    } else {
-        writeBotLog($email, "ERROR", "Login Failed", $res['message'] ?? 'Unknown error');
     }
-}
 
 $updateMoneyStmt->close();
 recordEconomySnapshot($conn);
-echo "<hr>✨ Cycle Finished (Omni-Access v16.1).";
+echo "<hr>✨ Cycle Finished (Omni-Access v16.2).";

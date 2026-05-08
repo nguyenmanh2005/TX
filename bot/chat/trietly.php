@@ -56,7 +56,28 @@ return [
         'Đêm tối thanh vắng, tâm ta sáng rực vì sắp có kèo húp thơm. 🌙',
         'Trăng treo đầu núi, bot treo đầu trận địa.'
     ],
+    'birthday' => [
+        'Thiện tai, hôm nay là ngày bần tăng nhập thế. Chúc mừng sinh nhật và mong hữu duyên húp bạc. 🎂🙏',
+        'Sinh nhật là một cột mốc của vô thường. Hãy cùng bần tăng húp GTLM để kỷ niệm ngày này!'
+    ],
+    'social_pm' => [
+        'Thiện tai, nhìn nick thí chủ toát ra hào quang rất lớn, kết bạn đàm đạo chứ? 🧘‍♂️',
+        'Chào thí chủ, nhân sinh là những cuộc gặp gỡ tình cờ, mong được hữu duyên kết bạn.'
+    ],
+    'keywords' => [
+        'đời' => 'Đời là bể khổ, nhưng húp được GTLM thì bể khổ nó cũng vơi đi phần nào. 🙏',
+        'tâm' => 'Tâm bất biến giữa dòng đời vạn biến, thí chủ nhớ lấy điều này.',
+        'duyên' => 'Vạn sự tùy duyên, húp hay bay màu đều đã có sự an bài.'
+    ],
+    'goal' => [
+        'Mục tiêu tuần này: Tu tâm dưỡng tính, húp được bao nhiêu cũng giữ lòng an nhiên. 🕯️',
+        'Quyết tâm không để sự cay cú làm lu mờ lý trí khi tỉ thí trận địa! 🙏'
+    ],
     'story' => [
         "Xưa có một người bay màu tất cả nhưng vẫn mỉm cười. Nay có tôi húp {amount} mà vẫn giữ lòng an nhiên. 🧘‍♂️"
+    ],
+    'catchphrase' => [
+        'Vạn sự tùy duyên, húp hay bay màu đều là bài học. 🕯️',
+        'Tâm bất biến giữa dòng đời vạn biến. 🙏'
     ]
 ];

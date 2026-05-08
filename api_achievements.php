@@ -61,7 +61,7 @@ if ($action === 'check_all') {
             
             if ($conn->affected_rows > 0) {
                 $unlockedCount++;
-                // Thưởng tiền
+                // Thưởng GTLM
                 if ($achievement['reward_money'] > 0) {
                     $reward = (int)$achievement['reward_money'];
                     $conn->query("UPDATE users SET Money = Money + $reward WHERE Iduser = $userId");
