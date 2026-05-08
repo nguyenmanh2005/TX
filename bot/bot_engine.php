@@ -134,7 +134,8 @@ foreach ($activeBots as $email) {
         $bet = floor($userMoney * (($personality == 'aggressive' ? rand(5, 12) : rand(1, 5)) / 100));
         if ($bet < 1000) $bet = 1000;
 
-        if (rand(0, 1)) {
+        $isWin = (rand(0, 1) === 1);
+        if ($isWin) {
             $updateMoneyStmt->bind_param("di", $bet, $userId);
             $updateMoneyStmt->execute();
             $state['wins']++;
@@ -145,7 +146,7 @@ foreach ($activeBots as $email) {
             $updateMoneyStmt->bind_param("di", $negativeBet, $userId);
             $updateMoneyStmt->execute();
             echo "💸 <span style='color:#f87171;'>Thua " . number_format($bet) . " tại $chosenGame</span><br>";
-            $msg = $brain->generateMessage($userId, 'loss', ['amount' => $bet]);
+            $msg = $brain->generateMessage($userId, 'lose', ['amount' => $bet]);
         }
 
         // --- MODULE 3: Social & Interaction ---
@@ -180,7 +181,7 @@ foreach ($activeBots as $email) {
                 }
             }
             
-            // 3. Tương tác Social Feed
+            // 3. Tương tác Social Feed (Like/Comment dạo)
             $feedRes = executeBotAction($baseUrl . "/api_social_feed.php?action=get_feed", null, $cFile);
             if (isset($feedRes['data']) && !empty($feedRes['data'])) {
                 $randomPost = $feedRes['data'][array_rand($feedRes['data'])];
@@ -190,8 +191,11 @@ foreach ($activeBots as $email) {
                 }
             }
 
-            // 4. Đăng Feed & Chat
-            executeBotAction($baseUrl . "/api_social_feed.php", ['action' => 'create_post', 'content' => $msg], $cFile);
+            // 4. Đăng Feed (Chỉ đăng khi thắng) & Chat
+            if ($isWin) {
+                executeBotAction($baseUrl . "/api_social_feed.php", ['action' => 'create_post', 'content' => $msg], $cFile);
+            }
+
             if (rand(1, 100) <= 60) {
                 executeBotAction($baseUrl . "/chat.php", ['message' => $msg], $cFile);
                 echo "💬 <span style='color:#38bdf8;'>Đã " . ($isReplied ? "phản hồi" : "tương tác") . " Social & Chat.</span><br>";

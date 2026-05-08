@@ -45,10 +45,23 @@ if (isset($_GET['action'])) {
     
     if ($_GET['action'] == 'mass_spawn' && isset($_GET['target'])) {
         $target = (int)$_GET['target'];
-        for ($i = 0; $i < 10; $i++) { // Spawn theo đợt nhỏ để tránh timeout
-            spawnNewBot($conn);
+        
+        $res = $conn->query("SELECT COUNT(*) as total FROM users WHERE Email LIKE '%bot%'");
+        $current = (int)$res->fetch_assoc()['total'];
+        
+        // Tối đa 10 bot mỗi đợt để tránh timeout
+        $toSpawn = min($target - $current, 10);
+        
+        if ($toSpawn > 0) {
+            for ($i = 0; $i < $toSpawn; $i++) {
+                spawnNewBot($conn);
+            }
+            $msg = "Spawned $toSpawn bots. Current total: " . ($current + $toSpawn);
+        } else {
+            $msg = "Target $target already reached or exceeded.";
         }
-        header("Location: index.php?msg=Mass Spawn Cycle Completed");
+        
+        header("Location: index.php?msg=" . urlencode($msg));
         exit;
     }
 }
