@@ -114,6 +114,7 @@ if (isset($_GET['action'])) {
     <link
         href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;500;700&display=swap"
         rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <?php echo getCSSIncludes(['special_effects' => true]); ?>
     <style>
         :root {
@@ -528,6 +529,45 @@ if (isset($_GET['action'])) {
         </div>
     </div>
 
+    <!-- Statistics and History Section -->
+    <div class="stats-card-container" style="max-width: 1200px; margin: 20px auto; padding: 0 20px;">
+        <div class="glass-card" style="display: block; padding: 20px;">
+            <h3 style="font-family: 'Orbitron'; color: var(--primary); margin-top: 0;">BÁO CÁO CHIẾN DỊCH</h3>
+            <div class="stats-container">
+                <div class="stat-item wins">
+                    <div class="label">Lần Thắng</div>
+                    <div class="value"><?= $gameThang ?></div>
+                </div>
+                <div class="stat-item losses">
+                    <div class="label">Lần Thua</div>
+                    <div class="value"><?= $gameThua ?></div>
+                </div>
+            </div>
+            <canvas id="gameChart" style="max-height: 300px;"></canvas>
+        </div>
+    </div>
+
+    <div class="history-box" style="max-width: 1200px; margin: 20px auto; padding: 0 20px;">
+        <div class="glass-card" style="display: block; padding: 20px;">
+            <h3 style="font-family: 'Orbitron'; color: var(--primary); margin-top: 0;">NHẬT KÝ CHIẾN ĐẤU</h3>
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--primary);">
+                        <th style="padding: 10px; text-align: center;">ID</th>
+                        <th style="padding: 10px; text-align: right;">Cược</th>
+                        <th style="padding: 10px; text-align: left;">Kết quả</th>
+                        <th style="padding: 10px; text-align: right;">Nhận</th>
+                        <th style="padding: 10px; text-align: right;">Thời gian</th>
+                    </tr>
+                </thead>
+                <tbody id="history-tbody">
+                    <!-- AJAX Load -->
+                </tbody>
+            </table>
+            <p id="history-loading" style="text-align: center; opacity: 0.5; margin-top: 20px;">Đang tải dữ liệu...</p>
+        </div>
+    </div>
+
     <script>
         let currentChip = 1000;
         let myBets = {};
@@ -544,7 +584,6 @@ if (isset($_GET['action'])) {
         $('#customBet').on('input', function() {
             currentChip = parseInt($(this).val()) || 0;
             $('.chip').removeClass('active');
-            // Re-activate chip if matches
             $(`.chip[data-val="${currentChip}"]`).addClass('active');
         });
 
@@ -595,9 +634,8 @@ if (isset($_GET['action'])) {
 
             const bowl = $('#bowl'), sparks = $('#shakingSparks');
             $('.animal-tile').removeClass('winner');
-            $('.die').css('opacity', 0); // Reset dice visibility
+            $('.die').css('opacity', 0);
             
-            // Step 1: Slam bowl down and start loop shake
             const tl = gsap.timeline();
             tl.to(bowl, { y: 0, rotateX: 0, rotateZ: 0, opacity: 1, duration: 0.4, ease: "bounce.out" })
               .add(() => {
@@ -618,12 +656,10 @@ if (isset($_GET['action'])) {
 
             $.post('baucua.php?action=play', { bets: JSON.stringify(betsData) }, function (res) {
                 if (res.success) {
-                    // Ensure at least 1.5s of shaking
                     setTimeout(() => {
-                        gsap.killTweensOf(bowl); // Stop shaking
+                        gsap.killTweensOf(bowl);
                         sparks.hide();
                         
-                        // Step 2: Lift bowl and show results
                         gsap.to(bowl, { y: -250, x: 100, rotateZ: 45, opacity: 0, duration: 0.8, ease: "power2.inOut" });
                         
                         res.results.forEach((animal, i) => {
@@ -648,7 +684,6 @@ if (isset($_GET['action'])) {
                                 setTimeout(() => $('.game-area').removeClass('lose-shake'), 500);
                             }
 
-                            // Step 3: Reset for next round
                             setTimeout(() => {
                                 gsap.to(bowl, { y: 0, x: 0, rotateZ: 0, opacity: 1, duration: 0.5 });
                                 gsap.to('.die', { scale: 0, opacity: 0, duration: 0.3 });
@@ -656,6 +691,7 @@ if (isset($_GET['action'])) {
                                 $('#playBtn').prop('disabled', false).text('⚡ XÓC NGAY');
                                 isRolling = false;
                                 clearBets();
+                                loadBaucuaHistory();
                             }, 2500);
                         }, 1200);
                     }, 1500);
@@ -668,10 +704,41 @@ if (isset($_GET['action'])) {
                 }
             });
         }
-    </script>
 
-    <canvas id="threejs-background"></canvas>
-    <script>
+        async function loadBaucuaHistory() {
+            try {
+                const response = await fetch('../game_history_universal.php?action=get_history&game=baucua');
+                if (!response.ok) return;
+                const data = await response.json();
+                if (data.success && data.history) {
+                    const tbody = document.getElementById('history-tbody');
+                    const loading = document.getElementById('history-loading');
+                    if (data.history.length > 0) {
+                        tbody.innerHTML = '';
+                        data.history.forEach(record => {
+                            const row = document.createElement('tr');
+                            row.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                            row.innerHTML = `
+                                <td style="padding: 10px; text-align: center;">${record.Id}</td>
+                                <td style="padding: 10px; text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                                <td style="padding: 10px; text-align: left;">${record.Result}</td>
+                                <td style="padding: 10px; text-align: right; color: ${record.WinAmount > 0 ? '#00ff88' : '#ff4757'}">
+                                    ${record.WinAmount > 0 ? '+' : ''}${parseInt(record.WinAmount).toLocaleString('vi-VN')}
+                                </td>
+                                <td style="padding: 10px; text-align: right; opacity: 0.6;">${record.Time}</td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+                        if (loading) loading.style.display = 'none';
+                    } else {
+                        if (loading) loading.textContent = 'Chưa có lịch sử chơi.';
+                    }
+                }
+            } catch (error) {
+                console.error('History load error:', error);
+            }
+        }
+
         (function () {
             window.themeConfig = {
                 particleCount: 500,
@@ -690,593 +757,6 @@ if (isset($_GET['action'])) {
                 document.head.appendChild(s);
             });
         })();
-    
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for baucua game
-    const ctxBaucua = document.getElementById('gameChart');
-    if (ctxBaucua) {
-        const gameChart = new Chart(ctxBaucua.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadBaucuaHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for baucua game
-    const ctxBaucua = document.getElementById('gameChart');
-    if (ctxBaucua) {
-        const gameChart = new Chart(ctxBaucua.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadBaucuaHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for baucua game
-    const ctxBaucua = document.getElementById('gameChart');
-    if (ctxBaucua) {
-        const gameChart = new Chart(ctxBaucua.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadBaucuaHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for baucua game
-    const ctxBaucua = document.getElementById('gameChart');
-    if (ctxBaucua) {
-        const gameChart = new Chart(ctxBaucua.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadBaucuaHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for baucua game
-    const ctxBaucua = document.getElementById('gameChart');
-    if (ctxBaucua) {
-        const gameChart = new Chart(ctxBaucua.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
     // Auto-load history on page load
     window.addEventListener('load', loadBaucuaHistory);
 
