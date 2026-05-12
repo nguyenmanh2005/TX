@@ -3193,6 +3193,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                     <a href="leaderboard.php" class="menu-item tooltip" data-tooltip="Bảng xếp hạng người chơi">
                         <span class="menu-icon">🏆</span> Xếp Hạng
                     </a>
+                    <a href="spectator.php" class="menu-item tooltip" data-tooltip="Xem live & Tip">
+                        <span class="menu-icon">👀</span> Spectator
+                    </a>
                     <a href="tournaments.php" class="menu-item tooltip" data-tooltip="Tham gia giải đấu">
                         <span class="menu-icon">🎯</span> Giải Đấu
                     </a>

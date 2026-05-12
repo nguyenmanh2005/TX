@@ -102,8 +102,8 @@ if ($action === 'send_money') {
     $row = $result->fetch_assoc();
     $stmt->close();
 
-    if ($row['count'] >= 10) {
-        echo json_encode(['success' => false, 'message' => 'Bạn đã tặng quà tối đa hôm nay (10 lần/ngày)!']);
+    if ($row['count'] >= 3) {
+        echo json_encode(['success' => false, 'message' => 'Bạn đã tặng quà tối đa hôm nay (3 lần/ngày)!']);
         exit();
     }
 
@@ -111,21 +111,25 @@ if ($action === 'send_money') {
     $conn->begin_transaction();
 
     try {
-        // Trừ gtlm người gửi
+        // Tính thuế 2%
+        $tax = $amount * 0.02;
+        $receivedAmount = $amount - $tax;
+
+        // Trừ gtlm người gửi (trừ nguyên số tiền gửi)
         $stmt = $conn->prepare("UPDATE users SET Money = Money - ? WHERE Iduser = ?");
         $stmt->bind_param("di", $amount, $userId);
         $stmt->execute();
         $stmt->close();
 
-        // Cộng gtlm người nhận
+        // Cộng gtlm người nhận (cộng số tiền sau thuế)
         $stmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
-        $stmt->bind_param("di", $amount, $toUserId);
+        $stmt->bind_param("di", $receivedAmount, $toUserId);
         $stmt->execute();
         $stmt->close();
 
-        // Lưu lịch sử tặng quà
+        // Lưu lịch sử tặng quà (Lưu giá trị thực nhận)
         $stmt = $conn->prepare("INSERT INTO gifts (from_user_id, to_user_id, gift_type, gift_value, message, is_claimed, claimed_at) VALUES (?, ?, 'money', ?, ?, 1, NOW())");
-        $stmt->bind_param("iids", $userId, $toUserId, $amount, $message);
+        $stmt->bind_param("iids", $userId, $toUserId, $receivedAmount, $message);
         $stmt->execute();
         $stmt->close();
 
@@ -140,7 +144,7 @@ if ($action === 'send_money') {
         $senderNameData = $senderNameResult->fetch_assoc();
         $senderName = $senderNameData['Name'] ?? 'Ai đó';
         $senderNameStmt->close();
-        notifyGiftReceived($conn, $toUserId, $userId, $senderName, 'money', $amount);
+        notifyGiftReceived($conn, $toUserId, $userId, $senderName, 'money', $receivedAmount);
 
         echo json_encode(['success' => true, 'message' => 'Tặng quà thành công!']);
     } catch (Exception $e) {
@@ -222,8 +226,8 @@ if ($action === 'send_item') {
     $row = $result->fetch_assoc();
     $stmt->close();
 
-    if ($row['count'] >= 10) {
-        echo json_encode(['success' => false, 'message' => 'Bạn đã tặng quà tối đa hôm nay (10 lần/ngày)!']);
+    if ($row['count'] >= 3) {
+        echo json_encode(['success' => false, 'message' => 'Bạn đã tặng quà tối đa hôm nay (3 lần/ngày)!']);
         exit();
     }
 
@@ -334,7 +338,7 @@ if ($action === 'get_daily_count') {
     $result = $stmt->get_result();
     $row = $result->fetch_assoc();
     $stmt->close();
-    echo json_encode(['success' => true, 'count' => (int) $row['count'], 'max' => 10]);
+    echo json_encode(['success' => true, 'count' => (int) $row['count'], 'max' => 3]);
     exit();
 }
 

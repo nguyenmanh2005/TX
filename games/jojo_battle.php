@@ -84,21 +84,6 @@ if (isset($_GET['action'])) {
         if ($stmt->execute()) {
             $newMoney = $money - $cuoc;
             $conn->query("UPDATE users SET Money = $newMoney WHERE Iduser = $userId");
-        
-        // Insert vào history_vq table
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SESSION['Iduser'])) {
-            $userId = $_SESSION['Iduser'];
-            $betAmount = (int)($_POST['bet'] ?? 0);
-            $resultStr = $_POST['result'] ?? 'Unknown';
-            $winAmount = (int)($reward ?? 0);
-            
-            $historyStmt = $conn->prepare("INSERT INTO history_vq (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-            if ($historyStmt) {
-                $historyStmt->bind_param("iisi", $userId, $betAmount, $resultStr, $winAmount);
-                $historyStmt->execute();
-                $historyStmt->close();
-            }
-        }
             echo json_encode(['success' => true, 'newBalance' => number_format($newMoney) . ' gtlm']);
         } else {
             echo json_encode(['success' => false, 'message' => '❌ Lỗi hệ thống!']);
@@ -121,14 +106,25 @@ if (isset($_GET['action'])) {
 
         $totalWin = 0;
         $totalBet = 0;
+        $chosen = '';
         while ($bet = $res->fetch_assoc()) {
             $totalBet += $bet['amount'];
+            $chosen = $bet['chosen_character'];
             if ($bet['chosen_character'] === $winner)
                 $totalWin += $bet['amount'] * 2;
         }
 
         if ($totalWin > 0)
             $conn->query("UPDATE users SET Money = Money + $totalWin WHERE Iduser = $userId");
+
+        // Insert vào history_vq table
+        $historyStmt = $conn->prepare("INSERT INTO history_vq (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
+        if ($historyStmt) {
+            $resultStr = "Cược: $chosen - Thắng: $winner";
+            $historyStmt->bind_param("iisi", $userId, $totalBet, $resultStr, $totalWin);
+            $historyStmt->execute();
+            $historyStmt->close();
+        }
 
         if (file_exists('../game_history_helper.php')) {
             require_once '../game_history_helper.php';
@@ -463,11 +459,11 @@ $roundId = time();
             $('#btn-duel').prop('disabled', true);
 
             try {
-                const res = await $.post('vq.php?action=place_bet', { chon: selected, cuoc: amt, round_id: Date.now() });
+                const res = await $.post('jojo_battle.php?action=place_bet', { chon: selected, cuoc: amt, round_id: Date.now() });
                 if (!res.success) { Swal.fire('Lỗi', res.message, 'error'); active = false; return; }
                 $('#money-val').text(res.newBalance);
 
-                const result = await $.post('vq.php?action=get_result', { round_id: Date.now() });
+                const result = await $.post('jojo_battle.php?action=get_result', { round_id: Date.now() });
 
                 // Animation logic (Simplified for stability)
                 gsap.to('.fighter', { x: (Math.random() - 0.5) * 50, repeat: 10, yoyo: true, duration: 0.1 });

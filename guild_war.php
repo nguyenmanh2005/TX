@@ -24,12 +24,15 @@ $stmt->execute();
 $myGuild = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
-// Tính thời gian còn lại (đến hết Chủ Nhật)
-$now = new DateTime();
-$endOfWeek = new DateTime('next Monday 00:00:00');
-$interval = $now->diff($endOfWeek);
-$timeLeft = $interval->format('%d ngày %h giờ %i phút');
-
+// Lấy các thách đấu hiện tại
+$activeChallenges = getActiveGuildChallenges($conn, $myGuild ? $myGuild['id'] : 0);
+$pendingChallenges = [];
+if ($myGuild) {
+    $stmt = $conn->prepare("SELECT c.*, g.name as challenger_name FROM guild_challenges c JOIN guilds g ON c.challenger_id = g.id WHERE c.challenged_id = ? AND c.status = 0");
+    $stmt->bind_param("i", $myGuild['id']);
+    $stmt->execute();
+    $pendingChallenges = $stmt->get_result();
+}
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -274,13 +277,57 @@ $timeLeft = $interval->format('%d ngày %h giờ %i phút');
                 <span class="stat-value"><?= number_format($myGuild['points'] ?: 0) ?></span>
             </div>
             <div class="stat-item">
-                <span class="stat-label">Trận thắng</span>
-                <span class="stat-value"><?= number_format($myGuild['wins'] ?: 0) ?></span>
+                <span class="stat-label">Cúp chiến công</span>
+                <span class="stat-value"><i class="fa fa-trophy" style="color: gold;"></i> <?= $myGuild['id'] ? (int)$conn->query("SELECT trophies_count FROM guilds WHERE id = ".$myGuild['id'])->fetch_assoc()['trophies_count'] : 0 ?></span>
+            </div>
+        </div>
+
+        <!-- Section Thách Đấu -->
+        <div class="social-war-section" style="margin-bottom: 40px;">
+            <h2 style="color: #f1c40f; margin-bottom: 20px;"><i class="fa fa-swords"></i> Thách Đấu Bang Hội (24h)</h2>
+            
+            <?php if ($pendingChallenges && $pendingChallenges->num_rows > 0): ?>
+            <div class="pending-challenges" style="background: rgba(231, 76, 60, 0.1); padding: 20px; border-radius: 15px; border: 1px solid #e74c3c; margin-bottom: 20px;">
+                <h3 style="color: #e74c3c; font-size: 1.1em; margin-bottom: 10px;">Lời mời thách đấu mới!</h3>
+                <?php while($pc = $pendingChallenges->fetch_assoc()): ?>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Bang <strong><?= htmlspecialchars($pc['challenger_name']) ?></strong> đang thách đấu bang bạn!</span>
+                        <button onclick="acceptChallenge(<?= $pc['id'] ?>)" class="btn-action" style="background: #2ecc71; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">Chấp nhận</button>
+                    </div>
+                <?php endwhile; ?>
+            </div>
+            <?php endif; ?>
+
+            <div class="active-challenges-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                <?php if ($activeChallenges->num_rows > 0): ?>
+                    <?php while($ac = $activeChallenges->fetch_assoc()): ?>
+                        <div class="challenge-card" style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); text-align: center;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <div>
+                                    <div style="font-weight: bold; color: #3498db;"><?= htmlspecialchars($ac['challenger_name']) ?></div>
+                                    <div style="font-size: 1.5em;"><?= number_format($ac['challenger_score']) ?></div>
+                                </div>
+                                <div style="font-weight: bold; color: #e74c3c; font-size: 1.2em;">VS</div>
+                                <div>
+                                    <div style="font-weight: bold; color: #3498db;"><?= htmlspecialchars($ac['challenged_name']) ?></div>
+                                    <div style="font-size: 1.5em;"><?= number_format($ac['challenged_score']) ?></div>
+                                </div>
+                            </div>
+                            <div class="timer-war" data-end="<?= $ac['end_time'] ?>" style="color: #bdc3c7; font-size: 0.9em;">
+                                Kết thúc sau: <span class="countdown">...</span>
+                            </div>
+                        </div>
+                    <?php endwhile; ?>
+                <?php else: ?>
+                    <div style="grid-column: 1/-1; text-align: center; color: #7f8c8d; padding: 20px; border: 1px dashed #7f8c8d; border-radius: 15px;">
+                        Chưa có trận thách đấu nào đang diễn ra.
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
         <?php else: ?>
         <div class="my-guild-stats" style="justify-content: center; color: #bdc3c7;">
-            Bạn chưa gia nhập Bang hội nào để tham gia Đua Top!
+            Bạn chưa gia nhập Bang hội nào để tham gia Đua Top & Thách Đấu!
         </div>
         <?php endif; ?>
 
@@ -300,7 +347,7 @@ $timeLeft = $interval->format('%d ngày %h giờ %i phút');
                     while($row = $leaderboard->fetch_assoc()):
                         $rankClass = ($rank <= 3) ? "rank-$rank" : "";
                 ?>
-                <tr class="guild-row">
+                <tr class="guild-row" onclick="challengeGuild(<?= $row['id'] ?>, '<?= addslashes($row['name']) ?>')">
                     <td class="<?= $rankClass ?>"><?= $rank ?></td>
                     <td>
                         <div class="guild-info">
@@ -351,5 +398,64 @@ $timeLeft = $interval->format('%d ngày %h giờ %i phút');
             </p>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        function challengeGuild(id, name) {
+            Swal.fire({
+                title: 'Thách đấu Bang hội',
+                text: "Bạn có muốn thách đấu Bang " + name + " trong 24h đua GTLM không?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#f1c40f',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Gửi lời thách!',
+                cancelButtonText: 'Hủy'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch('api_guild_war.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'action=challenge&target_guild_id=' + id
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        Swal.fire(data.success ? 'Thành công' : 'Lỗi', data.message, data.success ? 'success' : 'error');
+                    });
+                }
+            })
+        }
+
+        function acceptChallenge(challengeId) {
+            fetch('api_guild_war.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'action=accept&challenge_id=' + challengeId
+            })
+            .then(r => r.json())
+            .then(data => {
+                Swal.fire('Kết quả', data.message, data.success ? 'success' : 'error').then(() => location.reload());
+            });
+        }
+
+        // Countdown Timer
+        function updateCountdowns() {
+            document.querySelectorAll('.timer-war').forEach(el => {
+                const endTime = new Date(el.dataset.end).getTime();
+                const now = new Date().getTime();
+                const diff = endTime - now;
+
+                if (diff <= 0) {
+                    el.querySelector('.countdown').innerHTML = "Đang tổng kết...";
+                } else {
+                    const h = Math.floor(diff / 3600000);
+                    const m = Math.floor((diff % 3600000) / 60000);
+                    const s = Math.floor((diff % 60000) / 1000);
+                    el.querySelector('.countdown').innerHTML = `${h}h ${m}m ${s}s`;
+                }
+            });
+        }
+        setInterval(updateCountdowns, 1000);
+        updateCountdowns();
+    </script>
 </body>
 </html>

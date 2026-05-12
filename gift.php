@@ -664,7 +664,7 @@ if (!$giftsTableExists) {
 
         <div id="send-tab" class="tab-content active">
             <div class="daily-limit">
-                <strong>📊 Giới hạn tặng quà:</strong> <span id="daily-count">0</span> / 10 lần/ngày
+                <strong>📊 Giới hạn tặng quà:</strong> <span id="daily-count">0</span> / 3 lần/ngày
             </div>
 
             <div class="tabs">

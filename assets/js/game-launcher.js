@@ -18,30 +18,59 @@ class GameLauncher {
     }
 
     loadGames() {
-        // Danh sách tất cả games
+        // Danh sách tất cả games - Đã cập nhật đầy đủ 40 trò chơi
         this.games = [
-            { id: 'roulette', name: 'Roulette', icon: '🎡', url: 'roulette.php', category: 'casino', new: false },
-            { id: 'slot', name: 'Slot Machine', icon: '🎰', url: 'slot.php', category: 'casino', new: false },
-            { id: 'lucky_wheel', name: 'Lucky Wheel', icon: '🎡', url: 'lucky_wheel.php', category: 'casino', new: false },
-            { id: 'baucua', name: 'CYBER PETS', icon: '🎲', url: 'baucua.php', category: 'casino', new: false },
-            { id: 'plinko', name: 'Plinko', icon: '⚪', url: 'plinko.php', category: 'mini', new: true },
-            { id: 'mines', name: 'Mines', icon: '💣', url: 'mines.php', category: 'mini', new: true },
-            { id: 'wheel', name: 'Wheel', icon: '🎡', url: 'wheel.php', category: 'mini', new: true },
-            { id: 'crash', name: 'Crash', icon: '🚀', url: 'crash.php', category: 'mini', new: true },
-            { id: 'tower', name: 'Tower', icon: '🏗️', url: 'tower.php', category: 'mini', new: true },
-            { id: 'limbo', name: 'Limbo', icon: '🚀', url: 'limbo.php', category: 'mini', new: true },
-            { id: 'keno', name: 'Keno', icon: '🎯', url: 'keno.php', category: 'casino', new: true },
-            { id: 'dice_roll', name: 'Dice Roll', icon: '🎲', url: 'dice_roll.php', category: 'casino', new: true },
-            { id: 'baccarat', name: 'Baccarat', icon: '🃏', url: 'baccarat.php', category: 'card', new: true },
-            { id: 'hilo', name: 'Hi-Lo', icon: '📈', url: 'hilo.php', category: 'casino', new: true },
-            { id: 'aviator', name: 'Aviator', icon: '✈️', url: 'aviator.php', category: 'mini', new: true },
-            { id: 'dragon_tiger', name: 'Dragon Tiger', icon: '🐉🐅', url: 'dragon_tiger.php', category: 'casino', new: true },
-            { id: 'coinflip', name: 'Coin Flip', icon: '🪙', url: 'coinflip.php', category: 'casino', new: false },
-            { id: 'dice', name: 'Dice', icon: '🎲', url: 'dice.php', category: 'casino', new: false },
-            { id: 'poker', name: 'Poker', icon: '🃏', url: 'poker.php', category: 'card', new: false },
-            { id: 'blackjack', name: 'Blackjack', icon: '🃏', url: 'bj.php', category: 'card', new: false },
-            { id: 'bingo', name: 'Bingo', icon: '🎯', url: 'bingo.php', category: 'casino', new: false },
+            // Casino Category
+            { id: 'roulette', name: 'Roulette Pro', icon: '🎡', url: 'games/roulette.php', category: 'casino', new: false },
+            { id: 'slot', name: 'Classic Slot', icon: '🎰', url: 'games/slot.php', category: 'casino', new: false },
+            { id: 'slot_premium', name: 'Slot Machine Premium', icon: '💎', url: 'games/slot_machine.php', category: 'casino', new: true },
+            { id: 'baccarat', name: 'Baccarat', icon: '🃏', url: 'games/baccarat.php', category: 'card', new: true },
+            { id: 'blackjack', name: 'Blackjack', icon: '🃏', url: 'games/blackjack.php', category: 'card', new: false },
+            { id: 'poker', name: 'Texas Hold\'em', icon: '🃏', url: 'games/poker.php', category: 'card', new: false },
+            { id: 'dragon_tiger', name: 'Dragon Tiger', icon: '🐉🐅', url: 'games/dragontiger.php', category: 'casino', new: true },
+            { id: 'sicbo', name: 'Sicbo Tài Xỉu', icon: '🎲', url: 'games/sicbo_v2.php', category: 'casino', new: true },
+            { id: 'xocdia', name: 'Xóc Đĩa VIP', icon: '⚪🔴', url: 'games/xocdia.php', category: 'casino', new: true },
+            { id: 'fantan', name: 'Fan Tan', icon: '🟡', url: 'games/fantan.php', category: 'casino', new: true },
+            
+            // Mini Games Category
+            { id: 'crash', name: 'Crash Rocket', icon: '🚀', url: 'games/crash.php', category: 'mini', new: true },
+            { id: 'plinko', name: 'Plinko', icon: '⚪', url: 'games/plinko.php', category: 'mini', new: true },
+            { id: 'mines', name: 'Mines', icon: '💣', url: 'games/mines.php', category: 'mini', new: true },
+            { id: 'minesweeper', name: 'Dò Mìn (Classic)', icon: '🚩', url: 'games/minesweeper.php', category: 'mini', new: true },
+            { id: 'tower', name: 'Tower', icon: '🏗️', url: 'games/tower.php', category: 'mini', new: true },
+            { id: 'limbo', name: 'Limbo', icon: '🚀', url: 'games/limbo.php', category: 'mini', new: true },
+            { id: 'keno', name: 'Keno', icon: '🎯', url: 'games/keno.php', category: 'mini', new: true },
+            { id: 'hilo', name: 'Hi-Lo', icon: '📈', url: 'games/hilo.php', category: 'mini', new: true },
+            { id: 'coinflip', name: 'Coin Flip', icon: '🪙', url: 'games/coinflip.php', category: 'mini', new: false },
+            { id: 'rps', name: 'Oẳn Tù Tì', icon: '✌️✊🖐️', url: 'games/rps.php', category: 'mini', new: true },
+            
+            // Special & Social Games
             { id: 'banharc', name: 'Bắn Cá Arcade', icon: '🐟', url: 'games/banharc.php', category: 'arcade', new: true },
+            { id: 'jojo_battle', name: 'JOJO Battle', icon: '⚔️', url: 'games/jojo_battle.php', category: 'mini', new: true },
+            { id: 'battleroyale', name: 'Battle Royale', icon: '🪂', url: 'games/battleroyale.php', category: 'mini', new: true },
+            { id: 'trivia', name: 'Đố Vui Có Thưởng', icon: '💡', url: 'trivia.php', category: 'mini', new: true },
+            { id: 'world_boss', name: 'World Boss', icon: '👹', url: 'world_boss.php', category: 'mini', new: true },
+            
+            // Lottery Category
+            { id: 'lottery_mini', name: 'Xổ số Mini', icon: '🎯', url: 'games/lottery.php', category: 'mini', new: true },
+            { id: 'vietlott', name: 'Vietlott 6/45', icon: '🎱', url: 'games/vietlott.php', category: 'mini', new: true },
+            { id: 'community_lottery', name: 'Xổ số Cộng Đồng', icon: '🏛️', url: 'games/community_lottery.php', category: 'mini', new: true },
+            
+            // Classic Vietnamese Games
+            { id: 'baucua', name: 'CYBER PETS (Bầu Cua)', icon: '🎲', url: 'games/baucua.php', category: 'casino', new: false },
+            { id: 'daga', name: 'Đá Gà SV388', icon: '🐓', url: 'games/daga.php', category: 'casino', new: true },
+            { id: 'duangua', name: 'Đua Ngựa Royal', icon: '🐎', url: 'games/duangua.php', category: 'casino', new: true },
+            { id: 'samloc', name: 'Sâm Lốc', icon: '🃏', url: 'games/samloc.php', category: 'card', new: true },
+            { id: 'threecard', name: 'Ba Cây', icon: '🃏', url: 'games/threecard.php', category: 'card', new: true },
+            { id: 'tusac', name: 'Tứ Sắc', icon: '🎴', url: 'games/tusac.php', category: 'card', new: true },
+            
+            // Others
+            { id: 'lucky_wheel', name: 'Vòng Quay May Mắn', icon: '🎡', url: 'lucky_wheel.php', category: 'casino', new: false },
+            { id: 'bingo', name: 'Bingo Live', icon: '🎯', url: 'games/bingo.php', category: 'casino', new: false },
+            { id: 'scratch', name: 'Thẻ Cào May Mắn', icon: '🏷️', url: 'games/scratch.php', category: 'mini', new: true },
+            { id: 'yahtzee', name: 'Yahtzee Dice', icon: '🎲', url: 'games/yahtzee.php', category: 'mini', new: true },
+            { id: 'craps', name: 'Craps Table', icon: '🎲', url: 'games/craps.php', category: 'casino', new: true },
+            { id: 'dice_roll', name: 'Dice Roll Pro', icon: '🎲', url: 'dice_roll.php', category: 'mini', new: true },
         ];
     }
 

@@ -255,3 +255,21 @@ function notifyGuildMessage(mysqli $conn, int $userId, int $guildId, string $gui
     );
 }
 
+/**
+ * Thông báo khi bị thách đấu guild
+ */
+function notifyChallenge(mysqli $conn, int $leaderId, string $challengerName)
+{
+    return createNotification(
+        $conn,
+        $leaderId,
+        'guild',
+        'Thách đấu Bang hội!',
+        "Bang $challengerName đã gửi lời thách đấu 24h cho bang bạn!",
+        '⚔️',
+        'guild_war.php',
+        null,
+        true
+    );
+}
+
