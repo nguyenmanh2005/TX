@@ -5,6 +5,7 @@ bot/sessions/
 bot/cycle_logs/
 
 # Sensitive Config
+db_connect.php
 
 bot/cycle_logs/
 bot/logs/
