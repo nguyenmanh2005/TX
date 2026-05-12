@@ -87,11 +87,20 @@ switch ($action) {
         $name = trim($_POST['name'] ?? '');
         $tag = strtoupper(trim($_POST['tag'] ?? ''));
         $description = trim($_POST['description'] ?? '');
+        $creationFee = 500000; // Phí tạo Guild: 500k GTLM
         
         if (empty($name) || empty($tag)) {
             echo json_encode(['success' => false, 'message' => 'Tên và tag guild không được để trống!']);
             exit;
         }
+
+        // Kiểm tra tiền
+        $user = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc();
+        if ($user['Money'] < $creationFee) {
+            echo json_encode(['success' => false, 'message' => "Bạn cần ít nhất " . number_format($creationFee) . " GTLM để thành lập Guild!"]);
+            exit;
+        }
+
         // Kiểm tra user đã có guild chưa
         $checkMemberStmt = $conn->prepare("SELECT guild_id FROM guild_members WHERE user_id = ?");
         $checkMemberStmt->bind_param("i", $userId);
@@ -118,6 +127,9 @@ switch ($action) {
         // Tạo guild
         $conn->begin_transaction();
         try {
+            // Trừ tiền tạo Guild
+            $conn->query("UPDATE users SET Money = Money - $creationFee WHERE Iduser = $userId");
+
             $sql = "INSERT INTO guilds (name, tag, description, leader_id) VALUES (?, ?, ?, ?)";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("sssi", $name, $tag, $description, $userId);

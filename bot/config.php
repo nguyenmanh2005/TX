@@ -6,10 +6,19 @@
 require_once __DIR__ . '/../db_connect.php';
 
 // Tự động lấy danh sách bot từ DB
+global $conn;
+if (!isset($conn)) {
+    require_once __DIR__ . '/../db_connect.php';
+}
+
 $botEmails = [];
-$res = $conn->query("SELECT Email FROM users WHERE Email REGEXP '^bot[0-9]+@' ORDER BY Iduser DESC");
-while($row = $res->fetch_assoc()) {
-    $botEmails[] = $row['Email'];
+if (isset($conn) && $conn) {
+    $res = $conn->query("SELECT Email FROM users WHERE Email REGEXP '^bot[0-9]+@' ORDER BY Iduser DESC");
+    if ($res) {
+        while($row = $res->fetch_assoc()) {
+            $botEmails[] = $row['Email'];
+        }
+    }
 }
 
 return [

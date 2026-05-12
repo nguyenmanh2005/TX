@@ -3173,6 +3173,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                     <a href="marketplace.php" class="menu-item tooltip" data-tooltip="Mua bán và trao đổi items">
                         <span class="menu-icon">💼</span> Chợ
                     </a>
+                    <a href="crafting.php" class="menu-item tooltip" data-tooltip="Rèn vật phẩm hiếm">
+                        <span class="menu-icon">🛠️</span> Workshop
+                    </a>
                     <a href="gift.php" class="menu-item tooltip" data-tooltip="Tặng quà cho người khác">
                         <span class="menu-icon">🎁</span> Tặng Quà
                     </a>
@@ -3190,7 +3193,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                     <a href="leaderboard.php" class="menu-item tooltip" data-tooltip="Bảng xếp hạng người chơi">
                         <span class="menu-icon">🏆</span> Xếp Hạng
                     </a>
-                    <a href="tournament.php" class="menu-item tooltip" data-tooltip="Tham gia giải đấu">
+                    <a href="tournaments.php" class="menu-item tooltip" data-tooltip="Tham gia giải đấu">
                         <span class="menu-icon">🎯</span> Giải Đấu
                     </a>
                     <a href="trivia.php" class="menu-item tooltip" data-tooltip="Trắc nghiệm kiến thức">

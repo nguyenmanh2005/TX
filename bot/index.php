@@ -47,6 +47,8 @@ if (file_exists($logFile)) {
         foreach ($matches[2] as $index => $source) {
             // Nếu là URL, rút gọn lại. Nếu là PHP_SYSTEM thì giữ nguyên.
             $label = (strpos($source, 'http') === 0) ? parse_url($source, PHP_URL_PATH) : $source;
+            // Bảo mật: Xóa tên file nhạy cảm khỏi nhãn
+            $label = str_ireplace('config.php', '[HIDDEN]', $label);
             $apiFailures[$label] = ($apiFailures[$label] ?? 0) + 1;
         }
     }
@@ -329,7 +331,7 @@ if (isset($_GET['ajax'])) {
                     <div id="liveLogs" style="height: 250px; overflow-y: auto; font-family: monospace; font-size: 11px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 15px; line-height: 1.6;">
                         <?php foreach ($recentLogs as $log): ?>
                             <div style="margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 2px;">
-                                <?= htmlspecialchars($log) ?>
+                                <?= str_ireplace('config.php', '[REDACTED]', htmlspecialchars($log)) ?>
                             </div>
                         <?php endforeach; ?>
                     </div>

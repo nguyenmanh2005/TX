@@ -312,6 +312,9 @@ body::before{
     </div>
     <div style="display:flex;align-items:center;gap:12px;">
         <span class="live-badge"><span class="live-dot"></span>Live Data</span>
+        <a href="admin_analytics1.php" class="btn btn-ghost" style="border-color: var(--amber); color: var(--amber);">
+            <i class="fa fa-coins"></i> Revenue Breakdown
+        </a>
         <a href="admin_dashboard.php" class="btn btn-ghost"><i class="fa fa-chevron-left"></i> Dashboard</a>
     </div>
 </div>

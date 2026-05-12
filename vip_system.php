@@ -552,8 +552,12 @@ if ($nextLevel) {
     <div class="container">
         <div class="header-vip">
             <h1>👑 VIP System</h1>
-            <p style="color: #666; margin-top: 10px; font-size: 18px;">Nâng cấp VIP để nhận nhiều đặc quyền và phần
-                thưởng!</p>
+            <p style="color: #666; margin-top: 10px; font-size: 18px;">Nâng cấp VIP để nhận nhiều đặc quyền và phần thưởng!</p>
+            <div style="margin-top: 15px;">
+                <a href="monthly_pass.php" style="display: inline-block; padding: 8px 16px; background: linear-gradient(135deg, #ffd700 0%, #daa520 100%); color: #000; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 14px;">
+                    ✨ Xem Gói Monthly Pass
+                </a>
+            </div>
         </div>
 
         <div class="current-vip-card">

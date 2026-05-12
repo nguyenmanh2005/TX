@@ -21,7 +21,8 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
     $inError = true;
     
     $severity = ($errno & (E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR | E_USER_ERROR)) ? "CRITICAL" : "WARNING";
-    $msg = "[$severity] $errstr in " . basename($errfile) . ":$errline";
+    $safeFile = str_ireplace('config.php', '[HIDDEN]', basename($errfile));
+    $msg = "[$severity] $errstr in $safeFile:$errline";
     
     writeBotLog($currentBotEmail, "ERROR", "PHP_SYSTEM", $msg);
     if (isset($baseUrl) && file_exists($currentCookieFile)) {
@@ -37,7 +38,8 @@ set_exception_handler(function($e) {
     if ($inError) return;
     $inError = true;
     
-    $msg = "[CRITICAL] " . $e->getMessage() . " in " . basename($e->getFile()) . ":" . $e->getLine();
+    $safeFile = str_ireplace('config.php', '[HIDDEN]', basename($e->getFile()));
+    $msg = "[CRITICAL] " . $e->getMessage() . " in $safeFile:" . $e->getLine();
     writeBotLog($currentBotEmail, "ERROR", "PHP_EXCEPTION", $msg);
     if (isset($baseUrl) && file_exists($currentCookieFile)) {
         executeBotAction($baseUrl . "/chat2.php", ['message' => "🚨 EXCEPTION: $msg"], $currentCookieFile);
@@ -400,19 +402,26 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
         }
 
         // Calculate Bet Percentage
-        switch ($chosenLevel) {
-            case 'light': $betPercent = rand(1, 3); break;
-            case 'medium': $betPercent = rand(5, 10); break;
-            case 'heavy': $betPercent = rand(15, 25); break;
-            case 'all_in': $betPercent = rand(50, 100); break;
-            default: $betPercent = 2;
+        if ($personality === 'whale') {
+            // Whale luôn cược từ 10% đến 50% GTLM
+            $betPercent = rand(10, 50);
+            $chosenLevel = ($betPercent >= 30) ? 'WHALE_ALL_IN' : 'WHALE_HIGH';
+        } else {
+            switch ($chosenLevel) {
+                case 'light': $betPercent = rand(1, 3); break;
+                case 'medium': $betPercent = rand(5, 10); break;
+                case 'heavy': $betPercent = rand(15, 25); break;
+                case 'all_in': $betPercent = rand(50, 100); break;
+                default: $betPercent = 2;
+            }
         }
 
         $bet = floor($userMoney * ($betPercent / 100));
         if ($bet < 1000) $bet = 1000;
         if ($bet > $userMoney) $bet = $userMoney;
 
-        echo "🎲 <span style='color:#38bdf8;'>Mức cược:</span> " . strtoupper($chosenLevel) . " (" . $betPercent . "% - " . number_format($bet) . " GTLM)<br>";
+        $betLabel = ($personality === 'whale') ? "💎 WHALE BET" : strtoupper($chosenLevel);
+        echo "🎲 <span style='color:#38bdf8;'>Mức cược:</span> " . $betLabel . " (" . $betPercent . "% - " . number_format($bet) . " GTLM)<br>";
 
         // --- MENTORSHIP: Check for a mentor if losing ---
         $learningFrom = null;
@@ -722,6 +731,17 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
                 executeBotAction($baseUrl . "/chat.php", ['message' => $msg], $cFile);
                 echo "💬 <span style='color:#38bdf8;'>Đã tương tác Social & Chat.</span><br>";
 
+                // MODULE 4.1: Personality Special Chat
+                if ($personality === 'whale' && rand(1, 100) <= 20) {
+                    $whaleMsg = $brain->generateMessage($userId, 'high_bet', ['amount' => $bet]);
+                    executeBotAction($baseUrl . "/chat.php", ['message' => $whaleMsg], $cFile);
+                }
+
+                if ($personality === 'streamer' && rand(1, 100) <= 15) {
+                    $storyMsg = $brain->generateMessage($userId, 'story', []);
+                    executeBotAction($baseUrl . "/chat.php", ['message' => $storyMsg], $cFile);
+                }
+
                 // Thỉnh thoảng chat về Jackpot
                 if (rand(1, 100) <= 10) {
                     $jackpot = executeBotAction($baseUrl . "/api_jackpot.php?action=get_status", null, $cFile);
@@ -790,9 +810,11 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
             if (isset($pvpChallenges['challenges'])) {
                 foreach ($pvpChallenges['challenges'] as $challenge) {
                     if ($challenge['opponent_id'] == $userId) {
-                        // Chấp nhận thách đấu
-                        executeBotAction($baseUrl . "/api_pvp_challenge.php", ['action' => 'accept_challenge', 'challenge_id' => $challenge['id']], $cFile);
-                        writeBotLog($email, "INFO", "PVP", "Accepted challenge from #{$challenge['challenger_id']}");
+                        // Chấp nhận thách đấu (Bot luôn chấp nhận nếu có đủ tiền)
+                        if ($userMoney >= $challenge['bet_amount']) {
+                            executeBotAction($baseUrl . "/api_pvp_challenge.php", ['action' => 'accept_challenge', 'challenge_id' => $challenge['id']], $cFile);
+                            writeBotLog($email, "INFO", "PVP", "Accepted challenge from #{$challenge['challenger_id']}");
+                        }
                     }
                 }
             }
@@ -810,21 +832,56 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
                 }
             }
             
-            // Chủ động thách đấu (chủ yếu bot aggressive và trietly thích đàm đạo võ nghệ)
-            if (($personality == 'aggressive' || $personality == 'trietly') && rand(1, 100) <= 15) {
-                $otherBots = array_values($botNameMap);
-                $target = $otherBots[array_rand($otherBots)];
-                $targetId = $target['id'];
-                
-                if ($targetId != $userId) {
+            // Chủ động thách đấu (Tăng cường thách đấu cả người chơi thực)
+            if (rand(1, 100) <= 20) {
+                // Lấy danh sách người chơi online
+                $onlineUsers = $conn->query("SELECT Iduser, Name, Email FROM users WHERE last_active > NOW() - INTERVAL 10 MINUTE AND Iduser != $userId ORDER BY RAND() LIMIT 5")->fetch_all(MYSQLI_ASSOC);
+                if (!empty($onlineUsers)) {
+                    $target = $onlineUsers[array_rand($onlineUsers)];
+                    $targetId = $target['Iduser'];
+                    $isHuman = !preg_match('/^bot[0-9]+@/', $target['Email']);
+
                     $gameType = ['coinflip', 'dice', 'rps', 'number'][rand(0, 3)];
-                    executeBotAction($baseUrl . "/api_pvp_challenge.php", [
-                        'action' => 'create_challenge',
-                        'opponent_id' => $targetId,
-                        'game_type' => $gameType,
-                        'bet_amount' => rand(5000, 20000)
-                    ], $cFile);
-                    writeBotLog($email, "INFO", "PVP", "Challenged bot #$targetId to $gameType");
+                    $bet = rand(10000, 50000);
+                    
+                    if ($userMoney >= $bet) {
+                        executeBotAction($baseUrl . "/api_pvp_challenge.php", [
+                            'action' => 'create_challenge',
+                            'opponent_id' => $targetId,
+                            'game_type' => $gameType,
+                            'bet_amount' => $bet
+                        ], $cFile);
+                        
+                        $targetType = $isHuman ? "HUMAN" : "BOT";
+                        writeBotLog($email, "INFO", "PVP", "Challenged $targetType #$targetId to $gameType");
+                        
+                        // Trash talk nếu là người thật
+                        if ($isHuman && rand(1, 100) <= 30) {
+                            $taunt = ["Đánh ván không @{$target['Name']}?", "Giao lưu tý đi @{$target['Name']}!", "Sợ à @{$target['Name']}?"];
+                            executeBotAction($baseUrl . "/chat.php", ['message' => $taunt[array_rand($taunt)]], $cFile);
+                        }
+                    }
+                }
+            }
+
+            // 4. TOURNAMENT PARTICIPATION (MỚI)
+            if (rand(1, 100) <= 40) { // 40% cơ hội check giải đấu mỗi chu kỳ
+                $tournaments = executeBotAction($baseUrl . "/api_tournament.php?action=get_info", ['id' => 0], $cFile); 
+                // Note: I'll need a way to list all tournaments, for now I'll use a direct query or update api
+                
+                $tourRes = $conn->query("SELECT * FROM tournaments WHERE status = 'Pending' AND current_players < max_players ORDER BY RAND() LIMIT 1");
+                if ($tourRes && $tourRes->num_rows > 0) {
+                    $tour = $tourRes->fetch_assoc();
+                    
+                    // Kiểm tra bot đã tham gia chưa
+                    $checkJoined = $conn->query("SELECT id FROM tournament_participants WHERE tournament_id = {$tour['id']} AND user_id = $userId");
+                    if ($checkJoined->num_rows == 0 && $userMoney >= $tour['buy_in']) {
+                        $joinRes = executeBotAction($baseUrl . "/api_tournament.php", ['action' => 'join', 'tournament_id' => $tour['id']], $cFile);
+                        if (isset($joinRes['status']) && $joinRes['status'] === 'success') {
+                            echo "🏆 <span style='color:#ffd700; font-size:12px;'>Bot vừa tham gia giải đấu: {$tour['name']}</span><br>";
+                            writeBotLog($email, "INFO", "TOURNAMENT", "Joined {$tour['name']}");
+                        }
+                    }
                 }
             }
         }
@@ -1087,6 +1144,71 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
                 } elseif (empty($globalState['top_1'])) {
                     $globalState['top_1'] = $currentTop1;
                     file_put_contents($globalStateFile, json_encode($globalState));
+                }
+            }
+        }
+
+        // --- MODULE 10.6: Marketplace & Market Maker (NÂNG CẤP) ---
+        if (rand(1, 100) <= 25) {
+            echo "📊 <span style='color:#38bdf8; font-size:13px;'>Market Maker: Đang kiểm tra thị trường...</span><br>";
+            
+            // 1. Quét các món đồ "rẻ" để làm nguyên liệu
+            $listings = executeBotAction($baseUrl . "/api_marketplace.php?action=get_listings", null, $cFile);
+            if (isset($listings['listings'])) {
+                foreach ($listings['listings'] as $item) {
+                    // Nếu giá < 50k, bot có xu hướng mua để tích trữ làm nguyên liệu
+                    if ($item['price'] < 50000 && $item['seller_id'] != $userId && $userMoney >= $item['price']) {
+                        executeBotAction($baseUrl . "/api_marketplace.php", ['action' => 'buy', 'id' => $item['id']], $cFile);
+                        writeBotLog($email, "INFO", "MarketMaker", "Bought cheap material: {$item['item_name']} for {$item['price']}");
+                        $userMoney -= $item['price'];
+                    }
+                }
+            }
+
+            // 2. Thử nghiệm Chế tác (Crafting)
+            // Lấy danh sách công thức ngẫu nhiên
+            $recipesRes = $conn->query("SELECT * FROM crafting_recipes ORDER BY RAND() LIMIT 1");
+            if ($recipesRes && $recipesRes->num_rows > 0) {
+                $recipe = $recipesRes->fetch_assoc();
+                
+                // Bot thử vận may rèn đồ
+                $craftRes = executeBotAction($baseUrl . "/api_crafting.php", ['action' => 'craft', 'recipe_id' => $recipe['id']], $cFile);
+                if (isset($craftRes['status'])) {
+                    if ($craftRes['status'] === 'success') {
+                        echo "🔥 <span style='color:#f87171; font-size:12px;'>Bot rèn thành công: {$recipe['name']}!</span><br>";
+                        writeBotLog($email, "INFO", "MarketMaker", "Crafted successfully: {$recipe['name']}");
+                        
+                        // Đăng bán ngay lập tức với giá cao (ví dụ: 500k - 1.5tr)
+                        executeBotAction($baseUrl . "/api_marketplace.php", [
+                            'action' => 'list_item',
+                            'item_id' => $recipe['output_item_id'],
+                            'item_type' => $recipe['output_type'],
+                            'item_name' => "RÈN BỞI BOT: " . $recipe['name'],
+                            'price' => rand(500000, 1500000)
+                        ], $cFile);
+                    }
+                }
+            }
+        }
+
+        // --- MODULE 10.7: Tournament Participation ---
+        if (rand(1, 100) <= 30) {
+            $toursRes = executeBotAction($baseUrl . "/api_tournament.php", ['action' => 'get_active_list'], $cFile);
+            if (isset($toursRes['tournaments'])) {
+                foreach ($toursRes['tournaments'] as $tour) {
+                    if ($tour['status'] === 'Pending' && !$tour['is_joined'] && $tour['registered_players'] < $tour['max_players']) {
+                        if ($userMoney >= $tour['buy_in']) {
+                            executeBotAction($baseUrl . "/api_tournament.php", ['action' => 'join', 'tournament_id' => $tour['id']], $cFile);
+                            echo "🏆 <span style='color:#fbbf24; font-size:12px;'>Bot đăng ký giải đấu: {$tour['name']}</span><br>";
+                        }
+                    } elseif ($tour['status'] === 'Ongoing' && $tour['is_joined']) {
+                        $gType = strtolower($tour['game_type']);
+                        $betAmount = rand(1000, 50000);
+                        if ($userMoney >= $betAmount) {
+                            executeBotAction($baseUrl . "/api_".str_replace(' ', '', $gType).".php", ['action' => 'play', 'amount' => $betAmount], $cFile);
+                            echo "🎯 <span style='color:#10b981; font-size:12px;'>Bot đang thi đấu: {$tour['name']}</span><br>";
+                        }
+                    }
                 }
             }
         }

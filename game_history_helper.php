@@ -524,6 +524,9 @@ function logGameHistoryWithAll(mysqli $conn, int $userId, string $gameName, floa
             sendNotification($conn, $userId, "🎉 NỔ HŨ RỒNG THẦN!", "Chúc mừng! Bạn vừa nổ hũ và nhận được " . number_format($jackpotWin) . " GTLM!", "system");
         }
 
+        // Cập nhật tournament score
+        updateTournamentScore($conn, $userId, $gameName, $winAmount);
+
         // Tạo feed activity cho big win
         if ($isWin && $winAmount >= 5000000) {
             $checkFeed = $conn->query("SHOW TABLES LIKE 'social_feed'");
@@ -550,4 +553,37 @@ function logGameHistoryWithAll(mysqli $conn, int $userId, string $gameName, floa
     return $result;
 }
 
+/**
+ * Cập nhật điểm số giải đấu
+ */
+function updateTournamentScore(mysqli $conn, int $userId, string $gameName, float $winAmount) {
+    if ($winAmount <= 0) return;
+    
+    // Tìm giải đấu đang diễn ra cho loại game này
+    $sql = "SELECT id FROM tournaments WHERE status = 'Ongoing' AND (game_type = ? OR game_type = 'All') LIMIT 1";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) return;
+    
+    $stmt->bind_param("s", $gameName);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $tour = $res->fetch_assoc();
+    $stmt->close();
+    
+    if ($tour) {
+        $tourId = $tour['id'];
+        // Kiểm tra xem user có tham gia giải đấu này không
+        $stmt = $conn->prepare("SELECT id FROM tournament_participants WHERE tournament_id = ? AND user_id = ?");
+        $stmt->bind_param("ii", $tourId, $userId);
+        $stmt->execute();
+        $isParticipant = $stmt->get_result()->num_rows > 0;
+        $stmt->close();
+        
+        if ($isParticipant) {
+            // Cập nhật điểm (Win amount = Score)
+            $conn->query("INSERT INTO tournament_scores (tournament_id, user_id, score) VALUES ($tourId, $userId, $winAmount)
+                         ON DUPLICATE KEY UPDATE score = score + $winAmount");
+        }
+    }
+}
 ?>

@@ -640,6 +640,11 @@ if (
             <div style="margin-top: 15px; font-size: 18px; color: var(--success-color); font-weight: 600;">
                 👤 <?= htmlspecialchars($user['Name']) ?> | 💰 <?= number_format($user['Money'], 0, ',', '.') ?> gtlm
             </div>
+            <div style="margin-top: 20px;">
+                <a href="crafting.php" style="display: inline-block; padding: 10px 20px; background: linear-gradient(135deg, #ff4500 0%, #ff8c00 100%); color: white; text-decoration: none; border-radius: 12px; font-weight: 700; font-family: 'Orbitron', sans-serif; box-shadow: 0 0 15px rgba(255, 69, 0, 0.4);">
+                    🔥 ĐẾN XƯỞNG CHẾ TÁC
+                </a>
+            </div>
         </div>
 
         <?php if ($message): ?>
@@ -805,7 +810,10 @@ if (
             <?php endif; ?>
         </div>
 
-        <a href="index.php" class="back-link">🏠 Về Trang Chủ</a>
+        <div style="display: flex; gap: 15px; justify-content: center; align-items: center;">
+            <a href="index.php" class="back-link">🏠 Về Trang Chủ</a>
+            <a href="crafting.php" class="back-link" style="background: rgba(249, 115, 22, 0.1); border: 1px solid #f97316; color: #f97316;">🛠️ Workshop (Rèn đồ)</a>
+        </div>
     </div>
 
     <script>

@@ -10,7 +10,7 @@ $setup = "
 CREATE TABLE IF NOT EXISTS marketplace_listings (
     id INT AUTO_INCREMENT PRIMARY KEY,
     seller_id INT,
-    item_type ENUM('title', 'frame', 'item'),
+    item_type ENUM('title', 'frame', 'item', 'theme', 'cursor', 'chat_frame', 'avatar_frame'),
     item_id INT,
     item_name VARCHAR(255),
     price BIGINT,
@@ -18,7 +18,9 @@ CREATE TABLE IF NOT EXISTS marketplace_listings (
     status ENUM('active', 'sold', 'cancelled') DEFAULT 'active'
 );
 ";
-// $conn->query($setup);
+$conn->query($setup);
+// Thêm cột nếu bảng đã tồn tại
+$conn->query("ALTER TABLE marketplace_listings MODIFY COLUMN item_type ENUM('title', 'frame', 'item', 'theme', 'cursor', 'chat_frame', 'avatar_frame')");
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
@@ -82,10 +84,17 @@ switch ($action) {
             $netPrice = $price * 0.95;
             $conn->query("UPDATE users SET Money = Money + $netPrice WHERE Iduser = " . $listing['seller_id']);
             
-            // Chuyển quyền sở hữu vật phẩm (Giả định có bảng user_items, user_titles, user_frames)
-            // Ví dụ với title:
+            // Chuyển quyền sở hữu vật phẩm
             if ($listing['item_type'] == 'title') {
                 $conn->query("UPDATE user_titles SET user_id = $userId WHERE user_id = " . $listing['seller_id'] . " AND title_id = " . $listing['item_id']);
+            } elseif ($listing['item_type'] == 'theme') {
+                $conn->query("UPDATE user_themes SET user_id = $userId WHERE user_id = " . $listing['seller_id'] . " AND theme_id = " . $listing['item_id']);
+            } elseif ($listing['item_type'] == 'cursor') {
+                $conn->query("UPDATE user_cursors SET user_id = $userId WHERE user_id = " . $listing['seller_id'] . " AND cursor_id = " . $listing['item_id']);
+            } elseif ($listing['item_type'] == 'chat_frame') {
+                $conn->query("UPDATE user_chat_frames SET user_id = $userId WHERE user_id = " . $listing['seller_id'] . " AND chat_frame_id = " . $listing['item_id']);
+            } elseif ($listing['item_type'] == 'avatar_frame') {
+                $conn->query("UPDATE user_avatar_frames SET user_id = $userId WHERE user_id = " . $listing['seller_id'] . " AND avatar_frame_id = " . $listing['item_id']);
             }
             
             // Cập nhật listing

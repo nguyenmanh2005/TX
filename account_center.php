@@ -415,6 +415,24 @@ if ($checkFriendsTable && $checkFriendsTable->num_rows > 0) {
                 <div class="menu-title">Điểm Danh</div>
                 <div class="menu-description">Điểm danh hàng ngày để nhận phần thưởng</div>
             </a>
+
+            <a href="monthly_pass.php" class="menu-card" style="border: 1px solid #ffd700; background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(255,215,0,0.05) 100%);">
+                <div class="menu-icon">✨</div>
+                <div class="menu-title" style="color: #b8860b;">Monthly Pass</div>
+                <div class="menu-description">Gói thuê bao tháng với nhiều đặc quyền VIP</div>
+            </a>
+
+            <a href="crafting.php" class="menu-card" style="border: 1px solid #ff4500; background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(255,69,0,0.05) 100%);">
+                <div class="menu-icon">🔨</div>
+                <div class="menu-title" style="color: #ff4500;">Workshop</div>
+                <div class="menu-description">Chế tác và nâng cấp vật phẩm hiếm</div>
+            </a>
+
+            <a href="tournaments.php" class="menu-card" style="border: 1px solid #ffd700; background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(255,215,0,0.05) 100%);">
+                <div class="menu-icon">🏆</div>
+                <div class="menu-title" style="color: #daa520;">Tournament</div>
+                <div class="menu-description">Giải đấu có buy-in và Prize Pool cực lớn</div>
+            </a>
         </div>
 
         <div style="text-align: center;">

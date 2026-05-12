@@ -38,11 +38,15 @@ if (!isset($_SESSION['Iduser'])) { header("Location: login.php"); exit(); }
         </div>
 
         <!-- 🏷️ Filters (Coming soon) -->
-        <div style="display: flex; gap: 10px; margin-bottom: 30px; overflow-x: auto; padding-bottom: 10px;">
+        <div style="display: flex; gap: 10px; margin-bottom: 30px; overflow-x: auto; padding-bottom: 10px; align-items: center;">
             <button class="market-btn market-btn-secondary active" style="background: var(--market-primary); border: none;">Tất cả</button>
             <button class="market-btn market-btn-secondary">Danh hiệu (Titles)</button>
             <button class="market-btn market-btn-secondary">Khung Avatar</button>
             <button class="market-btn market-btn-secondary">Vật phẩm hiếm</button>
+            <div style="width: 2px; height: 30px; background: rgba(255,255,255,0.1); margin: 0 10px;"></div>
+            <a href="crafting.php" class="market-btn" style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; text-decoration: none; border: none; padding: 12px 25px; border-radius: 16px; font-weight: 800; font-size: 14px; box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);">
+                <i class="fa fa-hammer"></i> WORKSHOP
+            </a>
         </div>
 
         <!-- 📦 Listings -->

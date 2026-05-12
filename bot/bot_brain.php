@@ -15,7 +15,9 @@ class BotBrain {
         'hambo' => ['chat_style' => 'hambo'],
         'cugia' => ['chat_style' => 'cugia'],
         'genalpha' => ['chat_style' => 'genalpha'],
-        'announcer' => ['chat_style' => 'announcer']
+        'announcer' => ['chat_style' => 'announcer'],
+        'whale' => ['chat_style' => 'whale'],
+        'streamer' => ['chat_style' => 'streamer']
     ];
 
     public function getPersonality(int $userId, string $email = '') {

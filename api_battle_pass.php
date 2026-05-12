@@ -43,11 +43,10 @@ switch ($action) {
         $stats = $conn->query("SELECT * FROM bp_stats WHERE user_id = $userId")->fetch_assoc();
         if (!$stats) {
             $conn->query("INSERT INTO bp_stats (user_id) VALUES ($userId)");
-            $stats = ['level' => 1, 'xp' => 0, 'claimed_rewards' => '[]'];
+            $stats = ['level' => 1, 'xp' => 0, 'claimed_rewards' => '[]', 'has_premium' => 0, 'premium_claimed_rewards' => '[]'];
         }
         
         // Lấy danh sách nhiệm vụ
-        $today = date('Y-m-d');
         $missions = $conn->query("
             SELECT m.*, um.progress, um.status 
             FROM bp_missions m
@@ -59,36 +58,76 @@ switch ($action) {
         while ($row = $missions->fetch_assoc()) {
             $missionList[] = $row;
         }
+
+        // Lấy danh sách phần thưởng
+        $rewards = $conn->query("SELECT * FROM bp_rewards ORDER BY level ASC, type ASC")->fetch_all(MYSQLI_ASSOC);
         
         echo json_encode([
             'success' => true, 
             'level' => $stats['level'], 
             'xp' => $stats['xp'],
-            'xp_max' => $stats['level'] * 1000, // Mỗi level cần level * 1000 XP
+            'xp_max' => $stats['level'] * 1000,
+            'has_premium' => (bool)$stats['has_premium'],
             'missions' => $missionList,
-            'claimed' => json_decode($stats['claimed_rewards'] ?? '[]')
+            'rewards' => $rewards,
+            'claimed' => json_decode($stats['claimed_rewards'] ?? '[]'),
+            'premium_claimed' => json_decode($stats['premium_claimed_rewards'] ?? '[]')
         ]);
+        break;
+
+    case 'buy_premium':
+        $price = 200000; // Giá Premium Pass: 200k GTLM
+        $user = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc();
+        if ($user['Money'] < $price) exit(json_encode(['success' => false, 'message' => 'Không đủ GTLM!']));
+
+        $conn->begin_transaction();
+        try {
+            $conn->query("UPDATE users SET Money = Money - $price WHERE Iduser = $userId");
+            $conn->query("UPDATE bp_stats SET has_premium = 1 WHERE user_id = $userId");
+            $conn->commit();
+            echo json_encode(['success' => true, 'message' => 'Kích hoạt Premium Track thành công!']);
+        } catch (Exception $e) {
+            $conn->rollback();
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
         break;
 
     case 'claim_reward':
         $level = (int) $_POST['level'];
+        $track = $_POST['track'] ?? 'free'; // 'free' hoặc 'premium'
+        
         $stats = $conn->query("SELECT * FROM bp_stats WHERE user_id = $userId")->fetch_assoc();
         if ($level > $stats['level']) exit(json_encode(['success' => false, 'message' => 'Chưa đạt level!']));
         
-        $claimed = json_decode($stats['claimed_rewards'] ?? '[]', true);
+        if ($track === 'premium' && !$stats['has_premium']) {
+            exit(json_encode(['success' => false, 'message' => 'Cần mua Premium Pass!']));
+        }
+
+        $col = ($track === 'premium') ? 'premium_claimed_rewards' : 'claimed_rewards';
+        $claimed = json_decode($stats[$col] ?? '[]', true);
         if (in_array($level, $claimed)) exit(json_encode(['success' => false, 'message' => 'Đã nhận rồi!']));
         
-        // Phát thưởng theo level
-        $rewardMoney = $level * 50000; // Ví dụ: Level 1 nhận 50k, Level 2 nhận 100k...
-        
+        // Lấy thông tin phần thưởng từ DB
+        $stmt = $conn->prepare("SELECT * FROM bp_rewards WHERE level = ? AND type = ?");
+        $stmt->bind_param("is", $level, $track);
+        $stmt->execute();
+        $reward = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$reward) exit(json_encode(['success' => false, 'message' => 'Không có phần thưởng cho level này!']));
+
         $conn->begin_transaction();
         try {
-            $conn->query("UPDATE users SET Money = Money + $rewardMoney WHERE Iduser = $userId");
+            if ($reward['reward_type'] === 'money') {
+                $conn->query("UPDATE users SET Money = Money + {$reward['reward_value']} WHERE Iduser = $userId");
+            }
+            // (Thêm logic tặng item/skin ở đây nếu cần)
+
             $claimed[] = $level;
             $claimedJson = json_encode($claimed);
-            $conn->query("UPDATE bp_stats SET claimed_rewards = '$claimedJson' WHERE user_id = $userId");
+            $conn->query("UPDATE bp_stats SET $col = '$claimedJson' WHERE user_id = $userId");
             $conn->commit();
-            echo json_encode(['success' => true, 'reward' => $rewardMoney]);
+            echo json_encode(['success' => true, 'message' => "Bạn đã nhận: {$reward['reward_name']}"]);
         } catch (Exception $e) {
             $conn->rollback();
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);

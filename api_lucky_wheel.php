@@ -137,14 +137,26 @@ elseif ($action === 'spin') {
     // Tính góc quay cuối cùng (quay ngược lại để pointer trỏ đúng phần thưởng)
     $finalAngle = ($spinRotations * 360) + (360 - $targetAngle);
 
+    // --- MONTHLY PASS INTEGRATION: x2 Rewards ---
+    $hasMonthlyPass = false;
+    $checkPass = $conn->query("SELECT COUNT(*) as total FROM user_monthly_pass WHERE user_id = $userId AND expiry_date > NOW()");
+    if ($checkPass && $checkPass->fetch_assoc()['total'] > 0) {
+        $hasMonthlyPass = true;
+    }
+
+    $finalRewardValue = $selectedReward['reward_value'];
+    if ($hasMonthlyPass && $selectedReward['reward_type'] === 'money') {
+        $finalRewardValue *= 2;
+    }
+
     // Cấp phần thưởng
     $rewardGiven = false;
 
-    if ($selectedReward['reward_type'] === 'money' && $selectedReward['reward_value'] > 0) {
+    if ($selectedReward['reward_type'] === 'money' && $finalRewardValue > 0) {
         // Cấp gtlm
         $updateMoneySql = "UPDATE users SET Money = Money + ? WHERE Iduser = ?";
         $updateMoneyStmt = $conn->prepare($updateMoneySql);
-        $updateMoneyStmt->bind_param("di", $selectedReward['reward_value'], $userId);
+        $updateMoneyStmt->bind_param("di", $finalRewardValue, $userId);
         $updateMoneyStmt->execute();
         $updateMoneyStmt->close();
         $rewardGiven = true;
@@ -194,7 +206,7 @@ elseif ($action === 'spin') {
         $userId,
         $selectedReward['id'],
         $selectedReward['reward_type'],
-        $selectedReward['reward_value'],
+        $finalRewardValue,
         $selectedReward['reward_name'],
         $today
     );
@@ -202,8 +214,9 @@ elseif ($action === 'spin') {
     $insertStmt->close();
 
     $message = '';
-    if ($selectedReward['reward_type'] === 'money' && $selectedReward['reward_value'] > 0) {
-        $message = '🎉 Chúc mừng! Bạn nhận được ' . number_format($selectedReward['reward_value'], 0, ',', '.') . ' gtlm!';
+    if ($selectedReward['reward_type'] === 'money' && $finalRewardValue > 0) {
+        $vipText = $hasMonthlyPass ? " (X2 VIP BONUS!)" : "";
+        $message = '🎉 Chúc mừng! Bạn nhận được ' . number_format($finalRewardValue, 0, ',', '.') . ' gtlm!' . $vipText;
     } else {
         $message = '😢 ' . $selectedReward['reward_name'];
     }
@@ -211,6 +224,8 @@ elseif ($action === 'spin') {
     echo json_encode([
         'status' => 'success',
         'reward' => $selectedReward,
+        'final_value' => $finalRewardValue,
+        'has_vip' => $hasMonthlyPass,
         'angle' => $finalAngle,
         'reward_given' => $rewardGiven,
         'message' => $message
