@@ -81,6 +81,17 @@ $personalStats = [
     'achievements' => 0,
 ];
 
+// Fetch current lottery jackpot
+$todayDate = date('Y-m-d');
+$lotterySql = "SELECT jackpot_pool FROM lottery_draws WHERE draw_date = ? LIMIT 1";
+$lStmt = $conn->prepare($lotterySql);
+$lStmt->bind_param("s", $todayDate);
+$lStmt->execute();
+$lRes = $lStmt->get_result();
+$lotteryData = $lRes->fetch_assoc();
+$currentJackpot = (float)($lotteryData['jackpot_pool'] ?? 1000000);
+$lStmt->close();
+
 // Kiểm tra bảng game_history có tồn tại không
 $ghCheck = $conn->query("SHOW TABLES LIKE 'game_history'");
 if ($ghCheck && $ghCheck->num_rows > 0) {
@@ -1583,6 +1594,274 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
             position: relative;
         }
 
+        /* Floating Guild Chat */
+        .guild-chat-widget {
+            position: fixed;
+            bottom: 90px;
+            right: 30px;
+            width: 320px;
+            height: 450px;
+            background: rgba(26, 26, 46, 0.98);
+            backdrop-filter: blur(15px);
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            z-index: 9999;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+            transition: all 0.3s ease;
+            transform: translateY(0);
+        }
+
+        .guild-chat-widget.minimized {
+            height: 45px;
+            transform: translateY(0);
+        }
+
+        .guild-chat-header {
+            padding: 12px 15px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: #fff;
+            border-radius: 13px 13px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .guild-chat-messages {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .guild-chat-messages::-webkit-scrollbar { width: 5px; }
+        .guild-chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+
+        .gm-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 13px;
+        }
+
+        .gm-user { font-weight: bold; color: #f1c40f; margin-bottom: 3px; }
+        .gm-text { color: #ecf0f1; line-height: 1.4; }
+
+        .guild-chat-input-area {
+            padding: 10px;
+            display: flex;
+            gap: 5px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .guild-chat-input-area input {
+            flex: 1;
+            background: rgba(255,255,255,0.1) !important;
+            border: none !important;
+            color: #fff !important;
+            padding: 8px 12px !important;
+            border-radius: 20px !important;
+            font-size: 13px !important;
+        }
+
+                /* Notifications Dropdown */
+        .notification-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .notif-bell {
+            font-size: 1.5em;
+            color: #fff;
+            cursor: pointer;
+            position: relative;
+            padding: 10px;
+            transition: transform 0.3s;
+        }
+
+        .notif-bell:hover { transform: scale(1.1); }
+
+        .notif-badge {
+            position: absolute;
+            top: 5px; right: 5px;
+            background: #e74c3c;
+            color: #fff;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 0.6em;
+            font-weight: bold;
+            display: none;
+            border: 2px solid #1a1a2e;
+        }
+
+        .notif-dropdown {
+            display: none;
+            position: absolute;
+            top: 50px; right: 0;
+            width: 350px;
+            background: rgba(26, 26, 46, 0.98);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.5);
+            z-index: 10001;
+            overflow: hidden;
+            animation: slideInDown 0.3s ease;
+        }
+
+        .notif-header {
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notif-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .notif-item {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            transition: background 0.3s;
+            cursor: pointer;
+        }
+
+        .notif-item:hover { background: rgba(255,255,255,0.05); }
+        .notif-item.unread { background: rgba(52, 152, 219, 0.05); }
+
+        .notif-title { font-weight: bold; font-size: 0.95em; color: #4facfe; margin-bottom: 5px; }
+        .notif-msg { font-size: 0.85em; color: #ccc; line-height: 1.4; }
+        .notif-time { font-size: 0.75em; color: #666; margin-top: 8px; }
+
+        /* Global Jackpot Banner */
+        .jackpot-banner {
+            background: linear-gradient(135deg, #f1c40f 0%, #d35400 100%);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(241, 196, 15, 0.4);
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            animation: pulse-glow 2s infinite alternate;
+        }
+
+        @keyframes pulse-glow {
+            from { box-shadow: 0 10px 30px rgba(241, 196, 15, 0.3); }
+            to { box-shadow: 0 10px 60px rgba(241, 196, 15, 0.6); }
+        }
+
+        .jackpot-label {
+            font-size: 1em;
+            font-weight: 800;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .jackpot-amount {
+            font-size: 4em;
+            font-weight: 900;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            text-shadow: 0 0 20px #000;
+            margin: 5px 0;
+        }
+
+        .jackpot-winner {
+            font-size: 0.9em;
+            background: rgba(0,0,0,0.3);
+            display: inline-block;
+            padding: 5px 20px;
+            border-radius: 20px;
+            color: #fff;
+        }
+
+        .jackpot-coins {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            background: url('https://www.transparenttextures.com/patterns/stardust.png');
+            opacity: 0.3;
+        }
+        .daily-reward-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 10000;
+            backdrop-filter: blur(10px);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .reward-container {
+            background: rgba(26, 26, 46, 0.95);
+            border: 2px solid #f1c40f;
+            border-radius: 20px;
+            padding: 40px;
+            width: 90%;
+            max-width: 800px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 0 50px rgba(241, 196, 15, 0.3);
+        }
+
+        .streak-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin: 30px 0;
+        }
+
+        .streak-day {
+            background: rgba(255,255,255,0.05);
+            padding: 15px 5px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s;
+        }
+
+        .streak-day.active {
+            background: rgba(241, 196, 15, 0.2);
+            border-color: #f1c40f;
+            transform: scale(1.1);
+        }
+
+        .streak-day.claimed {
+            opacity: 0.5;
+            background: rgba(46, 204, 113, 0.2);
+            border-color: #2ecc71;
+        }
+
+        .day-label { font-size: 0.8em; color: #aaa; margin-bottom: 5px; }
+        .reward-icon { font-size: 1.5em; margin: 10px 0; }
+        .reward-val { font-weight: bold; font-size: 0.7em; color: #2ecc71; }
+        .rank-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            font-size: 10px;
+            margin-right: 5px;
+            color: #fff;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+        .badge-whaler { background: linear-gradient(135deg, #f1c40f, #d35400); } /* Rich */
+        .badge-veteran { background: linear-gradient(135deg, #3498db, #2980b9); } /* Old player */
+        .badge-pro { background: linear-gradient(135deg, #2ecc71, #27ae60); } /* High win rate */
         .particle {
             position: absolute;
             border-radius: 50%;
@@ -1592,9 +1871,108 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
         }
 
         @keyframes particleFloat {
+            50% {
+                transform: translateY(-5px);
+            }
+        }
+
+        /* Lobby Social Widgets */
+        .live-ticker-container {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            color: #fff;
+            padding: 10px 0;
+            overflow: hidden;
+            position: relative;
+            z-index: 100;
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        .ticker-wrapper {
+            display: flex;
+            white-space: nowrap;
+            animation: tickerMove 30s linear infinite;
+        }
+
+        @keyframes tickerMove {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+
+        .ticker-item {
+            margin-right: 50px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ticker-name { color: #f1c40f; }
+        .ticker-amount { color: #2ecc71; }
+
+        .guild-war-widget {
+            background: linear-gradient(135deg, rgba(26, 26, 46, 0.9) 0%, rgba(22, 33, 62, 0.9) 100%);
+            border: 2px solid rgba(241, 196, 15, 0.3);
+            border-radius: var(--border-radius-lg);
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .guild-war-widget h2 {
+            font-size: 1.5em;
+            color: #f1c40f;
+            text-align: center;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .top-guild-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .top-guild-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .top-guild-item:nth-child(1) { border-left-color: #f1c40f; background: rgba(241, 196, 15, 0.1); }
+        .top-guild-item:nth-child(2) { border-left-color: #bdc3c7; }
+        .top-guild-item:nth-child(3) { border-left-color: #cd7f32; }
+
+        .pvp-alert {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            background: #e67e22;
+            color: #fff;
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: none;
+            animation: slideInRight 0.5s ease;
+            border-left: 5px solid #fff;
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes particleExplode {
             0% {
                 opacity: 1;
-                transform: translate(0, 0) scale(1) rotate(0deg);
+                transform: translate(0, 0) scale(1);
             }
 
             50% {
@@ -2538,18 +2916,70 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body>
+    <!-- Live Win Ticker -->
+    <div class="live-ticker-container" id="liveTicker">
+        <div class="ticker-wrapper" id="tickerWrapper">
+            <div class="ticker-item">Đang tải tin tức mới nhất...</div>
+        </div>
+    </div>
+
+    <!-- Community Lottery Jackpot Meter -->
+    <div style="background: linear-gradient(90deg, #1e1b4b, #312e81); padding: 15px; border-bottom: 2px solid #fbbf24; text-align: center; color: white; display: flex; align-items: center; justify-content: center; gap: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); position: relative; z-index: 1000;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fa fa-trophy" style="color: #fbbf24; font-size: 24px;"></i>
+            <span style="font-weight: 800; font-size: 14px; letter-spacing: 1px; color: #94a3b8; text-transform: uppercase;">JACKPOT HÔM NAY</span>
+        </div>
+        <div style="font-size: 28px; font-weight: 800; color: #fbbf24; text-shadow: 0 0 10px rgba(251, 191, 36, 0.5); font-family: 'JetBrains Mono', monospace;">
+            <?= number_format($currentJackpot, 0, ',', '.') ?> <span style="font-size: 14px;">GTLM</span>
+        </div>
+        <a href="games/community_lottery.php" class="btn btn-sm" style="background: #fbbf24; color: #000; padding: 5px 15px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 12px;">MUA VÉ NGAY</a>
+    </div>
+
+    <!-- PVP Challenge Alert -->
+    <div class="pvp-alert" id="pvpAlert">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <i class="fa fa-swords" style="font-size: 24px;"></i>
+            <div>
+                <strong id="challengerName">Ai đó</strong> đang thách đấu bạn!
+                <div style="margin-top: 5px;">
+                    <a href="pvp_challenge.php" class="btn btn-sm" style="background: #fff; color: #e67e22; padding: 2px 10px;">XEM NGAY</a>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="header">
         <h1 class="welcome">Chào mừng, <span class="sparkle-text"><?php echo htmlspecialchars($user['Name']); ?></span>!
         </h1>
-        <a href="preview_themes.php" class="theme-button" id="themeButton" title="Xem trước themes với full background">
-            <span class="theme-icon">🎨</span>
-            <span class="theme-text">Xem Themes</span>
-        </a>
+        
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <div class="notification-container">
+                <div class="notif-bell" onclick="toggleNotifDropdown()">
+                    <i class="fa fa-bell"></i>
+                    <span class="notif-badge" id="notifCountBadge">0</span>
+                </div>
+                <div class="notif-dropdown" id="notifDropdown">
+                    <div class="notif-header">
+                        <strong>Thông báo</strong>
+                        <span onclick="markAllAsRead()" style="font-size: 0.8em; color: #4facfe; cursor: pointer;">Đánh dấu đã đọc</span>
+                    </div>
+                    <div class="notif-list" id="notifList">
+                        <!-- Notifications load here -->
+                    </div>
+                    <div style="padding: 10px; text-align: center; font-size: 0.8em; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <a href="#" style="color: #666; text-decoration: none;">Xem tất cả</a>
+                    </div>
+                </div>
+            </div>
+
+            <a href="preview_themes.php" class="theme-button" id="themeButton" title="Xem trước themes với full background">
+                <span class="theme-icon">🎨</span>
+                <span class="theme-text">Xem Themes</span>
+            </a>
+        </div>
         <div class="daidien">
             <?php
             // Get user avatar and avatar frame (Optimized)
@@ -2614,6 +3044,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
     </div>
 
     <div class="container">
+        <!-- Global Jackpot -->
+        <div class="jackpot-banner">
+            <div class="jackpot-coins"></div>
+            <div class="jackpot-label">🏆 HŨ RỒNG THẦN 🏆</div>
+            <div class="jackpot-amount" id="jackpotAmount">100.000.000</div>
+            <div class="jackpot-winner">
+                Người vừa nổ hũ: <strong id="lastJackpotWinner">Chưa có</strong> 
+                (<span id="lastJackpotAmount">0</span> GTLM)
+            </div>
+        </div>
+
         <div class="info-column">
             <!-- Live Clock -->
             <div class="live-clock">
@@ -2956,6 +3397,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
 
             <div class="game-grid-modern">
                 <!-- Game Bài (Card Games) -->
+                <a href="games/tusac.php" class="game-card" data-category="card">
+                    <span class="game-badge badge-new">New</span>
+                    <span class="game-icon">🎴</span>
+                    <span class="game-name">Tứ Sắc Cổ Truyền</span>
+                </a>
+                <a href="games/samloc.php" class="game-card" data-category="card">
+                    <span class="game-badge badge-new">New</span>
+                    <span class="game-icon">🃏</span>
+                    <span class="game-name">Sâm Lốc Tốc Độ</span>
+                </a>
                 <a href="games/blackjack.php" class="game-card" data-category="card">
                     <span class="game-badge badge-hot">Hot</span>
                     <span class="game-icon">👑</span>
@@ -3024,6 +3475,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                     <span class="game-icon">🎰</span>
                     <span class="game-name">Slot Machine</span>
                 </a>
+                <a href="games/community_lottery.php" class="game-card" data-category="slots">
+                    <span class="game-badge badge-hot">Hot</span>
+                    <span class="game-icon">🎫</span>
+                    <span class="game-name">Xổ Số Cộng Đồng</span>
+                </a>
+                <a href="luckywheel_tet.php" class="game-card" data-category="slots">
+                    <span class="game-badge badge-hot">Hot</span>
+                    <span class="game-icon">🧧</span>
+                    <span class="game-name">Vòng Quay Tết</span>
+                </a>
                 <a href="games/roulette.php" class="game-card" data-category="slots">
                     <span class="game-icon">🎡</span>
                     <span class="game-name">Roulette</span>
@@ -3050,6 +3511,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                 </a>
 
                 <!-- Mini Games & Casual -->
+                <a href="games/daga.php" class="game-card" data-category="mini">
+                    <span class="game-badge badge-new">New</span>
+                    <span class="game-icon">🐓</span>
+                    <span class="game-name">Đá Gà Premium</span>
+                </a>
+                <a href="games/battleroyale.php" class="game-card" data-category="mini">
+                    <span class="game-badge badge-new">New</span>
+                    <span class="game-icon">🔥</span>
+                    <span class="game-name">Battle Royale Số</span>
+                </a>
                 <a href="games/baucua.php" class="game-card" data-category="mini">
                     <span class="game-badge badge-hot">Hot</span>
                     <span class="game-icon">🎲</span>
@@ -3094,7 +3565,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                 </a>
                 <a href="games/sicbo.php" class="game-card" data-category="mini">
                     <span class="game-icon">🎲</span>
-                    <span class="game-name">Sic Bo</span>
+                    <span class="game-name">Sic Bo Classic</span>
+                </a>
+                <a href="games/sicbo_v2.php" class="game-card" data-category="mini">
+                    <span class="game-badge badge-new">New</span>
+                    <span class="game-icon">🎲</span>
+                    <span class="game-name">Sic Bo 3D</span>
                 </a>
                 <a href="games/craps.php" class="game-card" data-category="mini">
                     <span class="game-icon">🎲</span>
@@ -3128,9 +3604,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                     <span class="game-icon">🎯</span>
                     <span class="game-name">Đoán Số</span>
                 </a>
-                <a href="games/duangua.php" class="game-card" data-category="mini">
+                <a href="games/horserace.php" class="game-card" data-category="mini">
+                    <span class="game-badge badge-new">New</span>
                     <span class="game-icon">🐎</span>
-                    <span class="game-name">Đua Thú</span>
+                    <span class="game-name">Đua Ngựa Pari-Mutuel</span>
                 </a>
                 <a href="bot.php" class="game-card" data-category="mini">
                     <span class="game-icon">🎴</span>
@@ -3153,6 +3630,35 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
 
         <!-- Cột bảng xếp hạng -->
         <div class="ranking">
+            <!-- Guild War Top Widget -->
+            <div class="guild-war-widget" id="guildWarWidget">
+                <h2><i class="fa fa-shield-halved"></i> Top Bang Hội</h2>
+                <div class="top-guild-list" id="topGuildList">
+                    <div style="text-align: center; color: #bdc3c7; padding: 10px;">Đang cập nhật dữ liệu...</div>
+                </div>
+                <div style="text-align: center; margin-top: 10px;">
+                    <a href="guild_war.php" style="color: #f1c40f; font-size: 0.8em; text-decoration: none;">Chi tiết sự kiện &raquo;</a>
+                </div>
+            </div>
+
+            <!-- Battle Pass Progress Widget -->
+            <div class="guild-war-widget" style="margin-top: 20px; border-color: #4facfe;">
+                <h2><i class="fa fa-star" style="color: #4facfe;"></i> Battle Pass</h2>
+                <div style="padding: 10px; text-align: center;">
+                    <div style="font-size: 0.9em; margin-bottom: 5px;">Mùa 1: Khởi Đầu</div>
+                    <a href="battle_pass.php" class="btn btn-sm" style="background: linear-gradient(90deg, #4facfe, #00f2fe); border: none; width: 100%;">XEM TIẾN ĐỘ</a>
+                </div>
+            </div>
+
+            <!-- World Boss Status Widget -->
+            <div class="guild-war-widget" style="margin-top: 20px; border-color: #ff4500; background: rgba(255, 69, 0, 0.05);">
+                <h2><i class="fa fa-dragon" style="color: #ff4500;"></i> World Boss</h2>
+                <div style="padding: 10px; text-align: center;">
+                    <div id="boss-status-lobby" style="font-size: 0.85em; margin-bottom: 10px; color: #ff4500; font-weight: bold;">Hắc Long Thần đang xuất hiện!</div>
+                    <a href="world_boss.php" class="btn btn-sm" style="background: #ff4500; border: none; width: 100%; color: #fff;">THAM CHIẾN NGAY</a>
+                </div>
+            </div>
+
             <h2>🏆 Top những người đẹp trai trên GTLM</h2>
             <table>
                 <thead>
@@ -3222,6 +3728,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                                             <?= htmlspecialchars($r['title_icon'], ENT_QUOTES, 'UTF-8') ?>
                                         </span>
                                     <?php endif; ?>
+
+                                    <!-- Achievement Badges -->
+                                    <?php if ($r['Money'] > 100000000): ?>
+                                        <span class="rank-badge badge-whaler" title="Đại gia GTLM">💎</span>
+                                    <?php endif; ?>
+                                    
                                     <span
                                         class="<?= $sparkleClass ?>"><?= htmlspecialchars($r['Name'], ENT_QUOTES, 'UTF-8') ?></span>
                                 </td>
@@ -3251,6 +3763,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                 <span class="quick-link-icon">📅</span>
                 <div class="quick-link-title">Thử Thách Tuần</div>
                 <div class="quick-link-desc">Hoàn thành nhiệm vụ tuần để nhận thưởng lớn</div>
+            </a>
+            <a href="battle_pass.php" class="quick-link-card" style="border-left: 4px solid #4facfe;">
+                <span class="quick-link-icon">⭐</span>
+                <div class="quick-link-title">Battle Pass</div>
+                <div class="quick-link-desc">Làm nhiệm vụ, thăng cấp, nhận quà khủng</div>
+            </a>
+            <a href="world_boss.php" class="quick-link-card" style="border-left: 4px solid #ff4500;">
+                <span class="quick-link-icon">🐲</span>
+                <div class="quick-link-title">Boss Thế Giới</div>
+                <div class="quick-link-desc">Hợp sức tiêu diệt Hắc Long Thần</div>
             </a>
             <a href="daily_challenges.php" class="quick-link-card">
                 <span class="quick-link-icon">🎯</span>
@@ -3291,6 +3813,38 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
         💬
         <span class="badge" id="messagesBadge">0</span>
     </button>
+
+    <!-- Daily Reward Modal -->
+    <div class="daily-reward-modal" id="dailyRewardModal">
+        <div class="reward-container">
+            <h2 style="color: #f1c40f; font-size: 2.5em; margin-bottom: 10px;">🎁 QUÀ ĐĂNG NHẬP</h2>
+            <p>Đăng nhập liên tiếp để nhận thưởng lớn hơn!</p>
+            
+            <div class="streak-grid" id="streakGrid">
+                <!-- Days injected by JS -->
+            </div>
+
+            <button onclick="claimDailyReward()" id="btnClaimReward" class="btn btn-lg" style="background: #f1c40f; color: #000; padding: 15px 50px; font-weight: 800; border-radius: 30px;">
+                NHẬN QUÀ NGAY
+            </button>
+            <p id="claimStatus" style="margin-top: 15px; color: #2ecc71; font-weight: bold;"></p>
+        </div>
+    </div>
+    <div class="guild-chat-widget minimized" id="guildChatWidget" style="display: none;">
+        <div class="guild-chat-header" onclick="toggleGuildChat()">
+            <span><i class="fa fa-users"></i> Chat Bang Hội</span>
+            <i class="fa fa-chevron-up" id="chatToggleIcon"></i>
+        </div>
+        <div class="guild-chat-messages" id="guildChatMessages">
+            <!-- Messages load here -->
+        </div>
+        <div class="guild-chat-input-area">
+            <input type="text" id="guildChatMessage" placeholder="Nhập tin nhắn..." onkeypress="if(event.key==='Enter') sendGuildMessage()">
+            <button onclick="sendGuildMessage()" style="background: transparent; border: none; color: var(--primary-color); cursor: pointer;">
+                <i class="fa fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
 
     <!-- Confetti Container -->
     <div class="confetti-container" id="confettiContainer"></div>
@@ -3441,6 +3995,262 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
             fetchNotifCount();
             setInterval(fetchNotifCount, 30000); // Poll mỗi 30s
 
+            // ── Lobby Social Widgets Logic ────────────────────────
+            function updateLobbySocial() {
+                fetch('api_lobby_social.php?action=get_social_data')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (!data.success) return;
+
+                        // 1. Update Ticker
+                        const tickerWrapper = document.getElementById('tickerWrapper');
+                        if (tickerWrapper && data.live_wins.length > 0) {
+                            tickerWrapper.innerHTML = '';
+                            data.live_wins.forEach(win => {
+                                const item = document.createElement('div');
+                                item.className = 'ticker-item';
+                                item.innerHTML = `🎉 <span class="ticker-name">${win.Name}</span> vừa thắng <span class="ticker-amount">${Number(win.win_amount).toLocaleString()} gtlm</span> trong game <strong>${win.game_name}</strong>!`;
+                                tickerWrapper.appendChild(item);
+                            });
+                            // Duplicate to ensure smooth scrolling
+                            tickerWrapper.innerHTML += tickerWrapper.innerHTML;
+                        }
+
+                        // 2. Update Top Guilds
+                        const guildWidget = document.getElementById('guildWarWidget');
+                        const guildList = document.getElementById('topGuildList');
+                        if (guildWidget && guildList) {
+                            if (data.top_guilds.length > 0) {
+                                guildList.innerHTML = '';
+                                data.top_guilds.forEach((guild, idx) => {
+                                    const item = document.createElement('div');
+                                    item.className = 'top-guild-item';
+                                    item.innerHTML = `
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <span style="font-weight: 800; color: #f1c40f;">#${idx+1}</span>
+                                            <span class="guild-tag">[${guild.tag}]</span>
+                                            <strong>${guild.name}</strong>
+                                        </div>
+                                        <div style="color: #2ecc71; font-weight: 800;">${Number(guild.points).toLocaleString()}</div>
+                                    `;
+                                    guildList.appendChild(item);
+                                });
+                            } else {
+                                guildList.innerHTML = '<div style="text-align: center; color: #bdc3c7; padding: 10px; font-size: 0.9em;">Chưa có dữ liệu tuần này</div>';
+                            }
+                        }
+
+                        // 3. PVP Alerts
+                        if (data.challenges && data.challenges.length > 0) {
+                            const alert = document.getElementById('pvpAlert');
+                            const nameSpan = document.getElementById('challengerName');
+                            if (alert && nameSpan) {
+                                nameSpan.textContent = data.challenges[0].challenger_name;
+                                alert.style.display = 'block';
+                                // Tự động ẩn sau 10s
+                                setTimeout(() => { alert.style.display = 'none'; }, 10000);
+                            }
+                        }
+                    });
+            }
+
+            updateLobbySocial();
+            setInterval(updateLobbySocial, 60000); // Cập nhật mỗi phút
+
+            // ── Daily Reward Logic ─────────────────────────────
+            function checkDailyReward() {
+                fetch('api_daily_reward.php?action=check')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success && data.can_claim) {
+                            showRewardModal(data.streak);
+                        }
+                    });
+            }
+
+            function showRewardModal(currentStreak) {
+                const grid = document.getElementById('streakGrid');
+                const rewards = [10000, 25000, 50000, 100000, 200000, 500000, 1000000];
+                grid.innerHTML = '';
+                
+                for (let i = 1; i <= 7; i++) {
+                    const isClaimed = i <= currentStreak;
+                    const isActive = i === (currentStreak % 7) + 1;
+                    
+                    grid.innerHTML += `
+                        <div class="streak-day ${isClaimed ? 'claimed' : ''} ${isActive ? 'active' : ''}">
+                            <div class="day-label">Ngày ${i}</div>
+                            <div class="reward-icon">${i === 7 ? '👑' : '💰'}</div>
+                            <div class="reward-val">${(rewards[i-1]/1000)}K</div>
+                        </div>
+                    `;
+                }
+                document.getElementById('dailyRewardModal').style.display = 'flex';
+            }
+
+            function claimDailyReward() {
+                const btn = document.getElementById('btnClaimReward');
+                btn.disabled = true;
+                btn.textContent = 'ĐANG XỬ LÝ...';
+
+                fetch('api_daily_reward.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'action=claim'
+                }).then(r => r.json()).then(data => {
+                    if (data.success) {
+                        Swal.fire('Thành công!', `Bạn đã nhận được ${data.amount.toLocaleString()} GTLM!`, 'success');
+                        document.getElementById('dailyRewardModal').style.display = 'none';
+                        location.reload();
+                    } else {
+                        alert(data.message);
+                        btn.disabled = false;
+                        btn.textContent = 'NHẬN QUÀ NGAY';
+                    }
+                });
+            }
+            window.claimDailyReward = claimDailyReward;
+
+            checkDailyReward();
+
+            // ── Notification Logic ─────────────────────────────
+            let isNotifOpen = false;
+
+            function toggleNotifDropdown() {
+                const dropdown = document.getElementById('notifDropdown');
+                isNotifOpen = !isNotifOpen;
+                dropdown.style.display = isNotifOpen ? 'block' : 'none';
+                if (isNotifOpen) loadNotifications();
+            }
+            window.toggleNotifDropdown = toggleNotifDropdown;
+
+            function loadNotifications() {
+                fetch('api_notifications.php?action=get_notifications')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            const badge = document.getElementById('notifCountBadge');
+                            if (data.unread_count > 0) {
+                                badge.textContent = data.unread_count;
+                                badge.style.display = 'block';
+                            } else {
+                                badge.style.display = 'none';
+                            }
+
+                            const list = document.getElementById('notifList');
+                            if (data.notifications.length === 0) {
+                                list.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">Không có thông báo mới</div>';
+                                return;
+                            }
+
+                            list.innerHTML = '';
+                            data.notifications.forEach(n => {
+                                const div = document.createElement('div');
+                                div.className = `notif-item ${n.is_read == 0 ? 'unread' : ''}`;
+                                div.onclick = () => markAsRead(n.id);
+                                div.innerHTML = `
+                                    <div class="notif-title">${n.title}</div>
+                                    <div class="notif-msg">${n.message}</div>
+                                    <div class="notif-time">${n.created_at}</div>
+                                `;
+                                list.appendChild(div);
+                            });
+                        }
+                    });
+            }
+
+            function markAsRead(id) {
+                fetch('api_notifications.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `action=mark_as_read&id=${id}`
+                }).then(() => loadNotifications());
+            }
+
+            function markAllAsRead() {
+                fetch('api_notifications.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `action=mark_as_read&id=0`
+                }).then(() => loadNotifications());
+            }
+            window.markAllAsRead = markAllAsRead;
+
+            loadNotifications();
+            setInterval(loadNotifications, 30000); // Polling mỗi 30s
+
+            let lastGuildMsgId = 0;
+            let isChatMinimized = true;
+
+            function toggleGuildChat() {
+                const widget = document.getElementById('guildChatWidget');
+                const icon = document.getElementById('chatToggleIcon');
+                isChatMinimized = !isChatMinimized;
+                widget.classList.toggle('minimized', isChatMinimized);
+                icon.className = isChatMinimized ? 'fa fa-chevron-up' : 'fa fa-chevron-down';
+                if (!isChatMinimized) {
+                    scrollToBottom();
+                }
+            }
+            window.toggleGuildChat = toggleGuildChat;
+
+            function scrollToBottom() {
+                const msgs = document.getElementById('guildChatMessages');
+                msgs.scrollTop = msgs.scrollHeight;
+            }
+
+            function loadGuildMessages() {
+                fetch(`api_guild_chat.php?action=load&last_id=${lastGuildMsgId}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success && data.messages.length > 0) {
+                            const container = document.getElementById('guildChatMessages');
+                            data.messages.forEach(msg => {
+                                const div = document.createElement('div');
+                                div.className = 'gm-item';
+                                div.innerHTML = `
+                                    <div class="gm-user">${msg.username}</div>
+                                    <div class="gm-text">${msg.message}</div>
+                                `;
+                                container.appendChild(div);
+                                lastGuildMsgId = msg.id;
+                            });
+                            if (!isChatMinimized) scrollToBottom();
+                        }
+                    });
+            }
+
+            function sendGuildMessage() {
+                const input = document.getElementById('guildChatMessage');
+                const msg = input.value.trim();
+                if (!msg) return;
+
+                fetch('api_guild_chat.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `action=send&message=${encodeURIComponent(msg)}`
+                }).then(r => r.json()).then(data => {
+                    if (data.success) {
+                        input.value = '';
+                        loadGuildMessages();
+                    } else {
+                        alert(data.message);
+                    }
+                });
+            }
+            window.sendGuildMessage = sendGuildMessage;
+
+            // Check if user is in a guild
+            fetch('api_guild_chat.php?action=get_status')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.in_guild) {
+                        document.getElementById('guildChatWidget').style.display = 'flex';
+                        loadGuildMessages();
+                        setInterval(loadGuildMessages, 5000);
+                    }
+                });
+
             // ── Messages FAB ───────────────────────────────────────
             const msgFab = document.getElementById('messagesFab');
             if (msgFab) {
@@ -3448,6 +4258,51 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                     window.location.href = 'private_message.php';
                 });
             }
+
+            // ── Jackpot Logic ──────────────────────────────────
+            function updateJackpot() {
+                fetch('api_jackpot.php?action=get_status')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            animateNumber('jackpotAmount', data.amount);
+                            document.getElementById('lastJackpotWinner').textContent = data.last_winner || 'Chưa có';
+                            document.getElementById('lastJackpotAmount').textContent = Number(data.last_amount || 0).toLocaleString();
+                        }
+                    });
+            }
+
+            function animateNumber(id, target) {
+                const el = document.getElementById(id);
+                const current = parseInt(el.textContent.replace(/\./g, '')) || 0;
+                const step = (target - current) / 20;
+                let count = current;
+                
+                const timer = setInterval(() => {
+                    count += step;
+                    if ((step > 0 && count >= target) || (step < 0 && count <= target)) {
+                        count = target;
+                        clearInterval(timer);
+                    }
+                    el.textContent = Math.floor(count).toLocaleString('vi-VN');
+                }, 50);
+            }
+
+            updateJackpot();
+            setInterval(updateJackpot, 5000);
+
+            // ── Lottery Notification ──
+            const lotteryDrawTime = new Date('<?= $todayDate ?> 20:00:00');
+            setInterval(() => {
+                const now = new Date();
+                const diffMin = (lotteryDrawTime - now) / 60000;
+                if (diffMin > 0 && diffMin <= 30 && !window.lotteryNotified) {
+                    if (typeof showToast === 'function') {
+                        showToast(`🔔 Xổ số cộng đồng sẽ quay thưởng trong ${Math.round(diffMin)} phút nữa!`, 'info');
+                        window.lotteryNotified = true;
+                    }
+                }
+            }, 60000);
         })();
     </script>
 

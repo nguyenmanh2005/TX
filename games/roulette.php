@@ -2,7 +2,7 @@
 session_start();
 
 if (!isset($_SESSION['Iduser'])) {
-    header("Location: login.php");
+    header("Location: ../login.php");
     exit();
 }
 

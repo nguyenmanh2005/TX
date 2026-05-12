@@ -19,5 +19,18 @@ return [
         'max_bots_per_cycle' => 100,
         'session_lifetime' => 86400,
         'timeout' => 600
+    ],
+    'rivalries' => [
+        ['bot1@gmail.com', 'bot5@gmail.com'],
+        ['bot3@gmail.com', 'bot10@gmail.com'],
+        ['bot7@gmail.com', 'bot2@gmail.com']
+    ],
+    'alliances' => [
+        ['bot2@gmail.com', 'bot8@gmail.com'],
+        ['bot4@gmail.com', 'bot6@gmail.com']
+    ],
+    'announcer_emails' => [
+        'bot_mc@gmail.com',
+        'bot_announcer@gmail.com'
     ]
 ];

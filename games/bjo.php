@@ -4,7 +4,7 @@ session_start();
 require '../db_connect.php';
 
 if (!isset($_SESSION['Iduser'])) {
-    header("Location: login.php");
+    header("Location: ../login.php");
     exit();
 }
 

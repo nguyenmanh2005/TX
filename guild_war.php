@@ -1,0 +1,355 @@
+<?php
+session_start();
+require_once 'db_connect.php';
+require_once 'guild_war_helper.php';
+
+if (!isset($_SESSION['Iduser'])) {
+    header("Location: login.php");
+    exit();
+}
+
+$userId = $_SESSION['Iduser'];
+$leaderboard = getWeeklyGuildLeaderboard($conn, 20);
+
+// Lấy thông tin guild của user hiện tại
+$userGuildSql = "SELECT g.id, g.name, g.tag, s.points, s.wins,
+                (SELECT COUNT(*) + 1 FROM guild_weekly_stats WHERE points > s.points) as rank
+                FROM guild_members gm
+                JOIN guilds g ON gm.guild_id = g.id
+                LEFT JOIN guild_weekly_stats s ON g.id = s.guild_id
+                WHERE gm.user_id = ?";
+$stmt = $conn->prepare($userGuildSql);
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$myGuild = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+// Tính thời gian còn lại (đến hết Chủ Nhật)
+$now = new DateTime();
+$endOfWeek = new DateTime('next Monday 00:00:00');
+$interval = $now->diff($endOfWeek);
+$timeLeft = $interval->format('%d ngày %h giờ %i phút');
+
+?>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đua Top Bang Hội (Guild War)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/lobby.css">
+    <style>
+        :root {
+            --gold: #f1c40f;
+            --silver: #bdc3c7;
+            --bronze: #cd7f32;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .war-container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .war-header {
+            text-align: center;
+            margin-bottom: 40px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .war-header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #f1c40f, #e67e22);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .timer {
+            font-size: 1.2em;
+            color: #e74c3c;
+            font-weight: bold;
+            display: inline-block;
+            padding: 10px 20px;
+            background: rgba(231, 76, 60, 0.1);
+            border-radius: 50px;
+            border: 1px solid rgba(231, 76, 60, 0.3);
+        }
+
+        .my-guild-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            background: rgba(52, 152, 219, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(52, 152, 219, 0.3);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.9em;
+            color: #bdc3c7;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #3498db;
+        }
+
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 10px;
+        }
+
+        .leaderboard-table th {
+            padding: 15px;
+            text-align: left;
+            color: #bdc3c7;
+            text-transform: uppercase;
+            font-size: 0.8em;
+            letter-spacing: 1px;
+        }
+
+        .guild-row {
+            background: rgba(255, 255, 255, 0.03);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .guild-row:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: scale(1.01);
+        }
+
+        .guild-row td {
+            padding: 20px 15px;
+        }
+
+        .guild-row td:first-child {
+            border-top-left-radius: 12px;
+            border-bottom-left-radius: 12px;
+            font-weight: bold;
+            font-size: 1.2em;
+            width: 60px;
+            text-align: center;
+        }
+
+        .guild-row td:last-child {
+            border-top-right-radius: 12px;
+            border-bottom-right-radius: 12px;
+            text-align: right;
+            font-weight: bold;
+            color: #2ecc71;
+            font-size: 1.1em;
+        }
+
+        .rank-1 { color: var(--gold); }
+        .rank-2 { color: var(--silver); }
+        .rank-3 { color: var(--bronze); }
+
+        .guild-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .guild-tag {
+            background: rgba(255,255,255,0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        .guild-name {
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .leader-name {
+            font-size: 0.85em;
+            color: #7f8c8d;
+            display: block;
+        }
+
+        .prize-info {
+            margin-top: 50px;
+            background: rgba(241, 196, 15, 0.05);
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(241, 196, 15, 0.2);
+        }
+
+        .prize-info h3 {
+            color: var(--gold);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .prize-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .prize-list li {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .prize-list li:last-child {
+            border-bottom: none;
+        }
+
+        .btn-back {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+            z-index: 100;
+            transition: all 0.3s;
+        }
+
+        .btn-back:hover {
+            background: rgba(255,255,255,0.2);
+        }
+    </style>
+</head>
+<body>
+    <a href="guilds.php" class="btn-back"><i class="fa fa-arrow-left"></i> Quay lại</a>
+
+    <div class="war-container">
+        <div class="war-header">
+            <h1><i class="fa fa-shield-halved"></i> Đua Top Bang Hội</h1>
+            <p>Chiến đấu cùng đồng đội để giành lấy vinh quang và phần thưởng khổng lồ!</p>
+            <div class="timer">
+                <i class="fa fa-clock"></i> Kết thúc sau: <?= $timeLeft ?>
+            </div>
+        </div>
+
+        <?php if ($myGuild): ?>
+        <div class="my-guild-stats">
+            <div class="stat-item">
+                <span class="stat-label">Bang hội</span>
+                <span class="stat-value"><?= htmlspecialchars($myGuild['name']) ?></span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Hạng hiện tại</span>
+                <span class="stat-value">#<?= $myGuild['rank'] ?: '--' ?></span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Điểm tuần</span>
+                <span class="stat-value"><?= number_format($myGuild['points'] ?: 0) ?></span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Trận thắng</span>
+                <span class="stat-value"><?= number_format($myGuild['wins'] ?: 0) ?></span>
+            </div>
+        </div>
+        <?php else: ?>
+        <div class="my-guild-stats" style="justify-content: center; color: #bdc3c7;">
+            Bạn chưa gia nhập Bang hội nào để tham gia Đua Top!
+        </div>
+        <?php endif; ?>
+
+        <table class="leaderboard-table">
+            <thead>
+                <tr>
+                    <th>Hạng</th>
+                    <th>Bang Hội</th>
+                    <th style="text-align: center;">Trận thắng</th>
+                    <th style="text-align: right;">Điểm Chiến Công</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php 
+                $rank = 1;
+                if ($leaderboard->num_rows > 0): 
+                    while($row = $leaderboard->fetch_assoc()):
+                        $rankClass = ($rank <= 3) ? "rank-$rank" : "";
+                ?>
+                <tr class="guild-row">
+                    <td class="<?= $rankClass ?>"><?= $rank ?></td>
+                    <td>
+                        <div class="guild-info">
+                            <span class="guild-tag"><?= htmlspecialchars($row['tag']) ?></span>
+                            <div>
+                                <span class="guild-name"><?= htmlspecialchars($row['name']) ?></span>
+                                <span class="leader-name">Chủ bang: <?= htmlspecialchars($row['leader_name']) ?></span>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="text-align: center;"><?= number_format($row['wins']) ?></td>
+                    <td style="text-align: right;"><?= number_format($row['points']) ?></td>
+                </tr>
+                <?php 
+                    $rank++;
+                    endwhile; 
+                else:
+                ?>
+                <tr>
+                    <td colspan="4" style="text-align: center; padding: 40px; color: #7f8c8d;">Chưa có dữ liệu đua top tuần này.</td>
+                </tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+
+        <div class="prize-info">
+            <h3><i class="fa fa-trophy"></i> Cơ Cấu Giải Thưởng Tuần</h3>
+            <ul class="prize-list">
+                <li>
+                    <span><strong class="rank-1">Top 1 Bang Hội:</strong></span>
+                    <span>5.000.000 gtlm + Title "Vô Địch Bang Hội"</span>
+                </li>
+                <li>
+                    <span><strong class="rank-2">Top 2 Bang Hội:</strong></span>
+                    <span>2.500.000 gtlm</span>
+                </li>
+                <li>
+                    <span><strong class="rank-3">Top 3 Bang Hội:</strong></span>
+                    <span>1.000.000 gtlm</span>
+                </li>
+                <li>
+                    <span><strong>Top 4 - 10:</strong></span>
+                    <span>500.000 gtlm</span>
+                </li>
+            </ul>
+            <p style="font-size: 0.85em; color: #bdc3c7; margin-top: 15px; font-style: italic;">
+                * Phần thưởng sẽ được chuyển vào Quỹ Bang Hội sau khi kết thúc tuần. Chủ bang có quyền phân phối phần thưởng cho thành viên.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

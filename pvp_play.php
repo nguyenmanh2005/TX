@@ -18,6 +18,18 @@ if ($challengeId <= 0) {
 
 // Load theme
 require_once 'load_theme.php';
+
+// Kiểm tra loại game để chuyển hướng nếu cần
+$checkGame = $conn->prepare("SELECT game_type FROM pvp_challenges WHERE id = ?");
+$checkGame->bind_param("i", $challengeId);
+$checkGame->execute();
+$gameInfo = $checkGame->get_result()->fetch_assoc();
+$checkGame->close();
+
+if ($gameInfo && $gameInfo['game_type'] == 'caro') {
+    header("Location: pvp_caro.php?id=" . $challengeId);
+    exit();
+}
 ?>
 <!DOCTYPE html>
 <html lang="vi">

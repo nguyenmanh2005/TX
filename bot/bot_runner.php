@@ -20,7 +20,7 @@ $totalBots = count($config['bot_emails']);
             --panel: #0f172a;
             --primary: #6366f1;
             --success: #22c55e;
-            --warning: #f59e0b;
+            --warn: #f59e0b;
             --danger: #ef4444;
             --text: #f8fafc;
             --text-dim: #94a3b8;
@@ -242,7 +242,7 @@ $totalBots = count($config['bot_emails']);
                 }
             } catch (err) {
                 if (err.name === 'AbortError') {
-                    consoleEl.innerHTML += `<div style="color: var(--warning);">[Hệ thống] Đã dừng chu kỳ.</div>`;
+                    consoleEl.innerHTML += `<div style="color: var(--warn);">[Hệ thống] Đã dừng chu kỳ.</div>`;
                     document.getElementById('autoRun').checked = false; // Tắt auto nếu bấm dừng
                 } else {
                     consoleEl.innerHTML += `<div style="color: var(--danger);">[Lỗi] Engine: ${err.message}</div>`;

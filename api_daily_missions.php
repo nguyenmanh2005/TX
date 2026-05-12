@@ -27,7 +27,7 @@ if (!$checkTable || $checkTable->num_rows == 0) {
 /**
  * Tạo nhiệm vụ hàng ngày cho user (nếu chưa có)
  */
-function generateDailyMissions($conn, $userId, $date = null) {
+function generateDailyMissions(mysqli $conn, int $userId, ?string $date = null) {
     if (!$date) {
         $date = date('Y-m-d');
     }
@@ -62,7 +62,7 @@ function generateDailyMissions($conn, $userId, $date = null) {
 /**
  * Cập nhật progress cho nhiệm vụ
  */
-function updateMissionProgress($conn, $userId, $missionType, $value = 1, $date = null) {
+function updateMissionProgress(mysqli $conn, int $userId, string $missionType, int $value = 1, ?string $date = null) {
     if (!$date) {
         $date = date('Y-m-d');
     }

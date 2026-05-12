@@ -32,7 +32,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) &&
 
 
 if (!isset($_SESSION['Iduser'])) {
-    header("Location: login.php");
+    header("Location: ../login.php");
     exit();
 }
 

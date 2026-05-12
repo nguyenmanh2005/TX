@@ -402,6 +402,8 @@ require_once 'load_theme.php';
                             <option value="dice">Dice (Xúc Xắc)</option>
                             <option value="rps">Rock Paper Scissors (Oẳn Tù Tì)</option>
                             <option value="number">Đoán Số (1-100)</option>
+                            <option value="caro">Cờ Caro (15x15)</option>
+                            <option value="poker">Poker (1vs1 - Beta)</option>
                         </select>
                     </div>
 
@@ -640,7 +642,9 @@ require_once 'load_theme.php';
                 'coinflip': 'Coin Flip',
                 'dice': 'Dice',
                 'rps': 'Rock Paper Scissors',
-                'number': 'Đoán Số'
+                'number': 'Đoán Số',
+                'caro': 'Cờ Caro',
+                'poker': 'Poker'
             };
             return names[type] || type;
         }

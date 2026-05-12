@@ -24,6 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message'])) {
     $username = $_SESSION['Name'];
     $message = trim($_POST['message']);
     if (!empty($message)) {
+        require_once 'vocabulary_helper.php';
+        $message = VocabularyHelper::mask($message);
+        
         $stmt = $conn->prepare("INSERT INTO chat_errors (user_id, username, message, avatar) VALUES (?, ?, ?, ?)");
         $stmt->bind_param("isss", $userId, $username, $message, $avatar);
         $stmt->execute();

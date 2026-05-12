@@ -599,6 +599,8 @@ if ($guildsTableExists) {
             <div class="tabs">
                 <?php if ($userGuild): ?>
                     <div class="tab active" data-tab="my-guild">🏠 Guild Của Tôi</div>
+                    <div class="tab" data-tab="guild-war" style="background: rgba(241, 196, 15, 0.1); border: 1px solid rgba(241, 196, 15, 0.3); color: #f1c40f;">⚔️ Đua Top Guild</div>
+                    <div class="tab" data-tab="skills">✨ Kỹ Năng Bang</div>
                     <div class="tab" data-tab="members">👥 Thành Viên</div>
                     <div class="tab" data-tab="chat">💬 Chat Guild</div>
                     <?php if ($userGuildRole === 'leader' || $userGuildRole === 'officer'): ?>
@@ -648,6 +650,78 @@ if ($guildsTableExists) {
                             <?php if ($userGuildRole !== 'leader'): ?>
                                 <button class="btn btn-danger" onclick="leaveGuild(<?= $userGuild['id'] ?>)">Rời Guild</button>
                             <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Đua Top Guild -->
+                <div class="tab-content" id="guild-war">
+                    <div class="card" style="background: linear-gradient(135deg, rgba(26, 26, 46, 0.95), rgba(22, 33, 62, 0.95)); border: 1px solid rgba(241, 196, 15, 0.3);">
+                        <div style="text-align: center; padding: 20px;">
+                            <i class="fa fa-trophy" style="font-size: 64px; color: #f1c40f; margin-bottom: 20px;"></i>
+                            <h2 style="color: #fff; margin-bottom: 15px;">Sự Kiện Đua Top Bang Hội</h2>
+                            <p style="color: #bdc3c7; margin-bottom: 30px; font-size: 1.1em;">
+                                Cùng các thành viên trong Bang hội tham gia các trò chơi để tích lũy Điểm Chiến Công. 
+                                Bang hội có điểm cao nhất vào cuối tuần sẽ nhận được phần thưởng cực khủng!
+                            </p>
+                            <a href="guild_war.php" class="btn btn-primary" style="padding: 15px 40px; font-size: 1.2em;">
+                                <i class="fa fa-shield-halved"></i> Xem Bảng Xếp Hạng Ngay
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Kỹ Năng Bang -->
+                <div class="tab-content" id="skills">
+                    <div class="card">
+                        <h2 style="margin-bottom: 20px;"><i class="fa fa-sparkles" style="color: #f1c40f;"></i> Kỹ Năng Bang Hội</h2>
+                        <p style="color: #bdc3c7; margin-bottom: 25px;">Sử dụng điểm <strong>Guild XP</strong> để nâng cấp các kỹ năng hỗ trợ cho toàn bộ thành viên.</p>
+                        
+                        <div class="skills-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                            <!-- Skill: Fortune -->
+                            <div class="skill-card" style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                    <div>
+                                        <h3 style="color: #f1c40f;"><i class="fa fa-coins"></i> Tài Lộc (Fortune)</h3>
+                                        <p style="font-size: 0.9em; color: #aaa; margin: 10px 0;">Tăng tỉ lệ nhận thêm tiền khi thắng game.</p>
+                                        <div style="font-weight: bold; color: #2ecc71;">Hiệu ứng: +<span id="lvl-fortune-val">0</span>% tiền thắng</div>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div style="font-size: 1.2em; font-weight: bold;">Lv.<span id="lvl-fortune">0</span></div>
+                                    </div>
+                                </div>
+                                <button onclick="upgradeSkill('fortune')" class="btn btn-primary" style="width: 100%; margin-top: 15px;">Nâng cấp (<span id="cost-fortune">0</span> XP)</button>
+                            </div>
+
+                            <!-- Skill: Unity -->
+                            <div class="skill-card" style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                    <div>
+                                        <h3 style="color: #3498db;"><i class="fa fa-handshake"></i> Đoàn Kết (Unity)</h3>
+                                        <p style="font-size: 0.9em; color: #aaa; margin: 10px 0;">Tăng điểm chiến công nhận được cho Guild War.</p>
+                                        <div style="font-weight: bold; color: #2ecc71;">Hiệu ứng: +<span id="lvl-unity-val">0</span>% điểm CW</div>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div style="font-size: 1.2em; font-weight: bold;">Lv.<span id="lvl-unity">0</span></div>
+                                    </div>
+                                </div>
+                                <button onclick="upgradeSkill('unity')" class="btn btn-primary" style="width: 100%; margin-top: 15px;">Nâng cấp (<span id="cost-unity">0</span> XP)</button>
+                            </div>
+
+                            <!-- Skill: Charisma -->
+                            <div class="skill-card" style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                    <div>
+                                        <h3 style="color: #e74c3c;"><i class="fa fa-heart"></i> Nhân Phẩm (Charisma)</h3>
+                                        <p style="font-size: 0.9em; color: #aaa; margin: 10px 0;">Tăng lượng XP cá nhân nhận được khi chơi game.</p>
+                                        <div style="font-weight: bold; color: #2ecc71;">Hiệu ứng: +<span id="lvl-charisma-val">0</span>% XP nhận được</div>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div style="font-size: 1.2em; font-weight: bold;">Lv.<span id="lvl-charisma">0</span></div>
+                                    </div>
+                                </div>
+                                <button onclick="upgradeSkill('charisma')" class="btn btn-primary" style="width: 100%; margin-top: 15px;">Nâng cấp (<span id="cost-charisma">0</span> XP)</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1157,6 +1231,44 @@ if ($guildsTableExists) {
         <?php if ($userGuild): ?>
             loadMembers();
         <?php endif; ?>
+        function loadSkills() {
+            $.get('api_guild_skills.php', { action: 'get_skills' }, function(res) {
+                if (res.success) {
+                    for (const [type, lvl] of Object.entries(res.skills)) {
+                        $(`#lvl-${type}`).text(lvl);
+                        $(`#lvl-${type}-val`).text(lvl * (type === 'unity' ? 2 : 1));
+                        $(`#cost-${type}`).text((lvl + 1) * 5000);
+                    }
+                }
+            }, 'json');
+        }
+
+        function upgradeSkill(type) {
+            Swal.fire({
+                title: 'Nâng cấp kỹ năng?',
+                text: `Xác nhận sử dụng Guild XP để nâng cấp kỹ năng này?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Nâng cấp ngay'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('api_guild_skills.php', { action: 'upgrade', type: type }, function(res) {
+                        if (res.success) {
+                            Swal.fire('Thành công!', 'Đã nâng cấp kỹ năng bang hội.', 'success');
+                            loadSkills();
+                            location.reload(); // Reload to update XP display
+                        } else {
+                            Swal.fire('Lỗi!', res.message, 'error');
+                        }
+                    }, 'json');
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            loadSkills();
+            // ... existing ready code ...
+        });
     </script>
 </body>
 </html>

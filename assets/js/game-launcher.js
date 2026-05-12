@@ -41,6 +41,7 @@ class GameLauncher {
             { id: 'poker', name: 'Poker', icon: '🃏', url: 'poker.php', category: 'card', new: false },
             { id: 'blackjack', name: 'Blackjack', icon: '🃏', url: 'bj.php', category: 'card', new: false },
             { id: 'bingo', name: 'Bingo', icon: '🎯', url: 'bingo.php', category: 'casino', new: false },
+            { id: 'banharc', name: 'Bắn Cá Arcade', icon: '🐟', url: 'games/banharc.php', category: 'arcade', new: true },
         ];
     }
 

@@ -191,7 +191,7 @@ if (isset($_GET['ajax'])) {
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --primary: #6366f1; --secondary: #a855f7; --success: #22c55e; --danger: #ef4444; --warning: #f59e0b; --bg: #0f172a; --card: rgba(255,255,255,0.05); }
+        :root { --primary: #6366f1; --secondary: #a855f7; --success: #22c55e; --danger: #ef4444; --status-warn: #f59e0b; --bg: #0f172a; --card: rgba(255,255,255,0.05); }
         body { font-family: 'Outfit', sans-serif; background: var(--bg); color: white; margin: 0; padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding: 20px; background: var(--card); border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); }
@@ -234,7 +234,7 @@ if (isset($_GET['ajax'])) {
         .bot-info span { font-size: 10px; color: #94a3b8; }
         
         .bot-stats { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .money { color: var(--warning); font-weight: 700; font-size: 14px; }
+        .money { color: var(--status-warn); font-weight: 700; font-size: 14px; }
         .wins { font-size: 12px; color: var(--primary); }
         
         .mood-badge { font-size: 9px; padding: 2px 6px; border-radius: 5px; text-transform: uppercase; font-weight: 800; }
@@ -265,9 +265,12 @@ if (isset($_GET['ajax'])) {
                 <span style="color: var(--success); font-size: 12px;">● Đang giám sát <?= $stats['total'] ?> thành viên Thiên Thần & Ác Quỷ</span>
             </div>
             <div style="display: flex; gap: 10px;">
+               
+                <a href="../chat3.php" class="btn" style="background: #334155; border: 1px solid rgba(255,255,255,0.1)">📋 Báo Cáo Tester</a>
+                <a href="../games/megaspin.php" class="btn" style="background: #065f46; border: 1px solid rgba(255,255,255,0.1)">🎡 Mega Spin</a>
                 <a href="bot_buff.php" class="btn" style="background: #1e293b; border: 1px solid rgba(255,255,255,0.1)">💰 Buff Tiền</a>
                 <a href="bot_runner.php" class="btn" style="background: linear-gradient(135deg, #6366f1, #a855f7)">🚀 Trình Điều Khiển Web</a>
-                <a href="javascript:void(0)" onclick="spawnBots()" class="btn" style="background: var(--warning)">➕ Sinh Bot</a>
+                <a href="javascript:void(0)" onclick="spawnBots()" class="btn" style="background: var(--status-warn)">➕ Sinh Bot</a>
             </div>
         </div>
 
@@ -284,7 +287,7 @@ if (isset($_GET['ajax'])) {
         <div class="grid-stats">
             <div class="stat-card">
                 <div class="stat-label">Tổng Tài Sản Quân Đoàn</div>
-                <div class="stat-value" style="color: var(--warning)"><?= number_format($stats['total_bot_money']) ?> GTLM</div>
+                <div class="stat-value" style="color: var(--status-warn)"><?= number_format($stats['total_bot_money']) ?> GTLM</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">Tỉ Lệ Lạm Phát</div>
@@ -333,18 +336,18 @@ if (isset($_GET['ajax'])) {
                 </div>
             </div>
             <div class="right-col">
-                <div class="panel" style="margin-bottom: 20px; border: 2px solid var(--warning); background: rgba(245, 158, 11, 0.05);">
-                    <h2 style="font-size: 18px; margin-top:0; color: var(--warning); display: flex; align-items: center; gap: 10px;">
+                <div class="panel" style="margin-bottom: 20px; border: 2px solid var(--status-warn); background: rgba(245, 158, 11, 0.05);">
+                    <h2 style="font-size: 18px; margin-top:0; color: var(--status-warn); display: flex; align-items: center; gap: 10px;">
                         <span>👑 OP BOT HÔM NAY</span>
-                        <span style="font-size: 10px; background: var(--warning); color: black; padding: 2px 6px; border-radius: 4px;">TOP PROFIT</span>
+                        <span style="font-size: 10px; background: var(--status-warn); color: black; padding: 2px 6px; border-radius: 4px;">TOP PROFIT</span>
                     </h2>
                     <div id="opBotSection">
                         <?php if (!empty($stats['top_bots_today'])): 
                             $opBot = $stats['top_bots_today'][0]; ?>
                             <div style="text-align: center; padding: 20px 10px;">
                                 <div style="position: relative; display: inline-block;">
-                                    <img src="<?= $opBot['ImageURL'] ?>" style="width: 80px; height: 80px; border-radius: 24px; border: 3px solid var(--warning); box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);">
-                                    <div style="position: absolute; bottom: -10px; right: -10px; background: var(--warning); color: black; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; border: 3px solid var(--bg);">1</div>
+                                    <img src="<?= $opBot['ImageURL'] ?>" style="width: 80px; height: 80px; border-radius: 24px; border: 3px solid var(--status-warn); box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);">
+                                    <div style="position: absolute; bottom: -10px; right: -10px; background: var(--status-warn); color: black; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; border: 3px solid var(--bg);">1</div>
                                 </div>
                                 <h3 style="margin: 15px 0 5px; font-size: 20px;"><?= $opBot['Name'] ?></h3>
                                 <div style="color: var(--success); font-weight: 800; font-size: 18px;">+<?= number_format($opBot['total_profit']) ?> GTLM</div>
@@ -364,7 +367,7 @@ if (isset($_GET['ajax'])) {
                                 <li style="color: #94a3b8; text-align: center; padding: 10px;">✨ Hệ thống ổn định, 0 lỗi API.</li>
                             <?php else: ?>
                                 <?php foreach (array_slice($apiFailures, 0, 8) as $api => $count): 
-                                    $severity = $count > 10 ? 'var(--danger)' : ($count > 5 ? 'var(--warning)' : 'var(--success)');
+                                    $severity = $count > 10 ? 'var(--danger)' : ($count > 5 ? 'var(--status-warn)' : 'var(--success)');
                                 ?>
                                     <li class="api-fail-item" style="border-color: rgba(255,255,255,0.03);">
                                         <code style="color: #f8fafc; font-size: 10px;"><?= htmlspecialchars($api) ?></code>
@@ -531,7 +534,7 @@ if (isset($_GET['ajax'])) {
                         const renderSection = (title, items, icon) => {
                             if (items.length === 0) return '';
                             return `<div style="margin-bottom: 20px;">
-                                <h4 style="color: var(--warning); border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;">${icon} ${title}</h4>
+                                <h4 style="color: var(--status-warn); border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;">${icon} ${title}</h4>
                                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                                     ${items.map(i => `<span class="tag" style="padding: 5px 10px; font-size: 12px; background: rgba(255,255,255,0.05);">${i.name || i.icon || ''} ${i.name || ''}</span>`).join('')}
                                 </div>
@@ -757,8 +760,8 @@ if (isset($_GET['ajax'])) {
                         opBotEl.innerHTML = `
                             <div style="text-align: center; padding: 20px 10px;">
                                 <div style="position: relative; display: inline-block;">
-                                    <img src="${opBot.ImageURL}" style="width: 80px; height: 80px; border-radius: 24px; border: 3px solid var(--warning); box-shadow: 0 0 20px rgba(245,158,11,0.4);">
-                                    <div style="position: absolute; bottom: -10px; right: -10px; background: var(--warning); color: black; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; border: 3px solid var(--bg);">1</div>
+                                    <img src="${opBot.ImageURL}" style="width: 80px; height: 80px; border-radius: 24px; border: 3px solid var(--status-warn); box-shadow: 0 0 20px rgba(245,158,11,0.4);">
+                                    <div style="position: absolute; bottom: -10px; right: -10px; background: var(--status-warn); color: black; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; border: 3px solid var(--bg);">1</div>
                                 </div>
                                 <h3 style="margin: 15px 0 5px; font-size: 20px;">${opBot.Name}</h3>
                                 <div style="color: var(--success); font-weight: 800; font-size: 18px;">+${new Intl.NumberFormat().format(opBot.total_profit)} GTLM</div>

@@ -3,7 +3,7 @@ session_start();
 
 // Kiểm tra đăng nhập
 if (!isset($_SESSION['Iduser'])) {
-    header("Location: login.php");
+    header("Location: ../login.php");
     exit();
 }
 require '../db_connect.php';

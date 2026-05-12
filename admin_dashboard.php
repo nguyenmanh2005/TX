@@ -277,6 +277,12 @@ body::after{
             <h1>Dashboard <span>Overview</span></h1>
         </div>
         <div class="header-right">
+            <a href="bot/tester_bot.php" target="_blank" class="btn btn-ghost" style="color: #ff7185; border-color: #fb7185;">
+                <i class="fa fa-robot"></i> Chạy Tester Bot
+            </a>
+            <a href="chat3.php" class="btn btn-ghost">
+                <i class="fa fa-bug"></i> Báo Cáo Lỗi
+            </a>
             <a href="admin_analytics.php" class="btn btn-primary">
                 <i class="fa fa-chart-line"></i> Phân Tích Website
             </a>

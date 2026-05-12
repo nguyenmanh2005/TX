@@ -14,7 +14,7 @@
  * @param bool $isWin Có thắng không
  * @return bool True nếu thành công, False nếu thất bại
  */
-function logGameHistory($conn, $userId, $gameName, $betAmount = 0, $winAmount = 0, $isWin = false)
+function logGameHistory(mysqli $conn, int $userId, string $gameName, float $betAmount = 0, float $winAmount = 0, bool $isWin = false)
 {
     // Kiểm tra bảng game_history có tồn tại không
     $checkTable = $conn->query("SHOW TABLES LIKE 'game_history'");
@@ -58,7 +58,7 @@ function logGameHistory($conn, $userId, $gameName, $betAmount = 0, $winAmount = 
  * @param string $date Ngày cần tính (format: Y-m-d)
  * @return float Số gtlm kiếm được
  */
-function calculateEarnedMoney($conn, $userId, $date)
+function calculateEarnedMoney(mysqli $conn, int $userId, string $date)
 {
     $checkTable = $conn->query("SHOW TABLES LIKE 'game_history'");
     if (!$checkTable || $checkTable->num_rows == 0) {
@@ -91,7 +91,7 @@ function calculateEarnedMoney($conn, $userId, $date)
  * @param string|null $gameName Tên game cụ thể (null nếu đếm tất cả)
  * @return int Số lần chơi
  */
-function countGamesPlayed($conn, $userId, $date, $gameName = null)
+function countGamesPlayed(mysqli $conn, int $userId, string $date, ?string $gameName = null)
 {
     $checkTable = $conn->query("SHOW TABLES LIKE 'game_history'");
     if (!$checkTable || $checkTable->num_rows == 0) {
@@ -134,7 +134,7 @@ function countGamesPlayed($conn, $userId, $date, $gameName = null)
  * @param string|null $gameName Tên game cụ thể (null nếu đếm tất cả)
  * @return int Số lần thắng
  */
-function countWins($conn, $userId, $date, $gameName = null)
+function countWins(mysqli $conn, int $userId, string $date, ?string $gameName = null)
 {
     $checkTable = $conn->query("SHOW TABLES LIKE 'game_history'");
     if (!$checkTable || $checkTable->num_rows == 0) {
@@ -173,7 +173,7 @@ function countWins($conn, $userId, $date, $gameName = null)
  * Cập nhật tiến độ Events tự động
  * Gọi hàm này sau khi logGameHistory để tự động cập nhật events
  */
-function updateEventProgress($conn, $userId, $actionType, $actionValue)
+function updateEventProgress(mysqli $conn, int $userId, string $actionType, float $actionValue)
 {
     // Kiểm tra bảng events có tồn tại không
     $checkTable = $conn->query("SHOW TABLES LIKE 'events'");
@@ -241,7 +241,7 @@ function updateEventProgress($conn, $userId, $actionType, $actionValue)
 /**
  * Ghi lại lịch sử game và tự động cập nhật Events
  */
-function logGameHistoryWithEvents($conn, $userId, $gameName, $betAmount = 0, $winAmount = 0, $isWin = false)
+function logGameHistoryWithEvents(mysqli $conn, int $userId, string $gameName, float $betAmount = 0, float $winAmount = 0, bool $isWin = false)
 {
     // Ghi lại game history
     $result = logGameHistory($conn, $userId, $gameName, $betAmount, $winAmount, $isWin);
@@ -275,7 +275,7 @@ function logGameHistoryWithEvents($conn, $userId, $gameName, $betAmount = 0, $wi
  * Cập nhật streak khi chơi game
  * Gọi hàm này sau khi logGameHistory để tự động cập nhật streak
  */
-function updateStreak($conn, $userId)
+function updateStreak(mysqli $conn, int $userId)
 {
     // Kiểm tra bảng user_streaks có tồn tại không
     $checkTable = $conn->query("SHOW TABLES LIKE 'user_streaks'");
@@ -373,7 +373,7 @@ function updateStreak($conn, $userId)
 /**
  * Ghi lại lịch sử game và tự động cập nhật Streak
  */
-function logGameHistoryWithStreak($conn, $userId, $gameName, $betAmount = 0, $winAmount = 0, $isWin = false)
+function logGameHistoryWithStreak(mysqli $conn, int $userId, string $gameName, float $betAmount = 0, float $winAmount = 0, bool $isWin = false)
 {
     // Ghi lại game history
     $result = logGameHistory($conn, $userId, $gameName, $betAmount, $winAmount, $isWin);
@@ -389,7 +389,7 @@ function logGameHistoryWithStreak($conn, $userId, $gameName, $betAmount = 0, $wi
 /**
  * Cập nhật VIP total_spent khi chơi game
  */
-function updateVipSpent($conn, $userId, $betAmount)
+function updateVipSpent(mysqli $conn, int $userId, float $betAmount)
 {
     // Kiểm tra bảng user_vip có tồn tại không
     $checkTable = $conn->query("SHOW TABLES LIKE 'user_vip'");
@@ -443,7 +443,7 @@ function updateVipSpent($conn, $userId, $betAmount)
 /**
  * Cập nhật Reward Points khi chơi game
  */
-function updateRewardPoints($conn, $userId, $betAmount, $winAmount, $isWin)
+function updateRewardPoints(mysqli $conn, int $userId, float $betAmount, float $winAmount, bool $isWin)
 {
     // Kiểm tra bảng reward_points có tồn tại không
     $checkTable = $conn->query("SHOW TABLES LIKE 'reward_points'");
@@ -489,12 +489,23 @@ function updateRewardPoints($conn, $userId, $betAmount, $winAmount, $isWin)
 /**
  * Ghi lại lịch sử game và tự động cập nhật Streak + VIP + Reward Points + Social Feed
  */
-function logGameHistoryWithAll($conn, $userId, $gameName, $betAmount = 0, $winAmount = 0, $isWin = false)
+function logGameHistoryWithAll(mysqli $conn, int $userId, string $gameName, float $betAmount = 0, float $winAmount = 0, bool $isWin = false)
 {
     // Ghi lại game history
     $result = logGameHistory($conn, $userId, $gameName, $betAmount, $winAmount, $isWin);
 
     if ($result) {
+        // Cập nhật Guild War Points
+        require_once 'guild_war_helper.php';
+        updateGuildWarPoints($conn, $userId, $winAmount, $betAmount);
+
+        // Cập nhật Battle Pass missions
+        require_once 'api_battle_pass.php';
+        updateBPMission($conn, $userId, 'play_game', 1);
+        if ($winAmount > 0) {
+            updateBPMission($conn, $userId, 'win_money', $winAmount);
+        }
+
         // Cập nhật streak
         updateStreak($conn, $userId);
 
@@ -503,6 +514,15 @@ function logGameHistoryWithAll($conn, $userId, $gameName, $betAmount = 0, $winAm
 
         // Cập nhật reward points
         updateRewardPoints($conn, $userId, $betAmount, $winAmount, $isWin);
+
+        // Cập nhật Jackpot
+        require_once 'api_jackpot.php';
+        contributeToJackpot($conn, $betAmount);
+        $jackpotWin = checkJackpotWin($conn, $userId);
+        if ($jackpotWin > 0) {
+            require_once 'api_notifications.php';
+            sendNotification($conn, $userId, "🎉 NỔ HŨ RỒNG THẦN!", "Chúc mừng! Bạn vừa nổ hũ và nhận được " . number_format($jackpotWin) . " GTLM!", "system");
+        }
 
         // Tạo feed activity cho big win
         if ($isWin && $winAmount >= 5000000) {

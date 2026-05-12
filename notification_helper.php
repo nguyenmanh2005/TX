@@ -21,7 +21,7 @@
  * @param bool $isImportant Có quan trọng không
  * @return bool True nếu thành công
  */
-function createNotification($conn, $userId, $type, $title, $content, $icon = '🔔', $link = null, $relatedId = null, $isImportant = false)
+function createNotification(mysqli $conn, int $userId, string $type, string $title, string $content, string $icon = '🔔', ?string $link = null, ?int $relatedId = null, bool $isImportant = false)
 {
     // Kiểm tra bảng tồn tại
     $checkTable = $conn->query("SHOW TABLES LIKE 'user_notifications'");
@@ -71,7 +71,7 @@ function createNotification($conn, $userId, $type, $title, $content, $icon = '�
 /**
  * Tạo thông báo khi nhận lời mời kết bạn
  */
-function notifyFriendRequest($conn, $receiverId, $senderId, $senderName)
+function notifyFriendRequest(mysqli $conn, int $receiverId, int $senderId, string $senderName)
 {
     return createNotification(
         $conn,
@@ -88,7 +88,7 @@ function notifyFriendRequest($conn, $receiverId, $senderId, $senderName)
 /**
  * Tạo thông báo khi đạt achievement
  */
-function notifyAchievement($conn, $userId, $achievementId, $achievementName)
+function notifyAchievement(mysqli $conn, int $userId, int $achievementId, string $achievementName)
 {
     // Tạo notification thông thường
     $result = createNotification(
@@ -141,7 +141,7 @@ function notifyAchievement($conn, $userId, $achievementId, $achievementName)
 /**
  * Tạo feed activity khi có hoạt động lớn
  */
-function createFeedActivity($conn, $userId, $activityType, $message, $activityData = null)
+function createFeedActivity(mysqli $conn, int $userId, string $activityType, string $message, $activityData = null)
 {
     // Kiểm tra bảng social_feed có tồn tại không
     $checkTable = $conn->query("SHOW TABLES LIKE 'social_feed'");
@@ -163,7 +163,7 @@ function createFeedActivity($conn, $userId, $activityType, $message, $activityDa
 /**
  * Tạo thông báo khi nhận quà
  */
-function notifyGiftReceived($conn, $receiverId, $senderId, $senderName, $giftType, $giftValue)
+function notifyGiftReceived(mysqli $conn, int $receiverId, int $senderId, string $senderName, string $giftType, mixed $giftValue)
 {
     $giftTypeText = [
         'money' => 'gtlm',
@@ -190,7 +190,7 @@ function notifyGiftReceived($conn, $receiverId, $senderId, $senderName, $giftTyp
 /**
  * Tạo thông báo về sự kiện mới
  */
-function notifyEventUpdate($conn, $userId, $eventId, $eventName, $message)
+function notifyEventUpdate(mysqli $conn, int $userId, int $eventId, string $eventName, string $message)
 {
     return createNotification(
         $conn,
@@ -207,7 +207,7 @@ function notifyEventUpdate($conn, $userId, $eventId, $eventName, $message)
 /**
  * Tạo thông báo về giải đấu
  */
-function notifyTournamentUpdate($conn, $userId, $tournamentId, $tournamentName, $message)
+function notifyTournamentUpdate(mysqli $conn, int $userId, int $tournamentId, string $tournamentName, string $message)
 {
     return createNotification(
         $conn,
@@ -224,7 +224,7 @@ function notifyTournamentUpdate($conn, $userId, $tournamentId, $tournamentName, 
 /**
  * Tạo thông báo khi được mời vào guild
  */
-function notifyGuildInvite($conn, $receiverId, $guildId, $guildName, $inviterName)
+function notifyGuildInvite(mysqli $conn, int $receiverId, int $guildId, string $guildName, string $inviterName)
 {
     return createNotification(
         $conn,
@@ -241,7 +241,7 @@ function notifyGuildInvite($conn, $receiverId, $guildId, $guildName, $inviterNam
 /**
  * Tạo thông báo tin nhắn guild
  */
-function notifyGuildMessage($conn, $userId, $guildId, $guildName, $senderName, $message)
+function notifyGuildMessage(mysqli $conn, int $userId, int $guildId, string $guildName, string $senderName, string $message)
 {
     return createNotification(
         $conn,

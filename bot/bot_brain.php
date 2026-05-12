@@ -14,12 +14,43 @@ class BotBrain {
         'trietly_nguoc' => ['chat_style' => 'trietly_nguoc'],
         'hambo' => ['chat_style' => 'hambo'],
         'cugia' => ['chat_style' => 'cugia'],
-        'genalpha' => ['chat_style' => 'genalpha']
+        'genalpha' => ['chat_style' => 'genalpha'],
+        'announcer' => ['chat_style' => 'announcer']
     ];
 
-    public function getPersonality(int $userId) {
+    public function getPersonality(int $userId, string $email = '') {
+        $config = include __DIR__ . '/config.php';
+        if (in_array($email, $config['announcer_emails'] ?? [])) {
+            return 'announcer';
+        }
         $types = array_keys($this->personalities);
-        return $types[$userId % count($types)];
+        // Exclude announcer from random assignment
+        $randomTypes = array_filter($types, fn($t) => $t !== 'announcer');
+        return $randomTypes[$userId % count($randomTypes)];
+    }
+
+    public function getRivalryMessage(string $type, string $targetName) {
+        $templates = [
+            'rival_win' => [
+                "Haha {rival_name} bay màu rồi, hôm nay Ohio thật sự 💀",
+                "Nhìn {rival_name} bay màu mà tui thấy lòng nhẹ nhõm lạ kỳ! 😂",
+                "Vận may của {rival_name} hết rồi à? Yếu thế!"
+            ],
+            'ally_win' => [
+                "Đi thôi anh em {ally_name}, húp sạch lộc đê! 🔥",
+                "Tự hào về đồng đội {ally_name} quá, húp đậm nhé!",
+                "Đúng là anh em của tui, {ally_name} đánh đâu húp đó!"
+            ],
+            'rival_challenge' => [
+                "@{rival_name} dám thách đấu PvP không, yếu thế!",
+                "Này {rival_name}, ra chiêu solo 1-1 xem ai bay màu trước?",
+                "Tui thách {rival_name} dám theo kèo này đó, nhát gan!"
+            ]
+        ];
+        
+        $list = $templates[$type] ?? ["@{target_name} cẩn thận đó!"];
+        $msg = $list[array_rand($list)];
+        return str_replace('{rival_name}', $targetName, str_replace('{ally_name}', $targetName, $msg));
     }
 
     public function getTimeKey() {
@@ -135,6 +166,22 @@ class BotBrain {
         if (empty($list)) $list = ["Đang tỉ thí..."];
         $msg = $list[array_rand($list)];
 
+        // --- MEMORY LAYER INTEGRATION ---
+        if (isset($data['memory']) && $data['memory']) {
+            $mem = $data['memory'];
+            if ($mem['interaction_count'] > 10 && rand(1, 100) <= 50) {
+                $personalized = [
+                    "Chào người quen {$mem['name']}! Lại húp được gì chưa?",
+                    "Bác {$mem['name']} dạo này phong độ nhỉ, thấy online suốt.",
+                    "Lần trước thấy bác quẩy {$mem['favorite_game']}, nay đổi vị à?"
+                ];
+                $msg = $personalized[array_rand($personalized)];
+            }
+            if ($mem['tone'] === 'friendly' && rand(1, 100) <= 30) {
+                $msg = "Bạn hiền {$mem['name']} ơi, " . ltrim($msg);
+            }
+        }
+
         // 4. Broke & Tilted Special Overrides
         if ($type === 'begging') {
             $begMsgs = ["Em cháy túi rồi, bác nào tốt bụng cho em ít GTLM với! 🙏", "Hết GTLM rồi, ai cứu em phát...", "Trắng tay thật rồi, xin húp lộc từ các đại gia!", "Bác nào húp đậm cho em xin ít vốn ra chiêu với ạ."];
@@ -179,7 +226,16 @@ class BotBrain {
         foreach ($data as $key => $val) {
             $msg = str_replace('{' . $key . '}', $val, $msg);
         }
-        return $msg;
+
+        return $this->replaceVocabulary($msg);
+    }
+
+    /**
+     * 📝 Bộ lọc từ vựng tùy chỉnh (Vocabulary Filter)
+     */
+    private function replaceVocabulary(string $msg) {
+        require_once __DIR__ . '/../vocabulary_helper.php';
+        return VocabularyHelper::mask($msg);
     }
 
     private function loadChatFile(string $style) {

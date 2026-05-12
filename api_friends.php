@@ -325,6 +325,10 @@ if ($action === 'send_message') {
         exit();
     }
     
+    // Áp dụng bộ lọc từ vựng
+    require_once 'vocabulary_helper.php';
+    $message = VocabularyHelper::mask($message);
+    
     // Kiểm tra có phải bạn bè không
     $checkFriendship = $conn->prepare("SELECT * FROM friends WHERE user_id = ? AND friend_id = ? AND status = 'accepted'");
     $checkFriendship->bind_param("ii", $userId, $toUserId);

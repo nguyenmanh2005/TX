@@ -7,7 +7,7 @@ require '../db_connect.php';
 require_once '../load_theme.php';
 
 if (!isset($_SESSION['Iduser'])) {
-    header("Location: login.php");
+    header("Location: ../login.php");
     exit();
 }
 

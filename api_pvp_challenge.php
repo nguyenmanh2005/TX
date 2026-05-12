@@ -163,6 +163,16 @@ switch ($action) {
             $acceptStmt->execute();
             $acceptStmt->close();
 
+            // Khởi tạo Caro nếu là game Caro
+            if ($challenge['game_type'] == 'caro') {
+                $board = array_fill(0, 15, array_fill(0, 15, 0)); // 15x15 board
+                $boardJson = json_encode($board);
+                $initCaro = $conn->prepare("UPDATE pvp_challenges SET board_state = ?, current_turn_id = ? WHERE id = ?");
+                $initCaro->bind_param("sii", $boardJson, $challenge['challenger_id'], $challengeId);
+                $initCaro->execute();
+                $initCaro->close();
+            }
+
             $conn->commit();
 
             echo json_encode([
@@ -312,6 +322,89 @@ switch ($action) {
         ]);
         break;
 
+    case 'make_move':
+        // Đánh một nước trong Caro
+        $challengeId = (int) ($_POST['challenge_id'] ?? 0);
+        $row = (int) ($_POST['row'] ?? -1);
+        $col = (int) ($_POST['col'] ?? -1);
+
+        if ($challengeId <= 0 || $row < 0 || $col < 0 || $row >= 15 || $col >= 15) {
+            echo json_encode(['success' => false, 'message' => 'Dữ liệu không hợp lệ!']);
+            exit;
+        }
+
+        // Lấy challenge
+        $getChallenge = $conn->prepare("SELECT * FROM pvp_challenges WHERE id = ? AND status = 'accepted' AND game_type = 'caro'");
+        $getChallenge->bind_param("i", $challengeId);
+        $getChallenge->execute();
+        $challenge = $getChallenge->get_result()->fetch_assoc();
+        $getChallenge->close();
+
+        if (!$challenge) {
+            echo json_encode(['success' => false, 'message' => 'Challenge không hợp lệ!']);
+            exit;
+        }
+
+        // Kiểm tra lượt đánh
+        if ($challenge['current_turn_id'] != $userId) {
+            echo json_encode(['success' => false, 'message' => 'Chưa tới lượt của bạn!']);
+            exit;
+        }
+
+        $board = json_decode($challenge['board_state'], true);
+        if ($board[$row][$col] != 0) {
+            echo json_encode(['success' => false, 'message' => 'Ô này đã có người đánh!']);
+            exit;
+        }
+
+        // Thực hiện đánh
+        $playerToken = ($userId == $challenge['challenger_id']) ? 1 : 2;
+        $board[$row][$col] = $playerToken;
+        $boardJson = json_encode($board);
+
+        // Kiểm tra thắng
+        $isWin = checkCaroWin($board, $row, $col, $playerToken);
+        $nextTurnId = ($userId == $challenge['challenger_id']) ? $challenge['opponent_id'] : $challenge['challenger_id'];
+
+        $conn->begin_transaction();
+        try {
+            if ($isWin) {
+                // Thắng cuộc
+                $totalBet = $challenge['bet_amount'] * 2;
+                $updateWinner = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
+                $updateWinner->bind_param("di", $totalBet, $userId);
+                $updateWinner->execute();
+                $updateWinner->close();
+
+                updatePvpStats($conn, $userId, true, $totalBet);
+                updatePvpStats($conn, $nextTurnId, false, $challenge['bet_amount']);
+
+                $updateResult = $conn->prepare("UPDATE pvp_challenges SET status = 'completed', board_state = ?, result = ?, winner_id = ?, completed_at = NOW() WHERE id = ?");
+                $resultStr = ($userId == $challenge['challenger_id']) ? 'challenger_win' : 'opponent_win';
+                $updateResult->bind_param("ssii", $boardJson, $resultStr, $userId, $challengeId);
+                $updateResult->execute();
+                $updateResult->close();
+            } else {
+                // Tiếp tục game
+                $updateMove = $conn->prepare("UPDATE pvp_challenges SET board_state = ?, current_turn_id = ? WHERE id = ?");
+                $updateMove->bind_param("sii", $boardJson, $nextTurnId, $challengeId);
+                $updateMove->execute();
+                $updateMove->close();
+            }
+
+            $conn->commit();
+            echo json_encode([
+                'success' => true,
+                'message' => $isWin ? 'Bạn đã thắng!' : 'Đã đánh thành công!',
+                'is_win' => $isWin,
+                'board' => $board
+            ]);
+        } catch (Exception $e) {
+            $conn->rollback();
+            echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()]);
+        }
+        break;
+
     case 'get_challenge':
         // Lấy thông tin challenge
         $challengeId = (int) ($_GET['challenge_id'] ?? 0);
@@ -415,13 +508,70 @@ switch ($action) {
         }
         break;
 
+    case 'rematch':
+        $challengeId = (int) ($_POST['challenge_id'] ?? 0);
+        if (!$challengeId) {
+            echo json_encode(['success' => false, 'message' => 'ID không hợp lệ']);
+            break;
+        }
+
+        // Lấy thông tin trận cũ
+        $sql = "SELECT * FROM pvp_challenges WHERE id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("i", $challengeId);
+        $stmt->execute();
+        $old = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$old || $old['status'] != 'completed') {
+            echo json_encode(['success' => false, 'message' => 'Trận đấu chưa kết thúc']);
+            break;
+        }
+
+        // Xác định đối thủ
+        $opponentId = ($old['challenger_id'] == $userId) ? $old['opponent_id'] : $old['challenger_id'];
+        $betAmount = $old['bet_amount'];
+        $gameType = $old['game_type'];
+
+        // Kiểm tra tiền
+        $userMoneyRes = $conn->query("SELECT Money FROM users WHERE Iduser = $userId");
+        $userMoney = $userMoneyRes->fetch_assoc()['Money'];
+        if ($userMoney < $betAmount) {
+            echo json_encode(['success' => false, 'message' => 'Bạn không đủ tiền để tái đấu!']);
+            break;
+        }
+
+        // Tạo challenge mới - trừ tiền luôn như luồng create_challenge
+        $conn->begin_transaction();
+        try {
+            $conn->query("UPDATE users SET Money = Money - $betAmount WHERE Iduser = $userId");
+            
+            $sqlInsert = "INSERT INTO pvp_challenges (challenger_id, opponent_id, game_type, bet_amount, status) VALUES (?, ?, ?, ?, 'pending')";
+            $stmt = $conn->prepare($sqlInsert);
+            $stmt->bind_param("iisd", $userId, $opponentId, $gameType, $betAmount);
+            $stmt->execute();
+            $newId = $stmt->insert_id;
+            $stmt->close();
+
+            // Cập nhật Battle Pass mission
+            require_once 'api_battle_pass.php';
+            updateBPMission($conn, $userId, 'rematch_pvp', 1);
+
+            $conn->commit();
+            echo json_encode(['success' => true, 'new_challenge_id' => $newId]);
+        } catch (Exception $e) {
+            $conn->rollback();
+            echo json_encode(['success' => false, 'message' => 'Lỗi tạo trận tái đấu: ' . $e->getMessage()]);
+        }
+        break;
+
     default:
         echo json_encode(['success' => false, 'message' => 'Action không hợp lệ!']);
         break;
 }
 
 // Hàm tính kết quả game
-function calculateGameResult($gameType, $challengerChoice, $opponentChoice)
+function calculateGameResult(string $gameType, string $challengerChoice, string $opponentChoice)
 {
     switch ($gameType) {
         case 'coinflip':
@@ -474,8 +624,45 @@ function calculateGameResult($gameType, $challengerChoice, $opponentChoice)
     return 'draw';
 }
 
+// Hàm kiểm tra thắng Caro
+function checkCaroWin(array $board, int $row, int $col, int $player)
+{
+    $directions = [
+        [0, 1],  // Ngang
+        [1, 0],  // Dọc
+        [1, 1],  // Chéo chính
+        [1, -1]  // Chéo phụ
+    ];
+
+    foreach ($directions as $dir) {
+        $count = 1;
+        // Kiểm tra 2 phía của hướng
+        for ($i = 1; $i < 5; $i++) {
+            $r = $row + $dir[0] * $i;
+            $c = $col + $dir[1] * $i;
+            if ($r >= 0 && $r < 15 && $c >= 0 && $c < 15 && $board[$r][$c] == $player) {
+                $count++;
+            } else {
+                break;
+            }
+        }
+        for ($i = 1; $i < 5; $i++) {
+            $r = $row - $dir[0] * $i;
+            $c = $col - $dir[1] * $i;
+            if ($r >= 0 && $r < 15 && $c >= 0 && $c < 15 && $board[$r][$c] == $player) {
+                $count++;
+            } else {
+                break;
+            }
+        }
+
+        if ($count >= 5) return true;
+    }
+    return false;
+}
+
 // Hàm cập nhật stats
-function updatePvpStats($conn, $userId, $isWin, $amount)
+function updatePvpStats(mysqli $conn, int $userId, ?bool $isWin, float $amount)
 {
     $checkStats = $conn->prepare("SELECT * FROM pvp_stats WHERE user_id = ?");
     $checkStats->bind_param("i", $userId);

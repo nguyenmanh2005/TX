@@ -11,13 +11,13 @@ if (php_sapi_name() === 'cli' ||
     (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'ngrok') !== false) ||
     (isset($_SERVER['SERVER_ADDR']) && $_SERVER['SERVER_ADDR'] == '127.0.0.1')) {
     // --- CẤU HÌNH LOCAL (XAMPP) ---
-    $servername = "localhost";
+    $servername = "127.0.0.1";
     $db_username = "root";
     $db_password = "";
     $dbname      = "vdkmnuaahosting_taixiu"; // Đảm bảo bạn đã tạo DB này trong phpMyAdmin local
 } else {
     // --- CẤU HÌNH HOSTING ---
-    $servername = "localhost";
+    $servername = "127.0.0.1";
     $db_username = "vdkmnuaahosting_manh1";
     $db_password = "Alohaka3@";
     $dbname      = "vdkmnuaahosting_taixiu";
