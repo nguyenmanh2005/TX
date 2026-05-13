@@ -28,6 +28,7 @@ if ($action === 'craft') {
     }
 
     $reqs = json_decode($recipe['input_requirements'], true);
+    $matReqs = json_decode($recipe['material_requirements'], true) ?? [];
     $gtlmCost = $recipe['gtlm_cost'];
     $outType = $recipe['output_type'];
     $outId = $recipe['output_item_id'];
@@ -59,17 +60,14 @@ if ($action === 'craft') {
             throw new Exception("Bạn không đủ GTLM để thực hiện chế tác!");
         }
 
-        // 3. Kiểm tra và tiêu hao nguyên liệu
+        // 3. Kiểm tra và tiêu hao Item (Theme, Cursor, Frame)
         foreach ($reqs as $type => $amt) {
-            $tableName = '';
-            $idCol = '';
-            
+            $tableName = ''; $idCol = '';
             if ($type === 'theme') { $tableName = 'user_themes'; $idCol = 'theme_id'; }
             elseif ($type === 'cursor') { $tableName = 'user_cursors'; $idCol = 'cursor_id'; }
             elseif ($type === 'avatar_frame') { $tableName = 'user_avatar_frames'; $idCol = 'avatar_frame_id'; }
             elseif ($type === 'chat_frame') { $tableName = 'user_chat_frames'; $idCol = 'chat_frame_id'; }
             
-            // Tìm các item nhàn rỗi (không active) để tiêu hao
             $sql = "SELECT id FROM $tableName WHERE user_id = ? ";
             if ($type !== 'avatar_frame') $sql .= " AND is_active = 0 ";
             $sql .= " LIMIT $amt";
@@ -84,9 +82,17 @@ if ($action === 'craft') {
                 throw new Exception("Không đủ nguyên liệu $type!");
             }
 
-            // Xóa nguyên liệu
             foreach ($itemsToConsume as $item) {
                 $conn->query("DELETE FROM $tableName WHERE id = {$item['id']}");
+            }
+        }
+
+        // 4. Kiểm tra và tiêu hao Nguyên Liệu (Materials)
+        require_once 'material_helper.php';
+        foreach ($matReqs as $code => $amt) {
+            $success = add_material($conn, $userId, $code, -$amt, 'craft_cost', "Recipe #{$recipeId}");
+            if (!$success) {
+                throw new Exception("Không đủ nguyên liệu: $code!");
             }
         }
 

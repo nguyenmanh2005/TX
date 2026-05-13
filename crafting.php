@@ -29,6 +29,13 @@ function getUserItemCounts($conn, $userId) {
     $res = $conn->query("SELECT COUNT(*) as total FROM user_avatar_frames WHERE user_id = $userId");
     $counts['avatar_frame'] = $res->fetch_assoc()['total'];
     
+    // Materials
+    require_once 'material_helper.php';
+    $mats = get_user_materials($conn, $userId);
+    foreach ($mats as $m) {
+        $counts[$m['code']] = $m['quantity'];
+    }
+    
     return $counts;
 }
 
@@ -249,6 +256,10 @@ $userMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fet
                 foreach ($reqs as $type => $amt) {
                     if (($userCounts[$type] ?? 0) < $amt) $canCraft = false;
                 }
+                $matReqs = json_decode($recipe['material_requirements'], true) ?? [];
+                foreach ($matReqs as $code => $amt) {
+                    if (($userCounts[$code] ?? 0) < $amt) $canCraft = false;
+                }
             ?>
             <div class="recipe-card">
                 <div class="success-rate">Tỉ lệ: <?= $recipe['success_rate'] ?>%</div>
@@ -263,6 +274,20 @@ $userMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fet
                     ?>
                         <div class="req-item <?= $met ? 'met' : 'not-met' ?>">
                             <span><?= ucfirst(str_replace('_', ' ', $type)) ?></span>
+                            <span><?= $has ?> / <?= $amt ?></span>
+                        </div>
+                    <?php endforeach; ?>
+
+                    <?php 
+                    $matReqs = json_decode($recipe['material_requirements'], true) ?? [];
+                    foreach ($matReqs as $code => $amt): 
+                        // Fetch material info for icon/name
+                        $matInfo = $conn->query("SELECT name, icon FROM materials WHERE code = '$code'")->fetch_assoc();
+                        $has = $userCounts[$code] ?? 0;
+                        $met = ($has >= $amt);
+                    ?>
+                        <div class="req-item <?= $met ? 'met' : 'not-met' ?>">
+                            <span><?= $matInfo['icon'] ?> <?= $matInfo['name'] ?></span>
                             <span><?= $has ?> / <?= $amt ?></span>
                         </div>
                     <?php endforeach; ?>

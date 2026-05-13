@@ -60,13 +60,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Cập nhật ảnh đại diện nếu có
     if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
-        $imagePath = 'uploads/' . basename($_FILES['image']['name']);
-        if (move_uploaded_file($_FILES['image']['tmp_name'], $imagePath)) {
-            $updateImageSql = "UPDATE users SET ImageURL = ? WHERE Iduser = ?";
-            $stmt = $conn->prepare($updateImageSql);
-            $stmt->bind_param("si", $imagePath, $userId);
-            $stmt->execute();
-            $stmt->close();
+        $allowedExts = ['jpg', 'jpeg', 'png', 'gif'];
+        $allowedMimes = ['image/jpeg', 'image/png', 'image/gif'];
+        
+        $filename = $_FILES['image']['name'];
+        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        
+        // 1. Kiểm tra extension
+        if (in_array($ext, $allowedExts)) {
+            // 2. Kiểm tra MIME thực tế
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mime = finfo_file($finfo, $_FILES['image']['tmp_name']);
+            if (PHP_VERSION_ID < 80500) {
+                finfo_close($finfo);
+            }
+            
+            if (in_array($mime, $allowedMimes)) {
+                // 3. Đổi tên file ngẫu nhiên để tránh shell execution và overwrite
+                $newFilename = uniqid('avatar_', true) . '.' . $ext;
+                $imagePath = 'uploads/' . $newFilename;
+                
+                if (move_uploaded_file($_FILES['image']['tmp_name'], $imagePath)) {
+                    $updateImageSql = "UPDATE users SET ImageURL = ? WHERE Iduser = ?";
+                    $stmt = $conn->prepare($updateImageSql);
+                    $stmt->bind_param("si", $imagePath, $userId);
+                    $stmt->execute();
+                    $stmt->close();
+                }
+            }
         }
     }
 
@@ -298,10 +319,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <h2>✏️ Chỉnh Sửa Hồ Sơ</h2>
             <form method="POST" enctype="multipart/form-data" id="editForm">
                 <label for="name">👤 Tên:</label>
-                <input type="text" id="name" name="name" value="<?= htmlspecialchars($user['Name'], ENT_QUOTES, 'UTF-8') ?>" required>
+                <input type="text" id="name" name="name" value="<?= htmlspecialchars((string)($user['Name'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required>
 
                 <label for="email">📧 Email:</label>
-                <input type="email" id="email" name="email" value="<?= htmlspecialchars($user['Email'], ENT_QUOTES, 'UTF-8') ?>" required>
+                <input type="email" id="email" name="email" value="<?= htmlspecialchars((string)($user['Email'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required>
 
                 <label for="password">🔒 Mật khẩu mới (để trống nếu không đổi):</label>
                 <input type="password" id="password" name="password" placeholder="Nhập mật khẩu mới...">

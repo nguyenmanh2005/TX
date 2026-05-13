@@ -1,9 +1,5 @@
 <?php
 session_start();
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-header('Content-Type: text/html; charset=utf-8');
-
 require 'db_connect.php';
 
 // Kiểm tra kết nối
@@ -50,11 +46,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && $_POST["action"] === "forgot") {
         $stmt_upd->bind_param("ss", $token, $email);
         $stmt_upd->execute();
 
-        $reset_link = "ngu1.php";
+        $reset_link = "forgot_password_step2.php?email=" . urlencode($email) . "&token=" . urlencode($token);
 
         echo json_encode([
             "status" => "success",
-            "message" => "Vì Lười Làm Click Vào Đây Để Nhập Lại Mật Khẩu.",
+            "message" => "Vui lòng click vào liên kết bên dưới để đặt lại mật khẩu.",
             "link" => $reset_link
         ]);
     }

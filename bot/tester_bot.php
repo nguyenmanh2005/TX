@@ -58,20 +58,42 @@ function postToChat(mysqli $conn, string $botName, string $message, string $avat
     $stmt->close();
 }
 
+function loginToSystem(string $baseUrl, string $username, string $password) {
+    $cookieFile = __DIR__ . '/cookies.txt';
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $baseUrl . 'api_login.php');
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query(['username' => $username, 'password' => $password]));
+    curl_setopt($ch, CURLOPT_COOKIEJAR, $cookieFile);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_exec($ch);
+    
+    if (PHP_VERSION_ID < 80500) {
+        curl_close($ch);
+    }
+}
+
+// Nếu bạn muốn quét các trang yêu cầu đăng nhập, hãy bỏ comment dòng dưới và nhập info
+loginToSystem($baseUrl, 'cumanhpt@gmail.com', '1');
+
 function checkUrl(string $url) {
+    $cookieFile = __DIR__ . '/cookies.txt';
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false); // Đã đổi: Không tự động follow để phát hiện redirect 302
     curl_setopt($ch, CURLOPT_TIMEOUT, 10);
     curl_setopt($ch, CURLOPT_USERAGENT, "AdminTesterBot/1.0");
+    curl_setopt($ch, CURLOPT_COOKIEFILE, $cookieFile);
+    curl_setopt($ch, CURLOPT_COOKIEJAR, $cookieFile);
     
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $finalUrl = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
     $error = curl_error($ch);
+    
     if (PHP_VERSION_ID < 80500) {
-        $cc = 'curl_close';
-        $cc($ch);
+        curl_close($ch);
     }
 
     if ($error) {
@@ -82,6 +104,11 @@ function checkUrl(string $url) {
         "code" => $httpCode,
         "issues" => []
     ];
+
+    // Phát hiện redirect về login.php (Dấu hiệu thiếu session)
+    if ($httpCode == 302 || $httpCode == 301) {
+        $results["issues"][] = "Phát hiện chuyển hướng (Có thể là yêu cầu đăng nhập)";
+    }
 
     if ($httpCode >= 400) {
         $results["issues"][] = "HTTP Code $httpCode";

@@ -368,6 +368,9 @@ if (
         $stmt->close();
     }
 }
+// Lấy nguyên liệu đã sở hữu
+require_once 'material_helper.php';
+$userMaterials = get_user_materials($conn, $userId);
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -617,6 +620,27 @@ if (
         }
             \n
     
+        .material-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            position: relative;
+        }
+        .material-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        .rarity-common { border-color: #bdc3c7; background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%); }
+        .rarity-uncommon { border-color: #2ecc71; background: linear-gradient(135deg, rgba(46, 204, 113, 0.1) 0%, #fff 100%); }
+        .rarity-rare { border-color: #3498db; background: linear-gradient(135deg, rgba(52, 152, 219, 0.1) 0%, #fff 100%); }
+        .rarity-epic { border-color: #9b59b6; background: linear-gradient(135deg, rgba(155, 89, 182, 0.1) 0%, #fff 100%); }
+        .rarity-legendary { border-color: #f1c40f; background: linear-gradient(135deg, rgba(241, 196, 15, 0.1) 0%, #fff 100%); box-shadow: 0 0 15px rgba(241, 196, 15, 0.3); }
+        
+        .mat-icon { font-size: 40px; margin-bottom: 10px; display: block; }
+        .mat-name { font-weight: 700; font-size: 14px; margin-bottom: 5px; }
+        .mat-qty { position: absolute; top: 10px; right: 10px; background: #333; color: white; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 700; }
+        .mat-rarity-label { font-size: 10px; text-transform: uppercase; font-weight: 800; opacity: 0.7; }
+
         /* Three.js canvas background */
         #threejs-background {
             position: fixed;
@@ -658,8 +682,8 @@ if (
             <button class="tab-button" onclick="switchTab('cursors')">🖱️ Cursors (<?= count($cursors) ?>)</button>
             <button class="tab-button" onclick="switchTab('chat_frames')">💬 Khung Chat
                 (<?= count($chatFrames) ?>)</button>
-            <button class="tab-button" onclick="switchTab('avatar_frames')">🖼️ Khung Avatar
-                (<?= count($avatarFrames) ?>)</button>
+            <button class="tab-button" onclick="switchTab('avatar_frames')">🖼️ Khung Avatar (<?= count($avatarFrames) ?>)</button>
+            <button class="tab-button" onclick="switchTab('materials')">🧪 Nguyên Liệu (<?= count($userMaterials) ?>)</button>
         </div>
 
         <!-- Themes Tab -->
@@ -806,6 +830,28 @@ if (
                 <div class="no-items">
                     <h2>📦 Chưa có khung avatar nào</h2>
                     <p>Hãy vào <a href="khungavatar.php">🖼️ Chọn Khung Avatar</a> để mua khung avatar đẹp nhé!</p>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- Materials Tab -->
+        <div id="materials-tab" class="tab-content">
+            <?php if (count($userMaterials) > 0): ?>
+                <div class="items-grid" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));">
+                    <?php foreach ($userMaterials as $mat): ?>
+                        <div class="material-card rarity-<?= $mat['rarity'] ?>">
+                            <div class="mat-qty">x<?= $mat['quantity'] ?></div>
+                            <span class="mat-icon"><?= $mat['icon'] ?></span>
+                            <div class="mat-name"><?= htmlspecialchars($mat['name']) ?></div>
+                            <div class="mat-rarity-label"><?= $mat['rarity'] ?></div>
+                            <div style="font-size: 11px; opacity: 0.6; margin-top: 5px;"><?= htmlspecialchars($mat['description']) ?></div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <div class="no-items">
+                    <h2>📦 Kho nguyên liệu trống</h2>
+                    <p>Hãy tham gia các trò chơi và Dungeon để thu thập nguyên liệu nhé!</p>
                 </div>
             <?php endif; ?>
         </div>

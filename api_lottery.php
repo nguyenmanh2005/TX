@@ -123,22 +123,39 @@ elseif ($action === 'buy' && $userId) {
     sort($numArr);
     $numbers = implode(',', $numArr);
     
-    // Check balance
-    $user = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc();
-    if ($user['Money'] < $ticketPrice) {
-        echo json_encode(['success' => false, 'message' => 'Không đủ tiền']);
-        exit();
+    // Check balance and deduct in transaction
+    $conn->begin_transaction();
+    try {
+        // Khóa hàng người dùng để tránh race condition
+        $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $user = $stmt->get_result()->fetch_assoc();
+        
+        if ($user['Money'] < $ticketPrice) {
+            throw new Exception('Không đủ tiền');
+        }
+        
+        // Deduct
+        $newMoney = $user['Money'] - $ticketPrice;
+        $upd = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
+        $upd->bind_param("di", $newMoney, $userId);
+        $upd->execute();
+        
+        $ins = $conn->prepare("INSERT INTO lottery_tickets (user_id, draw_id, numbers) VALUES (?, ?, ?)");
+        $ins->bind_param("iis", $userId, $currentDraw['id'], $numbers);
+        $ins->execute();
+        
+        // Add 50% of ticket price to jackpot pool
+        $poolIncrease = $ticketPrice * 0.5;
+        $conn->query("UPDATE lottery_draws SET jackpot_pool = jackpot_pool + $poolIncrease WHERE id = {$currentDraw['id']}");
+        
+        $conn->commit();
+        echo json_encode(['success' => true, 'message' => 'Mua vé thành công!']);
+    } catch (Exception $e) {
+        $conn->rollback();
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
-    
-    // Deduct and Record
-    $conn->query("UPDATE users SET Money = Money - $ticketPrice WHERE Iduser = $userId");
-    $conn->query("INSERT INTO lottery_tickets (user_id, draw_id, numbers) VALUES ($userId, {$currentDraw['id']}, '$numbers')");
-    
-    // Add 50% of ticket price to jackpot pool
-    $poolIncrease = $ticketPrice * 0.5;
-    $conn->query("UPDATE lottery_draws SET jackpot_pool = jackpot_pool + $poolIncrease WHERE id = {$currentDraw['id']}");
-    
-    echo json_encode(['success' => true, 'message' => 'Mua vé thành công!']);
 }
 
 elseif ($action === 'history') {

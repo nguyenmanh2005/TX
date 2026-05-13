@@ -181,6 +181,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['user_number'])) {
             margin-bottom: 10px;
             background: linear-gradient(to right, #4facfe 0%, #00f2fe 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
         .balance-box {

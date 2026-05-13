@@ -36,31 +36,43 @@ if (isset($_GET['action'])) {
 
     if ($action === 'start') {
         $bet = (float) ($_POST['bet'] ?? 0);
-        if ($bet <= 0 || $bet > $money) {
+        if ($bet <= 0) {
             $response['message'] = "Gtlm cược không hợp lệ!";
         } else {
-            $conn->query("UPDATE users SET Money = Money - $bet WHERE Iduser = $userId");
+            $conn->begin_transaction();
+            try {
+                // Khóa người dùng
+                $res = $conn->query("SELECT Money FROM users WHERE Iduser = $userId FOR UPDATE");
+                $userData = $res->fetch_assoc();
+                if ($userData['Money'] < $bet) throw new Exception("Không đủ tiền!");
 
-            $instantCrash = rand(1, 100) <= 5; // 5% chance of instant crash at 1.00
-            if ($instantCrash) {
-                $crashPoint = 1.00;
-            } else {
-                $e = 100 / (rand(1, 1000000) / 10000);
-                $crashPoint = max(1.01, round($e * 0.96, 2)); // Reduced multiplier factor (House Edge)
+                $conn->query("UPDATE users SET Money = Money - $bet WHERE Iduser = $userId");
+
+                $instantCrash = rand(1, 100) <= 5;
+                if ($instantCrash) {
+                    $crashPoint = 1.00;
+                } else {
+                    $e = 100 / (rand(1, 1000000) / 10000);
+                    $crashPoint = max(1.01, round($e * 0.96, 2));
+                }
+
+                $_SESSION['crash_game'] = [
+                    'bet' => $bet,
+                    'crashPoint' => $crashPoint,
+                    'status' => 'active',
+                    'start_time' => microtime(true)
+                ];
+
+                $conn->commit();
+                $newMoney = $userData['Money'] - $bet;
+                $response = [
+                    'success' => true,
+                    'money' => number_format($newMoney, 0, ',', '.')
+                ];
+            } catch (Exception $e) {
+                $conn->rollback();
+                $response['message'] = $e->getMessage();
             }
-
-            $_SESSION['crash_game'] = [
-                'bet' => $bet,
-                'crashPoint' => $crashPoint,
-                'status' => 'active'
-            ];
-
-            $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
-            $response = [
-                'success' => true,
-                'crashPoint' => $crashPoint,
-                'money' => number_format($newMoney, 0, ',', '.')
-            ];
         }
     } elseif ($action === 'cashout') {
         $multiplier = (float) ($_POST['multiplier'] ?? 1.0);
@@ -68,22 +80,44 @@ if (isset($_GET['action'])) {
             $response['message'] = "Phiên chơi không tồn tại!";
         } else {
             $game = $_SESSION['crash_game'];
-            if ($multiplier > $game['crashPoint']) {
+            $elapsed = microtime(true) - $game['start_time'];
+            $serverMult = pow(1.005, ($elapsed * 1000) / 50);
+            
+            if ($multiplier > $serverMult + 0.5) {
+                $response['message'] = "Dữ liệu không khớp!";
+            } elseif ($multiplier > $game['crashPoint']) {
                 $response['message'] = "Đã nổ! Bạn không kịp rút Gtlm.";
+                $response['crashPoint'] = $game['crashPoint'];
             } else {
-                $winAmount = round($game['bet'] * $multiplier);
-                $conn->query("UPDATE users SET Money = Money + $winAmount WHERE Iduser = $userId");
-
-                $resStr = "Cashout at x$multiplier";
-                $profit = $winAmount - $game['bet'];
-                $his = $conn->prepare("INSERT INTO history_crash (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-                $his->bind_param("idss", $userId, $game['bet'], $resStr, $profit);
-                $his->execute();
-                logGameHistoryWithAll($conn, $userId, 'Crash', $game['bet'], $winAmount, true);
-
-                $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
-                $response = ['success' => true, 'winAmount' => number_format($winAmount, 0, ',', '.'), 'money' => number_format($newMoney, 0, ',', '.')];
-                unset($_SESSION['crash_game']);
+                $conn->begin_transaction();
+                try {
+                    $winAmount = round($game['bet'] * $multiplier);
+                    $conn->query("UPDATE users SET Money = Money + $winAmount WHERE Iduser = $userId");
+                    $resStr = "Cashout at x$multiplier";
+                    $profit = $winAmount - $game['bet'];
+                    $his = $conn->prepare("INSERT INTO history_crash (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
+                    $his->bind_param("idss", $userId, $game['bet'], $resStr, $profit);
+                    $his->execute();
+                    logGameHistoryWithAll($conn, $userId, 'Crash', $game['bet'], $winAmount, true);
+                    $conn->commit();
+                    $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
+                    $response = ['success' => true, 'winAmount' => number_format($winAmount, 0, ',', '.'), 'money' => number_format($newMoney, 0, ',', '.')];
+                    unset($_SESSION['crash_game']);
+                } catch (Exception $e) {
+                    $conn->rollback();
+                    $response['message'] = "Lỗi hệ thống!";
+                }
+            }
+        }
+    } elseif ($action === 'check') {
+        if (isset($_SESSION['crash_game']) && $_SESSION['crash_game']['status'] === 'active') {
+            $game = $_SESSION['crash_game'];
+            $elapsed = microtime(true) - $game['start_time'];
+            $currentMult = pow(1.005, ($elapsed * 1000) / 50);
+            if ($currentMult >= $game['crashPoint']) {
+                $response = ['success' => true, 'crashed' => true, 'crashPoint' => $game['crashPoint']];
+            } else {
+                $response = ['success' => true, 'crashed' => false];
             }
         }
     } elseif ($action === 'lost') {
@@ -371,7 +405,8 @@ if (isset($_GET['action'])) {
         }
 
         input[type=number] {
-            -moz-appearance: textfield
+            -moz-appearance: textfield;
+            appearance: textfield;
         }
 
         @media(max-width:1000px) {
@@ -594,7 +629,7 @@ if (isset($_GET['action'])) {
 
             $.post('crash.php?action=start', { bet: bet }, function (res) {
                 if (res.success) {
-                    crashPoint = res.crashPoint;
+                    crashPoint = 0; // Don't know it yet
                     $('#userMoney').text(res.money);
                     $('#startBtn').hide();
                     $('#cashoutBtn').show();
@@ -607,6 +642,18 @@ if (isset($_GET['action'])) {
                     const startTime = Date.now();
                     gameActive = true;
                     currentMult = 1.00;
+
+                    // Poll server for crash status every 500ms
+                    let checkInterval = setInterval(() => {
+                        if (!gameActive) { clearInterval(checkInterval); return; }
+                        $.get('crash.php?action=check', function(cres) {
+                            if (cres.crashed) {
+                                crashPoint = cres.crashPoint;
+                                crashed();
+                                clearInterval(checkInterval);
+                            }
+                        });
+                    }, 500);
 
                     multInterval = setInterval(() => {
                         currentMult *= 1.005;
@@ -625,10 +672,9 @@ if (isset($_GET['action'])) {
                         $('#potentialWin').text(potWin.toLocaleString('vi-VN'));
 
                         const isAuto = $('#enableAuto').is(':checked');
-                        if (isAuto && auto > 1 && currentMult >= auto && currentMult < crashPoint) {
+                        if (isAuto && auto > 1 && currentMult >= auto) {
                             cashout();
-                        } else if (currentMult >= crashPoint) {
-                            crashed();
+                            clearInterval(checkInterval);
                         }
                     }, 50);
                 } else {
@@ -686,6 +732,17 @@ if (isset($_GET['action'])) {
                         html: `Rút tại <b style="color:var(--accent)">x${finalMult.toFixed(2)}</b> nhận <b style="color:#2ecc71">${res.winAmount} gtlm</b>`,
                         icon: 'success', background: '#111', color: '#fff', timer: 3000
                     });
+                } else {
+                    if (res.crashPoint) {
+                        crashPoint = res.crashPoint;
+                        crashed();
+                    } else {
+                        Swal.fire('Lỗi', res.message, 'error');
+                        gameActive = false;
+                        clearInterval(multInterval);
+                        $('#cashoutBtn').hide();
+                        $('#startBtn').show();
+                    }
                 }
             });
         }

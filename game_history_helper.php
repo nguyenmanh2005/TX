@@ -487,7 +487,7 @@ function updateRewardPoints(mysqli $conn, int $userId, float $betAmount, float $
 }
 
 /**
- * Ghi lại lịch sử game và tự động cập nhật Streak + VIP + Reward Points + Social Feed
+ * Ghi lại lịch sử game và tự động cập nhật Streak + VIP + Reward Points + Social Feed + Materials + Dungeons
  */
 function logGameHistoryWithAll(mysqli $conn, int $userId, string $gameName, float $betAmount = 0, float $winAmount = 0, bool $isWin = false)
 {
@@ -526,6 +526,40 @@ function logGameHistoryWithAll(mysqli $conn, int $userId, string $gameName, floa
 
         // Cập nhật tournament score
         updateTournamentScore($conn, $userId, $gameName, $winAmount);
+
+        // --- Material & Dungeon Integration ---
+        require_once 'material_helper.php';
+        require_once 'dungeon_helper.php';
+
+        // 1. Roll for material drop
+        $drop = roll_material_drop($conn, $userId, $gameName, $isWin ? 'win' : 'lose', $betAmount, $winAmount, 0);
+        if ($drop) {
+            // Save to session so frontend can show notification
+            if (!isset($_SESSION['last_drops'])) $_SESSION['last_drops'] = [];
+            $_SESSION['last_drops'][] = $drop;
+        }
+
+        // 2. Update Dungeon Progress
+        update_dungeon_progress($conn, $userId, 'hunt', 1);
+        if ($isWin) {
+            update_dungeon_progress($conn, $userId, 'accumulate', $winAmount);
+        }
+        update_dungeon_progress($conn, $userId, 'specialist', 1, $gameName);
+        
+        // survivor: high bet
+        if ($betAmount >= 500000) {
+            update_dungeon_progress($conn, $userId, 'survivor', $betAmount);
+        }
+        // streak: win streak
+        $winStreak = get_current_win_streak($conn, $userId);
+        update_dungeon_progress($conn, $userId, 'streak', $winStreak);
+        
+        $today = date('Y-m-d');
+        $stmtExp = $conn->prepare("SELECT COUNT(DISTINCT game_name) as cnt FROM game_history WHERE user_id = ? AND DATE(played_at) = ?");
+        $stmtExp->bind_param("is", $userId, $today);
+        $stmtExp->execute();
+        $distinctGames = $stmtExp->get_result()->fetch_assoc()['cnt'];
+        update_dungeon_progress($conn, $userId, 'explorer', $distinctGames);
 
         // Tạo feed activity cho big win
         if ($isWin && $winAmount >= 5000000) {

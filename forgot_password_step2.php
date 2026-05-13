@@ -6,10 +6,11 @@ require 'db_connect.php';
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     header("Content-Type: application/json");
     $email = trim($_POST["email"] ?? '');
+    $token = trim($_POST["token"] ?? '');
     $newpass = trim($_POST["password"] ?? '');
 
-    if (empty($email) || empty($newpass)) {
-        echo json_encode(["status" => "error", "message" => "Vui lòng nhập đầy đủ email và mật khẩu."]);
+    if (empty($email) || empty($newpass) || empty($token)) {
+        echo json_encode(["status" => "error", "message" => "Vui lòng nhập đầy đủ thông tin."]);
         exit;
     }
 
@@ -18,26 +19,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         exit;
     }
 
-    // Kiểm tra xem email có tồn tại
-    $stmt = $conn->prepare("SELECT * FROM users WHERE Email = ?");
-    $stmt->bind_param("s", $email);
+    // 1. Kiểm tra email và token hợp lệ + còn hạn
+    $stmt = $conn->prepare("SELECT Iduser FROM users WHERE Email = ? AND reset_token = ? AND token_expiry > NOW()");
+    $stmt->bind_param("ss", $email, $token);
     $stmt->execute();
     $result = $stmt->get_result();
 
     if ($result->num_rows === 0) {
-        echo json_encode(["status" => "error", "message" => "Email không tồn tại trong hệ thống."]);
+        echo json_encode(["status" => "error", "message" => "Token không hợp lệ hoặc đã hết hạn."]);
         exit;
     }
 
-    // Cập nhật mật khẩu
+    // 2. Cập nhật mật khẩu và xóa token
     $hashed_pass = password_hash($newpass, PASSWORD_DEFAULT);
-    $stmt_update = $conn->prepare("UPDATE users SET Pass = ? WHERE Email = ?");
+    $stmt_update = $conn->prepare("UPDATE users SET Pass = ?, reset_token = NULL, token_expiry = NULL WHERE Email = ?");
     $stmt_update->bind_param("ss", $hashed_pass, $email);
 
     if ($stmt_update->execute()) {
-        echo json_encode(["status" => "success", "message" => "Mật khẩu đã được cập nhật."]);
+        echo json_encode(["status" => "success", "message" => "Mật khẩu đã được cập nhật thành công."]);
     } else {
-        echo json_encode(["status" => "error", "message" => "Không thể cập nhật mật khẩu."]);
+        echo json_encode(["status" => "error", "message" => "Lỗi CSDL: Không thể cập nhật mật khẩu."]);
     }
     exit;
 }
@@ -200,7 +201,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <main>
     <h2>Đặt lại mật khẩu</h2>
     <form id="resetForm">
-        <input type="email" name="email" placeholder="Nhập email" required>
+        <input type="email" name="email" placeholder="Nhập email" value="<?= htmlspecialchars($_GET['email'] ?? '') ?>" required>
+        <input type="text" name="token" placeholder="Mã xác nhận (Token)" value="<?= htmlspecialchars($_GET['token'] ?? '') ?>" required>
         <input type="password" name="password" placeholder="Mật khẩu mới" required>
         <button type="submit">Cập nhật</button>
         <br>

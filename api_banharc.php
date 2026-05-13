@@ -23,48 +23,77 @@ switch ($action) {
         if (!$userId) exit(json_encode(['success' => false, 'message' => 'Chưa đăng nhập']));
         
         $bulletPrice = (int)$_POST['bullet_price'];
+        $fishType = $_POST['fish_type'] ?? ''; // Loại cá muốn bắn (tùy chọn)
+        
         $allowed = [100, 500, 1000, 5000];
         if (!in_array($bulletPrice, $allowed)) exit(json_encode(['success' => false, 'message' => 'Mức đạn không hợp lệ']));
 
-        $user = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc();
-        if ($user['Money'] < $bulletPrice) exit(json_encode(['success' => false, 'message' => 'Hết đạn (Tiền)!']));
+        $conn->begin_transaction();
+        try {
+            $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+            $stmt->bind_param("i", $userId);
+            $stmt->execute();
+            $user = $stmt->get_result()->fetch_assoc();
 
-        // Trừ tiền ngay khi bắn
-        $conn->query("UPDATE users SET Money = Money - $bulletPrice WHERE Iduser = $userId");
-        
-        echo json_encode(['success' => true, 'new_balance' => $user['Money'] - $bulletPrice]);
-        break;
+            if ($user['Money'] < $bulletPrice) {
+                throw new Exception('Hết đạn (Tiền)!');
+            }
 
-    case 'catch':
-        if (!$userId) exit(json_encode(['success' => false]));
-        
-        $fishType = $_POST['fish_type']; // 'small', 'medium', 'large', 'boss', etc.
-        $bulletPrice = (int)$_POST['bullet_price'];
-        
-        // Cấu hình hệ số thưởng
-        $fishConfig = [
-            'small' => ['x' => 2, 'name' => 'Cá Xanh'],
-            'medium' => ['x' => 5, 'name' => 'Cá Vàng'],
-            'large' => ['x' => 10, 'name' => 'Cá Đỏ'],
-            'shark' => ['x' => 20, 'name' => 'Cá Mập'],
-            'octopus' => ['x' => 50, 'name' => 'Bạch Tuộc'],
-            'gold_crab' => ['x' => 100, 'name' => 'Cua Vàng'],
-            'dragon' => ['x' => 500, 'name' => 'Rồng Biển']
-        ];
+            // 1. Luôn trừ tiền đạn
+            $newBalance = $user['Money'] - $bulletPrice;
+            $upd = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
+            $upd->bind_param("di", $newBalance, $userId);
+            $upd->execute();
 
-        if (!isset($fishConfig[$fishType])) exit(json_encode(['success' => false]));
+            $caught = false;
+            $reward = 0;
+            $fishName = '';
 
-        $reward = $bulletPrice * $fishConfig[$fishType]['x'];
-        
-        // Cộng tiền cho người chơi
-        $conn->query("UPDATE users SET Money = Money + $reward WHERE Iduser = $userId");
-        
-        // Lưu lịch sử
-        $stmt = $conn->prepare("INSERT INTO history_banharc (user_id, fish_name, multiplier, reward) VALUES (?, ?, ?, ?)");
-        $stmt->bind_param("isii", $userId, $fishConfig[$fishType]['name'], $fishConfig[$fishType]['x'], $reward);
-        $stmt->execute();
+            // 2. Nếu có nhắm vào cá, thực hiện roll xác suất ngay tại đây
+            if (!empty($fishType)) {
+                $fishConfig = [
+                    'small' => ['x' => 2, 'name' => 'Cá Xanh', 'p' => 0.4],
+                    'medium' => ['x' => 5, 'name' => 'Cá Vàng', 'p' => 0.15],
+                    'large' => ['x' => 10, 'name' => 'Cá Đỏ', 'p' => 0.08],
+                    'shark' => ['x' => 20, 'name' => 'Cá Mập', 'p' => 0.04],
+                    'octopus' => ['x' => 50, 'name' => 'Bạch Tuộc', 'p' => 0.015],
+                    'gold_crab' => ['x' => 100, 'name' => 'Cua Vàng', 'p' => 0.008],
+                    'dragon' => ['x' => 500, 'name' => 'Rồng Biển', 'p' => 0.002]
+                ];
 
-        echo json_encode(['success' => true, 'reward' => $reward, 'fish_name' => $fishConfig[$fishType]['name']]);
+                if (isset($fishConfig[$fishType])) {
+                    $roll = rand(1, 10000) / 10000;
+                    if ($roll <= $fishConfig[$fishType]['p']) {
+                        $caught = true;
+                        $reward = $bulletPrice * $fishConfig[$fishType]['x'];
+                        $fishName = $fishConfig[$fishType]['name'];
+                        $newBalance += $reward;
+                        
+                        // Cập nhật lại tiền sau khi trúng
+                        $updReward = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
+                        $updReward->bind_param("di", $newBalance, $userId);
+                        $updReward->execute();
+
+                        // Lưu lịch sử
+                        $his = $conn->prepare("INSERT INTO history_banharc (user_id, fish_name, multiplier, reward) VALUES (?, ?, ?, ?)");
+                        $his->bind_param("isii", $userId, $fishName, $fishConfig[$fishType]['x'], $reward);
+                        $his->execute();
+                    }
+                }
+            }
+
+            $conn->commit();
+            echo json_encode([
+                'success' => true, 
+                'new_balance' => $newBalance,
+                'caught' => $caught,
+                'reward' => $reward,
+                'fish_name' => $fishName
+            ]);
+        } catch (Exception $e) {
+            $conn->rollback();
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
         break;
 
     case 'get_history':

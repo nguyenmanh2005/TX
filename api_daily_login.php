@@ -267,6 +267,17 @@ switch ($action) {
             $insertClaimedStmt->execute();
             $insertClaimedStmt->close();
 
+            // --- Material System Integration ---
+            require_once 'material_helper.php';
+            $consecutiveDays = $loginData['consecutive_days'];
+            if ($consecutiveDays >= 30) {
+                add_material($conn, $userId, 'moon_essence', 1, 'daily_login', "streak_$consecutiveDays");
+            } elseif ($consecutiveDays % 7 === 0) {
+                add_material($conn, $userId, 'gold_dust', 1, 'daily_login', "streak_$consecutiveDays");
+            } else {
+                add_material($conn, $userId, 'silver_dust', rand(2, 4), 'daily_login', "day_$consecutiveDays");
+            }
+
             $conn->commit();
 
             // Gửi thông báo
