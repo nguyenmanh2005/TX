@@ -3,31 +3,30 @@ php_errors.log
 *.log
 bot/sessions/
 bot/cycle_logs/
+bot/logs/
+bot/cookies.txt
 
 # Sensitive Config
 db_connect.php
+db_connect_backup_local.php
+.env.php
+.env
+db_info.json
 
-bot/cycle_logs/
-bot/logs/
-bot/sessions/
-xuat-toan-bo-du-an
-repomix-output.xml
 # Large Assets & Uploads
-cursors/
 uploads/
-123.zip
-.htaccess
-bot/cookies.txt
-Shared/img
+xuat-toan-bo-du-an/
+repomix-output.xml
+Shared/img/
 
 # Image Exclusion Rules
-# Ignore common image formats globally
 **/*.png
 **/*.jpg
 **/*.jpeg
 **/*.gif
 **/*.cur
 **/*.ani
+**/*.ico
 
 # EXCEPT Shared/img directory
 !Shared/img/
@@ -41,14 +40,9 @@ Thumbs.db
 node_modules/
 vendor/
 *.tmp
-bot/sessions
-.env.php
-.env
-db_connect_backup_local.php
-*.sql
 *.bak
+*.sql
 *.sqlite
 *.zip
 *.rar
 *.7z
-repomix-output.xml
