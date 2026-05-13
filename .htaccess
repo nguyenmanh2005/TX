@@ -1,8 +1,37 @@
-# Bật hiển thị lỗi (CHỈ DÙNG KHI DEBUG)
-php_flag display_errors on
-php_flag display_startup_errors on
-php_value error_reporting E_ALL
+# Tắt hiển thị lỗi trên Production
+php_flag display_errors off
+php_flag display_startup_errors off
+php_value error_reporting 0
 
 # Hoặc thêm vào đầu file PHP:
 # error_reporting(E_ALL);
 # ini_set('display_errors', 1);
+
+<Files ".env.php">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Chặn truy cập trực tiếp các file helper/config
+<FilesMatch "^(admin_helper|vocabulary_helper|db_connect)\.php$">
+    Deny from all
+</FilesMatch>
+
+<Files "db_info.json">
+    Order allow,deny
+    Deny from all
+</Files>
+
+<Files "php_errors.log">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Block access to .git directory
+RedirectMatch 404 /\.git
+
+# Custom Error Pages
+ErrorDocument 403 /1/Shared/403/403.php
+ErrorDocument 404 /1/Shared/404/404_GTLM_page.php
+
+Options -Indexes

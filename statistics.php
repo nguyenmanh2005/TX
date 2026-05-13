@@ -38,6 +38,7 @@ $totalSpent = 0;
 $winRate = 0;
 $gameStats = [];
 $recentGames = [];
+$dailyStats = [];
 
 if ($gameHistoryExists) {
     // Tổng số game đã chơi

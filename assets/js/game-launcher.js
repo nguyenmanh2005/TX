@@ -28,8 +28,8 @@ class GameLauncher {
             { id: 'blackjack', name: 'Blackjack', icon: '🃏', url: 'games/blackjack.php', category: 'card', new: false },
             { id: 'poker', name: 'Texas Hold\'em', icon: '🃏', url: 'games/poker.php', category: 'card', new: false },
             { id: 'dragon_tiger', name: 'Dragon Tiger', icon: '🐉🐅', url: 'games/dragontiger.php', category: 'casino', new: true },
-            { id: 'sicbo', name: 'Sicbo Tài Xỉu', icon: '🎲', url: 'games/sicbo_v2.php', category: 'casino', new: true },
-            { id: 'xocdia', name: 'Xóc Đĩa VIP', icon: '⚪🔴', url: 'games/xocdia.php', category: 'casino', new: true },
+            { id: 'sicbo', name: 'Xanh Đỏ Đối Kháng', icon: '🎲', url: 'games/sicbo_v2.php', category: 'casino', new: true },
+            { id: 'xocdia', name: 'Trận Địa Trắng Đỏ', icon: '⚪🔴', url: 'games/xocdia.php', category: 'casino', new: true },
             { id: 'fantan', name: 'Fan Tan', icon: '🟡', url: 'games/fantan.php', category: 'casino', new: true },
             
             // Mini Games Category
@@ -57,7 +57,7 @@ class GameLauncher {
             { id: 'community_lottery', name: 'Xổ số Cộng Đồng', icon: '🏛️', url: 'games/community_lottery.php', category: 'mini', new: true },
             
             // Classic Vietnamese Games
-            { id: 'baucua', name: 'CYBER PETS (Bầu Cua)', icon: '🎲', url: 'games/baucua.php', category: 'casino', new: false },
+            { id: 'baucua', name: 'Thế Giới Linh Thú', icon: '🎲', url: 'games/baucua.php', category: 'casino', new: false },
             { id: 'daga', name: 'Đá Gà SV388', icon: '🐓', url: 'games/daga.php', category: 'casino', new: true },
             { id: 'duangua', name: 'Đua Ngựa Royal', icon: '🐎', url: 'games/duangua.php', category: 'casino', new: true },
             { id: 'samloc', name: 'Sâm Lốc', icon: '🃏', url: 'games/samloc.php', category: 'card', new: true },

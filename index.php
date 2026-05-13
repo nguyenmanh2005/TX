@@ -3571,12 +3571,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                 </a>
                 <a href="games/sicbo.php" class="game-card" data-category="mini">
                     <span class="game-icon">🎲</span>
-                    <span class="game-name">Sic Bo Classic</span>
+                    <span class="game-name">Xanh Đỏ Classic</span>
                 </a>
                 <a href="games/sicbo_v2.php" class="game-card" data-category="mini">
                     <span class="game-badge badge-new">New</span>
                     <span class="game-icon">🎲</span>
-                    <span class="game-name">Sic Bo 3D</span>
+                    <span class="game-name">Xanh Đỏ 3D</span>
                 </a>
                 <a href="games/craps.php" class="game-card" data-category="mini">
                     <span class="game-icon">🎲</span>

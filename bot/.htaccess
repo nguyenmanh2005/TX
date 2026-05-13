@@ -1,13 +1,35 @@
-# Protect configuration and session files from web access
+# Security Gateway: Redirect sensitive files to file_guard.php
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Nếu truy cập file .txt, .log, .json -> Chuyển hướng qua gateway để check quyền admin
+    RewriteRule ^(.*)\.(txt|log|json)$ ../file_guard.php?file=$1.$2 [L,QSA]
+</IfModule>
+
+# Vẫn chặn tuyệt đối truy cập trực tiếp config.php
 <Files "config.php">
     Order allow,deny
     Deny from all
 </Files>
 
-<FilesMatch "\.(txt|log)$">
+<FilesMatch "\.(txt|log|tester_session\.txt)$">
     Order allow,deny
     Deny from all
 </FilesMatch>
 
+
+
 # Prevent directory listing
 Options -Indexes
+
+# Allow access to specific entry points
+<FilesMatch "^(index\.php|tester_bot\.php|bot_manager\.php)$">
+    <IfModule mod_authz_core_c>
+        Require all granted
+    </IfModule>
+    <IfModule !mod_authz_core_c>
+        Order allow,deny
+        Allow from all
+    </IfModule>
+</FilesMatch>
+
+

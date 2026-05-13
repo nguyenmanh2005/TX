@@ -390,7 +390,7 @@
             ]
         },
         'sicbo': {
-            title: 'Sic Bo ',
+            title: 'Xanh Đỏ Đối Kháng',
             icon: '🎲',
             steps: [
                 'Cược vào kết quả của 3 viên xúc xắc.',
@@ -508,7 +508,7 @@
             ]
         },
         'baucua': {
-            title: 'CYBER PETS Tôm Cá',
+            title: 'Thế Giới Linh Thú',
             icon: '🎲',
             steps: [
                 'Đặt cược vào một hoặc nhiều linh vật: Bầu, Cua, Tôm, Cá, Gà, Nai.',
@@ -517,7 +517,7 @@
             ]
         },
         'xocdia': {
-            title: 'Đồng xu diệu kỳ',
+            title: 'Trận Địa Trắng Đỏ',
             icon: '🔘',
             steps: [
                 'Dự đoán kết quả của 4 nút (đồng xu) sau khi xóc.',

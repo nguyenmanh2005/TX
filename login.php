@@ -39,17 +39,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $result = $stmt->get_result();
 
     if (!$result || $result->num_rows !== 1) {
-        jsonResponse(["status" => "error", "message" => "Email không tồn tại! 📭"]);
+        jsonResponse(["status" => "error", "message" => "Email hoặc mật khẩu không chính xác! 🔒"]);
     }
+
 
     $row = $result->fetch_assoc();
 
     if (!password_verify($password, $row['Pass'])) {
-        jsonResponse(["status" => "error", "message" => "Sai mật khẩu! 🔒"]);
+        jsonResponse(["status" => "error", "message" => "Email hoặc mật khẩu không chính xác! 🔒"]);
     }
 
+
     // Đăng nhập trực tiếp, không cần OTP
+    session_regenerate_id(true);
     $_SESSION['Iduser'] = $row['Iduser'];
+
     $_SESSION['Name'] = $row['Name'];
     $_SESSION['Role'] = $row['Role'];
 
@@ -957,6 +961,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     </style>
 </head>
 <body>
+    <?php include 'credits_terms_modal.php'; ?>
     <!-- Floating Particles -->
     <div class="particles-container" id="particlesContainer"></div>
 
@@ -1307,6 +1312,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                 background: '#fff',
                                 color: '#333'
                             }).then(() => {
+                                localStorage.removeItem('gtlm_welcomed_time'); // Force modal to show on login
                                 window.location.href = response.redirect;
                             });
                         } else {

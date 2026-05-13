@@ -12,6 +12,16 @@ if (!isset($_SESSION['Iduser'])) {
 $userId = $_SESSION['Iduser'];
 require_once '../load_theme.php'; // Nạp thông số theme
 
+/** @var int $particleCount */
+/** @var float $particleSize */
+/** @var string $particleColor */
+/** @var float $particleOpacity */
+/** @var int $shapeCount */
+/** @var array $shapeColors */
+/** @var float $shapeOpacity */
+/** @var array $bgGradient */
+/** @var string $bgGradientCSS */
+
 // Lấy thông tin người chơi để hiển thị Gtlm
 $sql = "SELECT * FROM users WHERE Iduser = ?";
 $stmt = $conn->prepare($sql);

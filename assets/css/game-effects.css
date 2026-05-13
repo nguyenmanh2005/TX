@@ -46,6 +46,7 @@
     font-size: 4rem;
     background: linear-gradient(to bottom, #fff 20%, #f1c40f 50%, #d35400 80%);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     filter: drop-shadow(0 0 20px rgba(241, 196, 15, 0.8));
     animation: winPop 1.5s cubic-bezier(0.17, 0.89, 0.32, 1.49) forwards;

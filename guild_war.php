@@ -33,6 +33,15 @@ if ($myGuild) {
     $stmt->execute();
     $pendingChallenges = $stmt->get_result();
 }
+
+// Tính thời gian còn lại đến cuối tuần (Chủ nhật 23:59:59)
+$now = new DateTime();
+$endOfWeek = new DateTime('next Sunday 23:59:59');
+if ($now->format('N') == 7 && $now->format('H') >= 23) {
+    // Nếu đang là đêm Chủ Nhật, có thể cần logic khác hoặc chỉ đơn giản là end of today
+}
+$interval = $now->diff($endOfWeek);
+$timeLeft = $interval->format('%d ngày, %h giờ, %i phút');
 ?>
 <!DOCTYPE html>
 <html lang="vi">

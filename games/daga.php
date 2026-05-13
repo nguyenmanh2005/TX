@@ -190,7 +190,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
     </style>
 </head>
 <body>
-    <h1 style="font-size: 3rem; font-weight: 900; margin: 2rem 0; letter-spacing: 5px; text-shadow: 0 0 20px rgba(255,255,255,0.2);">🐓 ĐÁ GÀ TRỰC TIẾP 🐓</h1>
+    <h1 style="font-size: 3rem; font-weight: 900; margin: 2rem 0; letter-spacing: 5px; text-shadow: 0 0 20px rgba(255,255,255,0.2);">🐓 ĐẠI CHIẾN THẦN KÊ 🐓</h1>
     <div class="balance" style="margin-bottom: 2rem;">💰 Số dư: <b id="money-display" style="color: var(--tet-gold); font-size: 1.5rem; text-shadow: 0 0 10px rgba(253, 203, 110, 0.3);"><?= number_format($money, 0, ',', '.') ?></b> GTLM</div>
 
     <div class="arena">

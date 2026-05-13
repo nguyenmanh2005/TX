@@ -70,6 +70,7 @@ if (isset($_GET['action'])) {
                 'win' => $win,
                 'multiplier' => $multiplier,
                 'winAmount' => number_format($winAmount, 0, ',', '.'),
+                'winAmountRaw' => $winAmount,
                 'money' => number_format($newMoney, 0, ',', '.'),
                 'winChance' => round($winChance, 2) . '%'
             ];

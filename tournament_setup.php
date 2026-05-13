@@ -56,8 +56,8 @@ if ($checkTournaments->fetch_assoc()['total'] == 0) {
     $nextHour = (clone $now)->modify('+1 hour')->format('Y-m-d H:i:s');
     
     $conn->query("INSERT INTO tournaments (name, game_type, buy_in, house_fee_percent, prize_pool, max_players, start_time, status) VALUES 
-    ('Giải Đấu Xúc Xắc Siêu Cấp', 'Dice', 100000, 10, 0, 20, '$nextHour', 'Pending'),
-    ('Đại Chiến Bầu Cua Hàng Tuần', 'Baucua', 500000, 15, 0, 50, '$tomorrow', 'Pending')");
+    ('Siêu Cấp Xanh Đỏ', 'Dice', 100000, 10, 0, 20, '$nextHour', 'Pending'),
+    ('Lễ Hội Linh Thú Hàng Tuần', 'Baucua', 500000, 15, 0, 50, '$tomorrow', 'Pending')");
     echo "✅ Đã thêm các giải đấu mẫu<br>";
 }
 

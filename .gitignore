@@ -16,6 +16,9 @@ repomix-output.xml
 cursors/
 uploads/
 123.zip
+.htaccess
+bot/cookies.txt
+Shared/img
 
 # Image Exclusion Rules
 # Ignore common image formats globally
@@ -39,3 +42,13 @@ node_modules/
 vendor/
 *.tmp
 bot/sessions
+.env.php
+.env
+db_connect_backup_local.php
+*.sql
+*.bak
+*.sqlite
+*.zip
+*.rar
+*.7z
+repomix-output.xml

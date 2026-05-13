@@ -460,7 +460,7 @@ if (isset($_GET['action'])) {
                 <div>
                     <h1
                         style="margin:0; font-size: 2.2rem; font-weight: 900; color: var(--primary); font-family: 'Orbitron'; letter-spacing: 2px;">
-                        CYBER PETS</h1>
+                        THẾ GIỚI LINH THÚ</h1>
                     <p style="margin:0; opacity:0.4; font-size: 0.7rem; letter-spacing: 1px;">Quantum Farm Protocol</p>
                 </div>
 

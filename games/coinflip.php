@@ -3,6 +3,16 @@ session_start();
 include '../load_theme.php';
 require_once '../game_history_helper.php';
 
+/** @var int $particleCount */
+/** @var float $particleSize */
+/** @var string $particleColor */
+/** @var float $particleOpacity */
+/** @var int $shapeCount */
+/** @var array $shapeColors */
+/** @var float $shapeOpacity */
+/** @var array $bgGradient */
+/** @var string $bgGradientCSS */
+
 if (!isset($_SESSION['Iduser'])) {
     header('Location: ../login.php');
     exit;
@@ -108,7 +118,7 @@ if (isset($_GET['action'])) {
             background-attachment: fixed;
             color: #fff;
             font-family: 'Inter', sans-serif;
-            overflow: hidden;
+            overflow-x: hidden;
         }
 
         * {
@@ -116,7 +126,7 @@ if (isset($_GET['action'])) {
         }
 
         .main-container {
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -136,7 +146,7 @@ if (isset($_GET['action'])) {
             display: grid;
             grid-template-columns: 320px 1fr;
             gap: 1.5rem;
-            height: 85vh;
+            min-height: 85vh;
         }
 
         .sidebar {
@@ -295,60 +305,25 @@ if (isset($_GET['action'])) {
             text-shadow: 0 0 20px rgba(241, 196, 15, 0.5);
             opacity: 0;
         }
-    
-        /* Statistics Container */
-        .stats-container {
+
+        .footer-container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px 40px;
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .stat-item {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 15px;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-        
-        .stat-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
-        }
-        
-        .stat-item.wins {
-            border-left: 4px solid #4ade80;
-        }
-        
-        .stat-item.losses {
-            border-left: 4px solid #ff6b6b;
-        }
-        
-        .stat-item .label {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.6);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 8px;
-        }
-        
-        .stat-item .value {
-            font-size: 28px;
-            font-weight: 700;
-            color: #ffd700;
-        }
-        
-        .chart-box {
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .chart-box canvas {
-            margin-top: 20px;
+            grid-template-columns: 1fr 350px;
+            gap: 2rem;
         }
 
+        @media (max-width: 992px) {
+            .glass-card {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+            .footer-container {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 
@@ -358,7 +333,14 @@ if (isset($_GET['action'])) {
             <div class="sidebar">
                 <div>
                     <h1
-                        style="margin:0; font-size: 2rem; font-weight: 900; color: var(--primary); font-family: 'Orbitron'; letter-spacing: 2px;">
+                        style="margin:0; font-size: 2rem; font-weight: 900;
+            color: var(--primary);
+            font-family: 'Orbitron';
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;">
                         COINFLIP</h1>
                     <p style="margin:0; opacity:0.4; font-size: 0.7rem; letter-spacing: 1px;">High-Stakes 3D Protocol
                     </p>
@@ -414,6 +396,47 @@ if (isset($_GET['action'])) {
         </div>
     </div>
 
+    <div class="footer-container">
+        <div class="glass-card" style="min-height: auto; grid-template-columns: 1fr; padding: 2rem;">
+            <h3 style="font-family: 'Orbitron'; color: var(--primary); margin-bottom: 20px;">
+                <i class="fas fa-history"></i> LỊCH SỬ THÁCH ĐẤU
+            </h3>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.6); text-align: left;">
+                            <th style="padding: 12px 8px;">Mã</th>
+                            <th style="padding: 12px 8px; text-align: right;">Cược</th>
+                            <th style="padding: 12px 8px;">Kết Quả</th>
+                            <th style="padding: 12px 8px; text-align: right;">Thắng</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        <tr><td colspan="4" style="text-align: center; padding: 20px; opacity: 0.5;">Đang tải...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="glass-card" style="min-height: auto; grid-template-columns: 1fr; padding: 2rem;">
+            <h3 style="font-family: 'Orbitron'; color: var(--primary); margin-bottom: 20px;">
+                <i class="fas fa-chart-pie"></i> THỐNG KÊ
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                <div style="background: rgba(74, 222, 128, 0.1); border: 1px solid rgba(74, 222, 128, 0.2); border-radius: 10px; padding: 15px; text-align: center;">
+                    <div style="font-size: 10px; color: #4ade80;">THẮNG</div>
+                    <div style="font-size: 20px; font-weight: bold; font-family: 'Orbitron';"><?= $gameThang ?></div>
+                </div>
+                <div style="background: rgba(255, 107, 107, 0.1); border: 1px solid rgba(255, 107, 107, 0.2); border-radius: 10px; padding: 15px; text-align: center;">
+                    <div style="font-size: 10px; color: #ff6b6b;">THUA</div>
+                    <div style="font-size: 20px; font-weight: bold; font-family: 'Orbitron';"><?= $gameThua ?></div>
+                </div>
+            </div>
+            <canvas id="gameChart" style="max-height: 150px;"></canvas>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         let scene, camera, renderer, coin;
         let isFlipping = false;
@@ -426,18 +449,14 @@ if (isset($_GET['action'])) {
             renderer.setSize($('#coin-canvas').width(), 400);
             $('#coin-canvas').append(renderer.domElement);
 
-            // Lighting Upgrade
-            const ambientLight = new THREE.AmbientLight(0xffffff, 1.2); // Brighter ambient
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
             scene.add(ambientLight);
-
             const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
             scene.add(hemiLight);
-
             const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
             dirLight.position.set(5, 10, 7);
             scene.add(dirLight);
 
-            // Create Coin
             const coinGeometry = new THREE.CylinderGeometry(2, 2, 0.2, 64);
             const goldMaterial = new THREE.MeshStandardMaterial({
                 color: 0xffd700,
@@ -447,25 +466,17 @@ if (isset($_GET['action'])) {
                 emissiveIntensity: 0.2
             });
 
-            // Texture for sides (Heads/Tails)
             const loader = new THREE.TextureLoader();
             const createTexture = (text) => {
                 const canvas = document.createElement('canvas');
                 canvas.width = 512; canvas.height = 512;
                 const ctx = canvas.getContext('2d');
-                // Vibrant gold background
                 const grad = ctx.createRadialGradient(256, 256, 50, 256, 256, 250);
-                grad.addColorStop(0, '#fff200');
-                grad.addColorStop(1, '#ffc400');
+                grad.addColorStop(0, '#fff200'); grad.addColorStop(1, '#ffc400');
                 ctx.fillStyle = grad; ctx.fillRect(0, 0, 512, 512);
-
-                // Shining text
                 ctx.fillStyle = '#8b6508'; ctx.font = 'bold 350px Orbitron';
                 ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 20;
                 ctx.fillText(text, 256, 256);
-
-                // Border
                 ctx.strokeStyle = '#8b6508'; ctx.lineWidth = 30;
                 ctx.strokeRect(20, 20, 472, 472);
                 return new THREE.CanvasTexture(canvas);
@@ -475,15 +486,14 @@ if (isset($_GET['action'])) {
             const tailsTex = createTexture('T');
 
             const materials = [
-                goldMaterial, // Side
-                new THREE.MeshStandardMaterial({ map: headsTex, metalness: 0.8, roughness: 0.2 }), // Top
-                new THREE.MeshStandardMaterial({ map: tailsTex, metalness: 0.8, roughness: 0.2 })  // Bottom
+                goldMaterial,
+                new THREE.MeshStandardMaterial({ map: headsTex, metalness: 0.8, roughness: 0.2 }),
+                new THREE.MeshStandardMaterial({ map: tailsTex, metalness: 0.8, roughness: 0.2 })
             ];
 
             coin = new THREE.Mesh(coinGeometry, materials);
             coin.rotation.x = Math.PI / 2;
             scene.add(coin);
-
             camera.position.z = 6;
             animate();
         }
@@ -519,10 +529,7 @@ if (isset($_GET['action'])) {
 
             $.post('coinflip.php?action=play', { bet: bet, choice: selectedChoice }, function (res) {
                 if (res.success) {
-                    // Animation Flip
                     const flipCount = 10 + Math.random() * 5;
-                    const targetRotation = res.result === 'Heads' ? 0 : Math.PI;
-
                     gsap.to(coin.position, { y: 3, duration: 0.6, yoyo: true, repeat: 1, ease: "power2.out" });
                     gsap.to(coin.rotation, {
                         x: Math.PI * 2 * flipCount + (Math.PI / 2),
@@ -533,19 +540,14 @@ if (isset($_GET['action'])) {
                             isFlipping = false;
                             $('#flipBtn').prop('disabled', false).text('⚡ TUNG NGAY');
                             $('#userMoney').text(res.money);
-
-                            // Adjust final rotation to show result
                             const finalX = res.result === 'Heads' ? Math.PI / 2 : -Math.PI / 2;
                             gsap.to(coin.rotation, { x: finalX, y: 0, z: 0, duration: 0.3 });
-
                             $('#resultOverlay').text(res.result.toUpperCase() + (res.win ? ' WIN!' : ' LOSE!'))
                                 .css({ opacity: 1, color: res.win ? '#00ff88' : '#ff4757' });
-
+                            loadCoinflipHistory();
                             if (res.win) {
                                 if (window.GameEffects) window.GameEffects.showWin(parseInt(res.winAmount.replace(/\./g, '')));
-                                Swal.fire({ title: 'THẮNG LỚN!', html: `Bạn nhận được <b style="color:#f1c40f">${res.winAmount} gtlm</b>`, icon: 'success', background: '#1a1a1a', color: '#fff', timer: 2000, showConfirmButton: false });
-                            } else {
-                                if (window.GameEffects) window.GameEffects.showLoss(0);
+                                Swal.fire({ title: 'THẮNG LỚN!', html: `Bạn nhận được <b style="color:#f1c40f">${res.winAmount} gtlm</b>`, icon: 'success', timer: 2000, showConfirmButton: false });
                             }
                         }
                     });
@@ -557,11 +559,49 @@ if (isset($_GET['action'])) {
             });
         }
 
-        $(document).ready(init3D);
-    </script>
+        async function loadCoinflipHistory() {
+            try {
+                const response = await fetch('../api_game_history.php?game=Coin Flip');
+                const data = await response.json();
+                if (data.success && data.history) {
+                    const tbody = document.getElementById('historyTableBody');
+                    if (data.history.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px; opacity: 0.5;">Chưa có lịch sử</td></tr>';
+                        return;
+                    }
+                    tbody.innerHTML = data.history.slice(0, 10).map(record => `
+                        <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                            <td style="padding: 12px 8px; opacity: 0.7;">#${record.id}</td>
+                            <td style="padding: 12px 8px; text-align: right;">${parseInt(record.bet_amount).toLocaleString()}</td>
+                            <td style="padding: 12px 8px;"><span style="color: ${record.is_win ? '#4ade80' : '#ff6b6b'}">${record.is_win ? 'THẮNG' : 'THUA'}</span></td>
+                            <td style="padding: 12px 8px; text-align: right;">${parseInt(record.win_amount).toLocaleString()}</td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (e) { console.error(e); }
+        }
 
-    <canvas id="threejs-background"></canvas>
-    <script>
+        $(document).ready(() => {
+            init3D();
+            loadCoinflipHistory();
+            const ctx = document.getElementById('gameChart');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Thắng', 'Thua'],
+                        datasets: [{
+                            data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                            backgroundColor: ['rgba(74, 222, 128, 0.6)', 'rgba(255, 107, 107, 0.6)'],
+                            borderColor: ['#4ade80', '#ff6b6b'],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#fff', font: { size: 10 } } } } }
+                });
+            }
+        });
+
         (function () {
             window.themeConfig = {
                 particleCount: <?= $particleCount ?>,
@@ -580,1574 +620,6 @@ if (isset($_GET['action'])) {
                 document.head.appendChild(s);
             });
         })();
-    
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for coinflip game
-    const ctxCoinflip = document.getElementById('gameChart');
-    if (ctxCoinflip) {
-        const gameChart = new Chart(ctxCoinflip.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadCoinflipHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for coinflip game
-    const ctxCoinflip = document.getElementById('gameChart');
-    if (ctxCoinflip) {
-        const gameChart = new Chart(ctxCoinflip.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadCoinflipHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for coinflip game
-    const ctxCoinflip = document.getElementById('gameChart');
-    if (ctxCoinflip) {
-        const gameChart = new Chart(ctxCoinflip.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadCoinflipHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for coinflip game
-    const ctxCoinflip = document.getElementById('gameChart');
-    if (ctxCoinflip) {
-        const gameChart = new Chart(ctxCoinflip.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadCoinflipHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for coinflip game
-    const ctxCoinflip = document.getElementById('gameChart');
-    if (ctxCoinflip) {
-        const gameChart = new Chart(ctxCoinflip.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadCoinflipHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for coinflip game
-    const ctxCoinflip = document.getElementById('gameChart');
-    if (ctxCoinflip) {
-        const gameChart = new Chart(ctxCoinflip.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadCoinflipHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for coinflip game
-    const ctxCoinflip = document.getElementById('gameChart');
-    if (ctxCoinflip) {
-        const gameChart = new Chart(ctxCoinflip.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadCoinflipHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for coinflip game
-    const ctxCoinflip = document.getElementById('gameChart');
-    if (ctxCoinflip) {
-        const gameChart = new Chart(ctxCoinflip.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadCoinflipHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for coinflip game
-    const ctxCoinflip = document.getElementById('gameChart');
-    if (ctxCoinflip) {
-        const gameChart = new Chart(ctxCoinflip.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadCoinflipHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for coinflip game
-    const ctxCoinflip = document.getElementById('gameChart');
-    if (ctxCoinflip) {
-        const gameChart = new Chart(ctxCoinflip.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadCoinflipHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for coinflip game
-    const ctxCoinflip = document.getElementById('gameChart');
-    if (ctxCoinflip) {
-        const gameChart = new Chart(ctxCoinflip.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadCoinflipHistory);
-
-
-
-    // Improved history loading function
-    async function loadCoinflipHistory() {
-        try {
-            const response = await fetch('coinflip.php?action=get_history', {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for coinflip game
-    const ctxCoinflip = document.getElementById('gameChart');
-    if (ctxCoinflip) {
-        const gameChart = new Chart(ctxCoinflip.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadCoinflipHistory);
-
-</script>
-
-
-
-
-
-
-
-
-
-
-
-
-<div class="bottom-section">
-    <div class="history-box">
-        <h3>📋 Lịch sử chơi (10 lần gần nhất)</h3>
-        <table border="1" cellpadding="10" id="historyTable">
-            <thead>
-                <tr style="background: rgba(255, 255, 255, 0.1);">
-                    <th style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); color: #ffd700;">ID</th>
-                    <th style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); color: #ffd700;">Cược</th>
-                    <th style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); color: #ffd700;">Kết quả</th>
-                    <th style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); color: #ffd700;">Thắng</th>
-                    <th style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); color: #ffd700;">Thời gian</th>
-                </tr>
-            </thead>
-            <tbody id="historyBody">
-                <tr><td colspan="5" style="text-align: center; padding: 15px; color: #aaa;">Chưa có lượt chơi nào</td></tr>
-            </tbody>
-        </table>
-    </div>
-    
-    <div class="chart-box">
-        <h3>📊 Thống kê</h3>
-        <div class="stats-container">
-            <div class="stat-item wins">
-                <div class="label">Lần Thắng</div>
-                <div class="value"><?= $gameThang ?></div>
-            </div>
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
+    </script>
 </body>
-
 </html>

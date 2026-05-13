@@ -118,7 +118,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_FILES["avatar"])) {
             background: <?= $bgGradientCSS ?>;
             background-attachment: fixed;
             min-height: 100vh;
-            position: relative;\n        padding: 20px;
+            position: relative;
+            padding: 20px;
         }
         
         * {
@@ -194,7 +195,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_FILES["avatar"])) {
             font-size: 28px;
             font-weight: 700;
         }
-            /* Three.js canvas background */\n        #threejs-background {\n            position: fixed;\n            top: 0;\n            left: 0;\n            width: 100%;\n            height: 100%;\n            z-index: -1;\n            pointer-events: none;\n        }\n
+            /* Three.js canvas background */
+        #threejs-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
     </style>
 </head>
 <body>
@@ -327,7 +338,29 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_FILES["avatar"])) {
     </script>
 
 <script>
-    // Initialize Three.js Background\n    (function() {\n        // Pass theme config từ PHP sang JavaScript\n        window.themeConfig = {\n            particleCount: <?= $particleCount ?? 800 ?>,\n            particleSize: <?= $particleSize ?? 0.05 ?>,\n            particleColor: '<?= $particleColor ?? "#ffffff" ?>',\n            particleOpacity: <?= $particleOpacity ?? 0.6 ?>,\n            shapeCount: <?= $shapeCount ?? 10 ?>,\n            shapeColors: <?= json_encode($shapeColors ?? ["#667eea", "#764ba2", "#4facfe", "#00f2fe"]) ?>,\n            shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>,\n            bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>\n        };\n        \n        // Load Three.js background script với đường dẫn chính xác\n        const isInGames = window.location.pathname.includes('/games/');\n        const script = document.createElement('script');\n        script.src = isInGames ? '../threejs-background.js' : 'threejs-background.js';\n        script.onload = function() {\n            console.log('Three.js background loaded');\n        };\n        document.head.appendChild(script);\n    })();
+    // Initialize Three.js Background
+    (function() {
+        // Pass theme config từ PHP sang JavaScript
+        window.themeConfig = {
+            particleCount: <?= $particleCount ?? 800 ?>,
+            particleSize: <?= $particleSize ?? 0.05 ?>,
+            particleColor: '<?= $particleColor ?? "#ffffff" ?>',
+            particleOpacity: <?= $particleOpacity ?? 0.6 ?>,
+            shapeCount: <?= $shapeCount ?? 10 ?>,
+            shapeColors: <?= json_encode($shapeColors ?? ["#667eea", "#764ba2", "#4facfe", "#00f2fe"]) ?>,
+            shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>,
+            bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>
+        };
+        
+        // Load Three.js background script với đường dẫn chính xác
+        const isInGames = window.location.pathname.includes('/games/');
+        const script = document.createElement('script');
+        script.src = isInGames ? '../threejs-background.js' : 'threejs-background.js';
+        script.onload = function() {
+            console.log('Three.js background loaded');
+        };
+        document.head.appendChild(script);
+    })();
 </script>
 </body>
 </html>

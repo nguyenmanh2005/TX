@@ -156,7 +156,7 @@ if (isset($_GET['action'])) {
 
 <head>
     <meta charset="UTF-8">
-    <title>Sic Bo 3D - Đỉnh Cao Xúc Xắc</title>
+    <title>Xanh Đỏ Đối Kháng - Đỉnh Cao Xúc Xắc</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../assets/css/main.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -480,14 +480,14 @@ if (isset($_GET['action'])) {
 
 <body>
     <div class="main-container">
-        <h1 class="game-title">SIC BO 3D</h1>
+        <h1 class="game-title">XANH ĐỎ ĐỐI KHÁNG</h1>
         <div class="balance-pill">💰 Số Gtlm: <span id="balance-val"><?= number_format($money, 0, ',', '.') ?></span> gtlm</div>
 
         <div class="info-guide" style="max-width: 800px; margin: 0 auto 2rem; background: rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 20px; border-left: 5px solid var(--accent); text-align: left; border-right: 1px solid rgba(255,255,255,0.1); border-top: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
             💡 <b>HƯỚNG DẪN NHANH:</b> Thả thính vào các ô liều. Bạn có thể liều nhiều ô cùng lúc.<br>
-            - <b>Xỉu (Ác quỷ):</b> Tổng điểm 4-10. Tỷ lệ 1 ăn 1.<br>
-            - <b>Tài (Thiên thần):</b> Tổng điểm 11-17. Tỷ lệ 1 ăn 1.<br>
-            - <b>Bộ ba:</b> 3 xúc xắc giống nhau (không tính Tài/Xỉu). Húp x30!
+            - <b>Ác Quỷ (Ác quỷ):</b> Tổng điểm 4-10. Tỷ lệ 1 ăn 1.<br>
+            - <b>Thiên Thần (Thiên thần):</b> Tổng điểm 11-17. Tỷ lệ 1 ăn 1.<br>
+            - <b>Bộ ba:</b> 3 xúc xắc giống nhau (không tính Thiên thần/ Ác quỷ). Húp x30!
             <button onclick="showFullRules()" style="background: var(--accent); color: #000; border: none; padding: 8px 20px; border-radius: 50px; cursor: pointer; margin-top: 10px; font-weight: 800; text-transform: uppercase; font-size: 0.7rem; box-shadow: 0 5px 15px rgba(251, 191, 36, 0.4);">📜 Xem chi tiết luật</button>
         </div>
 
@@ -537,11 +537,11 @@ if (isset($_GET['action'])) {
 
             <div class="bet-grid">
                 <!-- Main Bets -->
-                <div class="bet-item" data-type="small"><div class="label">🔵 XỈU (4-10)</div><div class="odds">1 ĂN 1</div><div class="bet-amount-badge" style="display:none">0</div></div>
+                <div class="bet-item" data-type="small"><div class="label">🔵 Xanh (4-10)</div><div class="odds">1 ĂN 1</div><div class="bet-amount-badge" style="display:none">0</div></div>
                 <div class="bet-item" data-type="odd"><div class="label">⚖️ LẺ</div><div class="odds">1 ĂN 1</div><div class="bet-amount-badge" style="display:none">0</div></div>
                 <div class="bet-item" data-type="any_triple" style="grid-column: span 2; background: rgba(251, 191, 36, 0.2); border: 2px solid var(--accent);"><div class="label">✨ BẤT KỲ BỘ BA ✨</div><div class="odds">1 ĂN 30</div><div class="bet-amount-badge" style="display:none">0</div></div>
                 <div class="bet-item" data-type="even"><div class="label">⚖️ CHẴN</div><div class="odds">1 ĂN 1</div><div class="bet-amount-badge" style="display:none">0</div></div>
-                <div class="bet-item" data-type="big"><div class="label">🔴 TÀI (11-17)</div><div class="odds">1 ĂN 1</div><div class="bet-amount-badge" style="display:none">0</div></div>
+                <div class="bet-item" data-type="big"><div class="label">🔴 Đỏ (11-17)</div><div class="odds">1 ĂN 1</div><div class="bet-amount-badge" style="display:none">0</div></div>
 
                 <!-- Single Numbers -->
                 <div style="grid-column: 1 / -1; margin: 1.5rem 0; font-size: 0.7rem; font-weight: 800; letter-spacing: 2px; color: rgba(255,255,255,0.4); border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem; text-transform: uppercase;">🎲 CHIẾN SỐ DUY NHẤT (x1, x2, x3)</div>

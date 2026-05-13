@@ -21,8 +21,12 @@ if (isset($conn) && $conn) {
     }
 }
 
+$env = file_exists(__DIR__ . '/../.env.php') ? require __DIR__ . '/../.env.php' : [];
+
 return [
-    'bot_password' => '12345678@@A',
+    'bot_password' => $env['BOT_PASSWORD'] ?? throw new RuntimeException('BOT_PASSWORD chưa được cấu hình trong .env.php!'),
+
+
     'bot_emails' => $botEmails, // Luôn cập nhật mới nhất từ DB
     'settings' => [
         'max_bots_per_cycle' => 100,

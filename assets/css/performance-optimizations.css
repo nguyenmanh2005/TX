@@ -33,11 +33,6 @@
     will-change: transform;
 }
 
-/* Optimize font loading */
-@font-face {
-    font-family: 'GameFont';
-    font-display: swap; /* Show fallback immediately */
-}
 
 /* Reduce animations on low-end devices */
 @media (prefers-reduced-motion: reduce) {

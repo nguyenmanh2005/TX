@@ -196,7 +196,7 @@ if (isset($_GET['action'])) {
         <div class="glass-card">
             <div class="sidebar">
                 <div>
-                    <h1 style="margin:0; font-size: 2rem; font-weight: 900; color: var(--primary); font-family: 'Orbitron'; letter-spacing: 2px;">QUANTUM PULSE</h1>
+                    <h1 style="margin:0; font-size: 2rem; font-weight: 900; color: var(--primary); font-family: 'Orbitron'; letter-spacing: 2px;">TRẬN ĐỊA TRẮNG ĐỎ</h1>
                     <p style="margin:0; opacity:0.4; font-size: 0.7rem; letter-spacing: 1px;">Particle Synchronization Lab</p>
                 </div>
 
@@ -379,15 +379,20 @@ if (isset($_GET['action'])) {
     <script>
         (function() {
             window.themeConfig = {
-                particleCount: <?= $particleCount ?>,
-                particleSize: <?= $particleSize ?>,
-                particleColor: '<?= $particleColor ?>',
-                bgGradient: <?= json_encode($bgGradient) ?>
+                particleCount: <?= $particleCount ?? 400 ?>,
+                particleSize: <?= $particleSize ?? 0.05 ?>,
+                particleColor: '<?= $particleColor ?? "#00f2fe" ?>',
+                bgGradient: <?= json_encode($bgGradient ?? ["#000000", "#0a0a2a"]) ?>
             };
             const prefix = '../';
             ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'].forEach(src => {
                 const s = document.createElement('script');
-                s.src = prefix + src; s.
+                s.src = prefix + src;
+                s.async = false;
+                document.head.appendChild(s);
+            });
+        })();
+    </script>
     <!-- Statistics and History Section -->
     <div class="stats-card-container" style="max-width: 1200px; margin: 20px auto; padding: 0 20px;">
         <div class="glass-card" style="display: block; padding: 20px; height: auto; grid-template-columns: 1fr;">

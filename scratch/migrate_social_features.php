@@ -1,5 +1,5 @@
 <?php
-require_once 'db_connect.php';
+require_once '../db_connect.php';
 
 $queries = [
     "CREATE TABLE IF NOT EXISTS guild_challenges (

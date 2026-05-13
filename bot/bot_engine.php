@@ -47,6 +47,13 @@ set_exception_handler(function($e) {
     $inError = false;
 });
 
+/**
+ * Ghi log hoạt động của bot
+ * @param string $email Email của bot
+ * @param string $level Mức độ log (INFO, ERROR, etc.)
+ * @param string $action Hành động thực hiện
+ * @param string $details Chi tiết hành động
+ */
 function writeBotLog(string $email, string $level, string $action, string $details = "") {
     $logDir = __DIR__ . '/logs/';
     if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
@@ -110,7 +117,14 @@ while($row = $nameRes->fetch_assoc()) {
     $botNameMap[$row['Email']] = ['id' => $row['Iduser'], 'name' => $row['Name']];
 }
 
-function executeBotAction(string $url, ?array $postData = null, string $cookieFile) {
+/**
+ * Thực hiện hành động bot qua cURL
+ * @param string $url URL đích
+ * @param array|null $postData Dữ liệu POST
+ * @param string $cookieFile File cookie
+ * @return array|null Kết quả trả về (JSON decoded)
+ */
+function executeBotAction(string $url, ?array $postData = null, string $cookieFile): ?array {
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (BotArmy/16.1; OmniAccess)');
@@ -132,6 +146,16 @@ function executeBotAction(string $url, ?array $postData = null, string $cookieFi
 }
 
 // ── MAIN LOOP ──
+/**
+ * Thực thi một chu kỳ hoạt động của Bot Army
+ * @param mysqli $conn Kết nối CSDL
+ * @param array $config Cấu hình hệ thống
+ * @param string $cookieDir Thư mục lưu cookie
+ * @param string $baseUrl URL gốc của website
+ * @param BotBrain $brain Engine xử lý hành vi
+ * @param array $botNameMap Bản đồ tên bot
+ * @param array $availableGames Danh sách game khả dụng
+ */
 function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string $baseUrl, BotBrain $brain, array $botNameMap, array $availableGames) {
     header('X-Accel-Buffering: no'); // Disable buffering for real-time streaming
     echo "<body style='background:#020617; color:#f8fafc; font-family:sans-serif; padding:20px;'>";

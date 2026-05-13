@@ -101,7 +101,7 @@ if (isset($_GET['action'])) {
                     logGameHistoryWithAll($conn, $userId, 'Crash', $game['bet'], $winAmount, true);
                     $conn->commit();
                     $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
-                    $response = ['success' => true, 'winAmount' => number_format($winAmount, 0, ',', '.'), 'money' => number_format($newMoney, 0, ',', '.')];
+                    $response = ['success' => true, 'winAmount' => number_format($winAmount, 0, ',', '.'), 'winAmountRaw' => $winAmount, 'money' => number_format($newMoney, 0, ',', '.')];
                     unset($_SESSION['crash_game']);
                 } catch (Exception $e) {
                     $conn->rollback();

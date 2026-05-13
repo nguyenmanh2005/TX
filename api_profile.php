@@ -254,6 +254,9 @@ switch ($action) {
         $profileTheme = trim($_POST['profile_theme'] ?? '');
         $customCss = trim($_POST['custom_css'] ?? '');
 
+        $updateStmt = null;
+        $insertStmt = null;
+
         // Kiểm tra đã có profile chưa
         $checkSql = "SELECT user_id FROM user_profiles WHERE user_id = ?";
         $checkStmt = $conn->prepare($checkSql);

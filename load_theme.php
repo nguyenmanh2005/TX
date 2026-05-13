@@ -11,6 +11,15 @@ if (!isset($conn)) {
 
 $themeConfig = null;
 $bgGradient = ['#667eea', '#764ba2', '#4facfe']; // Default gradient
+$bgGradientCSS = 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%)';
+$particleCount = 100;
+$particleSize = 0.05;
+$particleColor = '#ffffff';
+$particleOpacity = 0.6;
+$shapeCount = 10;
+$shapeColors = ['#667eea', '#764ba2', '#4facfe', '#00f2fe'];
+$shapeOpacity = 0.3;
+$themeName = 'Default';
 
 // Nếu có user session, load theme của user
 if (isset($_SESSION['Iduser'])) {
