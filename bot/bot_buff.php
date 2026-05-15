@@ -114,7 +114,7 @@ if (isset($_GET['action'])) {
 <body>
 
 <div class="container">
-    <h1>💰 Buff Tiền Quân Đoàn</h1>
+    <h1>💰 Buff  Gtlm Quân Đoàn</h1>
 
     <div class="tabs">
         <button class="tab-btn active" onclick="switchMode('random', this)">Ngẫu nhiên</button>
@@ -133,11 +133,11 @@ if (isset($_GET['action'])) {
             </div>
             <div style="display: flex; gap: 10px;">
                 <div class="form-group" style="flex:1;">
-                    <label>Tiền tối thiểu (Min)</label>
+                    <label> Gtlm tối thiểu (Min)</label>
                     <input type="number" name="min" value="100000">
                 </div>
                 <div class="form-group" style="flex:1;">
-                    <label>Tiền tối đa (Max)</label>
+                    <label> Gtlm tối đa (Max)</label>
                     <input type="number" name="max" value="1000000">
                 </div>
             </div>
@@ -152,7 +152,7 @@ if (isset($_GET['action'])) {
                 </select>
             </div>
             <div class="form-group">
-                <label>Số tiền Buff cụ thể</label>
+                <label>Số  Gtlm Buff cụ thể</label>
                 <input type="number" name="amount" value="1000000">
             </div>
         </div>
@@ -174,7 +174,7 @@ if (isset($_GET['action'])) {
             <input type="number" name="max_cap" value="10000000">
         </div>
 
-        <button type="submit" class="btn-submit">🚀 THỰC THI BUFF TIỀN</button>
+        <button type="submit" class="btn-submit">🚀 THỰC THI BUFF  Gtlm</button>
     </form>
 
     <div id="result"></div>
@@ -218,7 +218,7 @@ if (isset($_GET['action'])) {
         
         const data = await response.json();
         btn.disabled = false;
-        btn.innerText = '🚀 THỰC THI BUFF TIỀN';
+        btn.innerText = '🚀 THỰC THI BUFF  Gtlm';
 
         resDiv.style.display = 'block';
         resDiv.innerHTML = `

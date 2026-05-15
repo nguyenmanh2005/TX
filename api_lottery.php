@@ -133,7 +133,7 @@ elseif ($action === 'buy' && $userId) {
         $user = $stmt->get_result()->fetch_assoc();
         
         if ($user['Money'] < $ticketPrice) {
-            throw new Exception('Không đủ tiền');
+            throw new Exception('Không đủ  Gtlm');
         }
         
         // Deduct

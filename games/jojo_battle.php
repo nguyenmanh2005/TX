@@ -71,22 +71,35 @@ if (isset($_GET['action'])) {
 
     if ($action === 'place_bet') {
         $chon = $_POST['chon'] ?? '';
-        $cuoc = (int) ($_POST['cuoc'] ?? 0);
+        $cuoc = (float) ($_POST['cuoc'] ?? 0);
         $roundId = (int) ($_POST['round_id'] ?? 0);
 
-        if ($cuoc > $money || $cuoc <= 0) {
-            echo json_encode(['success' => false, 'message' => '⚠️ Số Gtlm không đủ!']);
-            exit;
-        }
+        $conn->begin_transaction();
+        try {
+            // SELECT FOR UPDATE
+            $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+            $stmt->bind_param("i", $userId);
+            $stmt->execute();
+            $u = $stmt->get_result()->fetch_assoc();
 
-        $stmt = $conn->prepare("INSERT INTO bets (user_id, round_id, chosen_character, amount) VALUES (?, ?, ?, ?)");
-        $stmt->bind_param("iisd", $userId, $roundId, $chon, $cuoc);
-        if ($stmt->execute()) {
-            $newMoney = $money - $cuoc;
-            $conn->query("UPDATE users SET Money = $newMoney WHERE Iduser = $userId");
-            echo json_encode(['success' => true, 'newBalance' => number_format($newMoney) . ' gtlm']);
-        } else {
-            echo json_encode(['success' => false, 'message' => '❌ Lỗi hệ thống!']);
+            if (!$u || $u['Money'] < $cuoc || $cuoc <= 0) {
+                throw new Exception('⚠️ Số Gtlm không đủ!');
+            }
+
+            $stmt = $conn->prepare("INSERT INTO bets (user_id, round_id, chosen_character, amount) VALUES (?, ?, ?, ?)");
+            $stmt->bind_param("iisd", $userId, $roundId, $chon, $cuoc);
+            if (!$stmt->execute()) throw new Exception('❌ Lỗi đặt cược!');
+
+            $stmt = $conn->prepare("UPDATE users SET Money = Money - ? WHERE Iduser = ?");
+            $stmt->bind_param("di", $cuoc, $userId);
+            $stmt->execute();
+
+            $conn->commit();
+            $newMoneyVal = $u['Money'] - $cuoc;
+            echo json_encode(['success' => true, 'newBalance' => number_format($newMoneyVal) . ' gtlm']);
+        } catch (Exception $e) {
+            $conn->rollback();
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
         exit;
     }
@@ -95,46 +108,60 @@ if (isset($_GET['action'])) {
         $roundId = (int) ($_POST['round_id'] ?? 0);
         $winner = rand(0, 1) ? "JoJo" : "Dio";
 
-        $stmt = $conn->prepare("INSERT INTO rounds (round_id, winner) VALUES (?, ?)");
-        $stmt->bind_param("is", $roundId, $winner);
-        $stmt->execute();
+        $conn->begin_transaction();
+        try {
+            $stmt = $conn->prepare("INSERT INTO rounds (round_id, winner) VALUES (?, ?)");
+            $stmt->bind_param("is", $roundId, $winner);
+            $stmt->execute();
 
-        $stmt = $conn->prepare("SELECT chosen_character, amount FROM bets WHERE round_id = ? AND user_id = ?");
-        $stmt->bind_param("ii", $roundId, $userId);
-        $stmt->execute();
-        $res = $stmt->get_result();
+            $stmt = $conn->prepare("SELECT chosen_character, amount FROM bets WHERE round_id = ? AND user_id = ?");
+            $stmt->bind_param("ii", $roundId, $userId);
+            $stmt->execute();
+            $res = $stmt->get_result();
 
-        $totalWin = 0;
-        $totalBet = 0;
-        $chosen = '';
-        while ($bet = $res->fetch_assoc()) {
-            $totalBet += $bet['amount'];
-            $chosen = $bet['chosen_character'];
-            if ($bet['chosen_character'] === $winner)
-                $totalWin += $bet['amount'] * 2;
+            $totalWin = 0;
+            $totalBet = 0;
+            $chosen = '';
+            while ($bet = $res->fetch_assoc()) {
+                $totalBet += $bet['amount'];
+                $chosen = $bet['chosen_character'];
+                if ($bet['chosen_character'] === $winner)
+                    $totalWin += $bet['amount'] * 2;
+            }
+
+            if ($totalWin > 0) {
+                $stmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
+                $stmt->bind_param("di", $totalWin, $userId);
+                $stmt->execute();
+            }
+
+            // Insert vào history_vq table
+            $historyStmt = $conn->prepare("INSERT INTO history_vq (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
+            if ($historyStmt) {
+                $resultStr = "Cược: $chosen - Thắng: $winner";
+                $historyStmt->bind_param("idid", $userId, $totalBet, $resultStr, $totalWin);
+                $historyStmt->execute();
+                $historyStmt->close();
+            }
+
+            if (file_exists('../game_history_helper.php')) {
+                require_once '../game_history_helper.php';
+                logGameHistoryWithAll($conn, $userId, 'Vòng Quay JoJo', $totalBet, $totalWin, $totalWin > 0);
+            }
+
+            $conn->commit();
+
+            // Lấy lại số dư mới nhất sau khi commit
+            $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
+            $stmt->bind_param("i", $userId);
+            $stmt->execute();
+            $newBalanceVal = $stmt->get_result()->fetch_assoc()['Money'];
+
+            echo json_encode(['success' => true, 'winner' => $winner, 'winAmount' => $totalWin, 'newBalance' => number_format($newBalanceVal) . ' gtlm', 'message' => ($totalWin > 0) ? "⭐ VICTORY!" : "💀 RETIRED!"]);
+        } catch (Exception $e) {
+            $conn->rollback();
+            echo json_encode(['success' => false, 'message' => '❌ Lỗi xử lý kết quả!']);
         }
-
-        if ($totalWin > 0)
-            $conn->query("UPDATE users SET Money = Money + $totalWin WHERE Iduser = $userId");
-
-        // Insert vào history_vq table
-        $historyStmt = $conn->prepare("INSERT INTO history_vq (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-        if ($historyStmt) {
-            $resultStr = "Cược: $chosen - Thắng: $winner";
-            $historyStmt->bind_param("iisi", $userId, $totalBet, $resultStr, $totalWin);
-            $historyStmt->execute();
-            $historyStmt->close();
-        }
-
-        if (file_exists('../game_history_helper.php')) {
-            require_once '../game_history_helper.php';
-            logGameHistoryWithAll($conn, $userId, 'Vòng Quay JoJo', $totalBet, $totalWin, $totalWin > 0);
-        }
-
-        $stmt = $conn->query("SELECT Money FROM users WHERE Iduser = $userId");
-        $newBalance = $stmt->fetch_assoc()['Money'];
-
-        echo json_encode(['success' => true, 'winner' => $winner, 'winAmount' => $totalWin, 'newBalance' => number_format($newBalance) . ' gtlm', 'message' => ($totalWin > 0) ? "⭐ VICTORY!" : "💀 RETIRED!"]);
         exit;
     }
 }

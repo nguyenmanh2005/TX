@@ -1,54 +1,74 @@
-# Logs & Sessions
+# --- LOGS, SESSIONS & TEMP FILES ---
 php_errors.log
+error_log
 *.log
 bot/sessions/
 bot/cycle_logs/
-
-# Sensitive Config
-db_connect.php
-
-bot/cycle_logs/
 bot/logs/
-bot/sessions/
+bot/tester_session.txt
+*.tmp
+*.bak
+*.swp
+.php-cs-fixer.cache
+.phpunit.result.cache
+
+# --- SENSITIVE CONFIGURATION ---
+db_connect.php
+db_connect_backup_local.php
+.env.php
+.env
+bot/cookies.txt
+
+# --- DATABASE EXPORTS ---
+*.sql
+*.sqlite
+
+# --- UPLOADS & LARGE ASSETS ---
+uploads/
+cursors/
+123.zip
+*.zip
+*.rar
+*.7z
+
+# --- TOOL OUTPUTS ---
 xuat-toan-bo-du-an
 repomix-output.xml
-# Large Assets & Uploads
-cursors/
-uploads/
-123.zip
-.htaccess
-bot/cookies.txt
-Shared/img
 
-# Image Exclusion Rules
-# Ignore common image formats globally
+# --- IMAGE EXCLUSION RULES ---
+# Ignore all images globally to save Git space
 **/*.png
 **/*.jpg
 **/*.jpeg
 **/*.gif
 **/*.cur
 **/*.ani
+**/*.ico
 
-# EXCEPT Shared/img directory
+# EXCEPT specific system images if needed (Keep Shared/img)
 !Shared/img/
 !Shared/img/**
+!img/favicon.ico
 
-# OS & IDE Files
+# --- DEV TOOLS & SCRIPTS (LOCAL ONLY) ---
+setup_sample_event.php
+setup_features_v3.php
+export_missing_tables.php
+check_db_tables.php
+tester_bot.php
+Công-Việc-Phát-Triển
+
+# --- OS & IDE FILES ---
 .DS_Store
 Thumbs.db
+desktop.ini
 .vscode/
 .idea/
 node_modules/
 vendor/
-*.tmp
-bot/sessions
-.env.php
-.env
-db_connect_backup_local.php
-*.sql
-*.bak
-*.sqlite
-*.zip
-*.rar
-*.7z
-repomix-output.xml
+.htaccess
+scratch/
+*.local
+*.dev
+.user.ini
+composer.phar

@@ -5,11 +5,11 @@ return [
         "Ai cần lì xì không? Đại gia đang vui!",
         "Chào cả nhà, hôm nay cược lớn húp lớn nhé!",
         "Vừa húp Jackpot bên Mega Spin xong, qua đây quẩy tiếp!",
-        "Tiền bạc là phù du, quan trọng là anh em vui vẻ!"
+        " Gtlm bạc là phù du, quan trọng là anh em vui vẻ!"
     ],
     'win' => [
         "Có thế chứ! Húp nhẹ vài triệu GTLM.",
-        "Tiền chỉ là con số, quan trọng là cảm giác húp!",
+        " Gtlm chỉ là con số, quan trọng là cảm giác húp!",
         "Đại gia không bao giờ thua, chỉ là chưa thắng đủ lớn thôi!",
         "Thắng trận này xong tí đi bao anh em Bang mình nhậu!",
         "Đỉnh cao của sự giàu sang là húp liên tục! 😎"

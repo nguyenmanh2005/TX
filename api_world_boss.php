@@ -46,7 +46,7 @@ switch ($action) {
         $boss = $conn->query("SELECT * FROM world_boss WHERE id = 1")->fetch_assoc();
         if ($boss['status'] == 'dead') exit(json_encode(['success' => false, 'message' => 'Boss đã bị tiêu diệt!']));
 
-        // Sát thương ngẫu nhiên dựa trên cấp độ hoặc tiền (Ví dụ: 10k - 50k)
+        // Sát thương ngẫu nhiên dựa trên cấp độ hoặc  Gtlm (Ví dụ: 10k - 50k)
         $dmg = rand(10000, 50000);
         
         $conn->begin_transaction();

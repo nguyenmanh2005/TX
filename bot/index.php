@@ -1,9 +1,8 @@
-<?php
-/**
- * 🛡️ Bot Army Control Center (Dashboard) v15.7
- * Features: Multi-Game Stats, Economy Chart, Detailed Bot Inventory
- */
 session_start();
+if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
+    header('Location: /login.php');
+    exit;
+}
 require_once '../db_connect.php';
 $config = require 'config.php';
 
@@ -109,12 +108,12 @@ while($row = $res->fetch_assoc()) {
 }
 
 // Lấy tổng GTLM người thật
-$humanRes = $conn->query("SELECT SUM(Money) as total FROM users WHERE Email NOT LIKE '%bot%'")->fetch_assoc();
+$humanRes = $conn->query("SELECT SUM(Money) as total FROM users WHERE Email NOT REGEXP '^bot[0-9]+@'")->fetch_assoc();
 $stats['total_human_money'] = (float)($humanRes['total'] ?? 0);
 
 // 5. Kiểm tra sức khỏe Bot
 require_once 'bot_health.php';
-$healthSummary = getBotHealthSummary($conn, $config);
+$healthSummary = getBotHealthSummary($conn, $config, $botStates);
 
 // Lọc dữ liệu biểu đồ theo Range
 $range = $_GET['range'] ?? '1d';
@@ -189,7 +188,7 @@ if (isset($_GET['ajax'])) {
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>🛡️ Bot Control Center v15.7</title>
+    <title>🛡️ Bot Control Center v16.5</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -257,20 +256,26 @@ if (isset($_GET['ajax'])) {
         .range-btn { background: transparent; border: none; color: #94a3b8; font-size: 10px; font-weight: 600; padding: 5px 10px; border-radius: 7px; cursor: pointer; transition: all 0.2s; }
         .range-btn.active { background: var(--primary); color: white; }
         .range-btn:hover:not(.active) { background: rgba(255,255,255,0.05); }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+            100% { opacity: 1; transform: scale(1); }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <div>
-                <h1 style="margin:0; font-size: 24px;">🛡️ Bot Army Control Center v15.7</h1>
+                <h1 style="margin:0; font-size: 24px;">🛡️ Bot Army Control Center v16.5</h1>
                 <span style="color: var(--success); font-size: 12px;">● Đang giám sát <?= $stats['total'] ?> thành viên Thiên Thần & Ác Quỷ</span>
             </div>
             <div style="display: flex; gap: 10px;">
                
                 <a href="../chat3.php" class="btn" style="background: #334155; border: 1px solid rgba(255,255,255,0.1)">📋 Báo Cáo Tester</a>
                 <a href="../games/megaspin.php" class="btn" style="background: #065f46; border: 1px solid rgba(255,255,255,0.1)">🎡 Mega Spin</a>
-                <a href="bot_buff.php" class="btn" style="background: #1e293b; border: 1px solid rgba(255,255,255,0.1)">💰 Buff Tiền</a>
+                <a href="bot_buff.php" class="btn" style="background: #1e293b; border: 1px solid rgba(255,255,255,0.1)">💰 Buff  Gtlm</a>
                 <a href="bot_runner.php" class="btn" style="background: linear-gradient(135deg, #6366f1, #a855f7)">🚀 Trình Điều Khiển Web</a>
                 <a href="javascript:void(0)" onclick="spawnBots()" class="btn" style="background: var(--status-warn)">➕ Sinh Bot</a>
             </div>
@@ -466,10 +471,15 @@ if (isset($_GET['ajax'])) {
                             <h3><?= $bot['Name'] ?></h3>
                             <span>ID: #<?= $bot['Iduser'] ?></span>
                         </div>
-                        <div style="margin-left: auto;">
+                        <div style="margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
                             <span class="mood-badge mood-<?= $bot['state']['mood'] ?? 'happy' ?>">
                                 <?= $bot['state']['mood'] ?? 'happy' ?>
                             </span>
+                            <?php if (isset($bot['state']['fail_count']) && $bot['state']['fail_count'] >= 5): ?>
+                                <span style="background: var(--danger); color: white; font-size: 8px; padding: 2px 4px; border-radius: 4px; animation: pulse 1.5s infinite;">
+                                    ⚠️ FAIL: <?= $bot['state']['fail_count'] ?>
+                                </span>
+                            <?php endif; ?>
                         </div>
                     </div>
                     

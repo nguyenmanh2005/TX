@@ -601,6 +601,7 @@ if ($guildsTableExists) {
                     <div class="tab active" data-tab="my-guild">🏠 Guild Của Tôi</div>
                     <div class="tab" data-tab="guild-war" style="background: rgba(241, 196, 15, 0.1); border: 1px solid rgba(241, 196, 15, 0.3); color: #f1c40f;">⚔️ Đua Top Guild</div>
                     <div class="tab" data-tab="skills">✨ Kỹ Năng Bang</div>
+                    <div class="tab" data-tab="guild-pro" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); color: #8b5cf6;">🏰 Trung Tâm Guild</div>
                     <div class="tab" data-tab="members">👥 Thành Viên</div>
                     <div class="tab" data-tab="chat">💬 Chat Guild</div>
                     <?php if ($userGuildRole === 'leader' || $userGuildRole === 'officer'): ?>
@@ -683,8 +684,8 @@ if ($guildsTableExists) {
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                                     <div>
                                         <h3 style="color: #f1c40f;"><i class="fa fa-coins"></i> Tài Lộc (Fortune)</h3>
-                                        <p style="font-size: 0.9em; color: #aaa; margin: 10px 0;">Tăng tỉ lệ nhận thêm tiền khi thắng game.</p>
-                                        <div style="font-weight: bold; color: #2ecc71;">Hiệu ứng: +<span id="lvl-fortune-val">0</span>% tiền thắng</div>
+                                        <p style="font-size: 0.9em; color: #aaa; margin: 10px 0;">Tăng tỉ lệ nhận thêm  Gtlm khi thắng game.</p>
+                                        <div style="font-weight: bold; color: #2ecc71;">Hiệu ứng: +<span id="lvl-fortune-val">0</span>%  Gtlm thắng</div>
                                     </div>
                                     <div style="text-align: right;">
                                         <div style="font-size: 1.2em; font-weight: bold;">Lv.<span id="lvl-fortune">0</span></div>
@@ -726,7 +727,22 @@ if ($guildsTableExists) {
                     </div>
                 </div>
 
-                <!-- Tab: Thành Viên -->
+                <!-- Tab: Trung Tâm Guild -->
+                <div class="tab-content" id="guild-pro">
+                    <div class="card" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1)); border: 1px solid rgba(139, 92, 246, 0.3);">
+                        <div style="text-align: center; padding: 20px;">
+                            <i class="fa fa-fort-awesome" style="font-size: 64px; color: #8b5cf6; margin-bottom: 20px;"></i>
+                            <h2 style="color: #fff; margin-bottom: 15px;">Trung Tâm Nâng Cao Bang Hội</h2>
+                            <p style="color: #cbd5e1; margin-bottom: 30px; font-size: 1.1em;">
+                                Nơi quản lý các Lãnh địa đang chiếm đóng và Cửa hàng Bang hội độc quyền. 
+                                Sử dụng Điểm đóng góp (Contribution Points) để mua sắm và gia tăng sức mạnh cho Bang hội!
+                            </p>
+                            <a href="guild_pro.php" class="btn" style="background: linear-gradient(135deg, #8b5cf6, #ec4899); padding: 15px 40px; font-size: 1.2em; border: none;">
+                                <i class="fa fa-shopping-bag"></i> VÀO TRUNG TÂM NGAY
+                            </a>
+                        </div>
+                    </div>
+                </div>
                 <div class="tab-content" id="members">
                     <div class="card">
                         <h2 style="margin-bottom: 20px;">Danh Sách Thành Viên</h2>

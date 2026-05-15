@@ -6,7 +6,7 @@
 require_once __DIR__ . '/../db_connect.php';
 $config = require __DIR__ . '/config.php';
 
-function getBotHealthSummary(mysqli $conn, array $config) {
+function getBotHealthSummary(mysqli $conn, array $config, array $preloadedStates = []) {
     $sessionDir = __DIR__ . '/sessions/';
     $logFile = __DIR__ . '/logs/' . date('Y-m-d') . '.log';
     
@@ -40,16 +40,18 @@ function getBotHealthSummary(mysqli $conn, array $config) {
         $status = 'healthy';
         $issues = [];
 
-        // 1. Check State File
-        if (!file_exists($stateFile)) {
+        // 1. Check State
+        $state = $preloadedStates[$botMd5] ?? null;
+        if ($state === null && file_exists($stateFile)) {
+            $state = json_decode(file_get_contents($stateFile), true);
+        }
+
+        if ($state === null && !file_exists($stateFile)) {
             $status = 'warning';
             $issues[] = "Chưa có file trạng thái";
-        } else {
-            $state = json_decode(file_get_contents($stateFile), true);
-            if ($state === null) {
-                $status = 'critical';
-                $issues[] = "File trạng thái bị hỏng (Invalid JSON)";
-            }
+        } else if ($state === null) {
+            $status = 'critical';
+            $issues[] = "File trạng thái bị hỏng hoặc không tải được";
         }
 
         // 2. Check Cookie/Session
@@ -64,10 +66,15 @@ function getBotHealthSummary(mysqli $conn, array $config) {
             }
         }
 
-        // 3. Check Recent Errors
-        if (isset($recentErrors[$email])) {
+        // 3. Check Recent Errors & Fail Count
+        if (isset($state['fail_count']) && $state['fail_count'] >= 5) {
             $status = 'critical';
-            $issues[] = "Lỗi gần đây: " . $recentErrors[$email];
+            $issues[] = "Thất bại liên tiếp ({$state['fail_count']} lần)";
+        }
+
+        if (isset($recentErrors[$email])) {
+            if ($status !== 'critical') $status = 'critical';
+            $issues[] = "Lỗi log gần đây: " . $recentErrors[$email];
         }
 
         $health[$status]++;

@@ -62,7 +62,7 @@ switch ($action) {
 
         $conn->begin_transaction();
         try {
-            // Cộng tiền
+            // Cộng  Gtlm
             $conn->query("UPDATE users SET Money = Money + $amount WHERE Iduser = $userId");
             
             // Cập nhật stats

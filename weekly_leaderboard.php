@@ -445,7 +445,7 @@ if ($userRank && $userRank <= 100) {
                 <div class="user-stats">
                     <div class="stat-box">
                         <div class="stat-label">Tổng Kiếm Được</div>
-                        <div class="stat-value"><?= number_format($userStats['total_earned']) ?> gtlm</div>
+                        <div class="stat-value"><?= number_format($userStats['total_earned']) ?> GTLM</div>
                     </div>
                     <div class="stat-box">
                         <div class="stat-label">Số Game</div>
@@ -485,7 +485,7 @@ if ($userRank && $userRank <= 100) {
                             <?= $reward['name'] ?> - Phần Thưởng
                         </div>
                         <div style="color: #666; margin-bottom: 15px;">
-                            <?= number_format($reward['money']) ?> gtlm + <?= number_format($reward['xp']) ?> XP
+                            <?= number_format($reward['money']) ?> GTLM + <?= number_format($reward['xp']) ?> XP
                         </div>
                         <button class="claim-reward-btn" onclick="claimReward()">
                             🎁 Nhận Phần Thưởng
@@ -541,7 +541,7 @@ if ($userRank && $userRank <= 100) {
                                         <?= $isCurrentUser ? '<span style="color: #667eea;">(Bạn)</span>' : '' ?>
                                     </div>
                                 </td>
-                                <td><?= number_format($entry['total_earned']) ?> gtlm</td>
+                                <td><?= number_format($entry['total_earned']) ?> GTLM</td>
                                 <td><?= number_format($entry['total_games']) ?></td>
                                 <td><?= number_format($entry['total_wins']) ?></td>
                                 <td><?= number_format($entry['win_rate'], 1) ?>%</td>

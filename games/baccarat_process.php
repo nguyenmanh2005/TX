@@ -11,7 +11,7 @@ header('Content-Type: application/json');
 /**
  * Hàm ghi log lỗi kèm thời gian vào file php_errors.log
  */
-function logError($message) {
+function logError(string $message) {
     $logFile = '../php_errors.log';
     $timestamp = date('Y-m-d H:i:s');
     $logMessage = "[$timestamp] Baccarat Error: $message" . PHP_EOL;
@@ -31,35 +31,48 @@ try {
         throw new Exception("Dữ liệu nhận từ trình duyệt bị rỗng hoặc sai định dạng JSON.");
     }
 
-    $betPlayer = intval($data['player'] ?? 0);
-    $betBanker = intval($data['banker'] ?? 0);
-    $betTie = intval($data['tie'] ?? 0);
+    $rawPlayer = $data['player'] ?? 0;
+    $rawBanker = $data['banker'] ?? 0;
+    $rawTie = $data['tie'] ?? 0;
+
+    // FIX: Chống Array Injection & Validate
+    if (is_array($rawPlayer) || is_array($rawBanker) || is_array($rawTie)) {
+        echo json_encode(['error' => 'Dữ liệu cược không hợp lệ (Array Injection)']); exit;
+    }
+    if (!is_numeric($rawPlayer) || !is_numeric($rawBanker) || !is_numeric($rawTie)) {
+        echo json_encode(['error' => 'Dữ liệu cược phải là số']); exit;
+    }
+
+    $betPlayer = (int)$rawPlayer;
+    $betBanker = (int)$rawBanker;
+    $betTie = (int)$rawTie;
     $totalBet = $betPlayer + $betBanker + $betTie;
+    $minBet = 1000;
 
-    if ($totalBet <= 0) {
-        echo json_encode(['error' => 'Mức thách đấu không hợp lệ']);
+    if ($totalBet < $minBet) {
+        echo json_encode(['error' => 'Mức thách đấu tối thiểu là ' . number_format($minBet) . ' gtlm']);
         exit();
     }
 
-    // 1. Kiểm tra ngân khố
-    $sql = "SELECT Money FROM users WHERE Iduser = ?";
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) throw new Exception("Lỗi chuẩn bị SQL (Check Money): " . $conn->error);
-    
-    $stmt->bind_param("i", $userId);
-    $stmt->execute();
-    $userData = $stmt->get_result()->fetch_assoc();
-    
-    if (!$userData) throw new Exception("Không tìm thấy thông tin người dùng ID: $userId");
-    $userMoney = $userData['Money'];
-
-    if ($userMoney < $totalBet) {
-        echo json_encode(['error' => 'Ngân khố không đủ để thách đấu']);
-        exit();
-    }
-
-    // 2. Tạm khấu trừ ngân khố
+    // 1. Kiểm tra ngân khố & KHÓA BẢN GHI (FOR UPDATE)
     $conn->begin_transaction();
+    try {
+        $sql = "SELECT Money FROM users WHERE Iduser = ? FOR UPDATE";
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) throw new Exception("Lỗi chuẩn bị SQL (Check Money): " . $conn->error);
+        
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $userData = $stmt->get_result()->fetch_assoc();
+        
+        if (!$userData) throw new Exception("Không tìm thấy thông tin người dùng ID: $userId");
+        $userMoney = $userData['Money'];
+
+        if ($userMoney < $totalBet) {
+            $conn->rollback();
+            echo json_encode(['error' => 'Ngân khố không đủ để thách đấu']);
+            exit();
+        }
     
     $updateSql = "UPDATE users SET Money = Money - ? WHERE Iduser = ?";
     $updateStmt = $conn->prepare($updateSql);
@@ -102,6 +115,11 @@ try {
         'winAmount' => $winAmount,
         'newBalance' => $newBalance
     ]);
+
+    } catch (Exception $e) {
+        if (isset($conn) && $conn->connect_errno == 0) $conn->rollback();
+        throw $e;
+    }
 
 } catch (Exception $e) {
     if (isset($conn) && $conn->connect_errno == 0) $conn->rollback();
@@ -150,17 +168,17 @@ function simulateBaccarat() {
     ];
 }
 
-function calculateScore($cards) {
+function calculateScore(array $cards) {
     $total = 0;
     foreach ($cards as $c) $total += getVal($c);
     return $total % 10;
 }
 
-function getVal($c) {
+function getVal(int $c) {
     return ($c >= 10) ? 0 : $c;
 }
 
-function shouldBankerDraw($b, $p3) {
+function shouldBankerDraw(int $b, int $p3) {
     if ($p3 === -1) return $b <= 5;
     if ($b <= 2) return true;
     if ($b == 3) return $p3 != 8;
@@ -170,7 +188,7 @@ function shouldBankerDraw($b, $p3) {
     return false;
 }
 
-function formatCards($cards) {
+function formatCards(array $cards) {
     $suits = ['hearts', 'diamonds', 'clubs', 'spades'];
     $res = [];
     foreach ($cards as $c) {

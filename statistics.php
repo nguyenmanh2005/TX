@@ -630,13 +630,13 @@ if ($checkQuestsTable && $checkQuestsTable->num_rows > 0) {
                 <div class="stat-card">
                     <div class="stat-icon">💰</div>
                     <div class="stat-value <?= $totalEarned >= 0 ? 'positive' : 'negative' ?>" id="totalEarnedValue">
-                        <?= number_format($totalEarned, 0, ',', '.') ?> gtlm
+                        <?= number_format($totalEarned, 0, ',', '.') ?> GTLM
                     </div>
                     <div class="stat-label">Tổng Kiếm Được</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">💸</div>
-                    <div class="stat-value" id="totalSpentValue"><?= number_format($totalSpent, 0, ',', '.') ?> gtlm</div>
+                    <div class="stat-value" id="totalSpentValue"><?= number_format($totalSpent, 0, ',', '.') ?> GTLM</div>
                     <div class="stat-label">Tổng Đã Cược</div>
                 </div>
                 <div class="stat-card">
@@ -948,13 +948,13 @@ if ($checkQuestsTable && $checkQuestsTable->num_rows > 0) {
                     data: {
                         labels,
                         datasets: [{
-                            label: 'Kiếm Được (gtlm)',
+                            label: 'Kiếm Được (GTLM)',
                             data: earnedData,
                             borderColor: 'rgb(40, 167, 69)',
                             backgroundColor: 'rgba(40, 167, 69, 0.1)',
                             tension: 0.4
                         }, {
-                            label: 'Đã Cược (gtlm)',
+                            label: 'Đã Chiến (GTLM)',
                             data: spentData,
                             borderColor: 'rgb(220, 53, 69)',
                             backgroundColor: 'rgba(220, 53, 69, 0.1)',
@@ -1058,7 +1058,7 @@ if ($checkQuestsTable && $checkQuestsTable->num_rows > 0) {
         }
 
         function formatCurrency(value) {
-            return currencyFormatter.format(Math.round(value || 0)) + ' gtlm';
+            return currencyFormatter.format(Math.round(value || 0)) + ' GTLM';
         }
 
         function formatDateTime(value) {

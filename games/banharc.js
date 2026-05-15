@@ -36,12 +36,12 @@ class Fish {
         this.maxHp = type.hp;
         this.size = type.size;
         this.color = type.color;
-        
+
         // Vị trí xuất hiện ngẫu nhiên bên trái hoặc phải
         this.direction = Math.random() > 0.5 ? 1 : -1;
         this.x = this.direction === 1 ? -this.size : canvas.width + this.size;
         this.y = Math.random() * (canvas.height - 200) + 100;
-        
+
         // Di chuyển hơi zigzag
         this.angle = 0;
         this.isDead = false;
@@ -94,9 +94,9 @@ class Fish {
         if (this.maxHp > 1) {
             const healthBarWidth = this.size;
             ctx.fillStyle = '#333';
-            ctx.fillRect(-healthBarWidth/2, -this.size/2 - 10, healthBarWidth, 4);
+            ctx.fillRect(-healthBarWidth / 2, -this.size / 2 - 10, healthBarWidth, 4);
             ctx.fillStyle = '#4ade80';
-            ctx.fillRect(-healthBarWidth/2, -this.size/2 - 10, healthBarWidth * (this.hp / this.maxHp), 4);
+            ctx.fillRect(-healthBarWidth / 2, -this.size / 2 - 10, healthBarWidth * (this.hp / this.maxHp), 4);
         }
 
         ctx.restore();
@@ -188,7 +188,7 @@ function showScorePopup(x, y, score) {
 
 function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+
     spawnFish();
 
     // Update & Draw Fish
@@ -222,7 +222,7 @@ canvas.addEventListener('mousedown', (e) => {
     if (now - lastShotTime < 200) return; // Tốc độ bắn tối đa 5 viên/s
 
     const price = window.currentBulletPrice || 500;
-    
+
     // Kiểm tra xem có nhắm trúng con cá nào ngay lúc click không (Aiming)
     let targetedFish = null;
     for (const fish of fishes) {
@@ -233,15 +233,15 @@ canvas.addEventListener('mousedown', (e) => {
         }
     }
 
-    // Gọi API duy nhất: Trừ tiền đạn + Roll kết quả bắt cá luôn (Security fix)
-    $.post('../api_banharc.php', { 
-        action: 'shoot', 
+    // Gọi API duy nhất: Trừ  Gtlm đạn + Roll kết quả bắt cá luôn (Security fix)
+    $.post('../api_banharc.php', {
+        action: 'shoot',
         bullet_price: price,
         fish_type: targetedFish ? targetedFish.typeKey : ''
-    }, function(res) {
+    }, function (res) {
         if (res.success) {
             const bullet = new Bullet(canvas.width / 2, canvas.height - 50, e.clientX, e.clientY, price);
-            
+
             // Lưu kết quả server đã trả về vào viên đạn
             if (res.caught) {
                 bullet.serverCaught = true;
@@ -249,7 +249,7 @@ canvas.addEventListener('mousedown', (e) => {
                 bullet.fishName = res.fish_name;
                 bullet.targetFishId = targetedFish ? targetedFish.id : null; // Giả định có ID
             }
-            
+
             bullets.push(bullet);
             lastShotTime = now;
             $('#userBalance').text(Number(res.new_balance).toLocaleString());
@@ -266,15 +266,15 @@ function checkCollision() {
             const dist = Math.hypot(bullet.x - fish.x, bullet.y - fish.y);
             if (dist < fish.size / 2 + bullet.radius) {
                 bullet.isDead = true;
-                
+
                 // Nếu viên đạn này đã được Server xác nhận là "trúng" cá này
                 if (bullet.serverCaught && fish.typeKey === targetedFishType(bullet)) {
                     showScorePopup(fish.x, fish.y, bullet.reward);
                     fish.isDead = true;
-                    for(let i=0; i<20; i++) particles.push(new Particle(fish.x, fish.y, fish.color));
+                    for (let i = 0; i < 20; i++) particles.push(new Particle(fish.x, fish.y, fish.color));
                 } else {
                     // Trúng nhưng không chết (hoặc server roll trượt)
-                    for(let i=0; i<5; i++) particles.push(new Particle(bullet.x, bullet.y, '#fff'));
+                    for (let i = 0; i < 5; i++) particles.push(new Particle(bullet.x, bullet.y, '#fff'));
                 }
             }
         });

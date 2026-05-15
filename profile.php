@@ -129,6 +129,57 @@ $tableExists = $checkTable && $checkTable->num_rows > 0;
             margin-bottom: 10px;
         }
 
+        /* ── Pinned Achievements Gallery ── */
+        .pinned-gallery {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .pinned-item {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 2px solid #f1c40f;
+            cursor: help;
+            transition: all 0.3s ease;
+        }
+
+        .pinned-item:hover {
+            transform: translateY(-5px) scale(1.1);
+            box-shadow: 0 0 20px rgba(241, 196, 15, 0.5);
+        }
+
+        .pinned-item::after {
+            content: attr(data-name);
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .pinned-item:hover::after {
+            opacity: 1;
+        }
+
         .profile-title {
             font-size: 18px;
             color: #667eea;
@@ -590,11 +641,22 @@ $tableExists = $checkTable && $checkTable->num_rows > 0;
                 ? user.title_icon + ' ' + user.title_name
                 : '';
 
+            const pinnedAchievements = data.pinned_achievements || [];
+            let pinnedHtml = '';
+            if (pinnedAchievements.length > 0) {
+                pinnedHtml = '<div class="pinned-gallery">';
+                pinnedAchievements.forEach(ach => {
+                    pinnedHtml += `<div class="pinned-item" data-name="${ach.name}">${ach.icon}</div>`;
+                });
+                pinnedHtml += '</div>';
+            }
+
             const winRate = stats.total_games_played > 0
                 ? ((stats.total_games_won / stats.total_games_played) * 100).toFixed(1)
                 : 0;
 
             header.html(`
+                ${pinnedHtml}
                 <img src="${avatar}" alt="${user.Name}" class="profile-avatar" onerror="this.src='default-avatar.png'">
                 <div class="profile-name">${user.Name}</div>
                 ${title ? '<div class="profile-title">' + title + '</div>' : ''}

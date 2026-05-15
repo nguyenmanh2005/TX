@@ -69,71 +69,78 @@ $symbols = ["🍒", "🍋", "🍊", "🍇", "⭐", "💎", "🔔", "7️⃣"];
 // --- AJAX HANDLER ---
 if (isset($_GET['action']) && $_GET['action'] === 'spin') {
     header('Content-Type: application/json');
-    $cuoc = (int) ($_GET['bet'] ?? 0);
+    $cuoc = (float) ($_GET['bet'] ?? 0);
 
-    if ($cuoc > $soDu || $cuoc < 1000) {
-        echo json_encode(['success' => false, 'message' => '⚠️ Cược tối thiểu 1.000 gtlm và không vượt quá Số Gtlm!']);
+    if ($cuoc < 1000) {
+        echo json_encode(['success' => false, 'message' => '⚠️ Cược tối thiểu 1.000 gtlm!']);
         exit;
     }
 
-    // Quay 3 cuộn
-    $reels = [];
-    for ($i = 0; $i < 3; $i++) {
-        $reels[] = $symbols[array_rand($symbols)];
-    }
+    $conn->begin_transaction();
+    try {
+        // SELECT FOR UPDATE để khóa bản ghi user
+        $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ? FOR UPDATE");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $user = $stmt->get_result()->fetch_assoc();
 
-    $winAmount = 0;
-    $isWin = false;
-
-    // Tính thắng (Jackpot x10 cho 3 cái, x1.5 cho bất kỳ 2 cái)
-    if ($reels[0] === $reels[1] && $reels[1] === $reels[2]) {
-        // 3 giống nhau (Jackpot)
-        $isWin = true;
-        if ($reels[0] === "💎")
-            $winAmount = $cuoc * 10;
-        elseif ($reels[0] === "7️⃣")
-            $winAmount = $cuoc * 8;
-        elseif ($reels[0] === "⭐")
-            $winAmount = $cuoc * 6;
-        else
-            $winAmount = $cuoc * 4;
-    } elseif ($reels[0] === $reels[1] || $reels[1] === $reels[2] || $reels[0] === $reels[2]) {
-        // 2 giống nhau
-        $isWin = true;
-        $winAmount = floor($cuoc * 1.5);
-    }
-
-    $finalBalance = $soDu - $cuoc + $winAmount;
-    $conn->query("UPDATE users SET Money = $finalBalance WHERE Iduser = $userId");
-        
-        // Insert vào history_slot table
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SESSION['Iduser'])) {
-            $userId = $_SESSION['Iduser'];
-            $betAmount = (int)($_POST['bet'] ?? 0);
-            $resultStr = $_POST['result'] ?? 'Unknown';
-            $winAmount = (int)($reward ?? 0);
-            
-            $historyStmt = $conn->prepare("INSERT INTO history_slot (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-            if ($historyStmt) {
-                $historyStmt->bind_param("iisi", $userId, $betAmount, $resultStr, $winAmount);
-                $historyStmt->execute();
-                $historyStmt->close();
-            }
+        if (!$user || $user['Money'] < $cuoc) {
+            throw new Exception('⚠️ Số dư không đủ để thực hiện quay!');
         }
 
-    // Log sử
-    if (file_exists('../game_history_helper.php')) {
-        require_once '../game_history_helper.php';
-        logGameHistoryWithAll($conn, $userId, 'Slot Machine', $cuoc, $winAmount, $isWin);
-    }
+        // Quay 3 cuộn
+        $reels = [];
+        for ($i = 0; $i < 3; $i++) {
+            $reels[] = $symbols[array_rand($symbols)];
+        }
 
-    echo json_encode([
-        'success' => true,
-        'reels' => $reels,
-        'winAmount' => $winAmount,
-        'newBalance' => number_format($finalBalance) . ' gtlm',
-        'message' => $isWin ? "🎉 CHÚC MỪNG! Bạn thắng " . number_format($winAmount) . " gtlm!" : "💀 Rất tiếc! Chúc bạn may mắn lần sau."
-    ]);
+        $winAmount = 0;
+        $isWin = false;
+
+        // Tính thắng (Jackpot x10 cho 3 cái, x1.5 cho bất kỳ 2 cái)
+        if ($reels[0] === $reels[1] && $reels[1] === $reels[2]) {
+            $isWin = true;
+            if ($reels[0] === "💎") $winAmount = $cuoc * 10;
+            elseif ($reels[0] === "7️⃣") $winAmount = $cuoc * 8;
+            elseif ($reels[0] === "⭐") $winAmount = $cuoc * 6;
+            else $winAmount = $cuoc * 4;
+        } elseif ($reels[0] === $reels[1] || $reels[1] === $reels[2] || $reels[0] === $reels[2]) {
+            $isWin = true;
+            $winAmount = floor($cuoc * 1.5);
+        }
+
+        // Cập nhật số dư tương đối
+        $stmt = $conn->prepare("UPDATE users SET Money = Money - ? + ? WHERE Iduser = ?");
+        $stmt->bind_param("ddi", $cuoc, $winAmount, $userId);
+        $stmt->execute();
+
+        // Ghi log lịch sử riêng của slot
+        $resultStr = implode("|", $reels);
+        $historyStmt = $conn->prepare("INSERT INTO history_slot (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
+        $historyStmt->bind_param("idid", $userId, $cuoc, $resultStr, $winAmount);
+        $historyStmt->execute();
+        $historyStmt->close();
+
+        // Log tổng quát (Quest, BattlePass, etc)
+        if (file_exists('../game_history_helper.php')) {
+            require_once '../game_history_helper.php';
+            logGameHistoryWithAll($conn, $userId, 'Slot Machine', $cuoc, $winAmount, $isWin);
+        }
+
+        $conn->commit();
+
+        $finalBalanceVal = $user['Money'] - $cuoc + $winAmount;
+        echo json_encode([
+            'success' => true,
+            'reels' => $reels,
+            'winAmount' => $winAmount,
+            'newBalance' => number_format($finalBalanceVal) . ' gtlm',
+            'message' => $isWin ? "🎉 CHÚC MỪNG! Bạn thắng " . number_format($winAmount) . " gtlm!" : "💀 Rất tiếc! Chúc bạn may mắn lần sau."
+        ]);
+    } catch (Exception $e) {
+        $conn->rollback();
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
     exit;
 }
 ?>

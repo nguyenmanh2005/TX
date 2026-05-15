@@ -27,7 +27,7 @@ switch ($action) {
         break;
 }
 
-// Hàm để cộng tiền vào hũ (gọi từ game_history_helper)
+// Hàm để cộng  Gtlm vào hũ (gọi từ game_history_helper)
 function contributeToJackpot(mysqli $conn, float $betAmount) {
     $contribution = $betAmount * 0.001; // 0.1% mỗi lượt cược
     $conn->query("UPDATE global_jackpot SET amount = amount + $contribution WHERE id = 1");
@@ -36,25 +36,25 @@ function contributeToJackpot(mysqli $conn, float $betAmount) {
 // Hàm để kiểm tra nổ hũ (Ví dụ: tỉ lệ 1/10,000)
 function checkJackpotWin(mysqli $conn, int $userId) {
     if (rand(1, 10000) === 777) { // Con số may mắn
-        $jackpot = $conn->query("SELECT amount FROM global_jackpot WHERE id = 1")->fetch_assoc();
-        $winAmount = $jackpot['amount'];
-        
         $conn->begin_transaction();
         try {
-            // Cộng tiền cho user
-            $conn->query("UPDATE users SET Money = Money + $winAmount WHERE Iduser = $userId");
+            // FIX: Khóa quỹ hũ để tránh nổ hũ kép (Double Drain)
+            $stmt = $conn->prepare("SELECT amount FROM global_jackpot WHERE id = 1 FOR UPDATE");
+            $stmt->execute();
+            $jackpot = $stmt->get_result()->fetch_assoc();
+            $winAmount = $jackpot['amount'];
+
+            if ($winAmount < 100000000) $winAmount = 100000000; // Sàn tối thiểu
+            
+            // Cộng  Gtlm cho user (Dùng prepared statement)
+            $stmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
+            $stmt->bind_param("di", $winAmount, $userId);
+            $stmt->execute();
             
             // Reset hũ về 100tr
-            $conn->query("UPDATE global_jackpot SET 
-                            amount = 100000000, 
-                            last_winner_id = $userId, 
-                            last_win_amount = $winAmount, 
-                            last_win_at = NOW() 
-                          WHERE id = 1");
-            
-            // Gửi thông báo toàn hệ thống
-            require_once 'api_notifications.php';
-            // (Giả sử có hàm sendGlobalNotification)
+            $stmt = $conn->prepare("UPDATE global_jackpot SET amount = 100000000, last_winner_id = ?, last_win_amount = ?, last_win_at = NOW() WHERE id = 1");
+            $stmt->bind_param("id", $userId, $winAmount);
+            $stmt->execute();
             
             $conn->commit();
             return $winAmount;

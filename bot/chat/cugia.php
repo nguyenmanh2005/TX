@@ -43,7 +43,7 @@ return [
         'Trận địa này làm cụ thấy nhức cái đầu quá!'
     ],
     'flex_rank' => [
-        'Hạng này là để nhắc nhở các cháu biết ai mới là bậc tiền bối! 🥇',
+        'Hạng này là để nhắc nhở các cháu biết ai mới là bậc  Gtlm bối! 🥇',
         'Nhìn rank cụ đi, gừng càng già càng cay nhé các cháu.'
     ],
     'time_morning' => [

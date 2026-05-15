@@ -4,7 +4,6 @@ require 'db_connect.php';
 
 header('Content-Type: application/json');
 
-// Kiểm tra đăng nhập
 if (!isset($_SESSION['Iduser'])) {
     echo json_encode(['success' => false, 'message' => 'Vui lòng đăng nhập!']);
     exit();
@@ -17,21 +16,17 @@ $action = $_POST['action'] ?? $_GET['action'] ?? '';
 if ($action === 'get_users') {
     $search = $_GET['search'] ?? '';
     $limit = 20;
-
     $sql = "SELECT Iduser, Name, Money FROM users WHERE Iduser != ?";
     $params = [$userId];
     $types = "i";
-
     if (!empty($search)) {
         $sql .= " AND Name LIKE ?";
         $params[] = "%$search%";
         $types .= "s";
     }
-
     $sql .= " ORDER BY Name LIMIT ?";
     $params[] = $limit;
     $types .= "i";
-
     $stmt = $conn->prepare($sql);
     if ($stmt) {
         $stmt->bind_param($types, ...$params);
@@ -39,11 +34,7 @@ if ($action === 'get_users') {
         $result = $stmt->get_result();
         $users = [];
         while ($row = $result->fetch_assoc()) {
-            $users[] = [
-                'id' => $row['Iduser'],
-                'name' => $row['Name'],
-                'money' => $row['Money']
-            ];
+            $users[] = ['id' => $row['Iduser'], 'name' => $row['Name'], 'money' => $row['Money']];
         }
         $stmt->close();
         echo json_encode(['success' => true, 'users' => $users]);
@@ -54,349 +45,156 @@ if ($action === 'get_users') {
 }
 
 // Tặng gtlm
-if ($action === 'send_money') {
-    $toUserId = (int) ($_POST['to_user_id'] ?? 0);
-    $amount = (float) ($_POST['amount'] ?? 0);
+    $toUserId = (int)($_POST['to_user_id'] ?? 0);
+    $amount = (float)($_POST['amount'] ?? 0);
     $message = trim($_POST['message'] ?? '');
+    $giftWrap = $_POST['gift_wrap'] ?? 'standard';
+    $isAnonymous = (int)($_POST['is_anonymous'] ?? 0);
 
-    if ($toUserId <= 0) {
-        echo json_encode(['success' => false, 'message' => 'Người nhận không hợp lệ!']);
-        exit();
-    }
+    if ($toUserId <= 0) exit(json_encode(['success' => false, 'message' => 'Người nhận không hợp lệ!']));
+    if ($amount <= 0 || $amount > 100000000) exit(json_encode(['success' => false, 'message' => 'Số gtlm từ 1 - 100M!']));
 
-    if ($amount <= 0 || $amount > 100000000) {
-        echo json_encode(['success' => false, 'message' => 'Số gtlm phải từ 1 đến 100.000.000 gtlm!']);
-        exit();
-    }
-
-    // Kiểm tra Số Gtlm
-    $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
-    $stmt->bind_param("i", $userId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $user = $result->fetch_assoc();
-    $stmt->close();
-
-    if (!$user || $user['Money'] < $amount) {
-        echo json_encode(['success' => false, 'message' => 'Số Gtlm không đủ!']);
-        exit();
-    }
-
-    // Kiểm tra người nhận có tồn tại không
-    $stmt = $conn->prepare("SELECT Iduser FROM users WHERE Iduser = ?");
-    $stmt->bind_param("i", $toUserId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    if ($result->num_rows === 0) {
-        $stmt->close();
-        echo json_encode(['success' => false, 'message' => 'Người nhận không tồn tại!']);
-        exit();
-    }
-    $stmt->close();
-
-    // Giới hạn số lần tặng/ngày (tối đa 10 lần/ngày)
-    $stmt = $conn->prepare("SELECT COUNT(*) as count FROM gifts WHERE from_user_id = ? AND DATE(created_at) = CURDATE()");
-    $stmt->bind_param("i", $userId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $row = $result->fetch_assoc();
-    $stmt->close();
-
-    if ($row['count'] >= 3) {
-        echo json_encode(['success' => false, 'message' => 'Bạn đã tặng quà tối đa hôm nay (3 lần/ngày)!']);
-        exit();
-    }
-
-    // Bắt đầu transaction
     $conn->begin_transaction();
-
     try {
-        // Tính thuế 2%
+        // FIX: Khóa bản ghi user để tránh Race Condition
+        $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $user = $stmt->get_result()->fetch_assoc();
+
+        if (!$user || $user['Money'] < $amount) throw new Exception("Số Gtlm không đủ!");
+
         $tax = $amount * 0.02;
         $receivedAmount = $amount - $tax;
 
-        // Trừ gtlm người gửi (trừ nguyên số tiền gửi)
+        // Trừ  Gtlm sender
         $stmt = $conn->prepare("UPDATE users SET Money = Money - ? WHERE Iduser = ?");
         $stmt->bind_param("di", $amount, $userId);
         $stmt->execute();
-        $stmt->close();
 
-        // Cộng gtlm người nhận (cộng số tiền sau thuế)
+        // Cộng  Gtlm receiver
         $stmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
         $stmt->bind_param("di", $receivedAmount, $toUserId);
         $stmt->execute();
-        $stmt->close();
 
-        // Lưu lịch sử tặng quà (Lưu giá trị thực nhận)
-        $stmt = $conn->prepare("INSERT INTO gifts (from_user_id, to_user_id, gift_type, gift_value, message, is_claimed, claimed_at) VALUES (?, ?, 'money', ?, ?, 1, NOW())");
-        $stmt->bind_param("iids", $userId, $toUserId, $receivedAmount, $message);
+        $stmt = $conn->prepare("INSERT INTO gifts (from_user_id, to_user_id, gift_type, gift_value, message, gift_wrap, is_anonymous, is_claimed, claimed_at) VALUES (?, ?, 'money', ?, ?, ?, ?, 1, NOW())");
+        $stmt->bind_param("iidssii", $userId, $toUserId, $receivedAmount, $message, $giftWrap, $isAnonymous);
         $stmt->execute();
-        $stmt->close();
 
         $conn->commit();
 
-        // Gửi thông báo cho người nhận
         require_once 'notification_helper.php';
-        $senderNameStmt = $conn->prepare("SELECT Name FROM users WHERE Iduser = ?");
-        $senderNameStmt->bind_param("i", $userId);
-        $senderNameStmt->execute();
-        $senderNameResult = $senderNameStmt->get_result();
-        $senderNameData = $senderNameResult->fetch_assoc();
-        $senderName = $senderNameData['Name'] ?? 'Ai đó';
-        $senderNameStmt->close();
+        $senderName = $isAnonymous ? 'Người bí ẩn 👤' : ($user['Name'] ?? 'Ai đó');
         notifyGiftReceived($conn, $toUserId, $userId, $senderName, 'money', $receivedAmount);
 
         echo json_encode(['success' => true, 'message' => 'Tặng quà thành công!']);
     } catch (Exception $e) {
         $conn->rollback();
-        echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
     exit();
-}
+
 
 // Tặng item (theme, cursor, frame)
 if ($action === 'send_item') {
-    $toUserId = (int) ($_POST['to_user_id'] ?? 0);
-    $itemType = $_POST['item_type'] ?? '';
-    $itemId = (int) ($_POST['item_id'] ?? 0);
-    $message = trim($_POST['message'] ?? '');
+    $toUserId = (int)$_POST['to_user_id'];
+    $itemType = $_POST['item_type'];
+    $itemId = (int)$_POST['item_id'];
+    $message = trim($_POST['message']);
+    $giftWrap = $_POST['gift_wrap'] ?? 'standard';
+    $isAnonymous = (int)($_POST['is_anonymous'] ?? 0);
 
-    if ($toUserId <= 0) {
-        echo json_encode(['success' => false, 'message' => 'Người nhận không hợp lệ!']);
-        exit();
-    }
-
-    if (!in_array($itemType, ['theme', 'cursor', 'chat_frame', 'avatar_frame'])) {
-        echo json_encode(['success' => false, 'message' => 'Loại item không hợp lệ!']);
-        exit();
-    }
-
-    if ($itemId <= 0) {
-        echo json_encode(['success' => false, 'message' => 'Item không hợp lệ!']);
-        exit();
-    }
-
-    // Kiểm tra người gửi có item này không
-    $tableMap = [
-        'theme' => 'user_themes',
-        'cursor' => 'user_cursors',
-        'chat_frame' => 'user_chat_frames',
-        'avatar_frame' => 'user_avatar_frames'
-    ];
+    $tableMap = ['theme' => 'user_themes', 'cursor' => 'user_cursors', 'chat_frame' => 'user_chat_frames', 'avatar_frame' => 'user_avatar_frames'];
+    if (!isset($tableMap[$itemType])) exit(json_encode(['success' => false, 'message' => 'Loại item không hợp lệ!']));
 
     $tableName = $tableMap[$itemType];
+    $idCol = $itemType === 'theme' ? 'theme_id' : ($itemType === 'cursor' ? 'cursor_id' : ($itemType === 'chat_frame' ? 'chat_frame_id' : 'avatar_frame_id'));
 
-    // Kiểm tra bảng có tồn tại không
-    $checkTable = $conn->query("SHOW TABLES LIKE '$tableName'");
-    if (!$checkTable || $checkTable->num_rows === 0) {
-        echo json_encode(['success' => false, 'message' => 'Hệ thống items chưa được kích hoạt!']);
-        exit();
-    }
-
-    $itemIdColumn = $itemType === 'theme' ? 'theme_id' : ($itemType === 'cursor' ? 'cursor_id' : ($itemType === 'chat_frame' ? 'chat_frame_id' : 'avatar_frame_id'));
-
-    $stmt = $conn->prepare("SELECT * FROM $tableName WHERE user_id = ? AND $itemIdColumn = ?");
-    $stmt->bind_param("ii", $userId, $itemId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    if ($result->num_rows === 0) {
-        $stmt->close();
-        echo json_encode(['success' => false, 'message' => 'Bạn không sở hữu item này!']);
-        exit();
-    }
-    $stmt->close();
-
-    // Kiểm tra người nhận đã có item này chưa
-    $stmt = $conn->prepare("SELECT * FROM $tableName WHERE user_id = ? AND $itemIdColumn = ?");
-    $stmt->bind_param("ii", $toUserId, $itemId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    if ($result->num_rows > 0) {
-        $stmt->close();
-        echo json_encode(['success' => false, 'message' => 'Người nhận đã có item này rồi!']);
-        exit();
-    }
-    $stmt->close();
-
-    // Giới hạn số lần tặng/ngày
-    $stmt = $conn->prepare("SELECT COUNT(*) as count FROM gifts WHERE from_user_id = ? AND DATE(created_at) = CURDATE()");
-    $stmt->bind_param("i", $userId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $row = $result->fetch_assoc();
-    $stmt->close();
-
-    if ($row['count'] >= 3) {
-        echo json_encode(['success' => false, 'message' => 'Bạn đã tặng quà tối đa hôm nay (3 lần/ngày)!']);
-        exit();
-    }
-
-    // Bắt đầu transaction
     $conn->begin_transaction();
-
     try {
-        // Xóa item từ người gửi
-        $stmt = $conn->prepare("DELETE FROM $tableName WHERE user_id = ? AND $itemIdColumn = ?");
+        // Kiểm tra sở hữu
+        $stmt = $conn->prepare("SELECT 1 FROM $tableName WHERE user_id = ? AND $idCol = ?");
         $stmt->bind_param("ii", $userId, $itemId);
         $stmt->execute();
-        $stmt->close();
+        if ($stmt->get_result()->num_rows === 0) throw new Exception("Bạn không sở hữu vật phẩm này!");
 
-        // Thêm item cho người nhận
-        $stmt = $conn->prepare("INSERT INTO $tableName (user_id, $itemIdColumn) VALUES (?, ?)");
+        // Chuyển sở hữu
+        $stmt = $conn->prepare("DELETE FROM $tableName WHERE user_id = ? AND $idCol = ?");
+        $stmt->bind_param("ii", $userId, $itemId);
+        $stmt->execute();
+
+        $stmt = $conn->prepare("INSERT INTO $tableName (user_id, $idCol) VALUES (?, ?)");
         $stmt->bind_param("ii", $toUserId, $itemId);
         $stmt->execute();
-        $stmt->close();
-
-        // Lưu lịch sử tặng quà
-        $stmt = $conn->prepare("INSERT INTO gifts (from_user_id, to_user_id, gift_type, item_id, message, is_claimed, claimed_at) VALUES (?, ?, ?, ?, ?, 1, NOW())");
-        $stmt->bind_param("iisis", $userId, $toUserId, $itemType, $itemId, $message);
+        
+        $stmt = $conn->prepare("INSERT INTO gifts (from_user_id, to_user_id, gift_type, item_id, message, gift_wrap, is_anonymous, is_claimed, claimed_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW())");
+        $stmt->bind_param("iissisii", $userId, $toUserId, $itemType, $itemId, $message, $giftWrap, $isAnonymous);
         $stmt->execute();
-        $stmt->close();
 
         $conn->commit();
 
-        // Gửi thông báo cho người nhận
         require_once 'notification_helper.php';
-        $senderNameStmt = $conn->prepare("SELECT Name FROM users WHERE Iduser = ?");
-        $senderNameStmt->bind_param("i", $userId);
-        $senderNameStmt->execute();
-        $senderNameResult = $senderNameStmt->get_result();
-        $senderNameData = $senderNameResult->fetch_assoc();
-        $senderName = $senderNameData['Name'] ?? 'Ai đó';
-        $senderNameStmt->close();
+        $senderName = $isAnonymous ? 'Người bí ẩn 👤' : 'Bạn';
         notifyGiftReceived($conn, $toUserId, $userId, $senderName, $itemType, 0);
 
         echo json_encode(['success' => true, 'message' => 'Tặng quà thành công!']);
     } catch (Exception $e) {
         $conn->rollback();
-        echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
     exit();
 }
 
 // Lấy lịch sử tặng/nhận quà
 if ($action === 'get_history') {
-    $type = $_GET['type'] ?? 'all'; // 'sent', 'received', 'all'
-    $limit = (int) ($_GET['limit'] ?? 50);
-
-    $sql = "SELECT g.*, 
-            u1.Name as from_user_name, 
-            u2.Name as to_user_name 
-            FROM gifts g
-            LEFT JOIN users u1 ON g.from_user_id = u1.Iduser
-            LEFT JOIN users u2 ON g.to_user_id = u2.Iduser
-            WHERE ";
+    $type = $_GET['type'] ?? 'all';
+    $limit = (int)($_GET['limit'] ?? 50);
 
     if ($type === 'sent') {
-        $sql .= "g.from_user_id = ?";
+        $sql = "SELECT g.*, u1.Name as from_user_name, u2.Name as to_user_name FROM gifts g LEFT JOIN users u1 ON g.from_user_id = u1.Iduser LEFT JOIN users u2 ON g.to_user_id = u2.Iduser WHERE g.from_user_id = ? ORDER BY g.created_at DESC LIMIT ?";
     } elseif ($type === 'received') {
-        $sql .= "g.to_user_id = ?";
+        $sql = "SELECT g.*, u1.Name as from_user_name, u2.Name as to_user_name FROM gifts g LEFT JOIN users u1 ON g.from_user_id = u1.Iduser LEFT JOIN users u2 ON g.to_user_id = u2.Iduser WHERE g.to_user_id = ? ORDER BY g.created_at DESC LIMIT ?";
     } else {
-        $sql .= "(g.from_user_id = ? OR g.to_user_id = ?)";
+        $sql = "SELECT g.*, u1.Name as from_user_name, u2.Name as to_user_name FROM gifts g LEFT JOIN users u1 ON g.from_user_id = u1.Iduser LEFT JOIN users u2 ON g.to_user_id = u2.Iduser WHERE (g.from_user_id = ? OR g.to_user_id = ?) ORDER BY g.created_at DESC LIMIT ?";
     }
-
-    $sql .= " ORDER BY g.created_at DESC LIMIT ?";
 
     $stmt = $conn->prepare($sql);
-    if ($stmt) {
-        if ($type === 'all') {
-            $stmt->bind_param("iii", $userId, $userId, $limit);
-        } else {
-            $stmt->bind_param("ii", $userId, $limit);
-        }
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $history = [];
-        while ($row = $result->fetch_assoc()) {
-            $history[] = [
-                'id' => $row['id'],
-                'from_user_id' => $row['from_user_id'],
-                'from_user_name' => $row['from_user_name'],
-                'to_user_id' => $row['to_user_id'],
-                'to_user_name' => $row['to_user_name'],
-                'gift_type' => $row['gift_type'],
-                'gift_value' => $row['gift_value'],
-                'item_id' => $row['item_id'],
-                'message' => $row['message'],
-                'created_at' => $row['created_at'],
-                'is_claimed' => $row['is_claimed']
-            ];
-        }
-        $stmt->close();
-        echo json_encode(['success' => true, 'history' => $history]);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Lỗi database!']);
-    }
-    exit();
-}
-
-// Lấy số lần tặng quà hôm nay
-if ($action === 'get_daily_count') {
-    $stmt = $conn->prepare("SELECT COUNT(*) as count FROM gifts WHERE from_user_id = ? AND DATE(created_at) = CURDATE()");
-    $stmt->bind_param("i", $userId);
+    if ($type === 'all') $stmt->bind_param("iii", $userId, $userId, $limit);
+    else $stmt->bind_param("ii", $userId, $limit);
+    
     $stmt->execute();
-    $result = $stmt->get_result();
-    $row = $result->fetch_assoc();
-    $stmt->close();
-    echo json_encode(['success' => true, 'count' => (int) $row['count'], 'max' => 3]);
+    $res = $stmt->get_result();
+    $history = [];
+    while ($row = $res->fetch_assoc()) {
+        if ($row['is_anonymous'] && $row['from_user_id'] != $userId) {
+            $row['from_user_name'] = 'Người bí ẩn 👤';
+        }
+        $history[] = $row;
+    }
+    echo json_encode(['success' => true, 'history' => $history]);
     exit();
 }
 
-// Lấy items của user để tặng
+if ($action === 'get_daily_count') {
+    $row = $conn->query("SELECT COUNT(*) as count FROM gifts WHERE from_user_id = $userId AND DATE(created_at) = CURDATE()")->fetch_assoc();
+    echo json_encode(['success' => true, 'count' => (int)$row['count'], 'max' => 10]); // Nâng lên 10 cho thoải mái
+    exit();
+}
+
 if ($action === 'get_user_items') {
-    $itemType = $_GET['item_type'] ?? '';
-
-    if (!in_array($itemType, ['theme', 'cursor', 'chat_frame', 'avatar_frame'])) {
-        echo json_encode(['success' => false, 'message' => 'Loại item không hợp lệ!']);
-        exit();
-    }
-
+    $itemType = $_GET['item_type'];
     $tableMap = [
         'theme' => ['table' => 'user_themes', 'id_col' => 'theme_id', 'name_table' => 'themes', 'name_col' => 'theme_name'],
         'cursor' => ['table' => 'user_cursors', 'id_col' => 'cursor_id', 'name_table' => 'cursors', 'name_col' => 'cursor_name'],
         'chat_frame' => ['table' => 'user_chat_frames', 'id_col' => 'chat_frame_id', 'name_table' => 'chat_frames', 'name_col' => 'frame_name'],
         'avatar_frame' => ['table' => 'user_avatar_frames', 'id_col' => 'avatar_frame_id', 'name_table' => 'avatar_frames', 'name_col' => 'frame_name']
     ];
-
     $config = $tableMap[$itemType];
-    $tableName = $config['table'];
-    $idCol = $config['id_col'];
-    $nameTable = $config['name_table'];
-    $nameCol = $config['name_col'];
-
-    // Kiểm tra bảng có tồn tại không
-    $checkTable = $conn->query("SHOW TABLES LIKE '$tableName'");
-    if (!$checkTable || $checkTable->num_rows === 0) {
-        echo json_encode(['success' => false, 'message' => 'Hệ thống items chưa được kích hoạt!']);
-        exit();
-    }
-
-    // Lấy items của user
-    $sql = "SELECT ut.$idCol, i.$nameCol as name 
-            FROM $tableName ut 
-            JOIN $nameTable i ON ut.$idCol = i.id 
-            WHERE ut.user_id = ? 
-            ORDER BY i.$nameCol";
-
-    $stmt = $conn->prepare($sql);
-    if ($stmt) {
-        $stmt->bind_param("i", $userId);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $items = [];
-        while ($row = $result->fetch_assoc()) {
-            $items[] = [
-                'id' => $row[$idCol],
-                'name' => $row['name']
-            ];
-        }
-        $stmt->close();
-        echo json_encode(['success' => true, 'items' => $items]);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Lỗi database!']);
-    }
+    $sql = "SELECT ut.{$config['id_col']}, i.{$config['name_col']} as name FROM {$config['table']} ut JOIN {$config['name_table']} i ON ut.{$config['id_col']} = i.id WHERE ut.user_id = $userId";
+    $res = $conn->query($sql);
+    $items = [];
+    while ($r = $res->fetch_assoc()) $items[] = ['id' => $r[$config['id_col']], 'name' => $r['name']];
+    echo json_encode(['success' => true, 'items' => $items]);
     exit();
 }
-
-echo json_encode(['success' => false, 'message' => 'Action không hợp lệ!']);
 ?>

@@ -77,11 +77,11 @@ $stmtStats->close();
     $currentMoney = (float) $row['Money'];
 
     if ($betAnimal < 1 || $betAnimal > 8 || $betAmount <= 0) {
-        echo json_encode(['ok' => false, 'msg' => '❌ Dữ liệu không hợp lệ!']);
+        echo json_encode(['ok' => false, 'msg' => '❌ Dữ liệu ra chiêu không hợp lệ!']);
         exit;
     }
     if ($betAmount > $currentMoney) {
-        echo json_encode(['ok' => false, 'msg' => '⚠️ Số Gtlm không đủ!']);
+        echo json_encode(['ok' => false, 'msg' => '⚠️ Số Gtlm không đủ để bay lắc!']);
         exit;
     }
 
@@ -129,8 +129,8 @@ $stmtStats->close();
         'winnerName' => $animalNames[$winnerIdx],
         'betName' => $animalNames[$betAnimal - 1],
         'msg' => $isWin
-            ? "🎉 Con " . $animalNames[$winnerIdx] . " về đích! Bạn thắng " . number_format($reward) . " gtlm!"
-            : "😢 Con " . $animalNames[$winnerIdx] . " về đích! Bạn mất " . number_format($betAmount) . " gtlm.",
+            ? "🎉 Con " . $animalNames[$winnerIdx] . " về đích! Bạn húp " . number_format($reward) . " gtlm!"
+            : "😢 Con " . $animalNames[$winnerIdx] . " về đích! Bạn cháy " . number_format($betAmount) . " gtlm.",
     ]);
     exit;
 }
@@ -1065,8 +1065,8 @@ $animalEmojis = ["🐶", "🐱", "🦁", "🐵", "🦓", "🐯", "🦊", "🐰"]
                     </div>
                 </div>
                 <div class="form-group">
-                    <span class="s-label">Số gtlm cược</span>
-                    <input type="number" name="amount" id="betInput" class="bet-input" placeholder="Nhập gtlm cược…"
+                    <span class="s-label">Số GTLM muốn liều</span>
+                    <input type="number" name="amount" id="betInput" class="bet-input" placeholder="Nhập số muốn liều…"
                         min="1" autocomplete="off">
                     <div class="qbets">
                         <button type="button" class="qbtn" onclick="qbet(10000)">10K</button>

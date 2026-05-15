@@ -20,7 +20,7 @@ require_once 'user_progress_helper.php';
 // Lấy thông tin người dùng hiện tại từ bảng users
 $userId = $_SESSION['Iduser'];
 $sql = "SELECT u.Iduser, u.Name, u.Email, u.Pass, u.Money, u.reset_token, u.token_expiry, u.Role, u.ImageURL, u.chat_frame_id, 
-        u.active_title_id, u.avatar_frame_id, a.icon as title_icon, a.name as title_name,
+        u.active_title_id, u.avatar_frame_id, u.vip_expiry, a.icon as title_icon, a.name as title_name,
         af.ImageURL AS avatar_frame_image
         FROM users u
         LEFT JOIN achievements a ON u.active_title_id = a.id
@@ -385,6 +385,17 @@ switch ($user['Role']) {
                 style="background: rgba(255, 243, 224, 0.5); border-left-color: var(--warning-color);">
                 <p><strong>🎭 Vai trò: </strong><?= htmlspecialchars($roleName, ENT_QUOTES, 'UTF-8') ?></p>
             </div>
+
+            <?php 
+            $isVip = !empty($user['vip_expiry']) && strtotime($user['vip_expiry']) > time();
+            if ($isVip): 
+                $expiryDate = date('d/m/Y H:i', strtotime($user['vip_expiry']));
+            ?>
+                <div class="profile-info-item" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(255,255,255,0.7) 100%); border-left-color: #f59e0b;">
+                    <p><strong style="color: #f59e0b;"><i class="fa fa-crown"></i> TRẠNG THÁI VIP:</strong> ĐANG KÍCH HOẠT</p>
+                    <p style="font-size: 14px; margin-top: -5px; color: #94a3b8;">Hết hạn: <?= $expiryDate ?></p>
+                </div>
+            <?php endif; ?>
 
             <?php if (!empty($user['chat_frame_id'])): ?>
                 <div class="chat-frame-container">

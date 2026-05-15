@@ -6,22 +6,23 @@
 
 class VocabularyHelper {
     private static $map = [
-        'thắng tiền' => ['húp GTLM'],
-        'thua tiền'  => ['bay màu', 'bốc hơi', 'về cõi'],
+        'thắng Gtlm' => ['húp GTLM'],
+        'thua Gtlm'  => ['bay màu', 'bốc hơi', 'về cõi'],
         'thắng'      => ['húp', 'ăn ngập mặt'],
         'thua'       => ['bay màu', 'về cõi', 'thành tro'],
-        'hết tiền'   => ['nick trắng tay', 'nick khô hạn'],
+        'hết Gtlm'   => ['nick trắng tay', 'nick khô hạn'],
         'cá cược'    => ['giao lưu', 'thử vận'],
         'đặt cược'   => ['thả thính', 'ra chiêu'],
         'ván bài'    => ['ván giao lưu'],
-        'tiền'       => ['GTLM'],
+        ' Gtlm'       => ['GTLM'],
         'túi'        => ['nick'],
         'cược'       => ['chiến', 'liều'],
         'casino'     => ['trận địa'],
         'tài xỉu'    => ['Xanh Đỏ Đối Kháng'],
         'xóc đĩa'    => ['Trận Địa Trắng Đỏ'],
         'bầu cua'    => ['Thế Giới Linh Thú'],
-        'đá gà'      => ['Đại Chiến Thần Kê']
+        'đá gà'      => ['Đại Chiến Thần Kê'],
+        'rồng hổ'     => ['Chiến Trường Rồng Hổ']
     ];
 
     /**

@@ -84,14 +84,14 @@ if (isset($_GET['action'])) {
         $_SESSION['mines_cuoc'] = 0;
         $response = [
             'success' => true,
-            'message' => '🆕 Ván mới bắt đầu! Hãy đặt cược.',
+            'message' => '🆕 Ván mới bắt đầu! Hãy thả thính.',
             'newBalance' => number_format($soDu, 0, ',', '.') . ' gtlm',
             'board' => array_fill(0, 25, '?')
         ];
     } elseif ($action === 'start') {
         $cuoc = (int) ($_POST['cuoc'] ?? 0);
         if ($cuoc <= 0 || $cuoc > $soDu) {
-            $response['message'] = '⚠️ Số gtlm cược không hợp lệ hoặc không đủ Số Gtlm!';
+            $response['message'] = '⚠️ Số GTLM muốn chiến không hợp lệ hoặc không đủ vốn!';
         } else {
             $_SESSION['mines_cuoc'] = $cuoc;
             $soDu -= $cuoc;
@@ -100,14 +100,14 @@ if (isset($_GET['action'])) {
             $capNhat->execute();
             $response = [
                 'success' => true,
-                'message' => '🎯 Đã đặt cược ' . number_format($cuoc, 0, ',', '.') . ' gtlm! Chúc may mắn!',
+                'message' => '🎯 Đã ra chiêu ' . number_format($cuoc, 0, ',', '.') . ' GTLM! Chúc may mắn!',
                 'newBalance' => number_format($soDu, 0, ',', '.') . ' gtlm'
             ];
         }
     } elseif ($action === 'reveal') {
         $cell = (int) ($_POST['cell'] ?? -1);
         if ($_SESSION['mines_cuoc'] <= 0) {
-            $response['message'] = '⚠️ Hãy đặt cược trước khi mở ô!';
+            $response['message'] = '⚠️ Hãy thả thính trước khi mở ô!';
         } elseif (in_array($cell, $_SESSION['mines_revealed'])) {
             $response['message'] = '⚠️ Ô này đã được mở!';
         } elseif ($cell < 0 || $cell >= 25) {
@@ -463,14 +463,14 @@ if (!isset($_SESSION['mines_board'])) {
         </div>
 
         <div id="bet-section">
-            <input type="number" id="bet-amount" placeholder="gtlm cược (gtlm)" min="1" max="<?= $soDu ?>">
+            <input type="number" id="bet-amount" placeholder="GTLM muốn chiến (GTLM)" min="1" max="<?= $soDu ?>">
             <div style="display: flex; justify-content: center; gap: 10px;">
-                <button id="btn-start" class="btn-game btn-start">🎯 Đặt cược</button>
+                <button id="btn-start" class="btn-game btn-start">🎯 Thả thính</button>
                 <button id="btn-new" class="btn-game btn-new">🆕 Làm mới</button>
             </div>
         </div>
 
-        <div id="status-box" class="thongbao">Sẵn sàng! Hãy đặt cược.</div>
+        <div id="status-box" class="thongbao">Sẵn sàng! Hãy thả thính ngay.</div>
 
         <a href="../index.php" class="home-link">🏠 Quay lại trang chủ</a>
     </div>

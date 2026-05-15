@@ -27,7 +27,7 @@ if ($action === 'buy') {
         exit();
     }
 
-    // Lấy tiền user
+    // Lấy  Gtlm user
     $user = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc();
     if ($user['Money'] < $passType['price']) {
         echo json_encode(['status' => 'error', 'message' => 'Bạn không đủ GTLM!']);
@@ -36,7 +36,7 @@ if ($action === 'buy') {
 
     $conn->begin_transaction();
     try {
-        // Trừ tiền
+        // Trừ  Gtlm
         $conn->query("UPDATE users SET Money = Money - {$passType['price']} WHERE Iduser = $userId");
 
         // Kiểm tra xem đã có gói chưa
@@ -111,7 +111,7 @@ if ($action === 'buy') {
         $stmt->execute();
         $stmt->close();
 
-        // Cộng tiền
+        // Cộng  Gtlm
         $conn->query("UPDATE users SET Money = Money + {$activePass['daily_bonus']} WHERE Iduser = $userId");
 
         $conn->commit();

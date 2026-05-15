@@ -28,25 +28,61 @@ if (isset($_GET['action'])) {
     if ($action === 'roll') {
         $bet = (float) ($_POST['bet'] ?? 0);
         $target = (float) ($_POST['target'] ?? 2.0);
-        if ($bet <= 0 || $bet > $money || $target < 1.01 || $target > 1000000) {
-            $response['message'] = "Tham số không hợp lệ!";
-        } else {
-            $conn->query("UPDATE users SET Money = Money - $bet WHERE Iduser = $userId");
+        
+        if ($bet <= 0 || $target < 1.01 || $target > 1000000) {
+            echo json_encode(['success' => false, 'message' => "Tham số không hợp lệ!"]);
+            exit;
+        }
+
+        $conn->begin_transaction();
+        try {
+            // Khóa bản ghi user
+            $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+            $stmt->bind_param("i", $userId);
+            $stmt->execute();
+            $u = $stmt->get_result()->fetch_assoc();
+
+            if (!$u || $u['Money'] < $bet) {
+                throw new Exception("Ngân khố không đủ để phóng tên lửa!");
+            }
+
+            // Trừ  Gtlm cược
+            $updateStmt = $conn->prepare("UPDATE users SET Money = Money - ? WHERE Iduser = ?");
+            $updateStmt->bind_param("di", $bet, $userId);
+            $updateStmt->execute();
+
             // Provably fair logic
             $houseEdge = 1.0;
             $result = (100 / (rand(1, 100000000) / 1000000)) * (1 - $houseEdge / 100);
             $result = max(1.00, round($result, 2));
             $win = ($result >= $target);
             $winAmount = $win ? round($bet * $target) : 0;
-            if ($winAmount > 0)
-                $conn->query("UPDATE users SET Money = Money + $winAmount WHERE Iduser = $userId");
+            
+            if ($winAmount > 0) {
+                $winStmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
+                $winStmt->bind_param("di", $winAmount, $userId);
+                $winStmt->execute();
+            }
+
             $profit = $winAmount - $bet;
             $resStr = "Target: x$target | Result: x$result";
             $his = $conn->prepare("INSERT INTO history_limbo (Iduser,Bet,Result,WinAmount,Time) VALUES (?,?,?,?,NOW())");
-            $his->bind_param("idss", $userId, $bet, $resStr, $profit);
+            $his->bind_param("idid", $userId, $bet, $resStr, $profit);
             $his->execute();
-            logGameHistoryWithAll($conn, $userId, 'Limbo', $bet, $winAmount, $win);
-            $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
+
+            // Log history helper
+            if (file_exists('../game_history_helper.php')) {
+                require_once '../game_history_helper.php';
+                logGameHistoryWithAll($conn, $userId, 'Limbo', $bet, $winAmount, $win);
+            }
+
+            $conn->commit();
+
+            $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
+            $stmt->bind_param("i", $userId);
+            $stmt->execute();
+            $newMoney = $stmt->get_result()->fetch_assoc()['Money'];
+
             $response = [
                 'success' => true,
                 'result' => $result,
@@ -55,6 +91,9 @@ if (isset($_GET['action'])) {
                 'money' => number_format($newMoney, 0, ',', '.'),
                 'winChance' => round((1 / $target) * 99, 2) . '%'
             ];
+        } catch (Exception $e) {
+            $conn->rollback();
+            $response = ['success' => false, 'message' => $e->getMessage()];
         }
     }
     echo json_encode($response);

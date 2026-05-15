@@ -191,7 +191,7 @@ if (!isset($_SESSION['Iduser'])) { header("Location: login.php"); exit(); }
         function buyItem(id) {
             Swal.fire({
                 title: 'Xác nhận mua?',
-                text: "Tiền sẽ được trừ ngay lập tức vào tài khoản.",
+                text: " Gtlm sẽ được trừ ngay lập tức vào tài khoản.",
                 icon: 'question',
                 background: '#0f172a',
                 color: '#fff',

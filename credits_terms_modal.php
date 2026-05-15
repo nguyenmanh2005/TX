@@ -510,7 +510,7 @@
         <div class="gtlm-header">
             <span class="gtlm-logo">🎮</span>
             <h1 id="gtlm-title">Giải Trí Lành Mạnh</h1>
-            <p>Nền tảng giải trí miễn phí — Không tiền thật, không áp lực.<br>Vui chơi có trách nhiệm cùng cộng đồng.</p>
+            <p>Nền tảng giải trí miễn phí — Không  Gtlm thật, không áp lực.<br>Vui chơi có trách nhiệm cùng cộng đồng.</p>
         </div>
 
         <!-- Tabs -->
@@ -532,7 +532,10 @@
                     <p>
                         GTLM là nền tảng <strong>giải trí game hoàn toàn miễn phí</strong>, được xây dựng với mục đích
                         mang lại trải nghiệm vui chơi lành mạnh, an toàn cho mọi người.
-                        Không có tiền thật — mọi giao dịch đều dùng <strong>đồng GTLM ảo</strong>.
+                        <br><br>
+                        <i style="color: #667eea;">⚠️ <b>Lưu ý quan trọng:</b> Dự án được phát triển phi lợi nhuận, không có ý định quảng bá, thương mại hóa hay kiếm tiền từ người dùng dưới bất kỳ hình thức nào.</i>
+                        <br><br>
+                       
                     </p>
                 </div>
 
@@ -540,7 +543,7 @@
                     <div class="gtlm-feature-card">
                         <span class="feat-icon">🎮</span>
                         <h4>50+ Trò Chơi</h4>
-                        <p>Casino quốc tế, game dân gian Việt và nhiều hơn nữa</p>
+                        <p>Casino quốc tế và nhiều hơn nữa</p>
                     </div>
                     <div class="gtlm-feature-card">
                         <span class="feat-icon">🏆</span>
@@ -561,7 +564,7 @@
 
                 <div class="gtlm-currency-badge">
                     <span>💰</span>
-                    <span>Tiền tệ trong game: <strong>GTLM (Giải Trí Lành Mạnh)</strong> — hoàn toàn ảo, không có giá trị quy đổi thực tế</span>
+                    <span> Gtlm trong game: <strong>GTLM (Giải Trí Lành Mạnh)</strong> — hoàn toàn ảo, không có giá trị quy đổi thực tế</span>
                 </div>
             </div>
 
@@ -664,7 +667,7 @@
                 </div>
 
                 <div class="gtlm-game-category">
-                    <h3 style="color:#c0442a">🇻🇳 Game Dân Gian Việt Nam</h3>
+                    <h3 style="color:#c0442a">GAME HOT</h3>
                     <div class="gtlm-game-tags">
                         <span class="gtlm-game-tag viet">Thế Giới Linh Thú</span>
                         <span class="gtlm-game-tag viet">Xanh Đỏ Đối Kháng</span>
@@ -798,14 +801,84 @@
                     </div>
                 </div>
 
+                <div class="gtlm-game-category" style="margin-top: 25px; margin-bottom: 10px;">
+                    <h3 style="color:#764ba2">🎵 Âm nhạc & Hiệu ứng</h3>
+                </div>
+
                 <div class="gtlm-credit-row">
-                    <div class="gtlm-credit-name"><span class="icon">🖼️</span> Unsplash / Freepik</div>
-                    <div class="gtlm-credit-desc">Hình ảnh chất lượng cao</div>
+                    <div class="gtlm-credit-name"><span class="icon">🎶</span> YouTube Audio Library</div>
+                    <div class="gtlm-credit-desc">
+                        Nhạc nền trò chơi & livestream
+                        <a class="gtlm-credit-link" href="https://www.youtube.com/audiolibrary" target="_blank" rel="noopener">youtube.com →</a>
+                    </div>
+                </div>
+
+                <div class="gtlm-credit-row">
+                    <div class="gtlm-credit-name"><span class="icon">🔊</span> Pixabay Music / Mixkit</div>
+                    <div class="gtlm-credit-desc">
+                        Âm thanh hiệu ứng (SFX) miễn phí
+                        <a class="gtlm-credit-link" href="https://pixabay.com/music/" target="_blank" rel="noopener">pixabay.com →</a>
+                    </div>
+                </div>
+
+                <div class="gtlm-credit-row">
+                    <div class="gtlm-credit-name"><span class="icon">🎹</span> Bensound / Zapsplat</div>
+                    <div class="gtlm-credit-desc">
+                        Tài nguyên âm thanh chất lượng cao
+                        <a class="gtlm-credit-link" href="https://www.bensound.com" target="_blank" rel="noopener">bensound.com →</a>
+                    </div>
+                </div>
+
+                <div class="gtlm-credit-row">
+                    <div class="gtlm-credit-name"><span class="icon">🎨</span> Freepik / Unsplash</div>
+                    <div class="gtlm-credit-desc">
+                        Tài nguyên đồ họa & Hình ảnh
+                        <a class="gtlm-credit-link" href="https://freepik.com" target="_blank" rel="noopener">freepik.com →</a>
+                    </div>
+                </div>
+
+                <div class="gtlm-game-category" style="margin-top: 25px; margin-bottom: 10px;">
+                    <h3 style="color:#2d2d3a">🤖 Trí Tuệ Nhân Tạo (AI)</h3>
+                </div>
+
+                <div class="gtlm-credit-row">
+                    <div class="gtlm-credit-name"><span class="icon">✨</span> Gemini / Grok / Claude / ChatGPT</div>
+                    <div class="gtlm-credit-desc">
+                        Hỗ trợ xây dựng Logic Game, Web Audio API (Slot Machine) và tối ưu hóa hệ thống.
+                    </div>
+                </div>
+
+                <div class="gtlm-credit-row">
+                    <div class="gtlm-credit-name"><span class="icon">🖼️</span> AI Image Generation</div>
+                    <div class="gtlm-credit-desc">
+                        Các hình ảnh nền (BR, Đá Gà, Tú Sắc) và Assets sự kiện được tạo bởi AI.
+                    </div>
+                </div>
+
+                <div class="gtlm-game-category" style="margin-top: 25px; margin-bottom: 10px;">
+                    <h3 style="color:#2d2d3a">🌐 Tài Nguyên Khác</h3>
+                </div>
+
+                <div class="gtlm-credit-row">
+                    <div class="gtlm-credit-name"><span class="icon">👾</span> Itch.io Assets</div>
+                    <div class="gtlm-credit-desc">
+                        Hình ảnh Boss Thế Giới (World Boss)
+                        <a class="gtlm-credit-link" href="https://itch.io" target="_blank" rel="noopener">itch.io →</a>
+                    </div>
+                </div>
+
+                <div class="gtlm-credit-row">
+                    <div class="gtlm-credit-name"><span class="icon">🏁</span> Transparent Textures</div>
+                    <div class="gtlm-credit-desc">
+                        Họa tiết nền giao diện
+                        <a class="gtlm-credit-link" href="https://www.transparenttextures.com" target="_blank" rel="noopener">transparenttextures.com →</a>
+                    </div>
                 </div>
 
                 <div class="gtlm-made-badge">
                     Được xây dựng với ❤️ bởi đội phát triển <b>GTLM</b>.<br>
-                    Toàn bộ mã nguồn và logic game được tự phát triển.
+                    Một số thư viện, tài nguyên hình ảnh và assets được sử dụng theo giấy phép của tác giả gốc.<br>
+                    Xin cảm ơn các dự án mã nguồn mở và cộng đồng sáng tạo.
                 </div>
             </div>
 
@@ -840,7 +913,7 @@
                     <div class="gtlm-rule-icon yellow">🎯</div>
                     <div class="gtlm-rule-text">
                         <h4>Mục đích giải trí</h4>
-                        <p>GTLM là nền tảng giải trí thuần túy. Đồng GTLM không có giá trị tiền tệ thực tế và không thể quy đổi ra tiền mặt.</p>
+                        <p>GTLM là nền tảng giải trí thuần túy. Đồng GTLM không có giá trị  Gtlm thực tế và không thể quy đổi ra  Gtlm mặt.</p>
                     </div>
                 </div>
 

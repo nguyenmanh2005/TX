@@ -36,10 +36,10 @@ switch ($action) {
             $user = $stmt->get_result()->fetch_assoc();
 
             if ($user['Money'] < $bulletPrice) {
-                throw new Exception('Hết đạn (Tiền)!');
+                throw new Exception('Hết đạn ( Gtlm)!');
             }
 
-            // 1. Luôn trừ tiền đạn
+            // 1. Luôn trừ  Gtlm đạn
             $newBalance = $user['Money'] - $bulletPrice;
             $upd = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
             $upd->bind_param("di", $newBalance, $userId);
@@ -69,7 +69,7 @@ switch ($action) {
                         $fishName = $fishConfig[$fishType]['name'];
                         $newBalance += $reward;
                         
-                        // Cập nhật lại tiền sau khi trúng
+                        // Cập nhật lại  Gtlm sau khi trúng
                         $updReward = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
                         $updReward->bind_param("di", $newBalance, $userId);
                         $updReward->execute();

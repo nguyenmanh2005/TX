@@ -55,7 +55,7 @@ if ($action === 'join') {
         exit();
     }
 
-    // 4. Kiểm tra tiền
+    // 4. Kiểm tra  Gtlm
     $user = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc();
     if ($user['Money'] < $tour['buy_in']) {
         echo json_encode(['status' => 'error', 'message' => 'Bạn không đủ GTLM để tham gia!']);
@@ -64,7 +64,7 @@ if ($action === 'join') {
 
     $conn->begin_transaction();
     try {
-        // Trừ tiền user
+        // Trừ  Gtlm user
         $conn->query("UPDATE users SET Money = Money - {$tour['buy_in']} WHERE Iduser = $userId");
 
         // Tính toán prize pool (trừ đi phí vận hành)
@@ -113,17 +113,6 @@ if ($action === 'join') {
     $stmt->execute();
     echo json_encode(['status' => 'success', 'data' => $stmt->get_result()->fetch_assoc()]);
     $stmt->close();
-} elseif ($action === 'log_score') {
-    $tournamentId = (int)($_POST['tournament_id'] ?? 0);
-    $score = (float)($_POST['score'] ?? 0);
-    
-    if ($tournamentId > 0 && $score > 0) {
-        $conn->query("INSERT INTO tournament_scores (tournament_id, user_id, score) VALUES ($tournamentId, $userId, $score)
-                     ON DUPLICATE KEY UPDATE score = score + $score");
-        echo json_encode(['status' => 'success', 'message' => 'Đã cập nhật điểm số!']);
-    } else {
-        echo json_encode(['status' => 'error', 'message' => 'Dữ liệu không hợp lệ!']);
-    }
 } elseif ($action === 'claim_reward') {
     // Admin đã tự động trao giải, ở đây chỉ trả về thành công để bot không lỗi
     echo json_encode(['status' => 'success', 'message' => 'Phần thưởng đã được trao tự động vào tài khoản của bạn!']);

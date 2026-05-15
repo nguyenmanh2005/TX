@@ -36,6 +36,16 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) &&
 }
 
 require_once '../load_theme.php';
+// Đảm bảo các biến theme luôn tồn tại
+if (!isset($bgGradientCSS)) $bgGradientCSS = 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%)';
+if (!isset($particleCount)) $particleCount = 100;
+if (!isset($particleSize)) $particleSize = 0.05;
+if (!isset($particleColor)) $particleColor = '#ffffff';
+if (!isset($particleOpacity)) $particleOpacity = 0.6;
+if (!isset($shapeCount)) $shapeCount = 10;
+if (!isset($shapeColors)) $shapeColors = ['#667eea', '#764ba2', '#4facfe', '#00f2fe'];
+if (!isset($shapeOpacity)) $shapeOpacity = 0.3;
+if (!isset($bgGradient)) $bgGradient = ['#667eea', '#764ba2', '#4facfe'];
 
 $userId = $_SESSION['Iduser'];
 $sql = "SELECT Money, Name FROM users WHERE Iduser = ?";
@@ -67,119 +77,109 @@ $userName = $user['Name'];
 // --- AJAX HANDLER ---
 if (isset($_GET['action']) && $_GET['action'] === 'buy_vietlott') {
     header('Content-Type: application/json');
-    $cost = 500000;
+    $cost = 50000; // Đã fix cost khớp với thông báo mua vé 50k
 
-    if ($money < $cost) {
-        echo json_encode(['success' => false, 'message' => '❌ Không đủ gtlm! Mỗi vé 50.000 gtlm.']);
-        exit;
-    }
+    $conn->begin_transaction();
+    try {
+        // SELECT FOR UPDATE để khóa bản ghi user
+        $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ? FOR UPDATE");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $user = $stmt->get_result()->fetch_assoc();
 
-    $rawNumbers = $_POST['numbers'] ?? '';
-    if (empty($rawNumbers)) {
-        echo json_encode(['success' => false, 'message' => '❌ Vui lòng chọn ít nhất 1 số.']);
-        exit;
-    }
-
-    $selected = array_unique(array_map('intval', explode(',', $rawNumbers)));
-    if (count($selected) < 1 || count($selected) > 6) {
-        echo json_encode(['success' => false, 'message' => '❌ Vui lòng chọn từ 1 đến 6 số.']);
-        exit;
-    }
-
-    // Quay số (6 số từ 1-45) với kiểm soát tỉ lệ
-    function generateWinningNumbers()
-    {
-        $p = range(1, 45);
-        shuffle($p);
-        return array_slice($p, 0, 6);
-    }
-
-    $winningNumbers = generateWinningNumbers();
-    $matchedNumbers = array_values(array_intersect($selected, $winningNumbers));
-    $matchCount = count($matchedNumbers);
-
-    // Kiểm soát tỉ lệ trúng giải lớn (3-6 số)
-    if ($matchCount >= 3) {
-        $chance = 100; // Mặc định 100%
-        if ($matchCount === 3)
-            $chance = 10;    // 10% trúng thật
-        if ($matchCount === 4)
-            $chance = 2;     // 2% trúng thật
-        if ($matchCount === 5)
-            $chance = 0.5;   // 0.5% trúng thật
-        if ($matchCount === 6)
-            $chance = 0.05;  // 0.05% trúng thật
-        if (mt_rand(1, 10000) > $chance * 100) {
-            // Re-roll: Quay lại cho đến khi matchCount <= 2
-            $limit = 0;
-            while ($matchCount >= 3 && $limit < 50) {
-                $winningNumbers = generateWinningNumbers();
-                $matchedNumbers = array_values(array_intersect($selected, $winningNumbers));
-                $matchCount = count($matchedNumbers);
-                $limit++;
-            }
-        }
-    }
-    sort($winningNumbers);
-
-    // Tính thưởng
-    $prize = 0;
-    switch ($matchCount) {
-        case 1:
-            $prize = 10000;
-            break;
-        case 2:
-            $prize = 50000;
-            break;
-        case 3:
-            $prize = 200000;
-            break;
-        case 4:
-            $prize = 1000000;
-            break;
-        case 5:
-            $prize = 10000000;
-            break;
-        case 6:
-            $prize = 100000000;
-            break;
-        default:
-            $prize = 0;
-    }
-
-    $newMoney = $money - $cost + $prize;
-    $conn->query("UPDATE users SET Money = $newMoney WHERE Iduser = $userId");
-        
-        // Insert vào history_vietlott table
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SESSION['Iduser'])) {
-            $userId = $_SESSION['Iduser'];
-            $betAmount = (int)($_POST['bet'] ?? 0);
-            $resultStr = $_POST['result'] ?? 'Unknown';
-            $winAmount = (int)($reward ?? 0);
-            
-            $historyStmt = $conn->prepare("INSERT INTO history_vietlott (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-            if ($historyStmt) {
-                $historyStmt->bind_param("iisi", $userId, $betAmount, $resultStr, $winAmount);
-                $historyStmt->execute();
-                $historyStmt->close();
-            }
+        if (!$user || $user['Money'] < $cost) {
+            throw new Exception('❌ Không đủ gtlm! Mỗi vé 50.000 gtlm.');
         }
 
-    if (file_exists('../game_history_helper.php')) {
-        require_once '../game_history_helper.php';
-        logGameHistoryWithAll($conn, $userId, 'Vietlott', $cost, $prize, $prize > 0);
-    }
+        $rawNumbers = $_POST['numbers'] ?? '';
+        if (empty($rawNumbers)) {
+            throw new Exception('❌ Vui lòng chọn ít nhất 1 số.');
+        }
 
-    echo json_encode([
-        'success' => true,
-        'winningNumbers' => $winningNumbers,
-        'matchedNumbers' => $matchedNumbers,
-        'prize' => $prize,
-        'newBalance' => number_format($newMoney) . ' gtlm',
-        'message' => ($prize > 0) ? "🎉 CHÚC MỪNG! Bạn trúng " . number_format($prize) . " gtlm!" : "😢 Rất tiếc! Chúc bạn may mắn lần sau."
-    ]);
+        $selected = array_unique(array_map('intval', explode(',', $rawNumbers)));
+        if (count($selected) < 1 || count($selected) > 6) {
+            throw new Exception('❌ Vui lòng chọn từ 1 đến 6 số.');
+        }
+
+        // Quay số (6 số từ 1-45) với kiểm soát tỉ lệ
+        function generateWinningNumbers()
+        {
+            $p = range(1, 45);
+            shuffle($p);
+            return array_slice($p, 0, 6);
+        }
+
+        $winningNumbers = generateWinningNumbers();
+        $matchedNumbers = array_values(array_intersect($selected, $winningNumbers));
+        $matchCount = count($matchedNumbers);
+
+        // Kiểm soát tỉ lệ trúng giải lớn (3-6 số)
+        if ($matchCount >= 3) {
+            $chance = 100; // Mặc định 100%
+            if ($matchCount === 3) $chance = 10;
+            if ($matchCount === 4) $chance = 2;
+            if ($matchCount === 5) $chance = 0.5;
+            if ($matchCount === 6) $chance = 0.05;
+            if (mt_rand(1, 10000) > $chance * 100) {
+                $limit = 0;
+                while ($matchCount >= 3 && $limit < 50) {
+                    $winningNumbers = generateWinningNumbers();
+                    $matchedNumbers = array_values(array_intersect($selected, $winningNumbers));
+                    $matchCount = count($matchedNumbers);
+                    $limit++;
+                }
+            }
+        }
+        sort($winningNumbers);
+
+        // Tính thưởng
+        $prize = 0;
+        switch ($matchCount) {
+            case 1: $prize = 10000; break;
+            case 2: $prize = 50000; break;
+            case 3: $prize = 200000; break;
+            case 4: $prize = 1000000; break;
+            case 5: $prize = 10000000; break;
+            case 6: $prize = 100000000; break;
+            default: $prize = 0;
+        }
+
+        // Cập nhật số dư tương đối
+        $stmt = $conn->prepare("UPDATE users SET Money = Money - ? + ? WHERE Iduser = ?");
+        $stmt->bind_param("ddi", $cost, $prize, $userId);
+        $stmt->execute();
+
+        // Ghi log lịch sử riêng của vietlott
+        $resultStr = implode(",", $winningNumbers);
+        $historyStmt = $conn->prepare("INSERT INTO history_vietlott (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
+        $historyStmt->bind_param("idid", $userId, $cost, $resultStr, $prize);
+        $historyStmt->execute();
+        $historyStmt->close();
+
+        if (file_exists('../game_history_helper.php')) {
+            require_once '../game_history_helper.php';
+            logGameHistoryWithAll($conn, $userId, 'Vietlott', $cost, $prize, $prize > 0);
+        }
+
+        $conn->commit();
+
+        $newBalanceVal = $user['Money'] - $cost + $prize;
+        echo json_encode([
+            'success' => true,
+            'winningNumbers' => $winningNumbers,
+            'matchedNumbers' => $matchedNumbers,
+            'prize' => $prize,
+            'newBalance' => number_format($newBalanceVal) . ' gtlm',
+            'message' => ($prize > 0) ? "🎉 CHÚC MỪNG! Bạn trúng " . number_format($prize) . " gtlm!" : "😢 Rất tiếc! Chúc bạn may mắn lần sau."
+        ]);
+    } catch (Exception $e) {
+        $conn->rollback();
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
     exit;
 }
+
+
 ?>
 <!DOCTYPE html>
 <html lang="vi">

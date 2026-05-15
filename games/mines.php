@@ -38,18 +38,48 @@ if (isset($_GET['action'])) {
     $action = $_GET['action'];
     $response = ['success' => false];
     if ($action === 'start') {
-        $bet = (float) ($_POST['bet'] ?? 0);
-        $minesCount = (int) ($_POST['mines'] ?? 3);
-        if ($bet <= 0 || $bet > $money || $minesCount < 1 || $minesCount > 24) {
-            $response['message'] = "Yêu cầu không hợp lệ!";
+        $rawBet = $_POST['bet'] ?? 0;
+        $minesCount = (int)($_POST['mines'] ?? 3);
+
+        // FIX: Chống Array Injection & Validate
+        if (is_array($rawBet) || !is_numeric($rawBet)) {
+            $response['message'] = "Dữ liệu cược không hợp lệ!";
+            echo json_encode($response); exit;
+        }
+
+        $bet = (float)$rawBet;
+        $minBet = 1000;
+
+        if ($bet < $minBet || $minesCount < 1 || $minesCount > 24) {
+            $response['message'] = "Yêu cầu không hợp lệ! Mức cược tối thiểu là " . number_format($minBet) . " gtlm.";
         } else {
-            $conn->query("UPDATE users SET Money = Money - $bet WHERE Iduser = $userId");
-            $allTiles = range(0, 24);
-            shuffle($allTiles);
-            $mines = array_slice($allTiles, 0, $minesCount);
-            $_SESSION['mines_game'] = ['bet' => $bet, 'mines' => $mines, 'revealed' => [], 'minesCount' => $minesCount, 'status' => 'active'];
-            $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
-            $response = ['success' => true, 'money' => number_format($newMoney, 0, ',', '.')];
+            $conn->begin_transaction();
+            try {
+                // FIX: Sử dụng Prepared Statement & FOR UPDATE
+                $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+                $stmt->bind_param("i", $userId);
+                $stmt->execute();
+                $userData = $stmt->get_result()->fetch_assoc();
+
+                if (!$userData || $userData['Money'] < $bet) throw new Exception("Không đủ  Gtlm!");
+
+                // Trừ  Gtlm an toàn
+                $stmt = $conn->prepare("UPDATE users SET Money = Money - ? WHERE Iduser = ?");
+                $stmt->bind_param("di", $bet, $userId);
+                $stmt->execute();
+
+                $allTiles = range(0, 24);
+                shuffle($allTiles);
+                $mines = array_slice($allTiles, 0, $minesCount);
+                $_SESSION['mines_game'] = ['bet' => $bet, 'mines' => $mines, 'revealed' => [], 'minesCount' => $minesCount, 'status' => 'active'];
+                
+                $conn->commit();
+                $newMoney = $userData['Money'] - $bet;
+                $response = ['success' => true, 'money' => number_format($newMoney, 0, ',', '.')];
+            } catch (Exception $e) {
+                $conn->rollback();
+                $response['message'] = $e->getMessage();
+            }
         }
     } elseif ($action === 'reveal') {
         $index = (int) ($_POST['index'] ?? -1);
@@ -84,18 +114,47 @@ if (isset($_GET['action'])) {
             if ($revealedCount == 0) {
                 $response['message'] = "Hãy lật ít nhất 1 ô!";
             } else {
-                $mult = getMinesMultiplier($game['minesCount'], $revealedCount);
-                $winAmount = round($game['bet'] * $mult);
-                $conn->query("UPDATE users SET Money = Money + $winAmount WHERE Iduser = $userId");
-                $resStr = "Win x$mult | Tiles: $revealedCount";
-                $profit = $winAmount - $game['bet'];
-                $his = $conn->prepare("INSERT INTO history_mines (Iduser,Bet,Result,WinAmount,Time) VALUES (?,?,?,?,NOW())");
-                $his->bind_param("idss", $userId, $game['bet'], $resStr, $profit);
-                $his->execute();
-                logGameHistoryWithAll($conn, $userId, 'Mines', $game['bet'], $winAmount, true);
-                $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
-                $response = ['success' => true, 'winAmount' => number_format($winAmount, 0, ',', '.'), 'money' => number_format($newMoney, 0, ',', '.'), 'mines' => $game['mines']];
-                unset($_SESSION['mines_game']);
+                $conn->begin_transaction();
+                try {
+                    // Khóa bản ghi user
+                    $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+                    $stmt->bind_param("i", $userId);
+                    $stmt->execute();
+                    $stmt->get_result();
+
+                    $mult = getMinesMultiplier($game['minesCount'], $revealedCount);
+                    $winAmount = round($game['bet'] * $mult);
+                    
+                    $updateStmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
+                    $updateStmt->bind_param("di", $winAmount, $userId);
+                    $updateStmt->execute();
+
+                    $resStr = "Win x$mult | Tiles: $revealedCount";
+                    $profit = $winAmount - $game['bet'];
+                    $his = $conn->prepare("INSERT INTO history_mines (Iduser,Bet,Result,WinAmount,Time) VALUES (?,?,?,?,NOW())");
+                    $his->bind_param("idid", $userId, $game['bet'], $resStr, $profit);
+                    $his->execute();
+
+                    logGameHistoryWithAll($conn, $userId, 'Mines', $game['bet'], $winAmount, true);
+                    
+                    $conn->commit();
+
+                    $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
+                    $stmt->bind_param("i", $userId);
+                    $stmt->execute();
+                    $newMoney = $stmt->get_result()->fetch_assoc()['Money'];
+
+                    $response = [
+                        'success' => true, 
+                        'winAmount' => number_format($winAmount, 0, ',', '.'), 
+                        'money' => number_format($newMoney, 0, ',', '.'), 
+                        'mines' => $game['mines']
+                    ];
+                    unset($_SESSION['mines_game']);
+                } catch (Exception $e) {
+                    $conn->rollback();
+                    $response['message'] = "Lỗi hệ thống quyết toán!";
+                }
             }
         }
     }

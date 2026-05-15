@@ -123,7 +123,7 @@ $userId = $_SESSION['Iduser'];
         }
 
         function watchStream(id) {
-            Swal.fire('Tính năng xem chi tiết', 'Đang kết nối tới session của người chơi...', 'info');
+            window.location.href = 'watch.php?id=' + id;
         }
 
         function tipStreamer(id) {

@@ -60,7 +60,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $remainingCount = 25;
     } elseif ($action === "draw" && $cuoc > 0) {
         if ($cuoc > $soDu || $cuoc <= 0) {
-            $thongBao = "⚠️ Số gtlm cược không hợp lệ!";
+            $thongBao = "⚠️ Số GTLM ra chiêu không hợp lệ!";
         } else {
             $_SESSION['bingo_last_bet'] = $cuoc;
 
@@ -567,8 +567,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         <form method="post" id="gameForm">
             <label style="display: block; margin: 15px 0 8px; font-weight: 600; color: white; font-size: 16px;">💰 Số
-                gtlm cược:</label>
-            <input type="number" name="cuoc" id="betInput" placeholder="Nhập số gtlm cược" required min="1"
+                GTLM muốn liều:</label>
+            <input type="number" name="cuoc" id="betInput" placeholder="Nhập số GTLM muốn liều" required min="1"
                 value="<?= $lastBetAmount > 0 ? $lastBetAmount : '' ?>"><br>
 
             <div class="button-group">

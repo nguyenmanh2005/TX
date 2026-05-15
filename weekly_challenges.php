@@ -104,8 +104,8 @@ if (empty($challenges)) {
         ],
         [
             'type' => 'earn_money',
-            'name' => 'Kiếm 2,000,000 gtlm',
-            'desc' => 'Tổng lợi nhuận +2,000,000 gtlm trong tuần',
+            'name' => 'Kiếm 2,000,000 GTLM',
+            'desc' => 'Tổng lợi nhuận +2,000,000 GTLM trong tuần',
             'req' => 2000000,
             'money' => 500000,
             'xp' => 500
@@ -307,7 +307,7 @@ if (!empty($challenges)) {
                             <div class="badge"><?= htmlspecialchars($c['challenge_type']) ?></div>
                         </div>
                         <div style="text-align:right;">
-                            <div>Thưởng: <?= number_format($c['reward_money']) ?> gtlm + <?= number_format($c['reward_xp']) ?>
+                            <div>Thưởng: <?= number_format($c['reward_money']) ?> GTLM + <?= number_format($c['reward_xp']) ?>
                                 XP</div>
                             <div><?= $progress ?> / <?= $req ?></div>
                         </div>

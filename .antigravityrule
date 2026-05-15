@@ -1,0 +1,193 @@
+# 📋 Antigravity Rules — Dự án Casino Platform (PHP)
+
+> Quy tắc làm việc được xây dựng dựa trên codebase thực tế của dự án.  
+> Áp dụng cho mọi yêu cầu code, fix bug, và phát triển tính năng mới.
+> AI không được sửa file này!.
+
+---
+
+## 1. 🗄️ Quy tắc Database — Bảng & Cột
+
+### 1.1 Tạo bảng mới
+- **KHÔNG** nhúng lệnh `CREATE TABLE` vào file logic (`.php` chạy hàng ngày).
+- **PHẢI** gửi SQL tạo bảng riêng thành **block SQL độc lập** trong chat, không tạo file PHP riêng để chạy.
+- Mọi lệnh tạo bảng **BẮT BUỘC** dùng `CREATE TABLE IF NOT EXISTS` để tránh lỗi khi bảng đã tồn tại.
+
+```sql
+-- ✅ Đúng
+CREATE TABLE IF NOT EXISTS ten_bang (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ...
+);
+
+-- ❌ Sai
+CREATE TABLE ten_bang ( ... );
+```
+
+### 1.2 Thêm cột mới vào bảng đã có
+- **KHÔNG** dùng `ALTER TABLE ADD COLUMN` trực tiếp nếu cột có thể đã tồn tại.
+- **PHẢI** wrap bằng kiểm tra tồn tại trước khi thêm, hoặc dùng stored procedure / block có điều kiện:
+
+```sql
+-- ✅ Đúng — kiểm tra trước khi ALTER
+ALTER TABLE users ADD COLUMN IF NOT EXISTS vip_expiry DATETIME DEFAULT NULL;
+
+-- Hoặc nếu MySQL version cũ không hỗ trợ IF NOT EXISTS:
+-- Gửi dưới dạng comment hướng dẫn chạy thủ công 1 lần
+```
+
+- Nếu MySQL không hỗ trợ `ADD COLUMN IF NOT EXISTS`, **phải ghi chú rõ** đây là lệnh chạy một lần và hướng dẫn kiểm tra trước.
+
+### 1.3 Gửi SQL riêng
+- SQL tạo bảng / thêm cột luôn được gửi trong **block riêng** tách biệt với code PHP, có tiêu đề rõ ràng:
+
+```
+📦 SQL — Chạy 1 lần trên database
+─────────────────────────────────
+[SQL ở đây]
+─────────────────────────────────
+```
+
+---
+
+## 2. 🎮 Quy tắc Game — Mới & Nâng cấp
+
+### 2.1 Khi có game MỚI hoàn toàn
+- **PHẢI hỏi** trước khi tạo file: *"Tạo file mới trong thư mục nào? Ghi thẳng vào `games/` hay tạo thư mục riêng?"*
+- Dự án hiện tại đặt game tại `games/ten_game.php` — mọi game mới cần xác nhận vị trí.
+
+### 2.2 Khi NÂNG CẤP game đã có
+- **PHẢI hỏi** trước khi ghi đè:
+
+> 🔄 *"File `games/crash.php` đã tồn tại. Bạn muốn:*
+> **(A) Ghi đè** file cũ (có thể mất code tùy chỉnh trước đó)*
+> **(B) Tạo phiên bản mới** tại `games/crash_v2.php`*
+> **(C) Xem diff** — mình chỉ gửi phần thay đổi để bạn merge thủ công?"*
+
+- **Không bao giờ** tự ý ghi đè file game đang tồn tại mà không có xác nhận.
+
+### 2.3 CSS & JS đi kèm game
+- Mỗi game có file CSS riêng tại `assets/css/game-[ten].css` và JS tại `assets/js/game-[ten].js`.
+- Khi tạo game mới, **phải hỏi** có tạo kèm CSS/JS riêng không hay dùng chung `assets/css/main.css`.
+- Khi sửa CSS/JS của game **đã có**, áp dụng quy tắc hỏi ghi đè như trên.
+
+---
+
+## 3. 📁 Cấu trúc File & Đặt tên
+
+### 3.1 Quy ước đặt tên (theo codebase hiện tại)
+| Loại file | Pattern | Ví dụ |
+|---|---|---|
+| Trang game | `games/[ten].php` | `games/crash.php` |
+| API endpoint | `api_[chức_năng].php` | `api_jackpot.php` |
+| Helper/Util | `[chức_năng]_helper.php` | `tournament_helper.php` |
+| Admin page | `admin_[chức_năng].php` | `admin_analytics.php` |
+| Cron job | `cron_[chức_năng].php` | `cron_auction.php` |
+| CSS game | `assets/css/game-[ten].css` | `assets/css/game-crash.css` |
+| JS game | `assets/js/game-[ten].js` | `assets/js/game-crash.js` |
+
+---
+
+## 4. 🔐 Quy tắc Security & Auth
+
+### 4.1 Kiểm tra session
+- Mọi API (`api_*.php`) phải kiểm tra session ở đầu file:
+
+```php
+if (!isset($_SESSION['Iduser'])) {
+    echo json_encode(['success' => false, 'message' => 'Chưa đăng nhập!']);
+    exit;
+}
+```
+
+### 4.2 Admin pages
+- File `admin_*.php` phải kiểm tra quyền admin. Hiện tại codebase dùng `$_SESSION['Iduser'] == 1` hoặc role check — **không được bỏ qua**.
+- Không để dòng `// die("Truy cập bị từ chối!")` bị comment out trong production.
+
+### 4.3 Race condition
+- Các thao tác quan trọng (đổi gift code, đặt cược, rút tiền) **PHẢI** dùng transaction + row lock như pattern hiện tại:
+
+```php
+$conn->begin_transaction();
+$stmt = $conn->prepare("SELECT ... FOR UPDATE");
+// ... xử lý ...
+$conn->commit();
+```
+
+---
+
+## 5. 🤖 Quy tắc Bot System
+
+### 5.1 Thêm bot personality mới
+- Bot chat personality nằm tại `bot/chat/[personality].php`.
+- Hỏi tên personality và style trước khi tạo.
+- **Không** sửa `bot/bot_brain.php` hay `bot/bot_engine.php` mà không có yêu cầu rõ ràng — đây là core engine.
+
+### 5.2 Bot và game_history
+- Mọi hành động cá cược của bot **PHẢI** được ghi vào `game_history` để mission/quest tính đúng.
+- Không tạo game mới mà bỏ qua việc hỏi có cần bot support không.
+
+### 5.3 Bot chat — Bảng từ thay thế
+Khi viết chat cho bot, **PHẢI** dùng từ thay thế theo bảng sau, không dùng từ gốc. Danh sách này lấy từ `vocabulary_helper.php` trong dự án:
+
+| Từ gốc | Thay bằng |
+|---|---|
+| tiền | GTLM |
+| túi | nick |
+| thắng tiền | húp GTLM |
+| thua tiền | bay màu / bốc hơi / về cõi |
+| cá cược | giao lưu / thử vận |
+| đặt cược |  ra chiêu |
+| cược | chiến / liều |
+| casino | trận địa |
+| sòng bài | trận địa |
+| ván bài | ván giao lưu |
+| thua | bay màu / về cõi / thành tro |
+| thắng | húp / ăn ngập mặt |
+| hết tiền | nick trắng tay / nick khô hạn |
+| tài xỉu | Xanh Đỏ Đối Kháng |
+| xóc đĩa | Trận Địa Trắng Đỏ |
+| bầu cua | Thế Giới Linh Thú |
+| đá gà | Đại Chiến Thần Kê |
+| rồng hổ | Chiến Trường Rồng Hổ |
+| slot machine / máy đánh bạc | máy vận may |
+| cờ bạc / đánh bạc | giao lưu giải trí |
+
+> 💡 Nếu gặp từ nhạy cảm chưa có trong bảng, **tìm trong `vocabulary_helper.php`** trước. Nếu không có mới hỏi.
+
+### 5.4 Tích hợp game mới vào Bot
+- Nếu game có chức năng bot (tự động đặt cược, chat, reaction...), logic đó **PHẢI** được viết vào file trong thư mục `bot/` — **không** nhúng vào file game (`games/*.php`) hay API game.
+- Bot **chỉ hoạt động khi admin bật** — không có cơ chế nào tự kích hoạt bot ngoài luồng admin khởi động (`bot_runner.php` / `bot_manager.php`).
+- Khi admin tắt bot, **toàn bộ** hoạt động bot dừng — không game nào được phép có bot chạy ngầm ngoài hệ thống này.
+- Khi tạo game mới có bot support, phải hỏi: *"Game này cần bot chơi không? Nếu có, mình sẽ tạo/cập nhật file trong `bot/` và hook vào `bot_manager.php`."*
+
+---
+
+## 6. 💬 Quy tắc Response & Giao tiếp
+
+### 6.1 Trước khi code
+Khi nhận yêu cầu, **phải xác nhận** các điểm sau nếu chưa rõ:
+- [ ] File mới hay sửa file cũ?
+- [ ] Cần tạo bảng DB không? → gửi SQL riêng
+- [ ] Game mới hay nâng cấp? → hỏi ghi đè hay tạo version mới
+- [ ] Cần bot hỗ trợ game này không?
+
+### 6.2 Khi gửi code
+- Luôn ghi rõ **tên file** và **đường dẫn** ở đầu mỗi block code.
+- Nếu sửa file cũ, chỉ gửi **phần thay đổi** kèm context đủ để tìm vị trí (trừ khi được yêu cầu gửi full file).
+- SQL chạy 1 lần luôn nằm trong block riêng, **không** nằm lẫn trong PHP logic.
+
+### 6.3 Sau khi code
+- Nêu rõ: file nào cần upload, SQL nào cần chạy, thứ tự thực hiện nếu có phụ thuộc.
+
+---
+
+## 7. ⚡ Quy tắc Performance (theo codebase hiện tại)
+
+- Tránh N+1 query — dùng JOIN hoặc subquery như pattern trong `api_auction.php`.
+- API trả về JSON phải set header: `header('Content-Type: application/json; charset=utf-8');`
+- Dùng prepared statements (`$conn->prepare(...)`) cho mọi query có input từ user — không bao giờ nối string trực tiếp vào SQL.
+
+---
+
+*Rules này được xây dựng từ codebase thực tế — cập nhật khi có pattern mới.*

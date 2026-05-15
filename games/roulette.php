@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 
 if (!isset($_SESSION['Iduser'])) {
@@ -36,6 +36,16 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) &&
 }
 
 require_once '../load_theme.php';
+// Đảm bảo các biến theme luôn tồn tại
+if (!isset($bgGradientCSS)) $bgGradientCSS = 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%)';
+if (!isset($particleCount)) $particleCount = 100;
+if (!isset($particleSize)) $particleSize = 0.05;
+if (!isset($particleColor)) $particleColor = '#ffffff';
+if (!isset($particleOpacity)) $particleOpacity = 0.6;
+if (!isset($shapeCount)) $shapeCount = 10;
+if (!isset($shapeColors)) $shapeColors = ['#667eea', '#764ba2', '#4facfe', '#00f2fe'];
+if (!isset($shapeOpacity)) $shapeOpacity = 0.3;
+if (!isset($bgGradient)) $bgGradient = ['#667eea', '#764ba2', '#4facfe'];
 
 $userId = $_SESSION['Iduser'];
 $sql = "SELECT Money, Name FROM users WHERE Iduser = ?";
@@ -88,110 +98,116 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
 
     $totalBet = 0;
     foreach ($bets as $b) {
-        $totalBet += (int) $b['amount'];
+        $totalBet += (float) $b['amount'];
     }
 
-    if ($totalBet > $soDu || $totalBet <= 0) {
-        echo json_encode(['success' => false, 'message' => '⚠️ Số Gtlm không đủ cho tổng cược!']);
+    if ($totalBet <= 0) {
+        echo json_encode(['success' => false, 'message' => '⚠️ Số  Gtlm cược không hợp lệ!']);
         exit;
     }
 
-    $winningNumber = rand(0, 36);
-    $color = getNumberColor($winningNumber);
+    $conn->begin_transaction();
+    try {
+        // SELECT FOR UPDATE để khóa bản ghi user
+        $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ? FOR UPDATE");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $user = $stmt->get_result()->fetch_assoc();
 
-    $totalWin = 0;
-    $breakdown = [];
-
-    foreach ($bets as $b) {
-        $type = $b['type'];
-        $val = $b['value'];
-        $amt = (int) $b['amount'];
-        $win = 0;
-
-        switch ($type) {
-            case 'straight':
-                if ($winningNumber == $val)
-                    $win = $amt * 36;
-                break;
-            case 'red':
-                if ($color === 'red')
-                    $win = $amt * 2;
-                break;
-            case 'black':
-                if ($color === 'black')
-                    $win = $amt * 2;
-                break;
-            case 'even':
-                if ($winningNumber != 0 && $winningNumber % 2 == 0)
-                    $win = $amt * 2;
-                break;
-            case 'odd':
-                if ($winningNumber != 0 && $winningNumber % 2 != 0)
-                    $win = $amt * 2;
-                break;
-            case 'low':
-                if ($winningNumber >= 1 && $winningNumber <= 18)
-                    $win = $amt * 2;
-                break;
-            case 'high':
-                if ($winningNumber >= 19 && $winningNumber <= 36)
-                    $win = $amt * 2;
-                break;
-            case 'dozen':
-                if ($val == 1 && $winningNumber >= 1 && $winningNumber <= 12)
-                    $win = $amt * 3;
-                if ($val == 2 && $winningNumber >= 13 && $winningNumber <= 24)
-                    $win = $amt * 3;
-                if ($val == 3 && $winningNumber >= 25 && $winningNumber <= 36)
-                    $win = $amt * 3;
-                break;
-            case 'column':
-                if ($winningNumber != 0 && ($winningNumber - $val) % 3 == 0)
-                    $win = $amt * 3;
-                break;
+        if (!$user || $user['Money'] < $totalBet) {
+            throw new Exception('⚠️ Số Gtlm không đủ cho tổng cược!');
         }
 
-        if ($win > 0) {
-            $totalWin += $win;
-            $breakdown[] = "Cược $type: Thắng " . number_format($win) . " gtlm";
-        }
-    }
+        $winningNumber = rand(0, 36);
+        $color = getNumberColor($winningNumber);
 
-    $newMoney = $soDu - $totalBet + $totalWin;
-    $conn->query("UPDATE users SET Money = $newMoney WHERE Iduser = $userId");
-        
-        // Insert vào history_roulette table
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SESSION['Iduser'])) {
-            $userId = $_SESSION['Iduser'];
-            $betAmount = (int)($_POST['bet'] ?? 0);
-            $resultStr = $_POST['result'] ?? 'Unknown';
-            $winAmount = (int)($reward ?? 0);
-            
-            $historyStmt = $conn->prepare("INSERT INTO history_roulette (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-            if ($historyStmt) {
-                $historyStmt->bind_param("iisi", $userId, $betAmount, $resultStr, $winAmount);
-                $historyStmt->execute();
-                $historyStmt->close();
+        $totalWin = 0;
+        $breakdown = [];
+
+        foreach ($bets as $b) {
+            $type = $b['type'];
+            $val = $b['value'];
+            $amt = (float) $b['amount'];
+            $win = 0;
+
+            switch ($type) {
+                case 'straight':
+                    if ($winningNumber == $val) $win = $amt * 36;
+                    break;
+                case 'red':
+                    if ($color === 'red') $win = $amt * 2;
+                    break;
+                case 'black':
+                    if ($color === 'black') $win = $amt * 2;
+                    break;
+                case 'even':
+                    if ($winningNumber != 0 && $winningNumber % 2 == 0) $win = $amt * 2;
+                    break;
+                case 'odd':
+                    if ($winningNumber != 0 && $winningNumber % 2 != 0) $win = $amt * 2;
+                    break;
+                case 'low':
+                    if ($winningNumber >= 1 && $winningNumber <= 18) $win = $amt * 2;
+                    break;
+                case 'high':
+                    if ($winningNumber >= 19 && $winningNumber <= 36) $win = $amt * 2;
+                    break;
+                case 'dozen':
+                    if ($val == 1 && $winningNumber >= 1 && $winningNumber <= 12) $win = $amt * 3;
+                    if ($val == 2 && $winningNumber >= 13 && $winningNumber <= 24) $win = $amt * 3;
+                    if ($val == 3 && $winningNumber >= 25 && $winningNumber <= 36) $win = $amt * 3;
+                    break;
+                case 'column':
+                    if ($winningNumber != 0 && ($winningNumber - $val) % 3 == 0) $win = $amt * 3;
+                    break;
+            }
+
+            if ($win > 0) {
+                $totalWin += $win;
+                $breakdown[] = "Cược $type: Thắng " . number_format($win) . " gtlm";
             }
         }
 
-    if (file_exists('../game_history_helper.php')) {
-        require_once '../game_history_helper.php';
-        logGameHistoryWithAll($conn, $userId, 'Roulette Pro', $totalBet, $totalWin, ($totalWin > 0));
-    }
+        // Cập nhật số dư tương đối
+        $stmt = $conn->prepare("UPDATE users SET Money = Money - ? + ? WHERE Iduser = ?");
+        $stmt->bind_param("ddi", $totalBet, $totalWin, $userId);
+        $stmt->execute();
 
-    echo json_encode([
-        'success' => true,
-        'number' => $winningNumber,
-        'color' => $color,
-        'totalWin' => $totalWin,
-        'totalBet' => $totalBet,
-        'newMoney' => number_format($newMoney) . ' gtlm',
-        'breakdown' => $breakdown,
-        'message' => ($totalWin > 0) ? "🎉 CHIẾN THẮNG: TRÚNG SỐ $winningNumber! (" . strtoupper($color) . ")" : "💀 KẾT QUẢ: SỐ $winningNumber ($color). CHÚC BẠN MAY MẮN LẦN SAU!"
-    ]);
+        // Ghi log lịch sử riêng của roulette
+        $historyStmt = $conn->prepare("INSERT INTO history_roulette (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
+        $resultStr = "Số $winningNumber ($color)";
+        $historyStmt->bind_param("idid", $userId, $totalBet, $resultStr, $totalWin);
+        $historyStmt->execute();
+        $historyStmt->close();
+
+        // Ghi log tổng quát (Quest, BattlePass, etc)
+        if (file_exists('../game_history_helper.php')) {
+            require_once '../game_history_helper.php';
+            logGameHistoryWithAll($conn, $userId, 'Roulette Pro', $totalBet, $totalWin, ($totalWin > 0));
+        }
+
+        $conn->commit();
+        
+        $newMoneyVal = $user['Money'] - $totalBet + $totalWin;
+
+        echo json_encode([
+            'success' => true,
+            'number' => $winningNumber,
+            'color' => $color,
+            'totalWin' => $totalWin,
+            'totalBet' => $totalBet,
+            'newMoney' => number_format($newMoneyVal) . ' gtlm',
+            'breakdown' => $breakdown,
+            'message' => ($totalWin > 0) ? "🎉 CHIẾN THẮNG: TRÚNG SỐ $winningNumber! (" . strtoupper($color) . ")" : "💀 KẾT QUẢ: SỐ $winningNumber ($color). CHÚC BẠN MAY MẮN LẦN SAU!"
+        ]);
+    } catch (Exception $e) {
+        $conn->rollback();
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
     exit;
 }
+
+
 ?>
 <!DOCTYPE html>
 <html lang="vi">

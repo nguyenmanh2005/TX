@@ -54,7 +54,7 @@ if ($action === 'craft') {
 
     $conn->begin_transaction();
     try {
-        // 2. Kiểm tra tiền
+        // 2. Kiểm tra  Gtlm
         $user = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc();
         if ($user['Money'] < $gtlmCost) {
             throw new Exception("Bạn không đủ GTLM để thực hiện chế tác!");
@@ -96,7 +96,7 @@ if ($action === 'craft') {
             }
         }
 
-        // 4. Trừ tiền
+        // 4. Trừ  Gtlm
         $conn->query("UPDATE users SET Money = Money - $gtlmCost WHERE Iduser = $userId");
 
         // 5. Tính toán tỉ lệ thành công

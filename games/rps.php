@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 
 if (!isset($_SESSION['Iduser'])) {
@@ -68,76 +68,93 @@ $tenNguoiChoi = $user['Name'];
 if (isset($_GET['action']) && $_GET['action'] === 'play_rps') {
     header('Content-Type: application/json');
     $chon = $_POST["chon"] ?? "";
-    $cuoc = (int) ($_POST["cuoc"] ?? 0);
+    $cuoc = (float) ($_POST["cuoc"] ?? 0);
 
     if (!in_array($chon, ["Đá", "Giấy", "Kéo"])) {
         echo json_encode(['success' => false, 'message' => '❌ Vui lòng chọn Đá, Giấy hoặc Kéo!']);
         exit;
     }
-    if ($cuoc > $soDu || $cuoc <= 0) {
-        echo json_encode(['success' => false, 'message' => '⚠️ Số Gtlm không đủ hoặc cược không hợp lệ!']);
-        exit;
-    }
 
-    $choices = ["Đá", "Giấy", "Kéo"];
-    $botChon = $choices[rand(0, 2)];
-    $emojis = ["Đá" => "👊", "Giấy" => "✋", "Kéo" => "✌️"];
+    $conn->begin_transaction();
+    try {
+        // SELECT FOR UPDATE để khóa bản ghi user
+        $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ? FOR UPDATE");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $user = $stmt->get_result()->fetch_assoc();
 
-    $status = ""; // win, draw, lose
-    $msg = "";
-    $winAmount = 0;
-    $laThang = false;
+        if (!$user || $user['Money'] < $cuoc || $cuoc <= 0) {
+            throw new Exception('⚠️ Số dư không đủ hoặc cược không hợp lệ!');
+        }
 
-    if ($chon === $botChon) {
-        $status = "draw";
-        $msg = "🤝 Hòa! Cả hai cùng chọn " . $emojis[$chon] . ".";
-        $winAmount = $cuoc; // Refund
-    } elseif (
-        ($chon === "Đá" && $botChon === "Kéo") ||
-        ($chon === "Giấy" && $botChon === "Đá") ||
-        ($chon === "Kéo" && $botChon === "Giấy")
-    ) {
-        $status = "win";
-        $laThang = true;
-        $winAmount = $cuoc * 2;
-        $msg = "🎉 Bạn thắng! " . $emojis[$chon] . " thắng " . $emojis[$botChon] . ". Nhận " . number_format($cuoc) . " gtlm!";
-    } else {
-        $status = "lose";
-        $msg = "😢 Bạn thua! " . $emojis[$chon] . " thua " . $emojis[$botChon] . ".";
+        $choices = ["Đá", "Giấy", "Kéo"];
+        $botChon = $choices[rand(0, 2)];
+        $emojis = ["Đá" => "👊", "Giấy" => "✋", "Kéo" => "✌️"];
+
+        $status = ""; // win, draw, lose
+        $msg = "";
         $winAmount = 0;
-    }
+        $laThang = false;
 
-    $newMoney = $soDu - $cuoc + $winAmount;
-    $conn->query("UPDATE users SET Money = $newMoney WHERE Iduser = $userId");
-        
-    // Insert vào history_rps table
-    $resultStr = "$chon vs $botChon";
-    $profit = $winAmount - $cuoc;
-    $historyStmt = $conn->prepare("INSERT INTO history_rps (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-    if ($historyStmt) {
-        $historyStmt->bind_param("iiss", $userId, $cuoc, $resultStr, $profit);
+        if ($chon === $botChon) {
+            $status = "draw";
+            $msg = "🤝 Hòa! Cả hai cùng chọn " . $emojis[$chon] . ".";
+            $winAmount = $cuoc; // Refund
+        } elseif (
+            ($chon === "Đá" && $botChon === "Kéo") ||
+            ($chon === "Giấy" && $botChon === "Đá") ||
+            ($chon === "Kéo" && $botChon === "Giấy")
+        ) {
+            $status = "win";
+            $laThang = true;
+            $winAmount = $cuoc * 2;
+            $msg = "🎉 Bạn thắng! " . $emojis[$chon] . " thắng " . $emojis[$botChon] . ". Nhận " . number_format($cuoc) . " gtlm!";
+        } else {
+            $status = "lose";
+            $msg = "😢 Bạn thua! " . $emojis[$chon] . " thua " . $emojis[$botChon] . ".";
+            $winAmount = 0;
+        }
+
+        // Cập nhật số dư tương đối
+        $stmt = $conn->prepare("UPDATE users SET Money = Money - ? + ? WHERE Iduser = ?");
+        $stmt->bind_param("ddi", $cuoc, $winAmount, $userId);
+        $stmt->execute();
+
+        // Ghi log lịch sử riêng của rps
+        $resultStr = "$chon vs $botChon";
+        $profit = $winAmount - $cuoc;
+        $historyStmt = $conn->prepare("INSERT INTO history_rps (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
+        $historyStmt->bind_param("idid", $userId, $cuoc, $resultStr, $profit);
         $historyStmt->execute();
         $historyStmt->close();
-    }
 
-    if (file_exists('../game_history_helper.php')) {
-        require_once '../game_history_helper.php';
-        logGameHistoryWithAll($conn, $userId, 'RPS', $cuoc, ($laThang ? $cuoc : 0), $laThang);
-    }
+        if (file_exists('../game_history_helper.php')) {
+            require_once '../game_history_helper.php';
+            logGameHistoryWithAll($conn, $userId, 'RPS', $cuoc, ($laThang ? $cuoc : 0), $laThang);
+        }
 
-    echo json_encode([
-        'success' => true,
-        'userChon' => $chon,
-        'botChon' => $botChon,
-        'userEmoji' => $emojis[$chon],
-        'botEmoji' => $emojis[$botChon],
-        'status' => $status,
-        'newMoney' => number_format($newMoney) . ' gtlm',
-        'message' => $msg,
-        'laThang' => $laThang
-    ]);
+        $conn->commit();
+
+        $newBalanceVal = $user['Money'] - $cuoc + $winAmount;
+        echo json_encode([
+            'success' => true,
+            'userChon' => $chon,
+            'botChon' => $botChon,
+            'userEmoji' => $emojis[$chon],
+            'botEmoji' => $emojis[$botChon],
+            'status' => $status,
+            'newMoney' => number_format($newBalanceVal) . ' gtlm',
+            'message' => $msg,
+            'laThang' => $laThang
+        ]);
+    } catch (Exception $e) {
+        $conn->rollback();
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
     exit;
 }
+
+
 ?>
 <!DOCTYPE html>
 <html lang="vi">

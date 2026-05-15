@@ -26,7 +26,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'play') {
         exit;
     }
 
-    // Trừ tiền cược
+    // Trừ  Gtlm cược
     $newMoney = $money - $bet;
     $stmt = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
     $stmt->bind_param("di", $newMoney, $userId);

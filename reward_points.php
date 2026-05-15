@@ -58,10 +58,10 @@ if (!$checkPoints || $checkPoints->num_rows == 0) {
 
     // Tạo rewards mẫu
     $sampleRewards = [
-        ['gtlm 10,000 gtlm', 'Đổi 100 điểm lấy 10,000 gtlm', 100, 'money', 10000, '💰'],
-        ['gtlm 50,000 gtlm', 'Đổi 400 điểm lấy 50,000 gtlm', 400, 'money', 50000, '💰'],
-        ['gtlm 100,000 gtlm', 'Đổi 750 điểm lấy 100,000 gtlm', 750, 'money', 100000, '💰'],
-        ['gtlm 500,000 gtlm', 'Đổi 3,500 điểm lấy 500,000 gtlm', 3500, 'money', 500000, '💰'],
+        ['GTLM 10,000 GTLM', 'Đổi 100 điểm lấy 10,000 GTLM', 100, 'money', 10000, '💰'],
+        ['GTLM 50,000 GTLM', 'Đổi 400 điểm lấy 50,000 GTLM', 400, 'money', 50000, '💰'],
+        ['GTLM 100,000 GTLM', 'Đổi 750 điểm lấy 100,000 GTLM', 750, 'money', 100000, '💰'],
+        ['GTLM 500,000 GTLM', 'Đổi 3,500 điểm lấy 500,000 GTLM', 3500, 'money', 500000, '💰'],
         ['XP 50', 'Đổi 50 điểm lấy 50 XP', 50, 'xp', 50, '⭐'],
         ['XP 200', 'Đổi 180 điểm lấy 200 XP', 180, 'xp', 200, '⭐'],
         ['XP 500', 'Đổi 400 điểm lấy 500 XP', 400, 'xp', 500, '⭐']

@@ -4,6 +4,7 @@ include '../db_connect.php';
 require_once '../include_css.php';
 include '../load_theme.php';
 require_once '../game_history_helper.php';
+require_once '../dynamic_event_helper.php';
 
 if (!isset($_SESSION['Iduser'])) {
     header('Location: ../login.php');
@@ -35,18 +36,34 @@ if (isset($_GET['action'])) {
     $response = ['success' => false];
 
     if ($action === 'start') {
-        $bet = (float) ($_POST['bet'] ?? 0);
-        if ($bet <= 0) {
-            $response['message'] = "Gtlm cược không hợp lệ!";
+        $rawBet = $_POST['bet'] ?? 0;
+        
+        // FIX: Chống Array Injection & Validate dữ liệu
+        if (is_array($rawBet) || !is_numeric($rawBet)) {
+            $response['message'] = "Dữ liệu cược không hợp lệ!";
+            echo json_encode($response); exit;
+        }
+
+        $bet = (float)$rawBet;
+        $minBet = 1000; // FIX: Chấp nhận Bet cực nhỏ
+
+        if ($bet < $minBet) {
+            $response['message'] = "Mức cược tối thiểu là " . number_format($minBet) . " gtlm!";
         } else {
             $conn->begin_transaction();
             try {
-                // Khóa người dùng
-                $res = $conn->query("SELECT Money FROM users WHERE Iduser = $userId FOR UPDATE");
-                $userData = $res->fetch_assoc();
-                if ($userData['Money'] < $bet) throw new Exception("Không đủ tiền!");
+                // FIX: Sử dụng Prepared Statement cho an toàn tuyệt đối
+                $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+                $stmt->bind_param("i", $userId);
+                $stmt->execute();
+                $userData = $stmt->get_result()->fetch_assoc();
 
-                $conn->query("UPDATE users SET Money = Money - $bet WHERE Iduser = $userId");
+                if (!$userData || $userData['Money'] < $bet) throw new Exception("Không đủ  Gtlm!");
+
+                // Trừ  Gtlm
+                $stmt = $conn->prepare("UPDATE users SET Money = Money - ? WHERE Iduser = ?");
+                $stmt->bind_param("di", $bet, $userId);
+                $stmt->execute();
 
                 $instantCrash = rand(1, 100) <= 5;
                 if ($instantCrash) {
@@ -91,21 +108,45 @@ if (isset($_GET['action'])) {
             } else {
                 $conn->begin_transaction();
                 try {
-                    $winAmount = round($game['bet'] * $multiplier);
-                    $conn->query("UPDATE users SET Money = Money + $winAmount WHERE Iduser = $userId");
+                    // Khóa bản ghi để đảm bảo tính nhất quán
+                    $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+                    $stmt->bind_param("i", $userId);
+                    $stmt->execute();
+                    $stmt->get_result();
+
+                    $eventMult = DynamicEventHelper::getModifier($conn, 'crash');
+                    $winAmount = round($game['bet'] * $multiplier * $eventMult);
+                    
+                    $updateStmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
+                    $updateStmt->bind_param("di", $winAmount, $userId);
+                    $updateStmt->execute();
+
                     $resStr = "Cashout at x$multiplier";
                     $profit = $winAmount - $game['bet'];
                     $his = $conn->prepare("INSERT INTO history_crash (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-                    $his->bind_param("idss", $userId, $game['bet'], $resStr, $profit);
+                    $his->bind_param("idid", $userId, $game['bet'], $resStr, $profit);
                     $his->execute();
+
                     logGameHistoryWithAll($conn, $userId, 'Crash', $game['bet'], $winAmount, true);
+                    
                     $conn->commit();
-                    $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
-                    $response = ['success' => true, 'winAmount' => number_format($winAmount, 0, ',', '.'), 'winAmountRaw' => $winAmount, 'money' => number_format($newMoney, 0, ',', '.')];
+                    
+                    // Lấy số dư mới sau khi commit
+                    $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
+                    $stmt->bind_param("i", $userId);
+                    $stmt->execute();
+                    $newMoney = $stmt->get_result()->fetch_assoc()['Money'];
+
+                    $response = [
+                        'success' => true, 
+                        'winAmount' => number_format($winAmount, 0, ',', '.'), 
+                        'winAmountRaw' => $winAmount, 
+                        'money' => number_format($newMoney, 0, ',', '.')
+                    ];
                     unset($_SESSION['crash_game']);
                 } catch (Exception $e) {
                     $conn->rollback();
-                    $response['message'] = "Lỗi hệ thống!";
+                    $response['message'] = "Lỗi hệ thống quyết toán!";
                 }
             }
         }
@@ -588,6 +629,14 @@ if (isset($_GET['action'])) {
             </div>
 
             <div class="crash-area" id="crashArea">
+                <?php 
+                $activeEvent = DynamicEventHelper::getActiveEvent($conn);
+                if ($activeEvent && ($activeEvent['game_type'] === 'crash' || $activeEvent['game_type'] === 'all')): ?>
+                <div class="event-banner" style="position: absolute; top: 20px; right: 20px; z-index: 20; background: linear-gradient(135deg, #f1c40f, #e67e22); padding: 10px 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(241, 196, 15, 0.4); animation: pulse 2s infinite;">
+                    <div style="font-size: 10px; font-weight: 800; color: #000; text-transform: uppercase;">SỰ KIỆN ĐANG DIỄN RA</div>
+                    <div style="font-size: 14px; font-weight: 900; color: #000;"><?= htmlspecialchars($activeEvent['name']) ?> (x<?= $activeEvent['multiplier'] ?>)</div>
+                </div>
+                <?php endif; ?>
                 <div id="crash-3d-container"></div>
 
                 <div class="mult-wrapper">

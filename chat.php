@@ -56,9 +56,41 @@ if (isset($_GET['action']) && $_GET['action'] === 'load') {
     ");
     $messages = [];
     while ($row = $result->fetch_assoc()) {
+        $msgId = $row['id'];
+        // Fetch reactions for this message
+        $reactRes = $conn->query("SELECT emoji, COUNT(*) as count FROM chat_reactions WHERE message_id = $msgId GROUP BY emoji");
+        $reactions = [];
+        while ($r = $reactRes->fetch_assoc()) {
+            $reactions[] = $r;
+        }
+        $row['reactions'] = $reactions;
         $messages[] = $row;
     }
     echo json_encode(array_reverse($messages));
+    exit;
+}
+
+if (isset($_GET['action']) && $_GET['action'] === 'react' && isset($_GET['msg_id']) && isset($_GET['emoji'])) {
+    $msgId = (int)$_GET['msg_id'];
+    $emoji = $_GET['emoji'];
+    
+    // Check if already reacted
+    $check = $conn->prepare("SELECT id FROM chat_reactions WHERE message_id = ? AND user_id = ? AND emoji = ?");
+    $check->bind_param("iis", $msgId, $userId, $emoji);
+    $check->execute();
+    if ($check->get_result()->num_rows > 0) {
+        // Remove reaction
+        $del = $conn->prepare("DELETE FROM chat_reactions WHERE message_id = ? AND user_id = ? AND emoji = ?");
+        $del->bind_param("iis", $msgId, $userId, $emoji);
+        $del->execute();
+        echo json_encode(['status' => 'removed']);
+    } else {
+        // Add reaction
+        $ins = $conn->prepare("INSERT INTO chat_reactions (message_id, user_id, emoji) VALUES (?, ?, ?)");
+        $ins->bind_param("iis", $msgId, $userId, $emoji);
+        $ins->execute();
+        echo json_encode(['status' => 'added']);
+    }
     exit;
 }
 ?>
@@ -383,6 +415,74 @@ if (isset($_GET['action']) && $_GET['action'] === 'load') {
         transform: scale(1.1) rotate(5deg);
         box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
     }
+    
+    .reaction-bar {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .reaction-btn {
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(0,0,0,0.05);
+        border-radius: 20px;
+        padding: 4px 10px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    
+    .reaction-btn:hover {
+        background: #f0f7ff;
+        transform: scale(1.1);
+        border-color: var(--secondary-color);
+    }
+    
+    .reaction-btn.active {
+        background: #e1f5fe;
+        border-color: var(--secondary-color);
+        box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
+    }
+    
+    .reaction-btn span {
+        font-weight: 700;
+        color: var(--secondary-color);
+    }
+
+    .message-actions {
+        opacity: 0;
+        transition: opacity 0.3s;
+        margin-left: 10px;
+    }
+
+    .chat-message:hover .message-actions {
+        opacity: 1;
+    }
+
+    .emoji-picker {
+        display: inline-flex;
+        gap: 5px;
+        background: white;
+        padding: 5px 10px;
+        border-radius: 30px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        border: 1px solid #eee;
+    }
+
+    .emoji-picker span {
+        cursor: pointer;
+        font-size: 18px;
+        transition: transform 0.2s;
+    }
+
+    .emoji-picker span:hover {
+        transform: scale(1.3);
+    }
           \n
     
         /* Three.js canvas background */
@@ -507,11 +607,36 @@ if (isset($_GET['action']) && $_GET['action'] === 'load') {
                 messageDiv.style.animationDelay = `${delay}s`;
               }
 
+              let reactionHtml = '<div class="reaction-bar">';
+              if (msg.reactions && msg.reactions.length > 0) {
+                msg.reactions.forEach(r => {
+                  reactionHtml += `
+                    <div class="reaction-btn" onclick="toggleReaction(${msg.id}, '${r.emoji}')">
+                      ${r.emoji} <span>${r.count}</span>
+                    </div>
+                  `;
+                });
+              }
+              
+              // Nút thêm reaction nhanh
+              const quickEmojis = ['👍', '😂', '🔥', '❤️', '😮', '😢'];
+              let pickerHtml = '<div class="message-actions"><div class="emoji-picker">';
+              quickEmojis.forEach(e => {
+                pickerHtml += `<span onclick="toggleReaction(${msg.id}, '${e}')">${e}</span>`;
+              });
+              pickerHtml += '</div></div>';
+              
+              reactionHtml += '</div>';
+
               messageDiv.innerHTML = `
                 ${avatarHtml}
                 <div class="message-content">
-                  <strong>${titleDisplay}${safeUsername}</strong>
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <strong>${titleDisplay}${safeUsername}</strong>
+                    ${pickerHtml}
+                  </div>
                   <p>${safeMessage}</p>
+                  ${reactionHtml}
                   <small>(${msg.created_at})</small>
                 </div>
               `;
@@ -529,6 +654,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'load') {
           }
         })
         .catch(err => console.error('Error loading messages:', err));
+    }
+
+    function toggleReaction(msgId, emoji) {
+      fetch(`chat.php?action=react&msg_id=${msgId}&emoji=${encodeURIComponent(emoji)}`)
+        .then(res => res.json())
+        .then(data => {
+          loadMessages();
+        })
+        .catch(err => console.error('Error toggling reaction:', err));
     }
 
     function sendMessage() {

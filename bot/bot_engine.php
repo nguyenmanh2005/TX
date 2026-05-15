@@ -8,6 +8,8 @@ require_once __DIR__ . '/../db_connect.php';
 $config = require __DIR__ . '/config.php';
 require_once __DIR__ . '/bot_brain.php';
 require_once __DIR__ . '/../game_history_helper.php';
+require_once __DIR__ . '/bot_blackjack_multi.php';
+require_once __DIR__ . '/bot_horserace_pvp.php';
 
 // 0. Helpers & Error Handling
 $currentBotEmail = "SYSTEM";
@@ -90,7 +92,7 @@ function recordEconomySnapshot(mysqli $conn) {
         'moods' => $moodCounts
     ];
     
-    if (count($history) > 50000) array_shift($history);
+    if (count($history) > 10000) array_shift($history); // Giới hạn 10,000 điểm để tối ưu hiệu năng
     file_put_contents($historyFile, json_encode($history));
 }
 
@@ -127,7 +129,7 @@ while($row = $nameRes->fetch_assoc()) {
 function executeBotAction(string $url, ?array $postData = null, string $cookieFile): ?array {
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (BotArmy/16.1; OmniAccess)');
+    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (BotArmy/16.5; OmniAccess)');
     curl_setopt($ch, CURLOPT_COOKIEJAR, $cookieFile);
     curl_setopt($ch, CURLOPT_COOKIEFILE, $cookieFile);
     curl_setopt($ch, CURLOPT_TIMEOUT, 10);
@@ -138,6 +140,14 @@ function executeBotAction(string $url, ?array $postData = null, string $cookieFi
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postData));
     }
     $response = curl_exec($ch);
+    $effectiveUrl = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
+    
+    // Kiểm tra nếu bị redirect về login (Hết hạn session)
+    if (strpos($effectiveUrl, 'login.php') !== false && strpos($url, 'login.php') === false) {
+        if (PHP_VERSION_ID < 80500) { $cc = 'curl_close'; $cc($ch); }
+        return ['_session_expired' => true];
+    }
+
     if (PHP_VERSION_ID < 80500) {
         $cc = 'curl_close';
         $cc($ch);
@@ -207,23 +217,40 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
     $memory = file_exists($memFile) ? json_decode(file_get_contents($memFile), true) : ['known_users' => []];
 
 
-    // --- MODULE 0: Login with Retry ---
+    // --- MODULE 0: Login with Retry & Session Rotation ---
     $res = null;
-    for ($attempt = 1; $attempt <= 3; $attempt++) {
-        $res = executeBotAction($baseUrl . "/login.php", ['email' => $email, 'password' => $config['bot_password']], $cFile);
-        if (isset($res['status']) && $res['status'] == 'success') break;
-        if ($attempt < 3) sleep(1);
-    }
+    $needsLogin = !file_exists($cFile);
     
-    if (!isset($res['status']) || $res['status'] !== 'success') {
-        writeBotLog($email, "ERROR", "Login failed after 3 attempts");
-        continue;
+    // Thử thực hiện một action nhẹ để check session
+    if (!$needsLogin) {
+        $check = executeBotAction($baseUrl . "/api_user_status.php", null, $cFile);
+        if (isset($check['_session_expired'])) $needsLogin = true;
     }
+
+    if ($needsLogin) {
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            $res = executeBotAction($baseUrl . "/api_login.php", ['email' => $email, 'password' => '123456'], $cFile);
+            if (isset($res['status']) && $res['status'] == 'success') break;
+            if ($attempt < 3) sleep(1);
+        }
+        
+        if (!isset($res['status']) || $res['status'] !== 'success') {
+            $state['fail_count'] = ($state['fail_count'] ?? 0) + 1;
+            writeBotLog($email, "ERROR", "Login failed after 3 attempts");
+            file_put_contents($sFile, json_encode($state));
+            continue;
+        }
+    } else {
+        $res = $check; // Dùng kết quả check status nếu vẫn còn session
+    }
+    $state['fail_count'] = 0; // Reset khi thành công
 
     $userId = (int)$res['Iduser'];
     $userName = $res['Name'];
     $userMoney = (float)$res['Money'];
-    $personality = $brain->getPersonality($userId, $email);
+    $personality = $state['personality'] ?? $brain->getPersonality($userId, $email);
+    if (!isset($state['personality'])) $state['personality'] = $personality;
+    
     $isAnnouncer = ($personality === 'announcer');
     $msg = "Đang dạo chơi quanh trận địa... 😊";
     $chosenGame = "trận địa";
@@ -350,9 +377,14 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
         // --- MODULE 2: Games ---
         $mood = $state['mood'] ?? 'happy';
         
+        // Special Real-time Games Hook
+        handleBlackjackMultiBot($conn, $baseUrl, $cFile, $state);
+        handleHorseRacePvPBot($conn, $baseUrl, $cFile);
+
         // --- BROKE CHECK (Cháy túi) ---
         // Nâng ngưỡng cháy túi lên 500,000 để đảm bảo an toàn tài chính
-        if ($userMoney < 500000) {
+        $shouldPlayGame = ($userMoney >= 500000);
+        if (!$shouldPlayGame) {
             $state['mood'] = 'broke';
             echo "💸 <span style='color:#fca5a5;'>Trạng thái: Cần tích lũy vốn (Dưới 500k)!</span> Nghỉ chơi game, đi lượm lặt...<br>";
             if (rand(1, 100) <= 60) {
@@ -362,188 +394,217 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
             if (rand(1, 100) <= 40) {
                 executeBotAction($baseUrl . "/api_giftcode.php", ['action' => 'claim_random'], $cFile);
             }
-            goto social_module; // Bỏ qua Module Game
-        }
-        
-        // Mood-based game selection
-        $filteredGames = $availableGames;
-        
-        // --- LOSE STREAK: Chuyển game nếu thua 2 ván liên tiếp ---
-        if ($state['lose_streak'] >= 2 && !empty($state['history'])) {
-            $lastGame = $state['history'][0]['game'];
-            $filteredGames = array_filter($availableGames, function($g) use ($lastGame) {
-                return $g !== $lastGame;
-            });
-            if (empty($filteredGames)) $filteredGames = $availableGames;
-            echo "🔄 <span style='color:#a78bfa;'>Đổi game:</span> Thua quá, chuyển từ $lastGame sang game khác...<br>";
-        }
-
-        if ($mood === 'tilted') {
-            $highRisk = ['Poker Texas', 'Baccarat Premium', 'Xì Dách Royale'];
-            $filteredGames = array_filter($filteredGames, function($g) use ($highRisk) {
-                return !in_array($g, $highRisk);
-            });
-            if (empty($filteredGames)) $filteredGames = $availableGames;
-        }
-        
-        // --- MULTI-LEVEL BETTING STRATEGY (Cược theo cấp độ) ---
-        $probabilities = [
-            'light' => 50,  // 1-3%
-            'medium' => 35, // 5-10%
-            'heavy' => 13,  // 15-25%
-            'all_in' => 2   // 50-100%
-        ];
-
-        // Personality Adjustments
-        if ($personality === 'aggressive') {
-            $probabilities['light'] -= 10; $probabilities['medium'] += 5; $probabilities['heavy'] += 3; $probabilities['all_in'] += 2;
-        } else if ($personality === 'shy') {
-            $probabilities['light'] += 40; $probabilities['medium'] -= 25; $probabilities['heavy'] -= 13; $probabilities['all_in'] = 0;
-        } else if ($personality === 'danchoi') {
-            $probabilities['all_in'] += 8; $probabilities['light'] -= 8;
-        }
-
-        // Mood Adjustments
-        if ($mood === 'excited') {
-            $probabilities['heavy'] += 5; $probabilities['light'] -= 5;
-        } else if ($mood === 'tilted') {
-            $probabilities['all_in'] = max(0, $probabilities['all_in'] - 2);
-            $probabilities['medium'] += 2;
-        } else if ($mood === 'broke') {
-            $probabilities = ['light' => 100, 'medium' => 0, 'heavy' => 0, 'all_in' => 0];
-        }
-
-        // Determine Level
-        $rand = rand(1, 100);
-        $currentSum = 0;
-        $chosenLevel = 'light';
-        foreach ($probabilities as $level => $prob) {
-            $currentSum += $prob;
-            if ($rand <= $currentSum) {
-                $chosenLevel = $level;
-                break;
-            }
-        }
-
-        // Calculate Bet Percentage
-        if ($personality === 'whale') {
-            // Whale luôn cược từ 10% đến 50% GTLM
-            $betPercent = rand(10, 50);
-            $chosenLevel = ($betPercent >= 30) ? 'WHALE_ALL_IN' : 'WHALE_HIGH';
         } else {
-            switch ($chosenLevel) {
-                case 'light': $betPercent = rand(1, 3); break;
-                case 'medium': $betPercent = rand(5, 10); break;
-                case 'heavy': $betPercent = rand(15, 25); break;
-                case 'all_in': $betPercent = rand(50, 100); break;
-                default: $betPercent = 2;
-            }
-        }
-
-        $bet = floor($userMoney * ($betPercent / 100));
-        if ($bet < 1000) $bet = 1000;
-        if ($bet > $userMoney) $bet = $userMoney;
-
-        $betLabel = ($personality === 'whale') ? "💎 WHALE BET" : strtoupper($chosenLevel);
-        echo "🎲 <span style='color:#38bdf8;'>Mức cược:</span> " . $betLabel . " (" . $betPercent . "% - " . number_format($bet) . " GTLM)<br>";
-
-        // --- MENTORSHIP: Check for a mentor if losing ---
-        $learningFrom = null;
-        if ($state['lose_streak'] >= 3 && !empty($mentors)) {
-            $learningFrom = $mentors[array_rand($mentors)];
-            $chosenGame = $learningFrom['game'];
-            echo "🎓 <span style='color:#60a5fa;'>Đang học hỏi:</span> Theo chân tiền bối <b>{$learningFrom['name']}</b> tại ván $chosenGame...<br>";
+            // Mood-based game selection
+            $filteredGames = $availableGames;
             
-            if (rand(1, 100) <= 40) {
-                $lMsg = $brain->generateMessage($userId, 'learning', ['mentor' => $learningFrom['name'], 'game' => $chosenGame]);
-                executeBotAction($baseUrl . "/chat.php", ['message' => $lMsg], $cFile);
+            // --- LOSE STREAK: Chuyển game nếu thua 2 ván liên tiếp ---
+            if ($state['lose_streak'] >= 2 && !empty($state['history'])) {
+                $lastGame = $state['history'][0]['game'];
+                $filteredGames = array_filter($availableGames, function($g) use ($lastGame) {
+                    return $g !== $lastGame;
+                });
+                if (empty($filteredGames)) $filteredGames = $availableGames;
+                echo "🔄 <span style='color:#a78bfa;'>Đổi game:</span> Thua quá, chuyển từ $lastGame sang game khác...<br>";
             }
-        } else {
-            $chosenGame = $filteredGames[array_rand($filteredGames)];
-        }
 
-        // --- TILTED LOGIC (Martingale fallback) ---
-        if ($state['lose_streak'] >= 3 && $chosenLevel !== 'all_in') {
-            $state['mood'] = 'tilted';
-            if (rand(1, 100) <= 30) {
-                $bet = min($userMoney, $bet * 2); // Martingale nhẹ
-                echo "📈 <span style='color:#fbbf24;'>Gấp thếp nhẹ:</span> Quyết tâm gỡ gạc...<br>";
+            if ($mood === 'tilted') {
+                $highRisk = ['Poker Texas', 'Baccarat Premium', 'Xì Dách Royale'];
+                $filteredGames = array_filter($filteredGames, function($g) use ($highRisk) {
+                    return !in_array($g, $highRisk);
+                });
+                if (empty($filteredGames)) $filteredGames = $availableGames;
             }
-        }
             
-            // Chat chửi thề / than vãn
-            if (rand(1, 100) <= 70) {
-                $tMsg = $brain->generateMessage($userId, 'tilted_chat');
-                executeBotAction($baseUrl . "/chat.php", ['message' => $tMsg], $cFile);
+            // --- MULTI-LEVEL BETTING STRATEGY (Cược theo cấp độ) ---
+            $probabilities = [
+                'light' => 50,  // 1-3%
+                'medium' => 35, // 5-10%
+                'heavy' => 13,  // 15-25%
+                'all_in' => 2   // 50-100%
+            ];
+
+            // Personality Adjustments
+            if ($personality === 'aggressive') {
+                $probabilities['light'] -= 10; $probabilities['medium'] += 5; $probabilities['heavy'] += 3; $probabilities['all_in'] += 2;
+            } else if ($personality === 'shy') {
+                $probabilities['light'] += 40; $probabilities['medium'] -= 25; $probabilities['heavy'] -= 13; $probabilities['all_in'] = 0;
+            } else if ($personality === 'danchoi') {
+                $probabilities['all_in'] += 8; $probabilities['light'] -= 8;
             }
 
-        if ($bet < 1000) $bet = 1000;
+            // Mood Adjustments
+            if ($mood === 'excited') {
+                $probabilities['heavy'] += 5; $probabilities['light'] -= 5;
+            } else if ($mood === 'tilted') {
+                $probabilities['all_in'] = max(0, $probabilities['all_in'] - 2);
+                $probabilities['medium'] += 2;
+            } else if ($mood === 'broke') {
+                $probabilities = ['light' => 100, 'medium' => 0, 'heavy' => 0, 'all_in' => 0];
+            }
 
-        $isWin = (rand(0, 1) === 1);
-        $winAmount = $isWin ? $bet : 0;
-        if ($isWin) {
-            $updateMoneyStmt->bind_param("di", $bet, $userId);
-            $updateMoneyStmt->execute();
-            $state['wins']++;
-            $state['win_streak']++;
-            $state['lose_streak'] = 0;
-            $state['mood'] = 'excited';
-            echo "💰 <span style='color:#4ade80;'>Húp " . number_format($bet) . " GTLM tại $chosenGame</span><br>";
-            
-            // --- MENTORSHIP: Become a mentor if winning big ---
-            if ($state['win_streak'] >= 5) {
-                $mentors[$userId] = ['name' => $userName, 'game' => $chosenGame, 'time' => time()];
-                // Giới hạn 5 mentor mới nhất
-                if (count($mentors) > 5) array_shift($mentors);
-                file_put_contents($mentorFile, json_encode($mentors));
-                
-                if (rand(1, 100) <= 30) {
-                    $tMsg = $brain->generateMessage($userId, 'teaching', ['game' => $chosenGame]);
-                    executeBotAction($baseUrl . "/chat.php", ['message' => $tMsg], $cFile);
+            // Determine Level
+            $rand = rand(1, 100);
+            $currentSum = 0;
+            $chosenLevel = 'light';
+            foreach ($probabilities as $level => $prob) {
+                $currentSum += $prob;
+                if ($rand <= $currentSum) {
+                    $chosenLevel = $level;
+                    break;
                 }
             }
 
-            $msgType = ($state['win_streak'] >= 3) ? 'streak_win' : 'win';
-            $msg = $brain->generateMessage($userId, $msgType, ['amount' => $bet]);
-        } else {
-            $negativeBet = -$bet;
-            $updateMoneyStmt->bind_param("di", $negativeBet, $userId);
-            $updateMoneyStmt->execute();
-            $state['lose_streak']++;
-            $state['win_streak'] = 0;
-            $state['mood'] = ($state['lose_streak'] >= 3) ? 'tilted' : 'depressed';
-            echo "💸 <span style='color:#f87171;'>Bay màu " . number_format($bet) . " GTLM tại $chosenGame</span><br>";
+            // Calculate Bet Percentage
+            if ($personality === 'whale') {
+                // Whale luôn cược từ 10% đến 50% GTLM
+                $betPercent = rand(10, 50);
+                $chosenLevel = ($betPercent >= 30) ? 'WHALE_ALL_IN' : 'WHALE_HIGH';
+            } else {
+                switch ($chosenLevel) {
+                    case 'light': $betPercent = rand(1, 3); break;
+                    case 'medium': $betPercent = rand(5, 10); break;
+                    case 'heavy': $betPercent = rand(15, 25); break;
+                    case 'all_in': $betPercent = rand(50, 100); break;
+                    default: $betPercent = 2;
+                }
+            }
+
+            $bet = floor($userMoney * ($betPercent / 100));
+            if ($bet < 1000) $bet = 1000;
+            if ($bet > $userMoney) $bet = $userMoney;
+
+            $betLabel = ($personality === 'whale') ? "💎 WHALE BET" : strtoupper($chosenLevel);
+            echo "🎲 <span style='color:#38bdf8;'>Mức cược:</span> " . $betLabel . " (" . $betPercent . "% - " . number_format($bet) . " GTLM)<br>";
+
+            // --- MENTORSHIP: Check for a mentor if losing ---
+            $learningFrom = null;
+            if ($state['lose_streak'] >= 3 && !empty($mentors)) {
+                $learningFrom = $mentors[array_rand($mentors)];
+                $chosenGame = $learningFrom['game'];
+                echo "🎓 <span style='color:#60a5fa;'>Đang học hỏi:</span> Theo chân  Gtlm bối <b>{$learningFrom['name']}</b> tại ván $chosenGame...<br>";
+                
+                if (rand(1, 100) <= 40) {
+                    $lMsg = $brain->generateMessage($userId, 'learning', ['mentor' => $learningFrom['name'], 'game' => $chosenGame]);
+                    executeBotAction($baseUrl . "/chat.php", ['message' => $lMsg], $cFile);
+                }
+            } else {
+                $chosenGame = $filteredGames[array_rand($filteredGames)];
+            }
+
+            // --- TILTED LOGIC (Martingale fallback) ---
+            if ($state['lose_streak'] >= 3 && $chosenLevel !== 'all_in') {
+                $state['mood'] = 'tilted';
+                if (rand(1, 100) <= 30) {
+                    $bet = min($userMoney, $bet * 2); // Martingale nhẹ
+                    echo "📈 <span style='color:#fbbf24;'>Gấp thếp nhẹ:</span> Quyết tâm gỡ gạc...<br>";
+                }
+            }
+                
+                // Chat chửi thề / than vãn
+                if (rand(1, 100) <= 70) {
+                    $tMsg = $brain->generateMessage($userId, 'tilted_chat');
+                    executeBotAction($baseUrl . "/chat.php", ['message' => $tMsg], $cFile);
+                }
+
+            if ($bet < 1000) $bet = 1000;
+
+            // --- IMPROVED GAMEPLAY LOGIC ---
+            // Thay vì 50/50 random, bot sẽ tính toán tỉ lệ thắng dựa trên Game và Personality
+            $baseWinRate = 48; // Tỉ lệ thắng cơ bản 48% (nhà cái luôn có lợi thế)
             
-            $msgType = ($state['lose_streak'] >= 3) ? 'streak_lose' : 'lose';
-            $msg = $brain->generateMessage($userId, $msgType, ['amount' => $bet]);
+            // Điều chỉnh theo tính cách
+            if ($personality === 'whale') $baseWinRate += 2; // Whale có "vận may" hơn tí
+            if ($personality === 'aggressive') $baseWinRate -= 2; // Aggressive dễ thua do "nóng máu"
+            
+            // Điều chỉnh theo Sự kiện Động (Dynamic Events)
+            require_once 'dynamic_event_helper.php';
+            $eventMult = DynamicEventHelper::getModifier($conn, strtolower($chosenGame));
+            if ($eventMult > 1.0) $baseWinRate += 5; // Tăng tỉ lệ thắng khi có sự kiện để bot "hùa" theo
+            
+            $isWin = (rand(1, 100) <= $baseWinRate);
+            $winAmount = 0;
+            
+            if ($isWin) {
+                // Tính toán winAmount thực tế hơn
+                if (strtolower($chosenGame) === 'crash') {
+                    $multiplier = (rand(1, 100) <= 80) ? (rand(110, 200) / 100) : (rand(200, 500) / 100);
+                    $winAmount = round($bet * $multiplier * $eventMult);
+                } else {
+                    $winAmount = round($bet * 2 * $eventMult); // Mặc định x2 (như tài xỉu)
+                }
+                
+                $profit = $winAmount - $bet;
+                $updateMoneyStmt->bind_param("di", $profit, $userId);
+                $updateMoneyStmt->execute();
+                
+                $state['wins']++;
+                $state['win_streak']++;
+                $state['lose_streak'] = 0;
+                $state['mood'] = 'excited';
+                echo "💰 <span style='color:#4ade80;'>Húp " . number_format($winAmount) . " GTLM tại $chosenGame (x" . round($winAmount/$bet, 2) . ")</span><br>";
+                
+                // Ghi vào lịch sử thật
+                require_once 'game_history_helper.php';
+                logGameHistoryWithAll($conn, $userId, $chosenGame, $bet, $winAmount, true);
+
+                // --- MENTORSHIP: Become a mentor if winning big ---
+                if ($state['win_streak'] >= 5) {
+                    $mentors[$userId] = ['name' => $userName, 'game' => $chosenGame, 'time' => time()];
+                    if (count($mentors) > 5) array_shift($mentors);
+                    file_put_contents($mentorFile, json_encode($mentors));
+                    
+                    if (rand(1, 100) <= 30) {
+                        $tMsg = $brain->generateMessage($userId, 'teaching', ['game' => $chosenGame]);
+                        executeBotAction($baseUrl . "/chat.php", ['message' => $tMsg], $cFile);
+                    }
+                }
+
+                $msgType = ($state['win_streak'] >= 3) ? 'streak_win' : 'win';
+                $msg = $brain->generateMessage($userId, $msgType, ['amount' => $winAmount]);
+            } else {
+                $negativeBet = -$bet;
+                $updateMoneyStmt->bind_param("di", $negativeBet, $userId);
+                $updateMoneyStmt->execute();
+                
+                $state['lose_streak']++;
+                $state['win_streak'] = 0;
+                $state['mood'] = ($state['lose_streak'] >= 3) ? 'tilted' : 'depressed';
+                echo "💸 <span style='color:#f87171;'>Bay màu " . number_format($bet) . " GTLM tại $chosenGame</span><br>";
+                
+                // Ghi vào lịch sử thật
+                require_once 'game_history_helper.php';
+                logGameHistoryWithAll($conn, $userId, $chosenGame, $bet, 0, false);
+                
+                $msgType = ($state['lose_streak'] >= 3) ? 'streak_lose' : 'lose';
+                $msg = $brain->generateMessage($userId, $msgType, ['amount' => $bet]);
+            }
+
+            // --- RECORD HISTORY ---
+            logGameHistory($conn, $userId, $chosenGame, $bet, $winAmount, $isWin);
+            
+            // --- SYNC FOR RIVALRY ---
+            $syncFile = __DIR__ . '/sessions/bot_sync.json';
+            $syncData = file_exists($syncFile) ? json_decode(file_get_contents($syncFile), true) : [];
+            $syncData[$email] = [
+                'name' => $userName,
+                'result' => $isWin ? 'win' : 'lose',
+                'amount' => $isWin ? $winAmount : $bet,
+                'time' => time()
+            ];
+            // Clean old sync data (> 15 min)
+            foreach($syncData as $e => $d) { if(time() - $d['time'] > 900) unset($syncData[$e]); }
+            file_put_contents($syncFile, json_encode($syncData));
+
+            // Cập nhật history vào state (tối đa 10 ván)
+            array_unshift($state['history'], [
+                'game' => $chosenGame,
+                'bet' => $bet,
+                'result' => $isWin ? 'win' : 'lose',
+                'time' => date('H:i d/m')
+            ]);
+            $state['history'] = array_slice($state['history'], 0, 10);
         }
-
-        // --- RECORD HISTORY ---
-        logGameHistory($conn, $userId, $chosenGame, $bet, $winAmount, $isWin);
-        
-        // --- SYNC FOR RIVALRY ---
-        $syncFile = __DIR__ . '/sessions/bot_sync.json';
-        $syncData = file_exists($syncFile) ? json_decode(file_get_contents($syncFile), true) : [];
-        $syncData[$email] = [
-            'name' => $userName,
-            'result' => $isWin ? 'win' : 'lose',
-            'amount' => $isWin ? $winAmount : $bet,
-            'time' => time()
-        ];
-        // Clean old sync data (> 15 min)
-        foreach($syncData as $e => $d) { if(time() - $d['time'] > 900) unset($syncData[$e]); }
-        file_put_contents($syncFile, json_encode($syncData));
-
-        // Cập nhật history vào state (tối đa 10 ván)
-        array_unshift($state['history'], [
-            'game' => $chosenGame,
-            'bet' => $bet,
-            'result' => $isWin ? 'win' : 'lose',
-            'time' => date('H:i d/m')
-        ]);
-        $state['history'] = array_slice($state['history'], 0, 10);
-        
-        social_module: 
         // --- MODULE 3: Social & Interaction ---
         if (rand(1, 100) <= 75) {
             $chatMessages = executeBotAction($baseUrl . "/chat.php?action=load", null, $cFile);
@@ -561,9 +622,12 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
                         // Check memory level
                         $memLevel = 0;
                         if (!$isBotParticipant) {
-                            $mNameClean = $conn->real_escape_string($pName);
-                            $memRes = $conn->query("SELECT interaction_count FROM bot_memory WHERE bot_id = $userId AND player_name = '$mNameClean'");
+                            $stmtMem = $conn->prepare("SELECT interaction_count FROM bot_memory WHERE bot_id = ? AND player_name = ?");
+                            $stmtMem->bind_param("is", $userId, $pName);
+                            $stmtMem->execute();
+                            $memRes = $stmtMem->get_result();
                             if ($memRes && $row = $memRes->fetch_assoc()) $memLevel = $row['interaction_count'];
+                            $stmtMem->close();
                         }
 
                         $replyData = ['player_name' => $pName, 'memory_level' => $memLevel];
@@ -637,20 +701,44 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
                         }
 
                         // E. Normal Reply fallback
-                        $msg = "@$pName " . $msg;
+                        $msg = $brain->generateMessage($userId, 'greet', $replyData);
+                        executeBotAction($baseUrl . "/chat.php", ['message' => "@$pName $msg"], $cFile);
                         $isReplied = true; break;
                     }
                 }
             }
 
-            // 1.5. Rivalry & Alliance Reactions
-            if (!$isReplied && rand(1, 100) <= 50) {
+            // 1.5. Rivalry & Alliance Reactions (Merged & Optimized)
+            if (!$isReplied && rand(1, 100) <= 60) {
                 $syncData = file_exists($syncFile) ? json_decode(file_get_contents($syncFile), true) : [];
+                $rivalStateFile = __DIR__ . '/sessions/rivalry_state.json';
+                $rivalState = file_exists($rivalStateFile) ? json_decode(file_get_contents($rivalStateFile), true) : ['last_rotation' => 0, 'last_reactions' => []];
+                
+                // Rotate dynamic rivals every 10 min
+                if (time() - $rivalState['last_rotation'] > 600) {
+                    $allBotEmails = array_keys($botNameMap);
+                    shuffle($allBotEmails);
+                    $newRivals = [];
+                    for ($i=0; $i<count($allBotEmails)-1; $i+=2) {
+                        $newRivals[] = [$allBotEmails[$i], $allBotEmails[$i+1]];
+                    }
+                    $rivalState['current_rivals'] = $newRivals;
+                    $rivalState['last_rotation'] = time();
+                    file_put_contents($rivalStateFile, json_encode($rivalState));
+                }
+
                 $myRivals = []; $myAllies = [];
+                // Static rivalries from config
                 foreach($config['rivalries'] as $pair) {
                     if($pair[0] == $email) $myRivals[] = $pair[1];
                     if($pair[1] == $email) $myRivals[] = $pair[0];
                 }
+                // Dynamic rivals from state
+                foreach($rivalState['current_rivals'] ?? [] as $pair) {
+                    if($pair[0] == $email) $myRivals[] = $pair[1];
+                    if($pair[1] == $email) $myRivals[] = $pair[0];
+                }
+                // Alliances
                 foreach($config['alliances'] as $pair) {
                     if($pair[0] == $email) $myAllies[] = $pair[1];
                     if($pair[1] == $email) $myAllies[] = $pair[0];
@@ -661,8 +749,8 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
                     if(time() - $data['time'] > 300) continue; // Only react to last 5 min
 
                     if(in_array($otherEmail, $myRivals)) {
-                        $type = ($data['result'] == 'lose') ? 'rival_win' : null; // "Haha rival thua"
-                        if($type) {
+                        $type = ($data['result'] == 'win') ? 'rival_win' : 'rival_lose';
+                        if ($type) {
                             $rMsg = $brain->getRivalryMessage($type, $data['name']);
                             executeBotAction($baseUrl . "/chat.php", ['message' => $rMsg], $cFile);
                             $isReplied = true; break;
@@ -678,50 +766,6 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
                     }
                 }
             }
-
-                // 1.5. Rivalry & Alliance Reactions
-                $rivalStateFile = __DIR__ . '/sessions/rivalry_state.json';
-                $rivalState = file_exists($rivalStateFile) ? json_decode(file_get_contents($rivalStateFile), true) : ['last_rotation' => 0, 'last_reactions' => []];
-                
-                // Rotate pairs every 10 min
-                if (time() - $rivalState['last_rotation'] > 600) {
-                    $allBotEmails = array_keys($botNameMap);
-                    shuffle($allBotEmails);
-                    $newRivals = [];
-                    for ($i=0; $i<count($allBotEmails)-1; $i+=2) {
-                        $newRivals[] = [$allBotEmails[$i], $allBotEmails[$i+1]];
-                    }
-                    $rivalState['current_rivals'] = $newRivals;
-                    $rivalState['last_rotation'] = time();
-                    file_put_contents($rivalStateFile, json_encode($rivalState));
-                }
-
-                if (!$isReplied && rand(1, 100) <= 60) {
-                    $syncData = file_exists($syncFile) ? json_decode(file_get_contents($syncFile), true) : [];
-                    $myRivals = [];
-                    foreach($rivalState['current_rivals'] ?? [] as $idx => $pair) {
-                        if ($pair[0] == $email || $pair[1] == $email) {
-                            $other = ($pair[0] == $email) ? $pair[1] : $pair[0];
-                            // Check rate limit (1 per 10 min for this pair)
-                            if (time() - ($rivalState['last_reactions'][$idx] ?? 0) > 600) {
-                                $myRivals[$idx] = $other;
-                            }
-                        }
-                    }
-
-                    foreach($myRivals as $idx => $otherEmail) {
-                        if (isset($syncData[$otherEmail]) && (time() - $syncData[$otherEmail]['time'] < 300)) {
-                            $data = $syncData[$otherEmail];
-                            $type = ($data['result'] == 'win') ? 'rival_win' : 'rival_lose';
-                            $rMsg = $brain->getRivalryMessage($type, $data['name']);
-                            executeBotAction($baseUrl . "/chat.php", ['message' => $rMsg], $cFile);
-                            
-                            $rivalState['last_reactions'][$idx] = time();
-                            file_put_contents($rivalStateFile, json_encode($rivalState));
-                            $isReplied = true; break;
-                        }
-                    }
-                }
 
             // 2. Logic Mention ngẫu nhiên (nếu chưa reply ai)
             if (!$isReplied) {
@@ -778,6 +822,155 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
         }
 
         file_put_contents($sFile, json_encode($state));
+
+        // --- MODULE 3.5: Chat Reactions ---
+        if (rand(1, 100) <= 30) {
+            $chatMessages = executeBotAction($baseUrl . "/chat.php?action=load", null, $cFile);
+            if (!empty($chatMessages) && is_array($chatMessages)) {
+                $recent = array_slice($chatMessages, -5);
+                foreach ($recent as $chat) {
+                    if ($chat['username'] !== $userName) {
+                        $emojis = ['👍', '🔥', '❤️', '😂', '😮'];
+                        $emoji = $emojis[array_rand($emojis)];
+                        executeBotAction($baseUrl . "/chat.php?action=react&msg_id={$chat['id']}&emoji=" . urlencode($emoji), null, $cFile);
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // --- MODULE 3.6: Bot Rumors ---
+        if (rand(1, 100) <= 15) {
+            // Tìm người chơi thật có thắng lớn hoặc chuỗi thắng gần đây
+            $rumorSql = "SELECT u.Name, gh.game_name, gh.win_amount, gh.is_win 
+                         FROM game_history gh 
+                         JOIN users u ON gh.user_id = u.Iduser 
+                         WHERE u.Email NOT REGEXP '^bot[0-9]+@' 
+                         AND gh.played_at > NOW() - INTERVAL 1 HOUR
+                         ORDER BY gh.win_amount DESC LIMIT 5";
+            $rumorRes = $conn->query($rumorSql);
+            if ($rumorRes && $rumorRes->num_rows > 0) {
+                $candidates = $rumorRes->fetch_all(MYSQLI_ASSOC);
+                $c = $candidates[array_rand($candidates)];
+                
+                $rumorData = [
+                    'player_name' => $c['Name'],
+                    'game_name' => $c['game_name'],
+                    'win_amount' => $c['win_amount'],
+                    'streak' => rand(3, 7) // Giả định streak ngẫu nhiên nếu thắng
+                ];
+                
+                $rMsg = $brain->generateMessage($userId, 'rumor', $rumorData);
+                executeBotAction($baseUrl . "/chat.php", ['message' => $rMsg], $cFile);
+            }
+        }
+        
+        // --- MODULE 3.7: Bot Spectator ---
+        if (rand(1, 100) <= 20) {
+            $lives = executeBotAction($baseUrl . "/api_spectator.php?action=get_live", null, $cFile);
+            if (!empty($lives['lives'])) {
+                $stream = $lives['lives'][array_rand($lives['lives'])];
+                $streamId = $stream['id'];
+                $streamerName = $stream['streamer_name'];
+                
+                // 1. Send Reaction
+                $emojis = ['❤️', '🔥', '👏', '🚀', '⭐'];
+                executeBotAction($baseUrl . "/api_spectator.php", [
+                    'action' => 'send_reaction',
+                    'stream_id' => $streamId,
+                    'emoji' => $emojis[array_rand($emojis)]
+                ], $cFile);
+                
+                // 2. Send Comment
+                if (rand(1, 100) <= 30) {
+                    $sMsg = $brain->generateMessage($userId, 'spectator_comment', [
+                        'streamer_name' => $streamerName,
+                        'game_name' => $stream['game_name']
+                    ]);
+                    executeBotAction($baseUrl . "/api_spectator.php", [
+                        'action' => 'send_chat',
+                        'stream_id' => $streamId,
+                        'message' => $sMsg
+                    ], $cFile);
+                }
+            }
+        }
+        
+        // --- MODULE 3.8: Dynamic Event Engine ---
+        require_once 'dynamic_event_helper.php';
+        if (rand(1, 100) <= 15) {
+            $newEvent = DynamicEventHelper::autoGenerate($conn);
+            if ($newEvent) {
+                $eMsg = $brain->generateMessage($userId, 'dynamic_event_new', $newEvent, $state);
+                executeBotAction($baseUrl . "/chat.php", ['message' => $eMsg], $cFile);
+                writeBotLog($email, "INFO", "Event", "Generated new dynamic event: " . $newEvent['name']);
+            } else {
+                if (rand(1, 100) <= 20) {
+                    $activeE = DynamicEventHelper::getActiveEvent($conn);
+                    if ($activeE) {
+                        $rMsg = $brain->generateMessage($userId, 'dynamic_event_remind', $activeE, $state);
+                        executeBotAction($baseUrl . "/chat.php", ['message' => $rMsg], $cFile);
+                    }
+                }
+            }
+        }
+
+        // --- MODULE 3.9: Spectator Commentary ---
+        if (rand(1, 100) <= 15) {
+            $liveRes = executeBotAction($baseUrl . "/api_spectator.php?action=get_live", null, $cFile);
+            if (isset($liveRes['lives']) && !empty($liveRes['lives'])) {
+                $randomLive = $liveRes['lives'][array_rand($liveRes['lives'])];
+                $streamer = $randomLive['streamer_name'];
+                $sId = $randomLive['id'];
+                $comment = $brain->generateMessage($userId, 'spectator_comment', ['streamer_name' => $streamer, 'game_name' => $randomLive['game_type']], $state);
+                executeBotAction($baseUrl . "/api_spectator.php", ['action' => 'send_chat', 'stream_id' => $sId, 'message' => $comment], $cFile);
+                $emojis = ['❤️', '🔥', '👏', '😮', '💎'];
+                executeBotAction($baseUrl . "/api_spectator.php", ['action' => 'send_reaction', 'stream_id' => $sId, 'emoji' => $emojis[array_rand($emojis)]], $cFile);
+            }
+        }
+        
+        // --- MODULE 4.1: Bracket Tournament ---
+        if (rand(1, 100) <= 20) {
+            $bracketTours = $conn->query("SELECT id, slots FROM tournament_brackets WHERE status = 'pending'")->fetch_all(MYSQLI_ASSOC);
+            foreach ($bracketTours as $bt) {
+                // Check if already joined
+                $checkJoined = $conn->query("SELECT id FROM tournament_bracket_participants WHERE tournament_id = {$bt['id']} AND user_id = $userId")->num_rows;
+                if (!$checkJoined) {
+                    $conn->query("INSERT IGNORE INTO tournament_bracket_participants (tournament_id, user_id) VALUES ({$bt['id']}, $userId)");
+                    writeBotLog($email, "INFO", "Bracket", "Joined bracket tournament #{$bt['id']}");
+                    
+                    // Check if full, then start
+                    $participantsCount = $conn->query("SELECT id FROM tournament_bracket_participants WHERE tournament_id = {$bt['id']}")->num_rows;
+                    if ($participantsCount >= $bt['slots']) {
+                        require_once 'tournament_bracket_helper.php';
+                        TournamentBracketHelper::startTournament($conn, $bt['id']);
+                        
+                        // Thông báo chat
+                        $msg = "🚀 Giải đấu Bracket #{$bt['id']} đã đủ người và bắt đầu! Anh em vào xem nhánh đấu tại tournaments.php nhé!";
+                        executeBotAction($baseUrl . "/chat.php", ['message' => $msg], $cFile);
+                    }
+                }
+            }
+        }
+        
+        // --- MODULE 4.2: Resolve Bracket Matches ---
+        if (rand(1, 100) <= 10) {
+            $activeMatches = $conn->query("SELECT * FROM tournament_matches WHERE status = 'pending' AND player1_id IS NOT NULL AND player2_id IS NOT NULL LIMIT 5")->fetch_all(MYSQLI_ASSOC);
+            if (!empty($activeMatches)) {
+                require_once 'tournament_bracket_helper.php';
+                foreach ($activeMatches as $m) {
+                    $winnerId = (rand(1, 100) > 50) ? $m['player1_id'] : $m['player2_id'];
+                    TournamentBracketHelper::resolveMatch($conn, $m['id'], $winnerId);
+                    
+                    if ($m['round'] >= 2) {
+                        $uRes = $conn->query("SELECT Name FROM users WHERE Iduser = $winnerId")->fetch_assoc();
+                        $wName = $uRes['Name'];
+                        $msg = "📢 Tin nóng: Bác @$wName đã chiến thắng và tiến vào vòng tiếp theo của Giải đấu Bracket #{$m['tournament_id']}! 🔥";
+                        executeBotAction($baseUrl . "/chat.php", ['message' => $msg], $cFile);
+                    }
+                }
+            }
+        }
         
         // --- MODULE 4: Competitive Interactions ---
         if (rand(1, 100) <= 40) {
@@ -834,7 +1027,7 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
             if (isset($pvpChallenges['challenges'])) {
                 foreach ($pvpChallenges['challenges'] as $challenge) {
                     if ($challenge['opponent_id'] == $userId) {
-                        // Chấp nhận thách đấu (Bot luôn chấp nhận nếu có đủ tiền)
+                        // Chấp nhận thách đấu (Bot luôn chấp nhận nếu có đủ  Gtlm)
                         if ($userMoney >= $challenge['bet_amount']) {
                             executeBotAction($baseUrl . "/api_pvp_challenge.php", ['action' => 'accept_challenge', 'challenge_id' => $challenge['id']], $cFile);
                             writeBotLog($email, "INFO", "PVP", "Accepted challenge from #{$challenge['challenger_id']}");
@@ -1190,26 +1383,48 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
             }
 
             // 2. Thử nghiệm Chế tác (Crafting)
-            // Lấy danh sách công thức ngẫu nhiên
             $recipesRes = $conn->query("SELECT * FROM crafting_recipes ORDER BY RAND() LIMIT 1");
             if ($recipesRes && $recipesRes->num_rows > 0) {
                 $recipe = $recipesRes->fetch_assoc();
-                
-                // Bot thử vận may rèn đồ
                 $craftRes = executeBotAction($baseUrl . "/api_crafting.php", ['action' => 'craft', 'recipe_id' => $recipe['id']], $cFile);
-                if (isset($craftRes['status'])) {
-                    if ($craftRes['status'] === 'success') {
-                        echo "🔥 <span style='color:#f87171; font-size:12px;'>Bot rèn thành công: {$recipe['name']}!</span><br>";
-                        writeBotLog($email, "INFO", "MarketMaker", "Crafted successfully: {$recipe['name']}");
-                        
-                        // Đăng bán ngay lập tức với giá cao (ví dụ: 500k - 1.5tr)
-                        executeBotAction($baseUrl . "/api_marketplace.php", [
-                            'action' => 'list_item',
-                            'item_id' => $recipe['output_item_id'],
-                            'item_type' => $recipe['output_type'],
-                            'item_name' => "RÈN BỞI BOT: " . $recipe['name'],
-                            'price' => rand(500000, 1500000)
-                        ], $cFile);
+                if (isset($craftRes['status']) && $craftRes['status'] === 'success') {
+                    writeBotLog($email, "INFO", "MarketMaker", "Crafted successfully: {$recipe['name']}");
+                    executeBotAction($baseUrl . "/api_marketplace.php", [
+                        'action' => 'list_item',
+                        'item_id' => $recipe['output_item_id'],
+                        'item_type' => $recipe['output_type'],
+                        'item_name' => "RÈN BỞI BOT: " . $recipe['name'],
+                        'price' => rand(500000, 1500000)
+                    ], $cFile);
+                }
+            }
+
+            // 3. Jackpot Hype
+            if (rand(1, 100) <= 10) {
+                $jpRes = $conn->query("SELECT amount FROM jackpots WHERE status = 'active' ORDER BY amount DESC LIMIT 1")->fetch_assoc();
+                if ($jpRes && $jpRes['amount'] > 10000000) {
+                    $jpMsg = "🔥 Hũ đang căng quá anh em ơi! Hơn " . number_format($jpRes['amount']) . " GTLM rồi, ai sẽ là người húp đây? 🚀";
+                    executeBotAction($baseUrl . "/api_social_feed.php", ['action' => 'post', 'content' => $jpMsg], $cFile);
+                }
+            }
+        }
+
+        // --- MODULE 10.9: Seasonal & Event Hype ---
+        if (rand(1, 100) <= 10) {
+            // 1. World Boss Hype
+            $bossStatus = executeBotAction($baseUrl . "/api_world_boss.php?action=get_status", null, $cFile);
+            if (isset($bossStatus['boss']) && $bossStatus['boss']['status'] == 'alive') {
+                $hypeMsg = "Anh em ơi, World Boss đang xuất hiện kìa! 🐲 Quất nó đê, húp quà to lắm!";
+                if (rand(1, 100) <= 50) executeBotAction($baseUrl . "/chat.php", ['message' => $hypeMsg], $cFile);
+            }
+            
+            // 2. Tet Lucky Wheel Participation
+            if (file_exists(__DIR__ . '/../api_luckywheel_tet.php') && rand(1, 100) <= 30) {
+                $betTet = rand(5000, 50000);
+                if ($userMoney >= $betTet) {
+                    $resTet = executeBotAction($baseUrl . "/api_luckywheel_tet.php", ['cuoc' => $betTet], $cFile);
+                    if (isset($resTet['success']) && $resTet['success']) {
+                        echo "🧧 <span style='color:#ef4444;'>Bot quay Lì xì Tết: {$resTet['label']}</span><br>";
                     }
                 }
             }
@@ -1261,11 +1476,21 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
                 if (rand(1, 100) <= 40) {
                     $bData = $botNameMap[$bEmail];
                     $bCFile = __DIR__ . '/sessions/' . md5($bEmail) . '.cookie';
+                    $bSFile = __DIR__ . '/sessions/' . md5($bEmail) . '.state.json';
+                    $bState = file_exists($bSFile) ? json_decode(file_get_contents($bSFile), true) : [];
+
                     $amounts = [1000, 5000, 10000, 50000];
                     $pick = $amounts[array_rand($amounts)];
                     
-                    // Giả lập Login và Tham gia
-                    executeBotAction($baseUrl . "/api_login.php", ['email' => $bEmail, 'password' => '123456'], $bCFile);
+                    $loginRes = executeBotAction($baseUrl . "/api_login.php", ['email' => $bEmail, 'password' => '123456'], $bCFile);
+                    if (isset($loginRes['status']) && $loginRes['status'] === 'error') {
+                        $bState['fail_count'] = ($bState['fail_count'] ?? 0) + 1;
+                        file_put_contents($bSFile, json_encode($bState));
+                        continue;
+                    }
+                    $bState['fail_count'] = 0;
+                    file_put_contents($bSFile, json_encode($bState));
+
                     executeBotAction($baseUrl . "/api_megaspin.php", ['action' => 'join', 'amount' => $pick], $bCFile);
                     echo "🎰 <span style='color:var(--primary);'>Bot <b>{$bData['name']}</b> đã tham gia Mega Spin với $pick GTLM</span><br>";
                 }

@@ -31,11 +31,11 @@ if (!$checkVipLevels || $checkVipLevels->num_rows == 0) {
 
     // Tạo dữ liệu mẫu
     $vipLevels = [
-        [1, 'Bronze', 0, 1.05, 10000, '#cd7f32', '🥉', 'Bonus 5% khi thắng, Daily bonus 10,000 gtlm'],
-        [2, 'Silver', 1000000, 1.10, 50000, '#c0c0c0', '🥈', 'Bonus 10% khi thắng, Daily bonus 50,000 gtlm'],
-        [3, 'Gold', 5000000, 1.15, 100000, '#ffd700', '🥇', 'Bonus 15% khi thắng, Daily bonus 100,000 gtlm'],
-        [4, 'Platinum', 20000000, 1.25, 250000, '#e5e4e2', '💎', 'Bonus 25% khi thắng, Daily bonus 250,000 gtlm'],
-        [5, 'Diamond', 50000000, 1.50, 500000, '#b9f2ff', '💠', 'Bonus 50% khi thắng, Daily bonus 500,000 gtlm']
+        [1, 'Bronze', 0, 1.05, 10000, '#cd7f32', '🥉', 'Húp thêm 5% khi thắng, Quà tặng 10,000 GTLM'],
+        [2, 'Silver', 1000000, 1.10, 50000, '#c0c0c0', '🥈', 'Húp thêm 10% khi thắng, Quà tặng 50,000 GTLM'],
+        [3, 'Gold', 5000000, 1.15, 100000, '#ffd700', '🥇', 'Húp thêm 15% khi thắng, Quà tặng 100,000 GTLM'],
+        [4, 'Platinum', 20000000, 1.25, 250000, '#e5e4e2', '💎', 'Húp thêm 25% khi thắng, Quà tặng 250,000 GTLM'],
+        [5, 'Diamond', 50000000, 1.50, 500000, '#b9f2ff', '💠', 'Húp thêm 50% khi thắng, Quà tặng 500,000 GTLM']
     ];
 
     foreach ($vipLevels as $level) {
@@ -579,11 +579,11 @@ if ($nextLevel) {
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">Daily Bonus</div>
-                    <div class="stat-value"><?= number_format($userVip['daily_bonus'] ?? 0) ?> gtlm</div>
+                    <div class="stat-value"><?= number_format($userVip['daily_bonus'] ?? 0) ?> GTLM</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">Tổng Đã Chi</div>
-                    <div class="stat-value"><?= number_format($userVip['total_spent']) ?> gtlm</div>
+                    <div class="stat-value"><?= number_format($userVip['total_spent']) ?> GTLM</div>
                 </div>
             </div>
 
@@ -595,7 +595,7 @@ if ($nextLevel) {
                 <div style="margin-top: 30px;">
                     <?php if ($canClaim): ?>
                         <button class="claim-daily-btn" onclick="claimDailyBonus()">
-                            🎁 Nhận Daily Bonus (<?= number_format($userVip['daily_bonus']) ?> gtlm)
+                            🎁 Nhận Quà Tặng (<?= number_format($userVip['daily_bonus']) ?> GTLM)
                         </button>
                     <?php else: ?>
                         <button class="claim-daily-btn" disabled>
@@ -613,8 +613,8 @@ if ($nextLevel) {
                     <div class="progress-fill" style="width: <?= $progressPercent ?>%"></div>
                 </div>
                 <div class="progress-text">
-                    <?= number_format($userVip['total_spent']) ?> / <?= number_format($nextLevel['required_spent']) ?> gtlm
-                    (Còn <?= number_format($nextLevel['required_spent'] - $userVip['total_spent']) ?> gtlm)
+                    <?= number_format($userVip['total_spent']) ?> / <?= number_format($nextLevel['required_spent']) ?> GTLM
+                    (Còn <?= number_format($nextLevel['required_spent'] - $userVip['total_spent']) ?> GTLM)
                 </div>
             </div>
         <?php endif; ?>

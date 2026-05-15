@@ -533,15 +533,15 @@ switch ($action) {
         $betAmount = $old['bet_amount'];
         $gameType = $old['game_type'];
 
-        // Kiểm tra tiền
+        // Kiểm tra  Gtlm
         $userMoneyRes = $conn->query("SELECT Money FROM users WHERE Iduser = $userId");
         $userMoney = $userMoneyRes->fetch_assoc()['Money'];
         if ($userMoney < $betAmount) {
-            echo json_encode(['success' => false, 'message' => 'Bạn không đủ tiền để tái đấu!']);
+            echo json_encode(['success' => false, 'message' => 'Bạn không đủ  Gtlm để tái đấu!']);
             break;
         }
 
-        // Tạo challenge mới - trừ tiền luôn như luồng create_challenge
+        // Tạo challenge mới - trừ  Gtlm luôn như luồng create_challenge
         $conn->begin_transaction();
         try {
             $conn->query("UPDATE users SET Money = Money - $betAmount WHERE Iduser = $userId");

@@ -57,7 +57,7 @@ $stmt->close();
 // 4. Lấy danh sách các gói có sẵn
 $passTypes = $conn->query("SELECT * FROM monthly_pass_types ORDER BY price ASC")->fetch_all(MYSQLI_ASSOC);
 
-// 5. Lấy tiền user
+// 5. Lấy  Gtlm user
 $userMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
 
 ?>

@@ -233,7 +233,7 @@ const searchData = [
     // Games
     { name: 'CYBER PETS', url: 'baucua.php', icon: '🎲', category: 'Game', keywords: ['baucua', 'CYBER PETS', 'game'] },
     { name: 'Blackjack', url: 'bj.php', icon: '🃏', category: 'Game', keywords: ['blackjack', 'bj', 'bài'] },
-    { name: 'Slot Machine', url: 'slot.php', icon: '🎰', category: 'Game', keywords: ['slot', 'máy đánh bạc'] },
+    { name: 'Slot Machine', url: 'slot.php', icon: '🎰', category: 'Game', keywords: ['slot', 'máy vận may'] },
     { name: 'Roulette', url: 'roulette.php', icon: '🎡', category: 'Game', keywords: ['roulette', 'vòng quay'] },
     { name: 'Dice', url: 'dice.php', icon: '🎲', category: 'Game', keywords: ['dice', 'xí ngầu', 'xúc xắc'] },
     { name: 'Coin Flip', url: 'coinflip.php', icon: '🪙', category: 'Game', keywords: ['coin', 'flip', 'đồng xu'] },

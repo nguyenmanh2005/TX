@@ -48,46 +48,67 @@ $gameThang = $resStats['wins'] ?? 0;
 $gameThua = ($resStats['total'] ?? 0) - $gameThang;
 
 if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $bet = (int)($_POST['bet'] ?? 0);
-    if ($bet <= 0 || $bet > $money) {
-        echo json_encode(['success' => false, 'message' => '⚠️ Số dư không đủ hoặc tiền cược không hợp lệ!']);
+    $bet = (float)($_POST['bet'] ?? 0);
+    if ($bet < 1000) {
+        echo json_encode(['success' => false, 'message' => '⚠️ Cược tối thiểu 1.000 gtlm!']);
         exit;
     }
 
-    $symbols = ['🍎', '🍌', '🍒', '🍇', '🍉', '🍍', '🥝', '🎭'];
-    $r1 = $symbols[rand(0, 7)];
-    $r2 = $symbols[rand(0, 7)];
-    $r3 = $symbols[rand(0, 7)];
+    $conn->begin_transaction();
+    try {
+        // SELECT FOR UPDATE để khóa bản ghi user
+        $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ? FOR UPDATE");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $user = $stmt->get_result()->fetch_assoc();
 
-    $reward = 0;
-    $status = 'lose';
-    if ($r1 === $r2 && $r2 === $r3) {
-        $multiplier = ($r1 === '🎭') ? 50 : 10;
-        $reward = $bet * $multiplier;
-        $status = 'win';
-    } elseif ($r1 === $r2 || $r2 === $r3 || $r1 === $r3) {
-        $reward = $bet * 2;
-        $status = 'win';
+        if (!$user || $user['Money'] < $bet) {
+            throw new Exception('⚠️ Số dư không đủ hoặc  Gtlm cược không hợp lệ!');
+        }
+
+        $symbols = ['🍎', '🍌', '🍒', '🍇', '🍉', '🍍', '🥝', '🎭'];
+        $r1 = $symbols[rand(0, 7)];
+        $r2 = $symbols[rand(0, 7)];
+        $r3 = $symbols[rand(0, 7)];
+
+        $reward = 0;
+        $status = 'lose';
+        if ($r1 === $r2 && $r2 === $r3) {
+            $multiplier = ($r1 === '🎭') ? 50 : 10;
+            $reward = $bet * $multiplier;
+            $status = 'win';
+        } elseif ($r1 === $r2 || $r2 === $r3 || $r1 === $r3) {
+            $reward = $bet * 2;
+            $status = 'win';
+        }
+
+        // Cập nhật số dư tương đối
+        $stmt = $conn->prepare("UPDATE users SET Money = Money - ? + ? WHERE Iduser = ?");
+        $stmt->bind_param("ddi", $bet, $reward, $userId);
+        $stmt->execute();
+
+        $resultStr = "$r1|$r2|$r3";
+        $stmtIns = $conn->prepare("INSERT INTO history_ac (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
+        $stmtIns->bind_param("idid", $userId, $bet, $resultStr, $reward);
+        $stmtIns->execute();
+
+        require_once '../game_history_helper.php';
+        logGameHistoryWithAll($conn, $userId, 'Máy Cần Gạt Quay', $bet, $reward, $reward > 0);
+
+        $conn->commit();
+
+        $newBalanceVal = $user['Money'] - $bet + $reward;
+        echo json_encode([
+            'success' => true,
+            'reel1' => $r1, 'reel2' => $r2, 'reel3' => $r3,
+            'reward' => $reward, 'status' => $status,
+            'money' => $newBalanceVal,
+            'message' => ($reward > 0) ? "🎉 THẮNG! Nhận " . number_format($reward) . " gtlm" : "😢 THUA RỒI!"
+        ]);
+    } catch (Exception $e) {
+        $conn->rollback();
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
-
-    $newBalance = $money - $bet + $reward;
-    $conn->query("UPDATE users SET Money = $newBalance WHERE Iduser = $userId");
-
-    $resultStr = "$r1|$r2|$r3";
-    $stmtIns = $conn->prepare("INSERT INTO history_ac (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-    $stmtIns->bind_param("iisi", $userId, $bet, $resultStr, $reward);
-    $stmtIns->execute();
-
-    require_once '../game_history_helper.php';
-    logGameHistoryWithAll($conn, $userId, 'Máy Cần Gạt Quay', $bet, $reward, $reward > 0);
-
-    echo json_encode([
-        'success' => true,
-        'reel1' => $r1, 'reel2' => $r2, 'reel3' => $r3,
-        'reward' => $reward, 'status' => $status,
-        'money' => $newBalance,
-        'message' => ($reward > 0) ? "🎉 THẮNG! Nhận " . number_format($reward) . " gtlm" : "😢 THUA RỒI!"
-    ]);
     exit;
 }
 ?>

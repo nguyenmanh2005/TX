@@ -73,14 +73,14 @@ switch ($action) {
         $price = $listing['price'];
         $user = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc();
         
-        if ($user['Money'] < $price) exit(json_encode(['success' => false, 'message' => 'Bạn không đủ tiền!']));
+        if ($user['Money'] < $price) exit(json_encode(['success' => false, 'message' => 'Bạn không đủ  Gtlm!']));
 
         $conn->begin_transaction();
         try {
-            // Trừ tiền người mua
+            // Trừ  Gtlm người mua
             $conn->query("UPDATE users SET Money = Money - $price WHERE Iduser = $userId");
             
-            // Cộng tiền cho người bán (trừ 5% phí sàn)
+            // Cộng  Gtlm cho người bán (trừ 5% phí sàn)
             $netPrice = $price * 0.95;
             $conn->query("UPDATE users SET Money = Money + $netPrice WHERE Iduser = " . $listing['seller_id']);
             

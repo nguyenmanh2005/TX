@@ -113,7 +113,7 @@ Bot không chỉ chơi game mà còn được lập trình để bao phủ toàn
 Bot đã được nâng cấp để tương tác toàn diện với các hệ thống mới:
 *   **Guild War (Bang Chiến)**: `cron_guild_war_reset.php`. Bot có thể gia nhập Bang hội, đóng góp điểm chiến công thông qua các ván thắng và tham gia đua Top Bang.
 *   **World Boss (Săn Boss Thế Giới)**: `api_world_boss.php`. Bot tự động tham gia tấn công "Hắc Long Thần" khi Boss xuất hiện, đóng góp vào tổng sát thương toàn server.
-*   **Battle Pass (Nhiệm Vụ Mùa Giải)**: `api_battle_pass.php`. Mỗi hành động của Bot (Chơi game, thắng tiền, tái đấu) đều được ghi nhận vào tiến trình Battle Pass, giúp Bot thăng cấp và nhận thưởng tự động.
+*   **Battle Pass (Nhiệm Vụ Mùa Giải)**: `api_battle_pass.php`. Mỗi hành động của Bot (Chơi game, thắng  Gtlm, tái đấu) đều được ghi nhận vào tiến trình Battle Pass, giúp Bot thăng cấp và nhận thưởng tự động.
 *   **Hũ Rồng Thần (Jackpot)**: `api_jackpot.php`. Mỗi lượt cược của Bot đóng góp 0.1% vào hũ chung và Bot cũng có tỉ lệ nổ hũ như người chơi thật.
 *   **Chợ Giao Dịch (Marketplace)**: `api_marketplace.php`. Bot đóng vai trò là "Người tạo lập thị trường" (Market Maker), thỉnh thoảng đăng bán các vật phẩm hiếm hoặc mua đồ từ người chơi để tạo tính thanh khoản.
 

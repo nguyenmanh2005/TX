@@ -52,9 +52,23 @@ if (isset($_GET['action'])) {
         $selected = $_POST['numbers'] ?? []; // Array of 1-10 numbers
         $count = count($selected);
 
-        if ($bet <= 0 || $bet > $money || $count < 1 || $count > 10) {
-            $response['message'] = "Yêu cầu không hợp lệ!";
-        } else {
+        if ($bet <= 0 || $count < 1 || $count > 10) {
+            echo json_encode(['success' => false, 'message' => "Yêu cầu không hợp lệ!"]);
+            exit;
+        }
+
+        $conn->begin_transaction();
+        try {
+            // SELECT FOR UPDATE để khóa bản ghi user
+            $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+            $stmt->bind_param("i", $userId);
+            $stmt->execute();
+            $u = $stmt->get_result()->fetch_assoc();
+
+            if (!$u || $u['Money'] < $bet) {
+                throw new Exception("Ngân khố không đủ để quay số!");
+            }
+
             $pool = range(1, 80);
             shuffle($pool);
             $drawn = array_slice($pool, 0, 20);
@@ -68,22 +82,35 @@ if (isset($_GET['action'])) {
             $winAmount = $bet * $mult;
             $profit = $winAmount - $bet;
 
-            $conn->query("UPDATE users SET Money = Money + $profit WHERE Iduser = $userId");
+            // Cập nhật số dư tương đối
+            $stmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
+            $stmt->bind_param("di", $profit, $userId);
+            $stmt->execute();
 
             $resStr = "Picks: $count | Matches: $matchCount";
             $his = $conn->prepare("INSERT INTO history_keno (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-            $his->bind_param("idss", $userId, $bet, $resStr, $profit);
+            $his->bind_param("idid", $userId, $bet, $resStr, $profit);
             $his->execute();
 
-            $newMoney = $money + $profit;
+            // Log history helper
+            if (file_exists('../game_history_helper.php')) {
+                require_once '../game_history_helper.php';
+                logGameHistoryWithAll($conn, $userId, 'Keno Premium', $bet, $winAmount, $winAmount > 0);
+            }
 
+            $conn->commit();
+
+            $finalMoney = $u['Money'] + $profit;
             $response = [
                 'success' => true,
                 'drawn' => $drawn,
                 'matchCount' => $matchCount,
                 'winAmount' => number_format($winAmount, 0, ',', '.'),
-                'money' => number_format($newMoney, 0, ',', '.')
+                'money' => number_format($finalMoney, 0, ',', '.')
             ];
+        } catch (Exception $e) {
+            $conn->rollback();
+            $response = ['success' => false, 'message' => $e->getMessage()];
         }
     }
     echo json_encode($response);

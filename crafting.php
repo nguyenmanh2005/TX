@@ -314,7 +314,7 @@ $userMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fet
         function startCraft(recipeId, name) {
             Swal.fire({
                 title: 'Bắt đầu chế tác?',
-                text: `Bạn có muốn rèn ${name}? Nguyên liệu và tiền sẽ bị tiêu hao.`,
+                text: `Bạn có muốn rèn ${name}? Nguyên liệu và  Gtlm sẽ bị tiêu hao.`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#ff4500',

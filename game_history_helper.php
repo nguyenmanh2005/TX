@@ -3,6 +3,7 @@
  * Helper function để ghi lại lịch sử game vào database
  * Sử dụng trong các game để track quest progress
  */
+require_once 'api_event_helper.php';
 
 /**
  * Ghi lại lịch sử chơi game
@@ -582,6 +583,46 @@ function logGameHistoryWithAll(mysqli $conn, int $userId, string $gameName, floa
                 }
             }
         }
+        
+        // 3. Update Community Challenges
+        updateCommunityChallenge($conn, $userId, 'game_played', 1);
+        if ($isWin) {
+            updateCommunityChallenge($conn, $userId, 'game_won', 1);
+        }
+
+        // --- NEW EVENT SYSTEM INTEGRATION ---
+        // 1. Game of the Day & XP Multipliers
+        $gotd = EventHelper::getGameOfTheDay($conn);
+        $xpMultiplier = ($gameName === $gotd) ? 2.0 : 1.0;
+        
+        // 2. Combo Streak
+        $combo = EventHelper::handleComboStreak($conn, $userId, $gameName);
+        if ($combo) {
+            if (!isset($_SESSION['pending_notifications'])) $_SESSION['pending_notifications'] = [];
+            $_SESSION['pending_notifications'][] = ['type' => 'success', 'title' => 'COMBO STREAK!', 'message' => $combo['message']];
+            $xpMultiplier += $combo['bonus_percent'];
+        }
+
+        // 3. Update Daily Tournament Score (Game of the Day only)
+        if ($gameName === $gotd && $winAmount > 0) {
+            EventHelper::updateDailyScore($conn, $userId, $winAmount);
+        }
+
+        // 4. Award XP (Base XP + Multipliers)
+        $baseXP = 10; 
+        if ($isWin) $baseXP += 15;
+        if ($betAmount >= 100000) $baseXP += 10;
+        
+        $finalXP = (int)round($baseXP * $xpMultiplier);
+        
+        // Add to User Level progress
+        if (file_exists('user_progress_helper.php')) {
+            require_once 'user_progress_helper.php';
+            up_add_xp($conn, $userId, $finalXP);
+        }
+        
+        // Add to Seasonal Pass XP
+        EventHelper::addSeasonalXP($conn, $userId, $finalXP);
     }
 
     return $result;
@@ -617,6 +658,33 @@ function updateTournamentScore(mysqli $conn, int $userId, string $gameName, floa
             // Cập nhật điểm (Win amount = Score)
             $conn->query("INSERT INTO tournament_scores (tournament_id, user_id, score) VALUES ($tourId, $userId, $winAmount)
                          ON DUPLICATE KEY UPDATE score = score + $winAmount");
+        }
+    }
+}
+
+/**
+ * Cập nhật tiến độ nhiệm vụ cộng đồng
+ */
+function updateCommunityChallenge(mysqli $conn, int $userId, string $type, int $value) {
+    // Tìm các nhiệm vụ đang active
+    // Ví dụ type: game_played (tổng số ván chơi), game_won (tổng số ván thắng)
+    $res = $conn->query("SELECT id, target_count, current_count FROM community_challenges WHERE status = 'active'");
+    if ($res && $res->num_rows > 0) {
+        while ($challenge = $res->fetch_assoc()) {
+            $challengeId = $challenge['id'];
+            
+            // Cập nhật current_count của challenge
+            $conn->query("UPDATE community_challenges SET current_count = current_count + $value WHERE id = $challengeId");
+            
+            // Cập nhật contribution của user
+            $conn->query("INSERT INTO community_challenge_participation (challenge_id, user_id, contribution) 
+                          VALUES ($challengeId, $userId, $value)
+                          ON DUPLICATE KEY UPDATE contribution = contribution + $value");
+            
+            // Kiểm tra hoàn thành
+            if ($challenge['current_count'] + $value >= $challenge['target_count']) {
+                $conn->query("UPDATE community_challenges SET status = 'completed' WHERE id = $challengeId");
+            }
         }
     }
 }

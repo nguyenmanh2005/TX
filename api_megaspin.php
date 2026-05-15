@@ -145,9 +145,9 @@ switch ($action) {
         $round = getCurrentRound($conn);
         $roundId = $round['id'];
 
-        // Kiểm tra tiền
+        // Kiểm tra  Gtlm
         $userMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
-        if ($userMoney < $amount) exit(json_encode(['success' => false, 'message' => 'Không đủ tiền!']));
+        if ($userMoney < $amount) exit(json_encode(['success' => false, 'message' => 'Không đủ  Gtlm!']));
 
         $conn->begin_transaction();
         try {

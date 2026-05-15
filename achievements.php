@@ -77,16 +77,18 @@ if ($achievementsTableExists) {
     }
 }
 
-// Lấy achievements đã đạt được
+// Lấy achievements đã đạt được và trạng thái ghim
+$unlockedData = [];
 $unlockedIds = [];
 if ($userAchievementsTableExists) {
-    $userAchievementsSql = "SELECT achievement_id FROM user_achievements WHERE user_id = ?";
+    $userAchievementsSql = "SELECT achievement_id, is_pinned FROM user_achievements WHERE user_id = ?";
     $userAchievementsStmt = $conn->prepare($userAchievementsSql);
     if ($userAchievementsStmt) {
         $userAchievementsStmt->bind_param("i", $userId);
         $userAchievementsStmt->execute();
-        $userAchievementsStmt->bind_result($achId);
+        $userAchievementsStmt->bind_result($achId, $isPinned);
         while ($userAchievementsStmt->fetch()) {
+            $unlockedData[$achId] = ['is_pinned' => $isPinned];
             $unlockedIds[] = $achId;
         }
         $userAchievementsStmt->close();
@@ -203,6 +205,8 @@ foreach ($allAchievements as &$achievement) {
     }
 
     $achievement['progress'] = $progress;
+    $achievement['is_pinned'] = isset($unlockedData[$achievement['id']]) ? $unlockedData[$achievement['id']]['is_pinned'] : 0;
+    
     if ($maxProgress > 0) {
         $achievement['progress_percent'] = min(100, ($progress / $maxProgress) * 100);
     } else {
@@ -560,6 +564,37 @@ unset($achievement);
             transform: translateY(-3px);
             box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
         }
+
+        /* ── Pin Button ── */
+        .pin-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .pin-btn.pinned {
+            background: #f1c40f;
+            color: #2c3e50;
+        }
+
+        .pin-btn.not-pinned {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            border: 1px dashed #667eea;
+        }
+
+        .pin-btn:hover {
+            transform: scale(1.03);
+            filter: brightness(1.1);
+        }
             \n
     
         /* Three.js canvas background */
@@ -635,8 +670,16 @@ unset($achievement);
                     </div>
                     <?php if ($achievement['reward_money'] > 0): ?>
                         <div class="achievement-reward">
-                            💰 Phần thưởng: <?= number_format($achievement['reward_money'], 0, ',', '.') ?> gtlm
+                            💰 Thưởng: <?= number_format($achievement['reward_money'], 0, ',', '.') ?> gtlm
                         </div>
+                    <?php endif; ?>
+
+                    <?php if ($achievement['unlocked']): ?>
+                        <button class="pin-btn <?= $achievement['is_pinned'] ? 'pinned' : 'not-pinned' ?>" 
+                                onclick="togglePin(<?= $achievement['id'] ?>, <?= $achievement['is_pinned'] ? '0' : '1' ?>)">
+                            <i class="<?= $achievement['is_pinned'] ? 'fa-solid fa-thumbtack' : 'fa-regular fa-thumbtack' ?>"></i>
+                            <?= $achievement['is_pinned'] ? 'Đã ghim' : 'Ghim lên hồ sơ' ?>
+                        </button>
                     <?php endif; ?>
                 </div>
             <?php endforeach; ?>
@@ -654,6 +697,27 @@ unset($achievement);
                 el.style.cursor = "url('img/tay.png'), url('../img/tay.png'), pointer";
             });
         });
+
+        function togglePin(achId, status) {
+            const action = status ? 'pin' : 'unpin';
+            const formData = new FormData();
+            formData.append('ach_id', achId);
+            formData.append('action', action);
+
+            fetch('api_achievement_pin.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => alert('Lỗi kết nối!'));
+        }
     </script>
 
 

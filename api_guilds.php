@@ -94,115 +94,96 @@ switch ($action) {
             exit;
         }
 
-        // Kiểm tra tiền
-        $user = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc();
-        if ($user['Money'] < $creationFee) {
-            echo json_encode(['success' => false, 'message' => "Bạn cần ít nhất " . number_format($creationFee) . " GTLM để thành lập Guild!"]);
-            exit;
-        }
-
-        // Kiểm tra user đã có guild chưa
-        $checkMemberStmt = $conn->prepare("SELECT guild_id FROM guild_members WHERE user_id = ?");
-        $checkMemberStmt->bind_param("i", $userId);
-        $checkMemberStmt->execute();
-        $checkMember = $checkMemberStmt->get_result();
-        if ($checkMember && $checkMember->num_rows > 0) {
-            echo json_encode(['success' => false, 'message' => 'Bạn đã có guild rồi!']);
-            $checkMemberStmt->close();
-            exit;
-        }
-        $checkMemberStmt->close();
-        
-        // Kiểm tra tên và tag đã tồn tại chưa
-        $checkName = $conn->prepare("SELECT id FROM guilds WHERE name = ? OR tag = ?");
-        $checkName->bind_param("ss", $name, $tag);
-        $checkName->execute();
-        $result = $checkName->get_result();
-        if ($result->num_rows > 0) {
-            echo json_encode(['success' => false, 'message' => 'Tên hoặc tag guild đã tồn tại!']);
-            exit;
-        }
-        $checkName->close();
-        
-        // Tạo guild
         $conn->begin_transaction();
         try {
-            // Trừ tiền tạo Guild
-            $conn->query("UPDATE users SET Money = Money - $creationFee WHERE Iduser = $userId");
+            // FIX: Chống SQL Injection & Lock User
+            $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+            $stmt->bind_param("i", $userId);
+            $stmt->execute();
+            $user = $stmt->get_result()->fetch_assoc();
+
+            if ($user['Money'] < $creationFee) {
+                throw new Exception("Bạn cần ít nhất " . number_format($creationFee) . " GTLM để thành lập Guild!");
+            }
+
+            // Kiểm tra user đã có guild chưa
+            $stmt = $conn->prepare("SELECT guild_id FROM guild_members WHERE user_id = ?");
+            $stmt->bind_param("i", $userId);
+            $stmt->execute();
+            if ($stmt->get_result()->num_rows > 0) {
+                throw new Exception("Bạn đã có guild rồi!");
+            }
+            
+            // Kiểm tra tên và tag
+            $stmt = $conn->prepare("SELECT id FROM guilds WHERE name = ? OR tag = ?");
+            $stmt->bind_param("ss", $name, $tag);
+            $stmt->execute();
+            if ($stmt->get_result()->num_rows > 0) {
+                throw new Exception("Tên hoặc tag guild đã tồn tại!");
+            }
+
+            // Trừ  Gtlm
+            $stmt = $conn->prepare("UPDATE users SET Money = Money - ? WHERE Iduser = ?");
+            $stmt->bind_param("di", $creationFee, $userId);
+            $stmt->execute();
 
             $sql = "INSERT INTO guilds (name, tag, description, leader_id) VALUES (?, ?, ?, ?)";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("sssi", $name, $tag, $description, $userId);
             $stmt->execute();
             $guildId = $conn->insert_id;
-            $stmt->close();
             
-            // Thêm leader vào guild_members
+            // Thêm leader
             $sql2 = "INSERT INTO guild_members (guild_id, user_id, role) VALUES (?, ?, 'leader')";
             $stmt2 = $conn->prepare($sql2);
             $stmt2->bind_param("ii", $guildId, $userId);
             $stmt2->execute();
-            $stmt2->close();
             
             $conn->commit();
             echo json_encode(['success' => true, 'message' => 'Tạo guild thành công!', 'guild_id' => $guildId]);
         } catch (Exception $e) {
             $conn->rollback();
-            echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()]);
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
         break;
         
     case 'join':
-        // Tham gia guild (accept invite hoặc join trực tiếp nếu public)
         $guildId = (int)($_POST['guild_id'] ?? 0);
-        
         if (!$guildId) {
-            echo json_encode(['success' => false, 'message' => 'Guild ID không hợp lệ!']);
-            exit;
+            echo json_encode(['success' => false, 'message' => 'Guild ID không hợp lệ!']); exit;
         }
         
-        // Kiểm tra user đã có guild chưa
-        $checkMemberStmt = $conn->prepare("SELECT guild_id FROM guild_members WHERE user_id = ?");
-        $checkMemberStmt->bind_param("i", $userId);
-        $checkMemberStmt->execute();
-        $checkMember = $checkMemberStmt->get_result();
-        if ($checkMember && $checkMember->num_rows > 0) {
-            echo json_encode(['success' => false, 'message' => 'Bạn đã có guild rồi!']);
-            $checkMemberStmt->close();
-            exit;
-        }
-        $checkMemberStmt->close();
-        
-        // Kiểm tra guild tồn tại
-        $checkGuild = $conn->prepare("SELECT id, max_members FROM guilds WHERE id = ?");
-        $checkGuild->bind_param("i", $guildId);
-        $checkGuild->execute();
-        $guild = $checkGuild->get_result()->fetch_assoc();
-        $checkGuild->close();
-        
-        if (!$guild) {
-            echo json_encode(['success' => false, 'message' => 'Guild không tồn tại!']);
-            exit;
-        }
-        
-        // Kiểm tra số thành viên
-        $memberCount = getGuildMemberCount($conn, $guildId);
-        if ($memberCount >= $guild['max_members']) {
-            echo json_encode(['success' => false, 'message' => 'Guild đã đầy!']);
-            exit;
-        }
-        
-        // Thêm thành viên
-        $sql = "INSERT INTO guild_members (guild_id, user_id, role) VALUES (?, ?, 'member')";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("ii", $guildId, $userId);
-        
-        if ($stmt->execute()) {
+        $conn->begin_transaction();
+        try {
+            // FIX: Chống Double Joining & Race Condition (Locking Guild)
+            $stmt = $conn->prepare("SELECT id, max_members FROM guilds WHERE id = ? FOR UPDATE");
+            $stmt->bind_param("i", $guildId);
+            $stmt->execute();
+            $guild = $stmt->get_result()->fetch_assoc();
+            
+            if (!$guild) throw new Exception("Guild không tồn tại!");
+
+            // Kiểm tra user đã có guild chưa
+            $stmt = $conn->prepare("SELECT guild_id FROM guild_members WHERE user_id = ?");
+            $stmt->bind_param("i", $userId);
+            $stmt->execute();
+            if ($stmt->get_result()->num_rows > 0) throw new Exception("Bạn đã có guild rồi!");
+
+            // Kiểm tra số thành viên (dùng subquery hoặc lock members table)
+            $memberCount = getGuildMemberCount($conn, $guildId);
+            if ($memberCount >= $guild['max_members']) throw new Exception("Guild đã đầy!");
+            
+            // Thêm thành viên
+            $stmt = $conn->prepare("INSERT INTO guild_members (guild_id, user_id, role) VALUES (?, ?, 'member')");
+            $stmt->bind_param("ii", $guildId, $userId);
+            $stmt->execute();
+            
+            $conn->commit();
             echo json_encode(['success' => true, 'message' => 'Tham gia guild thành công!']);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Lỗi khi tham gia guild!']);
+        } catch (Exception $e) {
+            $conn->rollback();
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
-        $stmt->close();
         break;
         
     case 'leave':

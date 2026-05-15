@@ -69,49 +69,74 @@ if (isset($_GET['action']) && $_GET['action'] === 'rut_tham') {
     header('Content-Type: application/json');
     $cost = 50000;
 
-    if ($soDu < $cost) {
-        echo json_encode(['success' => false, 'message' => '⚠️ Số Gtlm không đủ! Cần ' . number_format($cost) . ' gtlm.']);
-        exit;
-    }
+    $conn->begin_transaction();
+    try {
+        // SELECT FOR UPDATE để khóa bản ghi user
+        $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ? FOR UPDATE");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $user = $stmt->get_result()->fetch_assoc();
 
-    $bags = [
-        ["label" => "Trượt!", "reward" => 0, "chance" => 50],
-        ["label" => "10.000 gtlm", "reward" => 10000, "chance" => 20],
-        ["label" => "50.000 gtlm", "reward" => 50000, "chance" => 12],
-        ["label" => "100.000 gtlm", "reward" => 100000, "chance" => 12],
-        ["label" => "200.000 gtlm", "reward" => 270000, "chance" => 3],
-        ["label" => "500.000 gtlm", "reward" => 500000, "chance" => 2],
-        ["label" => "1.000.000 gtlm", "reward" => 1000000, "chance" => 1],
-    ];
-
-    $rand = mt_rand(1, 100);
-    $sum = 0;
-    $finalBag = $bags[0];
-    foreach ($bags as $bag) {
-        $sum += $bag['chance'];
-        if ($rand <= $sum) {
-            $finalBag = $bag;
-            break;
+        if (!$user || $user['Money'] < $cost) {
+            throw new Exception('⚠️ Số Gtlm không đủ! Cần ' . number_format($cost) . ' gtlm.');
         }
+
+        $bags = [
+            ["label" => "Trượt!", "reward" => 0, "chance" => 50],
+            ["label" => "10.000 gtlm", "reward" => 10000, "chance" => 20],
+            ["label" => "50.000 gtlm", "reward" => 50000, "chance" => 12],
+            ["label" => "100.000 gtlm", "reward" => 100000, "chance" => 12],
+            ["label" => "200.000 gtlm", "reward" => 270000, "chance" => 3],
+            ["label" => "500.000 gtlm", "reward" => 500000, "chance" => 2],
+            ["label" => "1.000.000 gtlm", "reward" => 1000000, "chance" => 1],
+        ];
+
+        $rand = mt_rand(1, 100);
+        $sum = 0;
+        $finalBag = $bags[0];
+        foreach ($bags as $bag) {
+            $sum += $bag['chance'];
+            if ($rand <= $sum) {
+                $finalBag = $bag;
+                break;
+            }
+        }
+
+        $rewardAmount = (float)$finalBag['reward'];
+        
+        // Cập nhật số dư tương đối
+        $stmt = $conn->prepare("UPDATE users SET Money = Money - ? + ? WHERE Iduser = ?");
+        $stmt->bind_param("ddi", $cost, $rewardAmount, $userId);
+        $stmt->execute();
+
+        // Ghi log lịch sử riêng (nếu cần bảng history_ruttham, hiện tại code gốc không thấy INSERT vào history_ruttham trong action xử lý  Gtlm)
+        // Lưu ý: Code gốc có SELECT từ history_ruttham ở trên nhưng không thấy INSERT ở action rút thăm. Tôi sẽ thêm INSERT để đồng bộ.
+        $historyStmt = $conn->prepare("INSERT INTO history_ruttham (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
+        if ($historyStmt) {
+            $historyStmt->bind_param("idid", $userId, $cost, $finalBag['label'], $rewardAmount);
+            $historyStmt->execute();
+            $historyStmt->close();
+        }
+
+        if (file_exists('../game_history_helper.php')) {
+            require_once '../game_history_helper.php';
+            logGameHistoryWithAll($conn, $userId, 'Rút Thăm', $cost, ($rewardAmount > 0 ? $rewardAmount : 0), $rewardAmount > 0);
+        }
+
+        $conn->commit();
+
+        $newBalanceVal = $user['Money'] - $cost + $rewardAmount;
+        echo json_encode([
+            'success' => true,
+            'rewardLabel' => $finalBag['label'],
+            'rewardAmount' => $rewardAmount,
+            'newBalance' => number_format($newBalanceVal) . ' gtlm',
+            'message' => $rewardAmount > 0 ? "🎉 CHÚC MỪNG! Bạn nhận được " . $finalBag['label'] . "!" : "😢 Rất tiếc, túi này không có gì!"
+        ]);
+    } catch (Exception $e) {
+        $conn->rollback();
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
-
-    $rewardAmount = $finalBag['reward'];
-    $newBalance = $soDu - $cost + $rewardAmount;
-
-    $conn->query("UPDATE users SET Money = $newBalance WHERE Iduser = $userId");
-
-    if (file_exists('../game_history_helper.php')) {
-        require_once '../game_history_helper.php';
-        logGameHistoryWithAll($conn, $userId, 'Rút Thăm', $cost, ($rewardAmount > 0 ? $rewardAmount : 0), $rewardAmount > 0);
-    }
-
-    echo json_encode([
-        'success' => true,
-        'rewardLabel' => $finalBag['label'],
-        'rewardAmount' => $rewardAmount,
-        'newBalance' => number_format($newBalance) . ' gtlm',
-        'message' => $rewardAmount > 0 ? "🎉 CHÚC MỪNG! Bạn nhận được " . $finalBag['label'] . "!" : "😢 Rất tiếc, túi này không có gì!"
-    ]);
     exit;
 }
 ?>

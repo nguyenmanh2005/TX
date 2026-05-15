@@ -147,8 +147,27 @@ switch ($action) {
 
             // Thành tựu (nếu bảng tồn tại)
             $achievements = [];
+            $pinnedAchievements = [];
             $checkUserAchievements = $conn->query("SHOW TABLES LIKE 'user_achievements'");
             if ($checkUserAchievements && $checkUserAchievements->num_rows > 0) {
+                // Pinned achievements first
+                $pinnedSql = "SELECT ua.unlocked_at, a.name, a.icon, a.description 
+                               FROM user_achievements ua
+                               INNER JOIN achievements a ON ua.achievement_id = a.id
+                               WHERE ua.user_id = ? AND ua.is_pinned = 1
+                               ORDER BY ua.unlocked_at DESC";
+                $pinnedStmt = $conn->prepare($pinnedSql);
+                if ($pinnedStmt) {
+                    $pinnedStmt->bind_param("i", $targetUserId);
+                    $pinnedStmt->execute();
+                    $pinnedResult = $pinnedStmt->get_result();
+                    while ($row = $pinnedResult->fetch_assoc()) {
+                        $pinnedAchievements[] = $row;
+                    }
+                    $pinnedStmt->close();
+                }
+
+                // Recent achievements
                 $achievementsSql = "SELECT ua.unlocked_at, a.name, a.icon, a.description 
                                     FROM user_achievements ua
                                     INNER JOIN achievements a ON ua.achievement_id = a.id
@@ -228,6 +247,7 @@ switch ($action) {
                 'statistics' => $stats,
                 'visits_count' => $visitsCount,
                 'achievements' => $achievements,
+                'pinned_achievements' => $pinnedAchievements,
                 'games' => $gameHighlights,
                 'guild' => $guild
             ]);

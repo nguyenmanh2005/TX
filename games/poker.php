@@ -201,10 +201,20 @@ if (isset($_GET['action'])) {
     $response = ['success' => false, 'message' => ''];
 
     if ($action === 'start_game') {
-        $bet = (int) ($_POST['bet'] ?? 10000);
-        if ($bet <= 0 || $bet > $soDu) {
-            $response['message'] = "⚠️ Số Gtlm không đủ!";
-        } else {
+        $bet = (float) ($_POST['bet'] ?? 10000);
+        
+        $conn->begin_transaction();
+        try {
+            // SELECT FOR UPDATE để khóa bản ghi user
+            $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ? FOR UPDATE");
+            $stmt->bind_param("i", $userId);
+            $stmt->execute();
+            $user = $stmt->get_result()->fetch_assoc();
+
+            if (!$user || $user['Money'] < $bet || $bet <= 0) {
+                throw new Exception("⚠️ Số Gtlm không đủ!");
+            }
+
             $suits = ['♠', '♥', '♦', '♣'];
             $faces = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
             $deck = [];
@@ -213,7 +223,6 @@ if (isset($_GET['action'])) {
                     $deck[] = $f . $s;
             shuffle($deck);
 
-            // Khởi tạo gtlm Bot khủng (Vài triệu -> 1 tỷ)
             $botMoney = [
                 1 => rand(5, 1000) * 1000000,
                 2 => rand(5, 1000) * 1000000,
@@ -222,7 +231,7 @@ if (isset($_GET['action'])) {
 
             $gameState = [
                 'deck' => $deck,
-                'player_money' => $soDu - $bet,
+                'player_money' => $user['Money'] - $bet,
                 'bet_per_player' => $bet,
                 'community' => [],
                 'player_hand' => array_splice($deck, 0, 2),
@@ -240,26 +249,29 @@ if (isset($_GET['action'])) {
                 'folded_players' => [],
                 'win_amount' => 0
             ];
-            $_SESSION['texas_holdem'] = $gameState;
-            $newMoney = $soDu - $bet;
-            $conn->query("UPDATE users SET Money = $newMoney WHERE Iduser = $userId");
-        
-            // Insert vào history_poker table logic placeholder
-            $historyStmt = $conn->prepare("INSERT INTO history_poker (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-            if ($historyStmt) {
-                $resStr = 'Pre-flop';
-                $win = 0;
-                $historyStmt->bind_param("iisi", $userId, $bet, $resStr, $win);
-                $historyStmt->execute();
-                $historyStmt->close();
-            }
 
+            // Trừ  Gtlm cược
+            $stmt = $conn->prepare("UPDATE users SET Money = Money - ? WHERE Iduser = ?");
+            $stmt->bind_param("di", $bet, $userId);
+            $stmt->execute();
+
+            // Insert vào history_poker
+            $historyStmt = $conn->prepare("INSERT INTO history_poker (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
+            $resStr = 'Pre-flop';
+            $win = 0;
+            $historyStmt->bind_param("idid", $userId, $bet, $resStr, $win);
+            $historyStmt->execute();
+            $historyStmt->close();
+
+            $conn->commit();
+
+            $_SESSION['texas_holdem'] = $gameState;
             $response = [
                 'success' => true,
                 'state' => 'pre-flop',
                 'playerHand' => $gameState['player_hand'],
                 'pot' => number_format($gameState['pot']) . ' gtlm',
-                'balance' => number_format($newMoney) . ' gtlm',
+                'balance' => number_format($gameState['player_money']) . ' gtlm',
                 'bots' => [
                     1 => ['money' => number_format($gameState['bot1_money']), 'folded' => false],
                     2 => ['money' => number_format($gameState['bot2_money']), 'folded' => false],
@@ -267,6 +279,9 @@ if (isset($_GET['action'])) {
                 ],
                 'message' => 'Vòng Pre-flop: Hãy xem bài riêng của bạn.'
             ];
+        } catch (Exception $e) {
+            $conn->rollback();
+            $response['message'] = $e->getMessage();
         }
     } elseif ($action === 'play_action') {
         if (!isset($_SESSION['texas_holdem']))
@@ -299,16 +314,13 @@ if (isset($_GET['action'])) {
             $strength = $res[0]; // 1-10
 
             $shouldFold = false;
-            // Bot fold logic
             if ($game['state'] === 'pre-flop') {
-                if ($strength == 1 && $res[1] < 110) { // Dưới J High
-                    if (rand(1, 100) < 30)
-                        $shouldFold = true;
+                if ($strength == 1 && $res[1] < 110) {
+                    if (rand(1, 100) < 30) $shouldFold = true;
                 }
             } else {
                 if ($strength == 1) {
-                    if (rand(1, 100) < 50)
-                        $shouldFold = true;
+                    if (rand(1, 100) < 50) $shouldFold = true;
                 }
             }
 
@@ -360,33 +372,50 @@ if (isset($_GET['action'])) {
 
                 $game['state'] = 'showdown';
                 $isWin = ($winner['id'] === 0);
-                if ($isWin) {
-                    $winAmount = $game['pot'];
-                    $conn->query("UPDATE users SET Money = Money + $winAmount WHERE Iduser = $userId");
-                    $msg = "🏆 CHIẾN THẮNG: " . number_format($winAmount) . " gtlm (" . $winner['res'][2] . ")";
-                } else {
-                    $msg = "💀 THẤT BẠI: " . $winner['name'] . " thắng với " . $winner['res'][2];
-                }
+                $winAmount = $isWin ? (float)$game['pot'] : 0;
+                
+                $conn->begin_transaction();
+                try {
+                    if ($isWin) {
+                        $stmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
+                        $stmt->bind_param("di", $winAmount, $userId);
+                        $stmt->execute();
+                        $msg = "🏆 CHIẾN THẮNG: " . number_format($winAmount) . " gtlm (" . $winner['res'][2] . ")";
+                    } else {
+                        $msg = "💀 THẤT BẠI: " . $winner['name'] . " thắng với " . $winner['res'][2];
+                    }
 
-                $response = [
-                    'success' => true,
-                    'state' => 'showdown',
-                    'winner' => $winner,
-                    'allHands' => [
-                        'player' => $game['player_hand'],
-                        'bot1' => $game['bot1_hand'],
-                        'bot2' => $game['bot2_hand'],
-                        'bot3' => $game['bot3_hand']
-                    ],
-                    'message' => $msg,
-                    'isWin' => $isWin,
-                    'newBalance' => number_format($isWin ? ($game['player_money'] + $game['pot']) : $game['player_money']) . ' gtlm',
-                    'bots' => [
-                        1 => ['money' => number_format($game['bot1_money']), 'folded' => $game['bot1_folded']],
-                        2 => ['money' => number_format($game['bot2_money']), 'folded' => $game['bot2_folded']],
-                        3 => ['money' => number_format($game['bot3_money']), 'folded' => $game['bot3_folded']],
-                    ]
-                ];
+                    // Log history helper
+                    if (file_exists('../game_history_helper.php')) {
+                        require_once '../game_history_helper.php';
+                        logGameHistoryWithAll($conn, $userId, 'Texas Poker', $game['bet_per_player'], $winAmount, $isWin);
+                    }
+
+                    $conn->commit();
+                    
+                    $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
+                    $stmt->bind_param("i", $userId);
+                    $stmt->execute();
+                    $newBalanceVal = $stmt->get_result()->fetch_assoc()['Money'];
+
+                    $response = [
+                        'success' => true,
+                        'state' => 'showdown',
+                        'winner' => $winner,
+                        'allHands' => ['player' => $game['player_hand'], 'bot1' => $game['bot1_hand'], 'bot2' => $game['bot2_hand'], 'bot3' => $game['bot3_hand']],
+                        'message' => $msg,
+                        'isWin' => $isWin,
+                        'newBalance' => number_format($newBalanceVal) . ' gtlm',
+                        'bots' => [
+                            1 => ['money' => number_format($game['bot1_money']), 'folded' => $game['bot1_folded']],
+                            2 => ['money' => number_format($game['bot2_money']), 'folded' => $game['bot2_folded']],
+                            3 => ['money' => number_format($game['bot3_money']), 'folded' => $game['bot3_folded']],
+                        ]
+                    ];
+                } catch (Exception $e) {
+                    $conn->rollback();
+                    $response['message'] = "❌ Lỗi thanh toán!";
+                }
                 echo json_encode($response);
                 exit;
         }

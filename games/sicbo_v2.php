@@ -35,110 +35,109 @@ if (isset($_GET['action'])) {
         $bets = json_decode($_POST['bets'], true); // Array of {type: 'small', amount: 1000}
         $totalBet = 0;
         foreach ($bets as $b)
-            $totalBet += (int) $b['amount'];
+            $totalBet += (float) $b['amount'];
 
-        if ($totalBet <= 0 || $totalBet > $money) {
+        if ($totalBet <= 0) {
             echo json_encode(['success' => false, 'message' => 'Lượng liều không hợp lệ!']);
             exit;
         }
 
-        $dice = [rand(1, 6), rand(1, 6), rand(1, 6)];
-        $sum = array_sum($dice);
-        sort($dice);
-        $diceStr = implode(',', $dice);
+        $conn->begin_transaction();
+        try {
+            // SELECT FOR UPDATE để khóa bản ghi user
+            $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+            $stmt->bind_param("i", $userId);
+            $stmt->execute();
+            $u = $stmt->get_result()->fetch_assoc();
 
-        $counts = array_count_values($dice);
-        $isTriple = (count($counts) === 1);
-        $anyDouble = (count($counts) < 3);
-
-        $winAmount = -$totalBet;
-        $winLog = [];
-
-        foreach ($bets as $b) {
-            $type = $b['type'];
-            $amt = (int) $b['amount'];
-            $won = false;
-            $pay = 0;
-
-            if ($type === 'small') {
-                if ($sum >= 4 && $sum <= 10 && !$isTriple) {
-                    $won = true;
-                    $pay = 1;
-                }
-            } elseif ($type === 'big') {
-                if ($sum >= 11 && $sum <= 17 && !$isTriple) {
-                    $won = true;
-                    $pay = 1;
-                }
-            } elseif ($type === 'odd') {
-                if ($sum % 2 != 0 && !$isTriple) {
-                    $won = true;
-                    $pay = 1;
-                }
-            } elseif ($type === 'even') {
-                if ($sum % 2 == 0 && !$isTriple) {
-                    $won = true;
-                    $pay = 1;
-                }
-            } elseif ($type === 'any_triple') {
-                if ($isTriple) {
-                    $won = true;
-                    $pay = 30;
-                }
-            } elseif (strpos($type, 'triple_') === 0) {
-                $v = (int) str_replace('triple_', '', $type);
-                if ($isTriple && $dice[0] == $v) {
-                    $won = true;
-                    $pay = 180;
-                }
-            } elseif (strpos($type, 'double_') === 0) {
-                $v = (int) str_replace('double_', '', $type);
-                if ($counts[$v] >= 2) {
-                    $won = true;
-                    $pay = 10;
-                }
-            } elseif (strpos($type, 'total_') === 0) {
-                $v = (int) str_replace('total_', '', $type);
-                if ($sum == $v) {
-                    $won = true;
-                    $pArr = [4 => 60, 5 => 30, 6 => 18, 7 => 12, 8 => 8, 9 => 7, 10 => 6, 11 => 6, 12 => 7, 13 => 8, 14 => 12, 15 => 18, 16 => 30, 17 => 60];
-                    $pay = $pArr[$v] ?? 0;
-                }
-            } elseif (strpos($type, 'single_') === 0) {
-                $v = (int) str_replace('single_', '', $type);
-                if (isset($counts[$v])) {
-                    $won = true;
-                    $pay = $counts[$v];
-                } // 1x, 2x, 3x
+            if (!$u || $u['Money'] < $totalBet) {
+                throw new Exception('Lượng liều vượt quá ngân khố!');
             }
 
-            if ($won) {
-                $winAmount += $amt * ($pay + 1);
-                $winLog[] = "$type (Won x$pay)";
+            $dice = [rand(1, 6), rand(1, 6), rand(1, 6)];
+            $sum = array_sum($dice);
+            sort($dice);
+            $diceStr = implode(',', $dice);
+
+            $counts = array_count_values($dice);
+            $isTriple = (count($counts) === 1);
+
+            $winAmount = -$totalBet;
+            $winLog = [];
+
+            foreach ($bets as $b) {
+                $type = $b['type'];
+                $amt = (float) $b['amount'];
+                $won = false;
+                $pay = 0;
+
+                if ($type === 'small') {
+                    if ($sum >= 4 && $sum <= 10 && !$isTriple) { $won = true; $pay = 1; }
+                } elseif ($type === 'big') {
+                    if ($sum >= 11 && $sum <= 17 && !$isTriple) { $won = true; $pay = 1; }
+                } elseif ($type === 'odd') {
+                    if ($sum % 2 != 0 && !$isTriple) { $won = true; $pay = 1; }
+                } elseif ($type === 'even') {
+                    if ($sum % 2 == 0 && !$isTriple) { $won = true; $pay = 1; }
+                } elseif ($type === 'any_triple') {
+                    if ($isTriple) { $won = true; $pay = 30; }
+                } elseif (strpos($type, 'triple_') === 0) {
+                    $v = (int) str_replace('triple_', '', $type);
+                    if ($isTriple && $dice[0] == $v) { $won = true; $pay = 180; }
+                } elseif (strpos($type, 'double_') === 0) {
+                    $v = (int) str_replace('double_', '', $type);
+                    if (isset($counts[$v]) && $counts[$v] >= 2) { $won = true; $pay = 10; }
+                } elseif (strpos($type, 'total_') === 0) {
+                    $v = (int) str_replace('total_', '', $type);
+                    if ($sum == $v) {
+                        $won = true;
+                        $pArr = [4 => 60, 5 => 30, 6 => 18, 7 => 12, 8 => 8, 9 => 7, 10 => 6, 11 => 6, 12 => 7, 13 => 8, 14 => 12, 15 => 18, 16 => 30, 17 => 60];
+                        $pay = $pArr[$v] ?? 0;
+                    }
+                } elseif (strpos($type, 'single_') === 0) {
+                    $v = (int) str_replace('single_', '', $type);
+                    if (isset($counts[$v])) { $won = true; $pay = $counts[$v]; }
+                }
+
+                if ($won) {
+                    $winAmount += $amt * ($pay + 1);
+                    $winLog[] = "$type (Won x$pay)";
+                }
             }
+
+            // Cập nhật số dư tương đối
+            $stmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
+            $stmt->bind_param("di", $winAmount, $userId);
+            $stmt->execute();
+
+            // History
+            $his = $conn->prepare("INSERT INTO history_sicbo (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
+            $his->bind_param("idid", $userId, $totalBet, $diceStr, $winAmount);
+            $his->execute();
+            $his->close();
+
+            // Log history helper
+            if (file_exists('../game_history_helper.php')) {
+                require_once '../game_history_helper.php';
+                logGameHistoryWithAll($conn, $userId, 'Sicbo Premium', $totalBet, ($winAmount > 0 ? $winAmount + $totalBet : 0), $winAmount > 0);
+            }
+
+            $conn->commit();
+
+            $finalMoney = $u['Money'] + $winAmount;
+            echo json_encode([
+                'success' => true,
+                'dice' => $dice,
+                'sum' => $sum,
+                'winAmount' => $winAmount,
+                'winLog' => $winLog,
+                'money' => number_format($finalMoney, 0, ',', '.'),
+                'rawMoney' => $finalMoney
+            ]);
+        } catch (Exception $e) {
+            $conn->rollback();
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
-
-        $newMoney = $money + $winAmount;
-        $stmt = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
-        $stmt->bind_param("di", $newMoney, $userId);
-        $stmt->execute();
-        $stmt->close();
-
-        // History
-        $his = $conn->prepare("INSERT INTO history_sicbo (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-        $his->bind_param("idss", $userId, $totalBet, $diceStr, $winAmount);
-        $his->execute();
-        $his->close();
-
-        echo json_encode([
-            'success' => true,
-            'dice' => $dice,
-            'sum' => $sum,
-            'winAmount' => $winAmount,
-            'winLog' => $winLog,
-            'money' => number_format($newMoney, 0, ',', '.'),
-            'rawMoney' => $newMoney
-        ]);
         exit;
     } elseif ($action === 'get_history') {
         $stmt = $conn->prepare("SELECT Bet, Result, WinAmount, Time FROM history_sicbo WHERE Iduser = ? ORDER BY Time DESC LIMIT 10");

@@ -1,1097 +1,333 @@
 <?php
 session_start();
 require 'db_connect.php';
-
-if (!isset($_SESSION['Iduser'])) {
-    header("Location: login.php");
-    exit();
-}
-
-// Load theme
+if (!isset($_SESSION['Iduser'])) { header("Location: login.php"); exit(); }
 require_once 'load_theme.php';
-
-// Đảm bảo $bgGradientCSS có giá trị
-if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
-    $bgGradientCSS = 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%)';
-}
-
 $userId = $_SESSION['Iduser'];
-
-// Lấy thông tin người dùng
-$sql = "SELECT Iduser, Name, Money FROM users WHERE Iduser = ?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $userId);
-$stmt->execute();
-$result = $stmt->get_result();
-$user = $result->fetch_assoc();
-$stmt->close();
-
-// Kiểm tra bảng gifts có tồn tại không
-$checkTable = $conn->query("SHOW TABLES LIKE 'gifts'");
-$giftsTableExists = $checkTable && $checkTable->num_rows > 0;
-
-if (!$giftsTableExists) {
-    die("⚠️ Hệ thống Gift chưa được kích hoạt! Vui lòng chạy file create_gift_tables.sql trước.");
-}
+$user = $conn->query("SELECT * FROM users WHERE Iduser = $userId")->fetch_assoc();
 ?>
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tặng Quà - Gift System</title>
-    <link rel="stylesheet" href="assets/css/main.css">
-    <link rel="stylesheet" href="assets/css/components.css">
-    <link rel="stylesheet" href="assets/css/responsive.css">
-    <link rel="stylesheet" href="assets/css/loading.css">
-    <link rel="stylesheet" href="assets/css/animations.css">
+    <title>Gifting Premium - Trao Gửi Yêu Thương</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --primary: #6366f1;
+            --accent: #ec4899;
+            --glass: rgba(255, 255, 255, 0.9);
         }
 
         body {
-            background:
-                <?= $bgGradientCSS ?>
-            ;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             background-attachment: fixed;
             min-height: 100vh;
-            padding: 20px;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            animation: fadeIn 0.6s ease;
-            position: relative;
-            overflow-x: hidden;
+            font-family: 'Inter', sans-serif;
+            color: #1e293b;
+            padding: 40px 20px;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1000px;
             margin: 0 auto;
-            background: rgba(255, 255, 255, 0.98);
+            background: var(--glass);
             backdrop-filter: blur(10px);
-            border-radius: 24px;
+            border-radius: 30px;
             padding: 40px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3),
-                0 0 0 1px rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            animation: slideUp 0.6s ease;
-            position: relative;
-            z-index: 1;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
-        .container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border-radius: 24px;
-            padding: 2px;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
+        h1 { text-align: center; font-size: 40px; font-weight: 900; margin-bottom: 30px; background: linear-gradient(to right, #6366f1, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
-        .container:hover::before {
-            opacity: 1;
-        }
-
-        h1 {
-            text-align: center;
-            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 40px;
-            font-size: 42px;
-            font-weight: 800;
-            letter-spacing: -1px;
-            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .tabs {
+        .money-card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 20px;
             display: flex;
+            align-items: center;
+            justify-content: center;
             gap: 15px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-            background: rgba(247, 247, 247, 0.8);
-            padding: 8px;
-            border-radius: 16px;
+            font-size: 24px;
+            font-weight: 800;
+            color: #059669;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 40px;
         }
 
-        .tab {
-            padding: 16px 32px;
-            background: transparent;
-            border: 2px solid transparent;
+        .tabs { display: flex; gap: 10px; margin-bottom: 30px; }
+        .tab { flex: 1; padding: 15px; border-radius: 15px; border: 2px solid transparent; background: #f1f5f9; cursor: pointer; font-weight: 700; transition: 0.3s; }
+        .tab.active { background: #fff; border-color: var(--primary); color: var(--primary); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+
+        .form-section { display: none; }
+        .form-section.active { display: block; animation: fadeIn 0.4s ease; }
+
+        .form-group { margin-bottom: 25px; }
+        label { display: block; font-weight: 700; margin-bottom: 10px; color: #475569; }
+        input, select, textarea { width: 100%; padding: 15px; border-radius: 12px; border: 2px solid #e2e8f0; outline: none; transition: 0.3s; }
+        input:focus { border-color: var(--primary); }
+
+        /* ── Gift Wrapping ── */
+        .wrap-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+        .wrap-card {
+            background: #fff;
+            border: 2px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .wrap-card.selected { border-color: var(--accent); background: #fdf2f8; }
+        .wrap-card i { font-size: 30px; color: var(--accent); margin-bottom: 10px; display: block; }
+        .wrap-name { font-size: 14px; font-weight: 700; }
+
+        .anonymous-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f8fafc;
+            padding: 15px;
             border-radius: 12px;
             cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            color: #666;
-            position: relative;
-            overflow: hidden;
         }
 
-        .tab::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
+        .btn-send {
             width: 100%;
-            height: 100%;
-            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
-            transition: left 0.3s ease;
-            z-index: -1;
-        }
-
-        .tab.active {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
             color: white;
-            border-color: transparent;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+            padding: 18px;
+            border-radius: 15px;
+            border: none;
+            font-size: 20px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
+            transition: 0.3s;
         }
+        .btn-send:hover { transform: translateY(-3px); box-shadow: 0 20px 25px -5px rgba(99, 102, 241, 0.4); }
 
-        .tab.active::before {
-            left: 0;
-        }
-
-        .tab:hover:not(.active) {
-            background: rgba(102, 126, 234, 0.1);
-            color: #667eea;
-            transform: translateY(-2px);
-        }
-
-        .tab-content {
+        /* ── Gift Box Animation ── */
+        .gift-box-anim {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
             display: none;
-            animation: fadeInContent 0.4s ease;
+            align-items: center; justify-content: center;
+            flex-direction: column;
         }
-
-        @keyframes fadeInContent {
-            from {
-                opacity: 0;
-                transform: translateY(10px) scale(0.98);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
+        .box-img { font-size: 150px; animation: wobble 1s infinite; cursor: pointer; }
+        @keyframes wobble {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            25% { transform: rotate(-10deg) scale(1.1); }
+            75% { transform: rotate(10deg) scale(1.1); }
         }
+        .confetti { position: absolute; }
 
-        .tab-content.active {
-            display: block;
-        }
-
-        .form-group {
-            margin-bottom: 24px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 10px;
-            font-weight: 700;
-            color: #333;
-            font-size: 15px;
-            letter-spacing: 0.3px;
-        }
-
-        input,
-        select,
-        textarea {
-            width: 100%;
-            padding: 14px 18px;
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            font-size: 16px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            background: #fff;
-            font-family: inherit;
-        }
-
-        input:focus,
-        select:focus,
-        textarea:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-            transform: translateY(-2px);
-        }
-
-        input:hover,
-        select:hover,
-        textarea:hover {
-            border-color: #bbb;
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 120px;
-            line-height: 1.6;
-        }
-
-        .user-search {
-            position: relative;
-        }
+        .history-card { background: #fff; padding: 20px; border-radius: 15px; margin-bottom: 15px; display: flex; align-items: center; gap: 15px; border: 1px solid #e2e8f0; }
+        .history-icon { width: 50px; height: 50px; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; }
 
         .user-list {
-            max-height: 250px;
-            overflow-y: auto;
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            background: white;
-            display: none;
-            position: absolute;
-            width: 100%;
-            z-index: 100;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15),
-                0 0 0 1px rgba(102, 126, 234, 0.1);
-            margin-top: 5px;
-            animation: slideDown 0.3s ease;
-            backdrop-filter: blur(10px);
+            position: absolute; width: 100%; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; max-height: 200px; overflow-y: auto; z-index: 50; display: none;
         }
-
-        .user-list::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .user-list::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-
-        .user-list::-webkit-scrollbar-thumb {
-            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
-            border-radius: 10px;
-        }
-
-        .user-list::-webkit-scrollbar-thumb:hover {
-            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
-        }
-
-        .user-item {
-            padding: 14px 18px;
-            cursor: pointer;
-            border-bottom: 1px solid #f0f0f0;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .user-item::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            height: 100%;
-            width: 4px;
-            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
-            transform: scaleY(0);
-            transition: transform 0.3s ease;
-            transform-origin: bottom;
-        }
-
-        .user-item:hover {
-            background: linear-gradient(90deg, rgba(102, 126, 234, 0.1) 0%, rgba(102, 126, 234, 0.05) 100%);
-            padding-left: 24px;
-            transform: translateX(5px);
-        }
-
-        .user-item:hover::before {
-            transform: scaleY(1);
-        }
-
-        .user-item:last-child {
-            border-bottom: none;
-            border-radius: 0 0 10px 10px;
-        }
-
-        .user-item:first-child {
-            border-radius: 10px 10px 0 0;
-        }
-
-        .btn {
-            padding: 16px 40px;
-            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 17px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3),
-                0 0 0 0 rgba(102, 126, 234, 0.4);
-            letter-spacing: 0.5px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.3);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-
-        .btn::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s ease;
-        }
-
-        .btn:hover::before {
-            width: 300px;
-            height: 300px;
-        }
-
-        .btn:hover::after {
-            left: 100%;
-        }
-
-        .btn:hover {
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5),
-                0 0 20px rgba(102, 126, 234, 0.3);
-            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
-        }
-
-        .btn:active {
-            transform: translateY(-1px) scale(0.98);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .alert {
-            padding: 18px 24px;
-            border-radius: 12px;
-            margin-bottom: 24px;
-            border-left: 4px solid;
-            animation: slideInRight 0.4s ease;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-weight: 500;
-        }
-
-        @keyframes slideInRight {
-            from {
-                opacity: 0;
-                transform: translateX(20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        .alert-success {
-            background: linear-gradient(90deg, rgba(40, 167, 69, 0.1) 0%, rgba(40, 167, 69, 0.05) 100%);
-            color: #155724;
-            border-left-color: #28a745;
-        }
-
-        .alert-error {
-            background: linear-gradient(90deg, rgba(220, 53, 69, 0.1) 0%, rgba(220, 53, 69, 0.05) 100%);
-            color: #721c24;
-            border-left-color: #dc3545;
-        }
-
-        .alert-info {
-            background: linear-gradient(90deg, rgba(23, 162, 184, 0.1) 0%, rgba(23, 162, 184, 0.05) 100%);
-            color: #0c5460;
-            border-left-color: #17a2b8;
-        }
-
-        .history-item {
-            padding: 20px;
-            border: 2px solid #e0e0e0;
-            border-radius: 14px;
-            margin-bottom: 16px;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(247, 247, 247, 0.9) 100%);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .history-item::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 4px;
-            height: 100%;
-            transition: width 0.3s ease, opacity 0.3s ease;
-        }
-
-        .history-item::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: radial-gradient(circle at right, rgba(102, 126, 234, 0.05) 0%, transparent 70%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .history-item:hover {
-            transform: translateX(8px) scale(1.01);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15),
-                0 0 0 1px rgba(102, 126, 234, 0.1);
-        }
-
-        .history-item:hover::before {
-            width: 6px;
-        }
-
-        .history-item:hover::after {
-            opacity: 1;
-        }
-
-        .history-item.sent {
-            border-left-color: #667eea;
-        }
-
-        .history-item.sent::before {
-            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-        }
-
-        .history-item.received {
-            border-left-color: #28a745;
-        }
-
-        .history-item.received::before {
-            background: linear-gradient(180deg, #28a745 0%, #20c997 100%);
-        }
-
-        .item-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 20px;
-            margin-top: 24px;
-        }
-
-        .item-card {
-            border: 2px solid #e0e0e0;
-            border-radius: 14px;
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            background: white;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .item-card::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(102, 126, 234, 0.15) 0%, transparent 70%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .item-card::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-            transition: left 0.5s ease;
-        }
-
-        .item-card:hover::before {
-            opacity: 1;
-        }
-
-        .item-card:hover::after {
-            left: 100%;
-        }
-
-        .item-card:hover {
-            border-color: #667eea;
-            transform: translateY(-5px) scale(1.03) rotate(1deg);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3),
-                0 0 20px rgba(102, 126, 234, 0.2);
-        }
-
-        .item-card.selected {
-            border-color: #667eea;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.1) 100%);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4),
-                0 0 0 3px rgba(102, 126, 234, 0.1);
-            transform: scale(1.05);
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        .item-card.selected::before {
-            opacity: 1;
-        }
-
-        .daily-limit {
-            text-align: center;
-            padding: 20px;
-            background: linear-gradient(135deg, rgba(255, 193, 7, 0.15) 0%, rgba(255, 235, 59, 0.1) 100%);
-            border: 2px solid #ffc107;
-            border-radius: 14px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.2);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-
-            0%,
-            100% {
-                box-shadow: 0 4px 15px rgba(255, 193, 7, 0.2);
-            }
-
-            50% {
-                box-shadow: 0 4px 25px rgba(255, 193, 7, 0.4);
-            }
-        }
-
-        .money-display {
-            font-size: 28px;
-            font-weight: 800;
-            margin: 30px 0;
-            text-align: center;
-            padding: 20px;
-            background: rgba(40, 167, 69, 0.1);
-            border-radius: 14px;
-            border: 2px solid rgba(40, 167, 69, 0.2);
-            color: #28a745;
-            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.2);
-        }
-
-        .money-display span {
-            background: <?= $bgGradientCSS ?>; background-attachment: fixed;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 20px;
-                border-radius: 16px;
-            }
-
-            h1 {
-                font-size: 32px;
-            }
-
-            .tabs {
-                flex-direction: column;
-            }
-
-            .tab {
-                width: 100%;
-            }
-
-            .item-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .money-display {
-                font-size: 22px;
-            }
-        }
-
-        \n
-    
-        /* Three.js canvas background */
-        #threejs-background {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            pointer-events: none;
-        }
+        .user-item { padding: 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
+        .user-item:hover { background: #f8fafc; }
 
     </style>
 </head>
-
 <body>
 
-
     <div class="container">
-        <h1>🎁 Tặng Quà</h1>
-        <div class="money-display">💰 Số Gtlm: <span><?= number_format($user['Money'], 0, ',', '.') ?></span> gtlm</div>
+        <h1>🎁 Gifting Premium</h1>
+        
+        <div class="money-card">
+            <i class="fa fa-wallet"></i>
+            <span><?= number_format($user['Money']) ?> GTLM</span>
+        </div>
 
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('send')">💌 Tặng Quà</button>
-            <button class="tab" onclick="switchTab('history')">📜 Lịch Sử</button>
+            <button class="tab active" onclick="switchTab('send')">Tặng Quà</button>
+            <button class="tab" onclick="switchTab('history')">Lịch Sử</button>
         </div>
 
-        <div id="send-tab" class="tab-content active">
-            <div class="daily-limit">
-                <strong>📊 Giới hạn tặng quà:</strong> <span id="daily-count">0</span> / 3 lần/ngày
+        <div id="send-tab" class="form-section active">
+            <div class="form-group" style="position: relative;">
+                <label>👤 Người nhận</label>
+                <input type="text" id="user-search" placeholder="Tìm tên người chơi..." oninput="searchUser()">
+                <div id="user-list" class="user-list"></div>
+                <input type="hidden" id="to-user-id">
             </div>
 
             <div class="tabs">
-                <button class="tab active" onclick="switchGiftType('money')">💰 Tặng gtlm</button>
-                <button class="tab" onclick="switchGiftType('item')">🎁 Tặng Item</button>
+                <button class="tab active" onclick="switchGiftType('money')">Gửi  Gtlm</button>
+                <button class="tab" onclick="switchGiftType('item')">Gửi Vật Phẩm</button>
             </div>
 
-            <!-- Tặng gtlm -->
-            <div id="money-form" class="tab-content active">
-                <form id="send-money-form">
-                    <div class="form-group">
-                        <label>👤 Tìm người nhận:</label>
-                        <div class="user-search">
-                            <input type="text" id="user-search" placeholder="Nhập tên người dùng..." autocomplete="off">
-                            <div id="user-list" class="user-list"></div>
-                        </div>
-                        <input type="hidden" id="to-user-id">
-                        <div id="selected-user"
-                            style="margin-top: 10px; padding: 10px; background: #e7f3ff; border-radius: 8px; display: none;">
-                            <strong>Đã chọn:</strong> <span id="selected-user-name"></span>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>💰 Số gtlm:</label>
-                        <input type="number" id="gift-amount" placeholder="Nhập số gtlm (1 - 100.000.000)" min="1"
-                            max="100000000" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>💬 Lời nhắn (tùy chọn):</label>
-                        <textarea id="gift-message" placeholder="Nhập lời nhắn..."></textarea>
-                    </div>
-
-                    <button type="submit" class="btn">🎁 Tặng Quà</button>
-                </form>
+            <div id="money-form" class="gift-type-section">
+                <div class="form-group">
+                    <label>💰 Số lượng GTLM</label>
+                    <input type="number" id="gift-amount" placeholder="Nhập số  Gtlm...">
+                </div>
             </div>
 
-            <!-- Tặng item -->
-            <div id="item-form" class="tab-content">
-                <form id="send-item-form">
-                    <div class="form-group">
-                        <label>👤 Tìm người nhận:</label>
-                        <div class="user-search">
-                            <input type="text" id="user-search-item" placeholder="Nhập tên người dùng..."
-                                autocomplete="off">
-                            <div id="user-list-item" class="user-list"></div>
-                        </div>
-                        <input type="hidden" id="to-user-id-item">
-                        <div id="selected-user-item"
-                            style="margin-top: 10px; padding: 10px; background: #e7f3ff; border-radius: 8px; display: none;">
-                            <strong>Đã chọn:</strong> <span id="selected-user-name-item"></span>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>🎁 Loại item:</label>
-                        <select id="item-type" onchange="loadUserItems()">
-                            <option value="">-- Chọn loại --</option>
-                            <option value="theme">Theme</option>
-                            <option value="cursor">Cursor</option>
-                            <option value="chat_frame">Chat Frame</option>
-                            <option value="avatar_frame">Avatar Frame</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>🎁 Chọn item:</label>
-                        <div id="items-container" class="item-grid"></div>
-                        <input type="hidden" id="selected-item-id">
-                    </div>
-
-                    <div class="form-group">
-                        <label>💬 Lời nhắn (tùy chọn):</label>
-                        <textarea id="gift-message-item" placeholder="Nhập lời nhắn..."></textarea>
-                    </div>
-
-                    <button type="submit" class="btn">🎁 Tặng Quà</button>
-                </form>
+            <div id="item-form" class="gift-type-section" style="display: none;">
+                <div class="form-group">
+                    <label>Loại vật phẩm</label>
+                    <select id="item-type" onchange="loadMyItems()">
+                        <option value="">-- Chọn loại --</option>
+                        <option value="avatar_frame">Khung Ảnh</option>
+                        <option value="theme">Giao diện</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Chọn vật phẩm</label>
+                    <select id="item-id">
+                        <option value="">-- Chọn vật phẩm --</option>
+                    </select>
+                </div>
             </div>
 
-            <div id="alert-container"></div>
+            <div class="form-group">
+                <label>🎁 Chọn hộp quà</label>
+                <div class="wrap-options">
+                    <div class="wrap-card selected" onclick="selectWrap('standard')" data-wrap="standard">
+                        <i class="fa fa-box"></i>
+                        <div class="wrap-name">Thường</div>
+                    </div>
+                    <div class="wrap-card" onclick="selectWrap('vip')" data-wrap="vip">
+                        <i class="fa fa-gem"></i>
+                        <div class="wrap-name">Hộp VIP</div>
+                    </div>
+                    <div class="wrap-card" onclick="selectWrap('tet')" data-wrap="tet">
+                        <i class="fa fa-envelope"></i>
+                        <div class="wrap-name">Lì Xì Tết</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>💬 Lời nhắn</label>
+                <textarea id="gift-message" placeholder="Chúc bạn chơi game vui vẻ!"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="anonymous-toggle" onclick="toggleAnon()">
+                    <input type="checkbox" id="is-anonymous">
+                    <span>Tặng ẩn danh (Người nhận không thấy tên bạn)</span>
+                </label>
+            </div>
+
+            <button class="btn-send" onclick="sendGift()">GỬI QUÀ NGAY</button>
         </div>
 
-        <div id="history-tab" class="tab-content">
-            <div class="tabs">
-                <button class="tab active" onclick="switchHistoryType('all')">📜 Tất Cả</button>
-                <button class="tab" onclick="switchHistoryType('sent')">📤 Đã Gửi</button>
-                <button class="tab" onclick="switchHistoryType('received')">📥 Đã Nhận</button>
-            </div>
-            <div id="history-container"></div>
-        </div>
-
-        <div style="text-align: center; margin-top: 30px;">
-            <a href="index.php" class="btn" style="text-decoration: none; display: inline-block;">🏠 Về Trang Chủ</a>
+        <div id="history-tab" class="form-section">
+            <div id="history-list"></div>
         </div>
     </div>
 
-    <script>
-        let selectedUserId = null;
-        let selectedUserIdItem = null;
-        let searchTimeout = null;
+    <!-- Animation Overlay -->
+    <div class="gift-box-anim" id="gift-anim" onclick="openBox()">
+        <div class="box-img" id="anim-box-icon">🎁</div>
+        <div style="margin-top: 20px; font-size: 24px; font-weight: 800;" id="anim-text">Bạn nhận được một món quà!</div>
+        <p style="opacity: 0.7;">Chạm vào hộp để mở</p>
+    </div>
 
-        // Switch tab
+    <script>
+        let currentGiftType = 'money';
+        let selectedWrap = 'standard';
+
         function switchTab(tab) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.getElementById(tab + '-tab').classList.add('active');
-            event.target.classList.add('active');
-
-            if (tab === 'history') {
-                loadHistory('all');
-            } else {
-                loadDailyCount();
-            }
+            $('.tab').removeClass('active');
+            $(`button[onclick="switchTab('${tab}')"]`).addClass('active');
+            $('.form-section').removeClass('active');
+            $(`#${tab}-tab`).addClass('active');
+            if(tab === 'history') loadHistory();
         }
 
-        // Switch gift type
         function switchGiftType(type) {
-            document.querySelectorAll('#send-tab .tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('#send-tab .tab').forEach(t => t.classList.remove('active'));
-            document.getElementById(type + '-form').classList.add('active');
-            event.target.classList.add('active');
+            currentGiftType = type;
+            $('.gift-type-section').hide();
+            $(`#${type}-form`).show();
+            $('#send-tab .tab').removeClass('active');
+            $(`button[onclick="switchGiftType('${type}')"]`).addClass('active');
         }
 
-        // Switch history type
-        function switchHistoryType(type) {
-            document.querySelectorAll('#history-tab .tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
-            loadHistory(type);
+        function selectWrap(wrap) {
+            selectedWrap = wrap;
+            $('.wrap-card').removeClass('selected');
+            $(`.wrap-card[data-wrap="${wrap}"]`).addClass('selected');
         }
 
-        // Load daily count
-        function loadDailyCount() {
-            fetch('api_gift.php?action=get_daily_count')
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        document.getElementById('daily-count').textContent = data.count;
-                    }
-                });
-        }
-
-        // Search users
-        document.getElementById('user-search').addEventListener('input', function () {
-            clearTimeout(searchTimeout);
-            const query = this.value.trim();
-            if (query.length < 2) {
-                document.getElementById('user-list').style.display = 'none';
-                return;
-            }
-
-            searchTimeout = setTimeout(() => {
-                fetch(`api_gift.php?action=get_users&search=${encodeURIComponent(query)}`)
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.success) {
-                            const list = document.getElementById('user-list');
-                            list.innerHTML = '';
-                            if (data.users.length === 0) {
-                                list.innerHTML = '<div class="user-item">Không tìm thấy người dùng</div>';
-                            } else {
-                                data.users.forEach(user => {
-                                    const item = document.createElement('div');
-                                    item.className = 'user-item';
-                                    item.textContent = `${user.name} (${number_format(user.money)} gtlm)`;
-                                    item.onclick = () => selectUser(user.id, user.name, 'money');
-                                    list.appendChild(item);
-                                });
-                            }
-                            list.style.display = 'block';
-                        }
-                    });
-            }, 300);
-        });
-
-        document.getElementById('user-search-item').addEventListener('input', function () {
-            clearTimeout(searchTimeout);
-            const query = this.value.trim();
-            if (query.length < 2) {
-                document.getElementById('user-list-item').style.display = 'none';
-                return;
-            }
-
-            searchTimeout = setTimeout(() => {
-                fetch(`api_gift.php?action=get_users&search=${encodeURIComponent(query)}`)
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.success) {
-                            const list = document.getElementById('user-list-item');
-                            list.innerHTML = '';
-                            if (data.users.length === 0) {
-                                list.innerHTML = '<div class="user-item">Không tìm thấy người dùng</div>';
-                            } else {
-                                data.users.forEach(user => {
-                                    const item = document.createElement('div');
-                                    item.className = 'user-item';
-                                    item.textContent = `${user.name} (${number_format(user.money)} gtlm)`;
-                                    item.onclick = () => selectUser(user.id, user.name, 'item');
-                                    list.appendChild(item);
-                                });
-                            }
-                            list.style.display = 'block';
-                        }
-                    });
-            }, 300);
-        });
-
-        // Select user
-        function selectUser(userId, userName, type) {
-            if (type === 'money') {
-                selectedUserId = userId;
-                document.getElementById('to-user-id').value = userId;
-                document.getElementById('selected-user-name').textContent = userName;
-                document.getElementById('selected-user').style.display = 'block';
-                document.getElementById('user-list').style.display = 'none';
-                document.getElementById('user-search').value = '';
-            } else {
-                selectedUserIdItem = userId;
-                document.getElementById('to-user-id-item').value = userId;
-                document.getElementById('selected-user-name-item').textContent = userName;
-                document.getElementById('selected-user-item').style.display = 'block';
-                document.getElementById('user-list-item').style.display = 'none';
-                document.getElementById('user-search-item').value = '';
-            }
-        }
-
-        // Load user items
-        function loadUserItems() {
-            const itemType = document.getElementById('item-type').value;
-            if (!itemType) {
-                document.getElementById('items-container').innerHTML = '';
-                document.getElementById('selected-item-id').value = '';
-                return;
-            }
-
-            document.getElementById('items-container').innerHTML = '<p>Đang tải items...</p>';
-            document.getElementById('selected-item-id').value = '';
-
-            fetch(`api_gift.php?action=get_user_items&item_type=${itemType}`)
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        const container = document.getElementById('items-container');
-                        if (data.items.length === 0) {
-                            container.innerHTML = '<p style="text-align: center; padding: 20px;">Bạn không có item nào để tặng.</p>';
-                            return;
-                        }
-
-                        container.innerHTML = data.items.map(item => `
-                            <div class="item-card" onclick="selectItem(${item.id}, this)">
-                                <strong>${item.name}</strong>
-                            </div>
-                        `).join('');
-                    } else {
-                        document.getElementById('items-container').innerHTML = `<p style="color: red;">${data.message}</p>`;
-                    }
-                })
-                .catch(() => {
-                    document.getElementById('items-container').innerHTML = '<p style="color: red;">Không thể tải items. Vui lòng thử lại.</p>';
-                });
-        }
-
-        // Select item
-        function selectItem(itemId, element) {
-            document.querySelectorAll('.item-card').forEach(card => card.classList.remove('selected'));
-            element.classList.add('selected');
-            document.getElementById('selected-item-id').value = itemId;
-        }
-
-        // Send money
-        document.getElementById('send-money-form').addEventListener('submit', function (e) {
-            e.preventDefault();
-            const formData = new FormData();
-            formData.append('action', 'send_money');
-            formData.append('to_user_id', document.getElementById('to-user-id').value);
-            formData.append('amount', document.getElementById('gift-amount').value);
-            formData.append('message', document.getElementById('gift-message').value);
-
-            fetch('api_gift.php', {
-                method: 'POST',
-                body: formData
-            })
-                .then(r => r.json())
-                .then(data => {
-                    showAlert(data.message, data.success ? 'success' : 'error');
-                    if (data.success) {
-                        document.getElementById('send-money-form').reset();
-                        document.getElementById('selected-user').style.display = 'none';
-                        selectedUserId = null;
-                        loadDailyCount();
-                        location.reload(); // Reload để cập nhật Số Gtlm
-                    }
-                });
-        });
-
-        // Send item
-        document.getElementById('send-item-form').addEventListener('submit', function (e) {
-            e.preventDefault();
-            const itemId = document.getElementById('selected-item-id').value;
-            if (!itemId) {
-                showAlert('Vui lòng chọn item!', 'error');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('action', 'send_item');
-            formData.append('to_user_id', document.getElementById('to-user-id-item').value);
-            formData.append('item_type', document.getElementById('item-type').value);
-            formData.append('item_id', itemId);
-            formData.append('message', document.getElementById('gift-message-item').value);
-
-            fetch('api_gift.php', {
-                method: 'POST',
-                body: formData
-            })
-                .then(r => r.json())
-                .then(data => {
-                    showAlert(data.message, data.success ? 'success' : 'error');
-                    if (data.success) {
-                        document.getElementById('send-item-form').reset();
-                        document.getElementById('selected-user-item').style.display = 'none';
-                        document.getElementById('items-container').innerHTML = '';
-                        selectedUserIdItem = null;
-                        loadDailyCount();
-                    }
-                });
-        });
-
-        // Load history
-        function loadHistory(type) {
-            fetch(`api_gift.php?action=get_history&type=${type}`)
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        const container = document.getElementById('history-container');
-                        if (data.history.length === 0) {
-                            container.innerHTML = '<div class="alert alert-info">Chưa có lịch sử tặng quà.</div>';
-                            return;
-                        }
-
-                        container.innerHTML = data.history.map(gift => {
-                            const isSent = gift.from_user_id == <?= $userId ?>;
-                            const otherUser = isSent ? gift.to_user_name : gift.from_user_name;
-                            const giftDisplay = gift.gift_type === 'money'
-                                ? `${number_format(gift.gift_value)} gtlm`
-                                : `${gift.gift_type} #${gift.item_id}`;
-
-                            return `
-                                <div class="history-item ${isSent ? 'sent' : 'received'}">
-                                    <strong>${isSent ? '📤 Gửi cho' : '📥 Nhận từ'}:</strong> ${otherUser}<br>
-                                    <strong>Quà:</strong> ${giftDisplay}<br>
-                                    ${gift.message ? `<strong>Lời nhắn:</strong> ${gift.message}<br>` : ''}
-                                    <small>${new Date(gift.created_at).toLocaleString('vi-VN')}</small>
-                                </div>
-                            `;
-                        }).join('');
-                    }
-                });
-        }
-
-        // Show alert
-        function showAlert(message, type) {
-            const container = document.getElementById('alert-container');
-            const alert = document.createElement('div');
-            alert.className = `alert alert-${type}`;
-            alert.textContent = message;
-            container.innerHTML = '';
-            container.appendChild(alert);
-            setTimeout(() => alert.remove(), 5000);
-        }
-
-        // Number format
-        function number_format(number) {
-            return new Intl.NumberFormat('vi-VN').format(number);
-        }
-
-        // Hide user list when clicking outside
-        document.addEventListener('click', function (e) {
-            if (!e.target.closest('.user-search')) {
-                document.getElementById('user-list').style.display = 'none';
-                document.getElementById('user-list-item').style.display = 'none';
-            }
-        });
-
-        // Load initial data
-        loadDailyCount();
-    </script>
-
-
-
-
-
-
-
-
-
-
-
-
-
-    <!-- Premium Effects System -->
-    <canvas id="threejs-background"></canvas>
-    <script>
-        (function () {
-            window.themeConfig = {
-                particleCount: <?= $particleCount ?? 800 ?>,
-                particleSize: <?= $particleSize ?? 0.05 ?>,
-                particleColor: '<?= $particleColor ?? "#ffffff" ?>',
-                particleOpacity: <?= $particleOpacity ?? 0.6 ?>,
-                shapeCount: <?= $shapeCount ?? 10 ?>,
-                shapeColors: <?= json_encode($shapeColors ?? ["#667eea", "#764ba2", "#4facfe", "#00f2fe"]) ?>,
-                shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>,
-                bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>
-            };
-            const prefix = window.location.pathname.includes('/games/') ? '../' : '';
-            const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
-
-            scripts.forEach(src => {
-                const s = document.createElement('script');
-                s.src = prefix + src;
-                s.async = false;
-                document.head.appendChild(s);
+        function searchUser() {
+            const q = $('#user-search').val();
+            if(q.length < 2) { $('#user-list').hide(); return; }
+            $.get('api_gift.php?action=get_users&search=' + q, function(res) {
+                if(res.success) {
+                    let html = res.users.map(u => `<div class="user-item" onclick="selectUser(${u.id}, '${u.name}')">${u.name}</div>`).join('');
+                    $('#user-list').html(html).show();
+                }
             });
-        })();
+        }
+
+        function selectUser(id, name) {
+            $('#to-user-id').val(id);
+            $('#user-search').val(name);
+            $('#user-list').hide();
+        }
+
+        function loadMyItems() {
+            const type = $('#item-type').val();
+            if(!type) return;
+            $.get('api_gift.php?action=get_user_items&item_type=' + type, function(res) {
+                if(res.success) {
+                    let html = res.items.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+                    $('#item-id').html(html);
+                }
+            });
+        }
+
+        function sendGift() {
+            const data = {
+                action: currentGiftType === 'money' ? 'send_money' : 'send_item',
+                to_user_id: $('#to-user-id').val(),
+                amount: $('#gift-amount').val(),
+                item_type: $('#item-type').val(),
+                item_id: $('#item-id').val(),
+                message: $('#gift-message').val(),
+                gift_wrap: selectedWrap,
+                is_anonymous: $('#is-anonymous').is(':checked') ? 1 : 0
+            };
+
+            $.post('api_gift.php', data, function(res) {
+                if(res.success) {
+                    Swal.fire('Thành công', 'Quà đã được gửi đi!', 'success');
+                } else {
+                    Swal.fire('Lỗi', res.message, 'error');
+                }
+            });
+        }
+
+        function loadHistory() {
+            $.get('api_gift.php?action=get_history', function(res) {
+                if(res.success) {
+                    let html = res.history.map(h => `
+                        <div class="history-card">
+                            <div class="history-icon">${h.gift_type === 'money' ? '💰' : '🎁'}</div>
+                            <div>
+                                <div style="font-weight: 800;">${h.from_user_name} ➔ ${h.to_user_name}</div>
+                                <div style="font-size: 13px; color: #64748b;">${h.gift_type === 'money' ? h.gift_value + ' GTLM' : 'Vật phẩm'}</div>
+                                <div style="font-style: italic; font-size: 12px;">"${h.message || '...'}"</div>
+                            </div>
+                        </div>
+                    `).join('');
+                    $('#history-list').html(html);
+                }
+            });
+        }
     </script>
-
 </body>
-
 </html>

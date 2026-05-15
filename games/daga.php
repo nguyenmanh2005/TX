@@ -53,7 +53,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
         $winAmount -= $amount; // Net win
     }
     
-    // Thực tế winAmount trả về là số tiền THÊM VÀO hoặc BỊ TRỪ
+    // Thực tế winAmount trả về là số  Gtlm THÊM VÀO hoặc BỊ TRỪ
     $finalWin = ($side === $winner) ? ($side === 'draw' ? $amount * 8 : $amount * 0.95) : -$amount;
 
     $newMoney = $money + $finalWin;
