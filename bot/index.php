@@ -1,6 +1,6 @@
 session_start();
-if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
-    header('Location: /login.php');
+if ((!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) && (!isset($_SESSION['Role']) || $_SESSION['Role'] != 1)) {
+    header('Location: ../login.php');
     exit;
 }
 require_once '../db_connect.php';

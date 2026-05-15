@@ -19,7 +19,7 @@ if (!$conn || $conn->connect_error) {
 
 // Lấy thông tin người dùng hiện tại từ bảng users
 $userId = $_SESSION['Iduser'];
-$sql = "SELECT u.Iduser, u.Name, u.Money, u.active_title_id, u.Role, u.current_theme_id, u.vip_expiry,
+$sql = "SELECT u.Iduser, u.Name, u.Money, u.active_title_id, u.Role, u.current_theme_id,
             a.icon as title_icon, a.name as title_name
             FROM users u
             LEFT JOIN achievements a ON u.active_title_id = a.id
@@ -150,63 +150,41 @@ if ($resultRank) {
 $giftMessage = '';
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
     $inputCode = trim($_POST['giftcode']);
-    $conn->begin_transaction();
-    try {
-        $codeSql = "SELECT * FROM giftcodes WHERE code = ? FOR UPDATE";
-        $stmt = $conn->prepare($codeSql);
-        $stmt->bind_param("s", $inputCode);
-        $stmt->execute();
-        $giftResult = $stmt->get_result();
+    $codeSql = "SELECT * FROM giftcodes WHERE code = ? AND (used_by IS NULL OR used_by = 0)";
+    $stmt = $conn->prepare($codeSql);
+    $stmt->bind_param("s", $inputCode);
+    $stmt->execute();
+    $giftResult = $stmt->get_result();
 
-        if ($giftResult->num_rows > 0) {
-            $gift = $giftResult->fetch_assoc();
+    if ($giftResult->num_rows > 0) {
+        $gift = $giftResult->fetch_assoc();
 
-            if ($gift['used_by'] && $gift['used_by'] != 0) {
-                throw new Exception("Mã này đã được sử dụng!");
-            }
-
-            if ($gift['expires_at'] && strtotime($gift['expires_at']) < time()) {
-                throw new Exception("Mã này đã hết hạn!");
-            }
-
+        // Kiểm tra hạn sử dụng
+        if ($gift['expires_at'] && strtotime($gift['expires_at']) < time()) {
+            $giftMessage = '<div class="message error">❌ Mã này đã hết hạn!</div>';
+        } else {
+            // Cập nhật gtlm người dùng (sử dụng prepared statement để tránh SQL injection)
             $reward = (float) $gift['reward'];
-            
-            // Cập nhật gtlm người dùng
             $updateMoneySql = "UPDATE users SET Money = Money + ? WHERE Iduser = ?";
-            $uStmt = $conn->prepare($updateMoneySql);
-            $uStmt->bind_param("di", $reward, $userId);
-            $uStmt->execute();
+            $updateMoneyStmt = $conn->prepare($updateMoneySql);
+            $updateMoneyStmt->bind_param("di", $reward, $userId);
+            $updateMoneyStmt->execute();
+            $updateMoneyStmt->close();
 
             // Cập nhật trạng thái mã
             $updateSql = "UPDATE giftcodes SET used_by = ?, used_at = NOW() WHERE id = ?";
-            $gStmt = $conn->prepare($updateSql);
-            $gStmt->bind_param("ii", $userId, $gift['id']);
-            $gStmt->execute();
+            $updateStmt = $conn->prepare($updateSql);
+            $updateStmt->bind_param("ii", $userId, $gift['id']);
+            $updateStmt->execute();
+            $updateStmt->close();
 
-            $conn->commit();
             $giftMessage = '<div class="message success">🎉 Chúc mừng! Bạn nhận được <strong>' . number_format($reward, 0, ',', '.') . ' gtlm</strong> từ mã quà tặng!</div>';
-        } else {
-            throw new Exception("Mã không tồn tại!");
         }
-    } catch (Exception $e) {
-        $conn->rollback();
-        $giftMessage = '<div class="message error">❌ ' . $e->getMessage() . '</div>';
+        $stmt->close();
+    } else {
+        $giftMessage = '<div class="message error">❌ Mã không tồn tại hoặc đã được sử dụng!</div>';
+        $stmt->close();
     }
-    if (isset($stmt)) $stmt->close();
-}
-
-// --- NEW EVENT DATA FETCHING ---
-require_once 'api_event_helper.php';
-$gotd = EventHelper::getGameOfTheDay($conn);
-$comboCount = isset($_SESSION['combo_games']) ? count($_SESSION['combo_games']) : 0;
-$activeSeason = EventHelper::getActiveSeason($conn);
-$userSeasonProgress = null;
-if ($activeSeason) {
-    $stmt = $conn->prepare("SELECT * FROM user_seasonal_pass_progress WHERE user_id = ? AND season_id = ?");
-    $stmt->bind_param("ii", $userId, $activeSeason['id']);
-    $stmt->execute();
-    $userSeasonProgress = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
 }
 ?>
 
@@ -1599,89 +1577,17 @@ if ($activeSeason) {
         }
 
         @keyframes balanceUpdate {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); color: var(--success-color); }
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+                color: var(--success-color);
+            }
         }
-
-        /* --- NEW EVENT CENTER STYLES --- */
-        .event-center-widget {
-            background: rgba(30, 41, 59, 0.8);
-            backdrop-filter: blur(15px);
-            border-radius: 24px;
-            padding: 25px;
-            margin-bottom: 25px;
-            border: 2px solid rgba(102, 126, 234, 0.3);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
-        }
-
-        .event-center-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .event-center-header h3 {
-            margin: 0;
-            font-size: 20px;
-            background: linear-gradient(to right, #818cf8, #f472b6);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: 800;
-        }
-
-        .event-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
-            padding: 15px;
-            margin-bottom: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            transition: 0.3s;
-        }
-
-        .event-card:hover { background: rgba(255, 255, 255, 0.08); transform: translateX(5px); }
-
-        .event-icon-circle {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            background: rgba(99, 102, 241, 0.2);
-            color: #818cf8;
-            border: 1px solid rgba(99, 102, 241, 0.4);
-        }
-
-        .event-info { flex: 1; }
-        .event-title { font-weight: 700; font-size: 15px; color: #fff; display: block; margin-bottom: 3px; }
-        .event-desc { font-size: 12px; color: #94a3b8; }
-
-        .event-badge {
-            padding: 4px 10px;
-            border-radius: 999px;
-            font-size: 11px;
-            font-weight: 800;
-            text-transform: uppercase;
-        }
-        .badge-xp { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); }
-        .badge-combo { background: linear-gradient(to right, #ec4899, #8b5cf6); color: white; }
-
-        .seasonal-pass-compact {
-            margin-top: 20px;
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 16px;
-            border: 1px dashed rgba(255, 255, 255, 0.1);
-        }
-        .seasonal-progress-info { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 8px; font-weight: 600; }
-        .seasonal-bar-container { height: 8px; background: rgba(255, 255, 255, 0.1); border-radius: 4px; overflow: hidden; }
-        .seasonal-bar-fill { height: 100%; transition: width 1s ease; box-shadow: 0 0 10px currentColor; }
 
         /* Enhanced Particle Effect for Game Links */
         .game-link {
@@ -3047,11 +2953,6 @@ if ($activeSeason) {
 
     <div class="header">
         <h1 class="welcome">Chào mừng, <span class="sparkle-text"><?php echo htmlspecialchars($user['Name']); ?></span>!
-            <?php if (!empty($user['vip_expiry']) && strtotime($user['vip_expiry']) > time()): ?>
-                <span style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 2px 10px; border-radius: 20px; font-size: 14px; margin-left: 10px; box-shadow: 0 0 10px rgba(245, 158, 11, 0.5); font-weight: 800; vertical-align: middle;">
-                    <i class="fa fa-crown"></i> VIP
-                </span>
-            <?php endif; ?>
         </h1>
         
         <div style="display: flex; align-items: center; gap: 15px;">
@@ -3074,28 +2975,10 @@ if ($activeSeason) {
                 </div>
             </div>
 
-            <!-- Nút Đấu Giá (Auction) -->
-            <a href="auction.php" class="auction-system-btn" title="Sàn Đấu Giá Vật Phẩm">
-                <span class="auction-btn-icon">🔨</span>
-                <span class="auction-btn-text">Đấu Giá</span>
-            </a>
-
             <a href="preview_themes.php" class="theme-button" id="themeButton" title="Xem trước themes với full background">
                 <span class="theme-icon">🎨</span>
                 <span class="theme-text">Xem Themes</span>
             </a>
-
-            <!-- Nút Thú Cưng (Pets) -->
-            <a href="pets.php" class="pet-system-btn" title="Hệ thống Thú Cưng & Mascot">
-                <span class="pet-btn-icon">🐾</span>
-                <span class="pet-btn-text">Thú Cưng</span>
-            </a>
-
-            <!-- Nút Bốc Quẻ (Daily Fortune) -->
-            <div class="fortune-teller-btn" onclick="openFortuneModal()" title="Bốc quẻ may mắn hôm nay!">
-                <span class="fortune-icon">🔮</span>
-                <span class="fortune-text">Bốc Quẻ</span>
-            </div>
         </div>
         <div class="daidien">
             <?php
@@ -3147,11 +3030,16 @@ if ($activeSeason) {
                 <a href="addimg.php"><i class="fa-solid fa-image icon"></i> Đổi ảnh đại diện</a>
                 <a href="khungchat.php"><i class="fa-solid fa-comment icon"></i> Chọn Khung Chat</a>
                 <a href="khungavatar.php"><i class="fa-solid fa-image icon"></i> Chọn Khung Avatar</a>
+                <a href="event_center.php"><i class="fa-solid fa-calendar-days icon"></i> Trung Tâm Sự Kiện</a>
+                <a href="seasonal_pass.php"><i class="fa-solid fa-ticket icon"></i> Thẻ Mùa Giải</a>
+                <a href="pets.php"><i class="fa-solid fa-paw icon"></i> Hệ Thống Thú Cưng</a>
                 <?php if (isset($user['Role']) && $user['Role'] == 1): ?>
                     <a href="admin_manage_frames.php"><i class="fa-solid fa-palette icon"></i> Admin - Quản Lý Khung</a>
                     <a href="admin_add_items.php"><i class="fa-solid fa-plus icon"></i> Admin - Thêm Items</a>
                     <a href="admin_manage_items.php"><i class="fa-solid fa-gear icon"></i> Admin - Quản Lý Items</a>
                     <a href="admin_manage_users.php"><i class="fa-solid fa-users-gear icon"></i> Admin - Quản Lý Users</a>
+                    <a href="admin_Event_Manager.php"><i class="fa-solid fa-calendar-check icon"></i> Admin - Quản Lý Sự Kiện</a>
+                    <a href="admin_tournaments.php"><i class="fa-solid fa-award icon"></i> Admin - Quản Lý Giải Đấu</a>
                     <a href="admin_fix_duplicates.php"><i class="fa-solid fa-broom icon"></i> Admin - Xử Lý Trùng Lặp</a>
                 <?php endif; ?>
                 <a href="#" id="darkModeToggle"><i class="fa-solid fa-moon icon"></i> Bật darkmode</a>
@@ -3238,59 +3126,7 @@ if ($activeSeason) {
                             <div class="personal-stat-label">Thành tích</div>
                         </div>
                     </div>
-                    </div>
                 </div>
-            </div>
-
-            <!-- EVENT CENTER WIDGET -->
-            <div class="event-center-widget">
-                <div class="event-center-header">
-                    <h3>🏆 EVENT CENTER</h3>
-                    <?php if ($user['Role'] == 1): ?>
-                    <a href="admin_Event_Manager.php" style="font-size: 10px; color: #64748b; text-decoration: none; opacity: 0.5;">Manage</a>
-                    <?php endif; ?>
-                </div>
-
-                <!-- Game of the Day -->
-                <div class="event-card">
-                    <div class="event-icon-circle">🎮</div>
-                    <div class="event-info">
-                        <span class="event-title">Game of the Day</span>
-                        <span class="event-desc"><?= $gotd ?></span>
-                    </div>
-                    <div class="event-badge badge-xp">x2 XP</div>
-                </div>
-
-                <!-- Combo Streak -->
-                <div class="event-card">
-                    <div class="event-icon-circle">🔥</div>
-                    <div class="event-info">
-                        <span class="event-title">Combo Streak</span>
-                        <span class="event-desc"><?= $comboCount ?> unique games played</span>
-                    </div>
-                    <?php if ($comboCount >= 3): ?>
-                        <div class="event-badge badge-combo">BONUS ACTIVE</div>
-                    <?php else: ?>
-                        <div class="event-badge" style="background:rgba(255,255,255,0.1); color:#94a3b8;"><?= $comboCount ?>/3</div>
-                    <?php endif; ?>
-                </div>
-
-                <!-- Seasonal Pass -->
-                <?php if ($activeSeason): ?>
-                <div class="seasonal-pass-compact" style="border-color: <?= $activeSeason['theme_color'] ?>;">
-                    <div class="seasonal-progress-info">
-                        <span><?= strtoupper($activeSeason['name']) ?></span>
-                        <span>LVL <?= $userSeasonProgress['current_level'] ?? 1 ?></span>
-                    </div>
-                    <div class="seasonal-bar-container">
-                        <?php 
-                        $prog = min(100, (($userSeasonProgress['current_xp'] ?? 0) / 1000) * 100); 
-                        ?>
-                        <div class="seasonal-bar-fill" style="width: <?= $prog ?>%; background: <?= $activeSeason['theme_color'] ?>; box-shadow: 0 0 10px <?= $activeSeason['theme_color'] ?>;"></div>
-                    </div>
-                    <a href="seasonal_pass.php" style="display:block; margin-top:10px; text-align:center; color:<?= $activeSeason['theme_color'] ?>; font-size:11px; font-weight:800; text-decoration:none;">VIEW PASS →</a>
-                </div>
-                <?php endif; ?>
             </div>
 
             <!-- Dashboard Menu Grid -->
@@ -3587,6 +3423,11 @@ if ($activeSeason) {
                     <span class="game-icon">👑</span>
                     <span class="game-name">Xì Dách Royale</span>
                 </a>
+                <a href="games/blackjack_multi.php" class="game-card" data-category="card">
+                    <span class="game-badge badge-new">Multi</span>
+                    <span class="game-icon">👥</span>
+                    <span class="game-name">Xì Dách Multiplayer</span>
+                </a>
                 <a href="games/bjo.php" class="game-card" data-category="card">
                     <span class="game-icon">👑</span>
                     <span class="game-name">Bj Cũ</span>
@@ -3655,10 +3496,10 @@ if ($activeSeason) {
                     <span class="game-icon">🎫</span>
                     <span class="game-name">Xổ Số Cộng Đồng</span>
                 </a>
-                <a href="events_spin.php" class="game-card" data-category="slots">
-                    <span class="game-badge badge-hot">Event</span>
+                <a href="luckywheel_tet.php" class="game-card" data-category="slots">
+                    <span class="game-badge badge-hot">Hot</span>
                     <span class="game-icon">🧧</span>
-                    <span class="game-name">Vòng Quay Sự Kiện</span>
+                    <span class="game-name">Vòng Quay Tết</span>
                 </a>
                 <a href="games/roulette.php" class="game-card" data-category="slots">
                     <span class="game-icon">🎡</span>
@@ -3796,6 +3637,26 @@ if ($activeSeason) {
                     <span class="game-icon">💎</span>
                     <span class="game-name">Triệu Phú</span>
                 </a>
+                <a href="games/duangua.php" class="game-card" data-category="mini">
+                    <span class="game-badge badge-hot">Hot</span>
+                    <span class="game-icon">🐎</span>
+                    <span class="game-name">Đua Thú Premium</span>
+                </a>
+                <a href="games/jojo_battle.php" class="game-card" data-category="mini">
+                    <span class="game-badge badge-new">New</span>
+                    <span class="game-icon">👊</span>
+                    <span class="game-name">Đại Chiến JoJo</span>
+                </a>
+                <a href="games/horserace_pvp.php" class="game-card" data-category="mini">
+                    <span class="game-badge badge-new">PVP</span>
+                    <span class="game-icon">🐎</span>
+                    <span class="game-name">Đua Ngựa PVP</span>
+                </a>
+                <a href="guild_pro.php" class="game-card" data-category="mini">
+                    <span class="game-badge badge-hot">Hot</span>
+                    <span class="game-icon">🛡️</span>
+                    <span class="game-name">Bang Hội Pro</span>
+                </a>
                 <a href="games/hopmu.php" class="game-card" data-category="mini">
                     <span class="game-icon">🎁</span>
                     <span class="game-name">Hộp Mú</span>
@@ -3805,7 +3666,6 @@ if ($activeSeason) {
 
         <!-- Cột bảng xếp hạng -->
         <div class="ranking">
-            <?php include 'community_challenge_widget.php'; ?>
             <!-- Guild War Top Widget -->
             <div class="guild-war-widget" id="guildWarWidget">
                 <h2><i class="fa fa-shield-halved"></i> Top Bang Hội</h2>
@@ -4467,19 +4327,6 @@ if ($activeSeason) {
             updateJackpot();
             setInterval(updateJackpot, 5000);
 
-            // ── Event Notifications ────────────────────────────────
-            <?php if (isset($_SESSION['pending_notifications'])): ?>
-                const pendingNotifs = <?= json_encode($_SESSION['pending_notifications']) ?>;
-                pendingNotifs.forEach(notif => {
-                    setTimeout(() => {
-                        if (typeof showToast === 'function') {
-                            showToast(notif, 'success');
-                        }
-                    }, 1500);
-                });
-                <?php unset($_SESSION['pending_notifications']); ?>
-            <?php endif; ?>
-
             // ── Lottery Notification ──
             const lotteryDrawTime = new Date('<?= $todayDate ?> 20:00:00');
             setInterval(() => {
@@ -4494,186 +4341,6 @@ if ($activeSeason) {
             }, 60000);
         })();
     </script>
-
-<style>
-    /* ── Fortune Teller Button ── */
-    .fortune-teller-btn {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
-        padding: 8px 16px;
-        border-radius: 50px;
-        cursor: pointer;
-        font-weight: 600;
-        font-size: 14px;
-        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        box-shadow: 0 4px 15px rgba(118, 75, 162, 0.4);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .fortune-teller-btn:hover {
-        transform: translateY(-3px) scale(1.05);
-        box-shadow: 0 8px 25px rgba(118, 75, 162, 0.6);
-    }
-
-    .fortune-teller-btn::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
-        animation: rotateGlow 4s linear infinite;
-    }
-
-    @keyframes rotateGlow {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-    }
-
-    .fortune-icon {
-        font-size: 18px;
-        filter: drop-shadow(0 0 5px rgba(255,255,255,0.8));
-        animation: pulseIcon 2s infinite;
-    }
-
-    @keyframes pulseIcon {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.2); }
-    }
-
-    @media (max-width: 768px) {
-        .fortune-text { display: none; }
-        .fortune-teller-btn { padding: 8px 12px; }
-    }
-
-    /* ── Pet System Button ── */
-    .pet-system-btn {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        background: linear-gradient(135deg, #f59e0b, #d97706);
-        color: white;
-        padding: 8px 16px;
-        border-radius: 50px;
-        cursor: pointer;
-        font-weight: 600;
-        font-size: 14px;
-        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        box-shadow: 0 4px 15px rgba(217, 119, 6, 0.4);
-        text-decoration: none;
-    }
-
-    .pet-system-btn:hover {
-        transform: translateY(-3px) scale(1.05);
-        box-shadow: 0 8px 25px rgba(217, 119, 6, 0.6);
-    }
-
-    .pet-btn-icon {
-        font-size: 18px;
-        animation: pawMove 2s infinite;
-    }
-
-    @keyframes pawMove {
-        0%, 100% { transform: rotate(0deg); }
-        50% { transform: rotate(20deg); }
-    }
-
-    @media (max-width: 768px) {
-        .pet-btn-text { display: none; }
-        .pet-system-btn { padding: 8px 12px; }
-    }
-
-    /* ── Auction System Button ── */
-    .auction-system-btn {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        background: linear-gradient(135deg, #4f46e5, #7c3aed);
-        color: white;
-        padding: 8px 16px;
-        border-radius: 50px;
-        cursor: pointer;
-        font-weight: 600;
-        font-size: 14px;
-        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
-        text-decoration: none;
-    }
-
-    .auction-system-btn:hover {
-        transform: translateY(-3px) scale(1.05);
-        box-shadow: 0 8px 25px rgba(124, 58, 237, 0.6);
-    }
-
-    .auction-btn-icon {
-        font-size: 18px;
-        animation: hammerPound 1.5s infinite;
-    }
-
-    @keyframes hammerPound {
-        0%, 100% { transform: rotate(0deg); }
-        50% { transform: rotate(-30deg); }
-    }
-
-    @media (max-width: 768px) {
-        .auction-btn-text { display: none; }
-        .auction-system-btn { padding: 8px 12px; }
-    }
-</style>
-
-<script>
-function openFortuneModal() {
-    // Show loading state
-    Swal.fire({
-        title: 'Đang xin quẻ...',
-        html: '<div style="font-size: 40px; animation: rotateGlow 2s infinite;">🔮</div>',
-        showConfirmButton: false,
-        allowOutsideClick: false,
-        background: 'rgba(20, 10, 40, 0.95)',
-        color: '#fff',
-        didOpen: () => {
-            Swal.showLoading();
-        }
-    });
-
-    fetch('api_fortune.php')
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                const title = data.already_drawn ? 'Quẻ Hôm Nay Của Bạn' : 'Kết Quả Xin Quẻ';
-                Swal.fire({
-                    title: title,
-                    html: `
-                        <div style="padding: 20px; text-align: center;">
-                            <div style="font-size: 50px; margin-bottom: 15px;">📜</div>
-                            <p style="font-size: 18px; line-height: 1.6; color: #e0e0ff; font-style: italic;">
-                                "${data.fortune}"
-                            </p>
-                            <div style="margin-top: 25px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
-                                <span style="display: block; font-size: 12px; color: #aaa; text-transform: uppercase; letter-spacing: 1px;">Trò chơi may mắn hôm nay</span>
-                                <strong style="font-size: 20px; color: #fbbf24;">🍀 ${data.lucky_game}</strong>
-                            </div>
-                        </div>
-                    `,
-                    confirmButtonText: 'Đã Hiểu',
-                    confirmButtonColor: '#667eea',
-                    background: 'linear-gradient(to bottom, #1e1b4b, #312e81)',
-                    color: '#fff'
-                });
-            } else {
-                Swal.fire('Lỗi!', data.message, 'error');
-            }
-        })
-        .catch(error => {
-            Swal.fire('Lỗi!', 'Không thể kết nối tới máy chủ.', 'error');
-        });
-}
-</script>
 
 </body>
 

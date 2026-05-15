@@ -2,11 +2,10 @@
 session_start();
 require_once 'db_connect.php';
 require_once 'api_event_helper.php';
+require_once 'admin_helper.php';
 
-// Kiểm tra quyền admin (Giả sử có session Role hoặc Iduser = 1)
-if (!isset($_SESSION['Iduser']) || $_SESSION['Iduser'] != 1) {
-    die("Truy cập bị từ chối!");
-}
+$userId = $_SESSION['Iduser'] ?? 0;
+requireAdmin($conn, $userId);
 
 $action = $_GET['action'] ?? '';
 

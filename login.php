@@ -56,6 +56,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $_SESSION['Name'] = $row['Name'];
     $_SESSION['Role'] = $row['Role'];
+    if ($row['Role'] == 1) {
+        $_SESSION['admin'] = true;
+    }
 
     // Cập nhật streak + thưởng ngày + XP sau khi đăng nhập thành công
     $loginBonus = up_handle_successful_login($conn, (int)$row['Iduser']);
