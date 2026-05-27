@@ -6,6 +6,12 @@ if (!isset($_SESSION['Iduser'])) {
     exit();
 }
 
+// CSRF Token
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+$csrfToken = $_SESSION['csrf_token'];
+
 require 'db_connect.php';
 
 // Load theme
@@ -106,6 +112,11 @@ $messageType = '';
 
 // Xử lý cập nhật Role
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['update_role'])) {
+    // CSRF check
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        $message = '❌ Yêu cầu không hợp lệ (CSRF token mismatch)!';
+        $messageType = 'error';
+    } else {
     $targetUserId = (int) $_POST['user_id'];
     $newRole = (int) $_POST['role'];
 
@@ -137,7 +148,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['update_role'])) {
             }
         }
     }
-}
+    } // end CSRF else
+} // end POST check
 
 // Xử lý tìm kiếm
 $search = $_GET['search'] ?? '';
@@ -671,6 +683,7 @@ if ($stmt) {
                             <td>
                                 <form method="POST" class="form-inline"
                                     onsubmit="return confirm('Bạn có chắc muốn thay đổi vai trò của <?= htmlspecialchars($user['Name'], ENT_QUOTES, 'UTF-8') ?>?')">
+                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                                     <input type="hidden" name="user_id" value="<?= $user['Iduser'] ?>">
                                     <select name="role" class="role-select" required>
                                         <option value="0" <?= $user['Role'] == 0 ? 'selected' : '' ?>>👤 User</option>

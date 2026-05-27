@@ -12,8 +12,16 @@ if (isset($_GET['success'])) {
     if ($_GET['success'] === 'deleted') $msg = '🗑️ Đã xóa công thức thành công!';
 }
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+$csrfToken = $_SESSION['csrf_token'];
+
 // Xử lý hành động
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die("CSRF Token verification failed.");
+    }
     $action = $_POST['action'] ?? '';
     if ($action === 'add') {
         $name = $_POST['name'] ?? '';
@@ -113,6 +121,7 @@ $recipes = $conn->query("SELECT * FROM crafting_recipes ORDER BY id DESC")->fetc
         <div class="card">
             <h2>✨ Thêm Công Thức Mới</h2>
             <form action="" method="POST">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                 <input type="hidden" name="action" value="add">
                 <div class="form-grid">
                     <div>
@@ -201,6 +210,7 @@ $recipes = $conn->query("SELECT * FROM crafting_recipes ORDER BY id DESC")->fetc
                         </td>
                         <td>
                             <form action="" method="POST" style="display:inline;" onsubmit="return confirm('Xác nhận xóa công thức này?')">
+                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="id" value="<?= $r['id'] ?>">
                                 <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i></button>

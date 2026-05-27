@@ -1,9 +1,14 @@
 <?php
-session_start();
-require_once 'db_connect.php';
+$isDirectCall = (isset($_SERVER['SCRIPT_FILENAME']) && basename(__FILE__) == basename($_SERVER['SCRIPT_FILENAME']));
 
-$userId = $_SESSION['Iduser'] ?? 0;
-if (!$userId) exit(json_encode(['success' => false]));
+if ($isDirectCall) {
+    if (session_status() === PHP_SESSION_NONE) {
+        @session_start();
+    }
+    require_once 'db_connect.php';
+
+    $userId = $_SESSION['Iduser'] ?? 0;
+    if (!$userId) exit(json_encode(['success' => false]));
 
 // 1. Khởi tạo bảng thông báo
 $setup = "
@@ -49,6 +54,7 @@ switch ($action) {
         echo json_encode(['success' => true]);
         break;
 }
+} // End $isDirectCall check
 
 // Hàm helper để gửi thông báo (có thể gọi từ bất cứ đâu)
 function sendNotification(mysqli $conn, int $userId, string $title, string $message, string $type = 'system') {

@@ -36,6 +36,96 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message'])) {
         $stmt->bind_param("isssi", $userId, $username, $message, $avatar, $chatFrameValue);
         $stmt->execute();
         $stmt->close();
+
+        // --- INTERCEPT CHAT COMMANDS FOR RANDOM EVENTS ---
+        $lowerMsg = mb_strtolower($message);
+        if ($lowerMsg === '!nhận') {
+            // Kiểm tra có event money_rain nào đang hoạt động
+            $event = $conn->query("SELECT * FROM random_events WHERE event_type = 'money_rain' AND is_active = 1 AND ends_at > NOW() LIMIT 1")->fetch_assoc();
+            if ($event) {
+                $eventId = (int)$event['id'];
+                // Check if user already claimed
+                $check = $conn->query("SELECT id FROM random_event_participants WHERE event_id = $eventId AND user_id = $userId")->fetch_assoc();
+                if (!$check) {
+                    $config = json_decode($event['config'], true);
+                    $claimed = (int)$conn->query("SELECT COUNT(*) as c FROM random_event_participants WHERE event_id = $eventId")->fetch_assoc()['c'];
+                    if ($claimed < ($config['max_claims'] ?? 50)) {
+                        $reward = rand($config['min_reward'], $config['max_reward']);
+                        $conn->begin_transaction();
+                        try {
+                            $conn->query("UPDATE users SET Money = Money + $reward WHERE Iduser = $userId");
+                            $ins = $conn->prepare("INSERT INTO random_event_participants (event_id, user_id, reward_given, reward_amount) VALUES (?, ?, 1, ?)");
+                            $ins->bind_param("iii", $eventId, $userId, $reward);
+                            $ins->execute();
+                            $ins->close();
+                            $conn->commit();
+
+                            // Gửi thông báo Hệ thống lên Chat thế giới
+                            $sysMsg = "🎉 Chúc mừng @{$username} đã gõ !nhận và húp thành công " . number_format($reward) . " GTLM từ Cơn Mưa GTLM!";
+                            $sysMsg = VocabularyHelper::mask($sysMsg);
+                            $sysId = 0;
+                            $sysName = 'Hệ Thống';
+                            $sysAvatar = 'https://cdn-icons-png.flaticon.com/512/1041/1041044.png';
+                            $msgStmt = $conn->prepare("INSERT INTO chat_messages (user_id, username, message, avatar, created_at) VALUES (?, ?, ?, ?, NOW())");
+                            $msgStmt->bind_param("isss", $sysId, $sysName, $sysMsg, $sysAvatar);
+                            $msgStmt->execute();
+                            $msgStmt->close();
+                        } catch (Exception $e) {
+                            $conn->rollback();
+                        }
+                    }
+                }
+            }
+        } elseif (preg_match('/^!đoán\s+(\d+)$/ui', $message, $matches)) {
+            $guess = (int)$matches[1];
+            // Kiểm tra có event lucky_number nào đang hoạt động
+            $event = $conn->query("SELECT * FROM random_events WHERE event_type = 'lucky_number' AND is_active = 1 AND ends_at > NOW() LIMIT 1")->fetch_assoc();
+            if ($event) {
+                $eventId = (int)$event['id'];
+                $config = json_decode($event['config'], true);
+                $range = (int)($config['number_range'] ?? 10);
+                if ($guess >= 1 && $guess <= $range) {
+                    // Check if already participated
+                    $check = $conn->query("SELECT id FROM random_event_participants WHERE event_id = $eventId AND user_id = $userId")->fetch_assoc();
+                    if (!$check) {
+                        $luckyNumber = $config['lucky_number'] ?? ((($eventId * 7 + 13) % $range) + 1);
+                        $winners = (int)$conn->query("SELECT COUNT(*) as c FROM random_event_participants WHERE event_id = $eventId AND reward_given = 1")->fetch_assoc()['c'];
+                        $isWin = ($guess === $luckyNumber) && ($winners < ($config['max_winners'] ?? 5));
+                        $reward = $isWin ? (int)$config['reward'] : 0;
+
+                        $conn->begin_transaction();
+                        try {
+                            if ($isWin) {
+                                $conn->query("UPDATE users SET Money = Money + $reward WHERE Iduser = $userId");
+                            }
+                            $ins = $conn->prepare("INSERT INTO random_event_participants (event_id, user_id, reward_given, reward_amount) VALUES (?, ?, ?, ?)");
+                            $given = $isWin ? 1 : 0;
+                            $ins->bind_param("iiii", $eventId, $userId, $given, $reward);
+                            $ins->execute();
+                            $ins->close();
+                            $conn->commit();
+
+                            // Gửi thông báo Hệ thống lên Chat thế giới
+                            if ($isWin) {
+                                $sysMsg = "🎉 Chúc mừng @{$username} đã đoán chính xác con số may mắn {$luckyNumber} và húp trọn " . number_format($reward) . " GTLM!";
+                            } else {
+                                $sysMsg = "❌ @{$username} đã đoán số {$guess} nhưng không chính xác! Số may mắn của vòng này là {$luckyNumber}.";
+                            }
+                            $sysMsg = VocabularyHelper::mask($sysMsg);
+                            $sysId = 0;
+                            $sysName = 'Hệ Thống';
+                            $sysAvatar = 'https://cdn-icons-png.flaticon.com/512/1041/1041044.png';
+                            $msgStmt = $conn->prepare("INSERT INTO chat_messages (user_id, username, message, avatar, created_at) VALUES (?, ?, ?, ?, NOW())");
+                            $msgStmt->bind_param("isss", $sysId, $sysName, $sysMsg, $sysAvatar);
+                            $msgStmt->execute();
+                            $msgStmt->close();
+                        } catch (Exception $e) {
+                            $conn->rollback();
+                        }
+                    }
+                }
+            }
+        }
     }
     exit;
 }

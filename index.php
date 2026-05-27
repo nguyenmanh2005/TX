@@ -7,10 +7,13 @@ if (!isset($_SESSION['Iduser'])) {
     exit();
 }
 
-// Kết nối tới database
 require 'db_connect.php';
 require_once 'user_progress_helper.php';
 require_once 'referral_helper.php';
+require_once 'api_event_helper.php';
+
+// Kiểm tra và kích hoạt ngẫu nhiên Flash Event chớp nhoáng (tối đa 2 lần/ngày)
+EventHelper::checkOrTriggerFlashEvent($conn);
 
 // Kiểm tra kết nối database
 if (!$conn || $conn->connect_error) {
@@ -3021,6 +3024,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
             <div class="dropdown-menu">
                 <a href="in4.php"><i class="fa-solid fa-user icon"></i> Hồ sơ</a>
                 <?php if (isset($user['Role']) && $user['Role'] == 1): ?>
+                    <a href="admin_advanced_center.php"><i class="fa-solid fa-shield-halved icon"></i> Master Trận Địa</a>
                     <a href="admin_analytics.php"><i class="fa-solid fa-chart-line icon"></i> Thống Kê Website</a>
                     <a href="bot/index.php"><i class="fa-solid fa-robot icon"></i> Quản Lý Bot Army</a>
                 <?php endif; ?>
@@ -3302,6 +3306,61 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                 <?php endif; ?>
             </div>
 
+            <!-- ⚡ FLASH EVENT SURPRISE BANNER -->
+            <?php
+            $flashMultiplier = EventHelper::getActiveFlashMultiplier($conn);
+            if ($flashMultiplier > 1.00):
+            ?>
+            <div class="flash-event-banner" style="background: linear-gradient(135deg, #ef4444 0%, #f59e0b 50%, #facc15 100%); padding: 16px 20px; border-radius: 16px; text-align: center; color: white; margin: 15px 0; box-shadow: 0 0 25px rgba(239, 68, 68, 0.45); font-weight: 800; border: 2px solid #fff; position: relative; overflow: hidden; animation: pulse 1.5s infinite alternate;">
+                <div style="font-size: 15px; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <i class="fa fa-bolt" style="font-size: 20px; color: #fff; text-shadow: 0 0 10px #facc15;"></i>
+                    <span>Sự Kiện Chớp Nhoáng (x2 Multiplier) đang nổ ra!</span>
+                </div>
+                <div style="font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.9); margin-top: 4px;">
+                    Tất cả phần thưởng GTLM nhận được sẽ nhân đôi! Mau ra chiêu!
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- 📖 STORYLINE EVENT SHORTCUT BANNER -->
+            <a href="storyline_event.php" style="display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #1e1b4b 0%, #311042 100%); border: 1.5px solid rgba(139, 92, 246, 0.4); border-radius: 16px; padding: 15px 20px; text-decoration: none; margin: 15px 0; transition: all 0.3s; box-shadow: 0 8px 25px rgba(139, 92, 246, 0.2); position: relative; overflow: hidden;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span style="font-size: 28px;">📖</span>
+                    <div style="text-align: left;">
+                        <span style="font-weight: 800; color: #c084fc; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; display: block;">Event Cốt Truyện</span>
+                        <span style="font-size: 12px; color: #cbd5e1; margin-top: 2px; display: block;">Vượt ải mỗi ngày - Nhận GTLM cực khủng</span>
+                    </div>
+                </div>
+                <span style="background: #a855f7; color: white; padding: 5px 15px; border-radius: 20px; font-size: 11px; font-weight: 800; box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);">THAM GIA</span>
+            </a>
+
+            <!-- 👥 COMMUNITY GOAL PROGRESS CARD -->
+            <?php
+            $today = date('Y-m-d');
+            $goalRes = $conn->query("SELECT * FROM community_goals WHERE goal_date = '$today' LIMIT 1");
+            $goal = $goalRes ? $goalRes->fetch_assoc() : null;
+            $targetVal = $goal ? (int)$goal['target_value'] : 1000000;
+            $currentVal = $goal ? (int)$goal['current_value'] : 0;
+            $pct = min(100, round(($currentVal / $targetVal) * 100, 2));
+            ?>
+            <div style="background: rgba(30, 41, 59, 0.65); backdrop-filter: blur(12px); border: 1.5px solid rgba(255,255,255,0.08); padding: 18px 20px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); margin: 15px 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <span style="font-weight: 800; color: #fbbf24; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;"><i class="fa fa-users"></i> Mục Tiêu Cộng Đồng</span>
+                    <span style="font-size: 12px; color: #94a3b8; font-weight: 700;"><?= number_format($currentVal) ?> / <?= number_format($targetVal) ?> cược</span>
+                </div>
+                <div style="background: rgba(0,0,0,0.4); height: 18px; border-radius: 9px; overflow: hidden; position: relative; border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="width: <?= $pct ?>%; height: 100%; background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899); transition: width 1s ease-in-out; border-radius: 9px; position: relative;">
+                        <div style="position: absolute; top:0; left:0; right:0; bottom:0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent); animation: shimmer 2s infinite;"></div>
+                    </div>
+                    <div style="position: absolute; width: 100%; text-align: center; top:0; line-height: 16px; font-size: 10px; font-weight: 900; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.85);">
+                        <?= $pct ?>% Hoàn Thành
+                    </div>
+                </div>
+                <p style="font-size: 12px; color: #94a3b8; margin: 10px 0 0; text-align: center; line-height: 1.4;">
+                    🎯 Cả server chung tay đạt 1.000.000 cược hôm nay để **NHÂN ĐÔI tỉ lệ trúng Jackpot** toàn server!
+                </p>
+            </div>
+
             <?php if (!empty($referralCode)): ?>
                 <div
                     style="background: rgba(255, 255, 255, 0.95); padding: 15px; border-radius: var(--border-radius-lg); margin: 20px 0; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
@@ -3404,6 +3463,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                 <button class="tab-btn" data-category="card">Game Bài</button>
                 <button class="tab-btn" data-category="slots">Slots & Quay Số</button>
                 <button class="tab-btn" data-category="mini">Mini Games</button>
+                <button class="tab-btn" data-category="social">Sư Đồ & Bang Hội</button>
             </div>
 
             <div class="game-grid-modern">
@@ -3661,6 +3721,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                     <span class="game-icon">🎁</span>
                     <span class="game-name">Hộp Mú</span>
                 </a>
+                
+                <!-- Social, Mentor and Guild Tournament Cards -->
+                <a href="social_feed.php" class="game-card" data-category="social">
+                    <span class="game-badge badge-hot">Feed</span>
+                    <span class="game-icon">📱</span>
+                    <span class="game-name">Bảng Tin & Tương Tác</span>
+                </a>
+                <a href="mentor_center.php" class="game-card" data-category="social">
+                    <span class="game-badge badge-new">🤝</span>
+                    <span class="game-icon">🤝</span>
+                    <span class="game-name">Trung Tâm Sư Đồ</span>
+                </a>
+                <a href="guild_tournament.php" class="game-card" data-category="social">
+                    <span class="game-badge badge-hot">GvG</span>
+                    <span class="game-icon">🏆</span>
+                    <span class="game-name">Đại Chiến Bang Hội</span>
+                </a>
             </div>
         </div>
 
@@ -3800,6 +3877,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                 <div class="quick-link-title">Thử Thách Tuần</div>
                 <div class="quick-link-desc">Hoàn thành nhiệm vụ tuần để nhận thưởng lớn</div>
             </a>
+            <a href="events.php" class="quick-link-card" style="border-left: 4px solid #f97316;">
+                <span class="quick-link-icon">🎪</span>
+                <div class="quick-link-title">Đại Sảnh Sự Kiện</div>
+                <div class="quick-link-desc">Tổng hợp mọi sự kiện, phần thưởng, nhiệm vụ</div>
+            </a>
             <a href="battle_pass.php" class="quick-link-card" style="border-left: 4px solid #4facfe;">
                 <span class="quick-link-icon">⭐</span>
                 <div class="quick-link-title">Battle Pass</div>
@@ -3809,6 +3891,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                 <span class="quick-link-icon">🐲</span>
                 <div class="quick-link-title">Boss Thế Giới</div>
                 <div class="quick-link-desc">Hợp sức tiêu diệt Hắc Long Thần</div>
+            </a>
+            <a href="oracle_prophecy.php" class="quick-link-card" style="border-left: 4px solid #8b5cf6;">
+                <span class="quick-link-icon">🔮</span>
+                <div class="quick-link-title">Lời Tiên Tri</div>
+                <div class="quick-link-desc">Gửi thông điệp, bình chọn sự kiện hàng tuần</div>
+            </a>
+            <a href="server_history.php" class="quick-link-card" style="border-left: 4px solid #10b981;">
+                <span class="quick-link-icon">📜</span>
+                <div class="quick-link-title">Biên Niên Sử</div>
+                <div class="quick-link-desc">Lịch sử hào hùng và các sự kiện đáng nhớ của Server</div>
+            </a>
+            <a href="hall_of_fame.php" class="quick-link-card" style="border-left: 4px solid #fbbf24;">
+                <span class="quick-link-icon">🏆</span>
+                <div class="quick-link-title">Đại Lộ Danh Vọng</div>
+                <div class="quick-link-desc">Tôn vinh những huyền thoại xuất chúng nhất</div>
             </a>
             <a href="daily_challenges.php" class="quick-link-card">
                 <span class="quick-link-icon">🎯</span>
@@ -4340,8 +4437,321 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                 }
             }, 60000);
         })();
+
+        // 🎣 CLIFFHANGER: Hiện gợi ý khi người dùng chuẩn bị rời đi
+        window.addEventListener('beforeunload', function (e) {
+            // Chỉ hiện nếu là người dùng thật và có GTLM
+            const money = parseInt(document.querySelector('.user-money')?.textContent.replace(/,/g, '') || 0);
+            if (money > 0 && Math.random() < 0.3) {
+                // Hầu hết trình duyệt hiện đại sẽ hiển thị thông báo mặc định,
+                // nhưng ta có thể dùng một custom modal nếu họ ở lại lâu hơn hoặc quay lại.
+                console.log("Cliffhanger triggered: Jackpot x3 at 8PM!");
+            }
+        });
+
+        // 🐾 OFFLINE REWARDS: Kiểm tra và nhắc nhở nhận quà từ Pet
+        async function checkPetRewards() {
+            try {
+                const res = await fetch('api_pets.php');
+                const data = await res.json();
+                if (data.collected > 1000) {
+                    Swal.fire({
+                        title: '🎁 Linh Thú Mang Quà Về!',
+                        text: `Linh thú của bạn đã nhặt được ${data.collected.toLocaleString()} GTLM trong lúc bạn offline!`,
+                        imageUrl: 'https://cdn-icons-png.flaticon.com/512/616/616408.png',
+                        imageWidth: 100,
+                        confirmButtonText: 'NHẬN NGAY 🔥',
+                        confirmButtonColor: '#6366f1'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            fetch('api_pets.php?action=claim')
+                            .then(() => location.reload());
+                        }
+                    });
+                }
+            } catch(e) {}
+        }
+        // ⚔️ PVP CHALLENGE LISTENER: Kiểm tra lệnh thách đấu
+        async function checkPvPChallenges() {
+            try {
+                const res = await fetch('api_pvp_check.php');
+                const data = await res.json();
+                if (data.has_challenge) {
+                    Swal.fire({
+                        title: '⚔️ LỆNH TRUY SOÁT!',
+                        html: `<div style="color:#ef4444; font-weight:900;">${data.challenger_name}</div> đang thách đấu bạn mức cược <br><b style="color:#fbbf24; font-size:1.5em;">${data.bet} GTLM</b>!<br>Bạn có dám nhận lời?`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'XUẤT CHIẾN 🔥',
+                        cancelButtonText: 'BỎ QUA',
+                        confirmButtonColor: '#ef4444',
+                        cancelButtonColor: '#334155',
+                        allowOutsideClick: false,
+                        backdrop: `rgba(239, 68, 68, 0.2)`
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = 'pvp_arena.php?id=' + data.challenge_id;
+                        }
+                    });
+                }
+            } catch(e) {}
+        }
+        setInterval(checkPvPChallenges, 8000);
     </script>
 
+    <!-- 🔮 NPC: Lão Tiên Tri GTLM UI -->
+    <style>
+        .oracle-bubble {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
+            z-index: 99999;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 3px solid rgba(255, 255, 255, 0.2);
+        }
+        .oracle-bubble:hover {
+            transform: scale(1.1) translateY(-5px);
+            box-shadow: 0 12px 35px rgba(99, 102, 241, 0.7);
+        }
+        .oracle-bubble .status-dot {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            width: 15px;
+            height: 15px;
+            background: #10b981;
+            border-radius: 50%;
+            border: 2px solid white;
+            animation: pulse-green 2s infinite;
+        }
+
+        .oracle-window {
+            position: fixed;
+            bottom: 110px;
+            left: 30px;
+            width: 350px;
+            height: 500px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            display: none;
+            flex-direction: column;
+            z-index: 99999;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            overflow: hidden;
+            animation: slideUp 0.4s ease-out;
+        }
+        .oracle-header {
+            background: linear-gradient(90deg, #6366f1, #a855f7);
+            padding: 15px 20px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .oracle-header h3 { margin: 0; font-size: 16px; display: flex; align-items: center; gap: 10px; }
+        .oracle-chat { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
+        .oracle-msg { padding: 10px 15px; border-radius: 15px; font-size: 14px; max-width: 85%; line-height: 1.5; }
+        .msg-ai { background: rgba(255,255,255,0.05); color: #e2e8f0; align-self: flex-start; border-bottom-left-radius: 2px; border: 1px solid rgba(255,255,255,0.05); }
+        .msg-user { background: #6366f1; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        
+        .oracle-input { padding: 15px; background: rgba(0,0,0,0.2); display: flex; gap: 10px; border-top: 1px solid rgba(255,255,255,0.05); }
+        .oracle-input input {
+            flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            padding: 10px 15px; border-radius: 10px; color: white; outline: none; font-size: 14px;
+        }
+        .oracle-input button {
+            background: #6366f1; border: none; color: white; width: 40px; height: 40px; border-radius: 10px; cursor: pointer;
+        }
+
+        .typing { font-style: italic; color: #94a3b8; font-size: 12px; margin-bottom: 5px; display: none; }
+
+        @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    </style>
+
+    <div class="oracle-bubble" id="oracleBubble" onclick="toggleOracle()" title="Hỏi Lão Tiên Tri GTLM">
+        🔮
+        <div class="status-dot"></div>
+    </div>
+
+    <div class="oracle-window" id="oracleWindow">
+        <div class="oracle-header">
+            <h3><span>🔮</span> Lão Tiên Tri GTLM</h3>
+            <span onclick="toggleOracle()" style="cursor:pointer; opacity:0.7">✕</span>
+        </div>
+        <div class="oracle-chat" id="oracleChat">
+            <div class="oracle-msg msg-ai">Chào tiểu tử! Hôm nay vận khí của ngươi thế nào? Có muốn lão phán cho một quẻ hay giải đáp luật chơi trận địa không?</div>
+        </div>
+        <div class="typing" id="oracleTyping" style="margin-left: 20px;">Lão đang bấm độn...</div>
+        <form class="oracle-input" onsubmit="sendToOracle(event)">
+            <input type="text" id="oracleInput" placeholder="Hỏi về xác suất, luật chơi, dự đoán..." autocomplete="off">
+            <button type="submit"><i class="fa fa-paper-plane"></i></button>
+        </form>
+    </div>
+
+    <script>
+        function toggleOracle() {
+            const win = document.getElementById('oracleWindow');
+            const isVisible = win.style.display === 'flex';
+            win.style.display = isVisible ? 'none' : 'flex';
+            if (!isVisible) {
+                document.getElementById('oracleInput').focus();
+            }
+        }
+
+        function sendToOracle(e) {
+            e.preventDefault();
+            const input = document.getElementById('oracleInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            appendMsg(text, 'user');
+            input.value = '';
+
+            const typing = document.getElementById('oracleTyping');
+            typing.style.display = 'block';
+
+            const formData = new FormData();
+            formData.append('question', text);
+
+            fetch('api_npc_oracle.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                typing.style.display = 'none';
+                if (data.success) {
+                    appendMsg(data.answer, 'ai');
+                }
+            })
+            .catch(() => {
+                typing.style.display = 'none';
+                appendMsg("Lão đang mệt, hãy quay lại sau ván giao lưu tới.", 'ai');
+            });
+        }
+
+        function appendMsg(text, type) {
+            const chat = document.getElementById('oracleChat');
+            const div = document.createElement('div');
+            div.className = `oracle-msg msg-${type}`;
+            div.textContent = text;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        // 🏆 SHARE WIN CARD: Hiển thị thẻ khoe chiến tích khi húp đậm
+        function showShareCard(amount, game) {
+            const modal = document.getElementById('shareWinModal');
+            document.getElementById('shareWinAmount').textContent = amount.toLocaleString();
+            document.getElementById('shareWinGame').textContent = game;
+            document.getElementById('shareWinTime').textContent = new Date().toLocaleTimeString();
+            
+            // Link ref thực tế (giả định dùng Iduser làm mã ref)
+            const userId = '<?= $_SESSION['Iduser'] ?>';
+            document.getElementById('shareRefLink').value = window.location.origin + window.location.pathname.replace('index.php', '') + 'register.php?ref=' + userId;
+            
+            modal.style.display = 'flex';
+        }
+
+        function closeShareCard() {
+            document.getElementById('shareWinModal').style.display = 'none';
+        }
+
+        function copyRefLink() {
+            const input = document.getElementById('shareRefLink');
+            input.select();
+            document.execCommand('copy');
+            Swal.fire({ title: 'Đã sao chép!', text: 'Gửi link này cho bạn bè để húp 1% hoa hồng lộc!', icon: 'success', timer: 2000, showConfirmButton: false });
+        }
+    </script>
+
+    <style>
+        .share-card-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+            display: none; align-items: center; justify-content: center; z-index: 100000;
+            animation: fadeIn 0.3s ease;
+        }
+        .share-card-content {
+            background: linear-gradient(135deg, #1e1b4b 0%, #020617 100%);
+            width: 380px; border-radius: 30px; border: 2px solid #fbbf24;
+            padding: 30px; position: relative; text-align: center;
+            box-shadow: 0 0 50px rgba(251, 191, 36, 0.3);
+        }
+        .badge-win {
+            background: #fbbf24; color: #000; font-weight: 900; padding: 5px 20px;
+            border-radius: 20px; font-size: 14px; letter-spacing: 2px;
+        }
+        .close-card {
+            position: absolute; top: 20px; right: 20px; background: none; border: none;
+            color: white; font-size: 20px; cursor: pointer; opacity: 0.5;
+        }
+        .share-card-body h2 {
+            font-size: 42px; font-weight: 900; margin: 20px 0 0 0; color: #fbbf24;
+            text-shadow: 0 0 20px rgba(251, 191, 36, 0.5);
+        }
+        .share-card-body p { color: #94a3b8; font-weight: 700; margin-bottom: 20px; }
+        .share-card-info { font-size: 12px; color: #64748b; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 10px; }
+        
+        .ref-link-box { margin-top: 30px; text-align: left; }
+        .ref-link-box small { color: #64748b; margin-bottom: 5px; display: block; }
+        .link-input { display: flex; gap: 10px; }
+        .link-input input {
+            flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            color: #fff; padding: 10px; border-radius: 10px; font-size: 11px;
+        }
+        .link-input button { background: #fbbf24; border: none; border-radius: 10px; width: 40px; cursor: pointer; }
+        
+        .btn-share-social {
+            margin-top: 20px; width: 100%; padding: 15px; border-radius: 15px; border: none;
+            background: #1877f2; color: white; font-weight: 800; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+
+    <div id="shareWinModal" class="share-card-overlay">
+        <div class="share-card-content">
+            <button class="close-card" onclick="closeShareCard()">✕</button>
+            <div class="share-card-header">
+                <span class="badge-win">CHIẾN TÍCH TRẬN ĐỊA</span>
+            </div>
+            <div class="share-card-body">
+                <h2 id="shareWinAmount">0</h2>
+                <p>GTLM ĐÃ VỀ KHO</p>
+                <div class="share-card-info">
+                    <span id="shareWinGame">Game Name</span> • <span id="shareWinTime">Time</span>
+                </div>
+            </div>
+            <div class="share-card-footer">
+                <div class="ref-link-box">
+                    <small>Mời bạn húp lộc, nhận 1% hoa hồng thụ động:</small>
+                    <div class="link-input">
+                        <input type="text" id="shareRefLink" readonly value="">
+                        <button onclick="copyRefLink()"><i class="fa fa-copy"></i></button>
+                    </div>
+                </div>
+                <button class="btn-share-social" onclick="Swal.fire('Tính năng đang mở!', 'Hệ thống đang kết nối tới API Facebook...', 'info')">
+                    <i class="fab fa-facebook"></i> KHOE LÊN FACEBOOK
+                </button>
+            </div>
+        </div>
+    </div>
+    <script src="assets/js/event_banner.js"></script>
 </body>
 
 

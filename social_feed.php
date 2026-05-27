@@ -85,8 +85,9 @@ while ($row = $result->fetch_assoc()) {
 }
 $stmt->close();
 
-// Lấy comments cho mỗi feed item
+// Lấy comments và reactions cho mỗi feed item
 foreach ($feedItems as &$item) {
+    // 1. Fetch Comments
     $sql = "SELECT sfc.*, u.Name, u.ImageURL
             FROM social_feed_comments sfc
             JOIN users u ON sfc.user_id = u.Iduser
@@ -100,6 +101,31 @@ foreach ($feedItems as &$item) {
     $item['comments'] = [];
     while ($comment = $result->fetch_assoc()) {
         $item['comments'][] = $comment;
+    }
+    $stmt->close();
+
+    // 2. Fetch Reactions
+    $item['reactions'] = [
+        'fire' => ['count' => 0, 'active' => false],
+        'cry' => ['count' => 0, 'active' => false],
+        'money' => ['count' => 0, 'active' => false],
+        'like' => ['count' => 0, 'active' => false]
+    ];
+    
+    $sql = "SELECT reaction_type, COUNT(*) as cnt,
+                  SUM(CASE WHEN user_id = ? THEN 1 ELSE 0 END) as my_react
+           FROM social_feed_reactions
+           WHERE feed_id = ?
+           GROUP BY reaction_type";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ii", $userId, $item['id']);
+    $stmt->execute();
+    $reactRes = $stmt->get_result();
+    while ($r = $reactRes->fetch_assoc()) {
+        $item['reactions'][$r['reaction_type']] = [
+            'count' => (int)$r['cnt'],
+            'active' => $r['my_react'] > 0
+        ];
     }
     $stmt->close();
 }
@@ -328,6 +354,50 @@ unset($item);
             font-weight: 600;
             cursor: pointer;
         }
+
+        .reaction-pill-btn {
+            background: rgba(0, 0, 0, 0.03);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 50px;
+            padding: 6px 15px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #4b5563;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        .reaction-pill-btn:hover {
+            transform: translateY(-2px);
+            background: rgba(102, 126, 234, 0.08);
+            border-color: rgba(102, 126, 234, 0.2);
+        }
+        .reaction-pill-btn.active {
+            background: rgba(102, 126, 234, 0.15) !important;
+            border-color: rgba(102, 126, 234, 0.4) !important;
+            color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+        .quick-comment-pill {
+            background: rgba(0, 0, 0, 0.02);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 12px;
+            padding: 5px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #4b5563;
+            white-space: nowrap;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .quick-comment-pill:hover {
+            background: rgba(102, 126, 234, 0.08);
+            color: #667eea;
+            border-color: rgba(102, 126, 234, 0.2);
+            transform: scale(1.02);
+        }
         
         .empty-state {
             text-align: center;
@@ -421,6 +491,31 @@ unset($item);
                             <span><?= $item['comments_count'] ?></span>
                         </button>
                     </div>
+
+                    <!-- Emoji Reactions Bar -->
+                    <div class="feed-reactions-row" style="display: flex; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(0,0,0,0.08);">
+                        <button class="reaction-pill-btn fire-btn <?= $item['reactions']['fire']['active'] ? 'active' : '' ?>" onclick="toggleReaction(<?= $item['id'] ?>, 'fire')">
+                            🔥 <span class="badge"><?= $item['reactions']['fire']['count'] ?></span>
+                        </button>
+                        <button class="reaction-pill-btn cry-btn <?= $item['reactions']['cry']['active'] ? 'active' : '' ?>" onclick="toggleReaction(<?= $item['id'] ?>, 'cry')">
+                            😭 <span class="badge"><?= $item['reactions']['cry']['count'] ?></span>
+                        </button>
+                        <button class="reaction-pill-btn money-btn <?= $item['reactions']['money']['active'] ? 'active' : '' ?>" onclick="toggleReaction(<?= $item['id'] ?>, 'money')">
+                            💰 <span class="badge"><?= $item['reactions']['money']['count'] ?></span>
+                        </button>
+                        <button class="reaction-pill-btn like-btn <?= $item['reactions']['like']['active'] ? 'active' : '' ?>" onclick="toggleReaction(<?= $item['id'] ?>, 'like')">
+                            ❤️ <span class="badge"><?= $item['reactions']['like']['count'] ?></span>
+                        </button>
+                    </div>
+
+                    <!-- Quick Comments Suggested Pills -->
+                    <div class="quick-comments-row" style="display: flex; gap: 8px; margin: 15px 0 10px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; align-items: center;">
+                        <span style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 5px; white-space: nowrap;">Bình luận nhanh:</span>
+                        <button class="quick-comment-pill" onclick="postQuickComment(<?= $item['id'] ?>, 'Húp căng thế! 🔥')">Húp căng thế! 🔥</button>
+                        <button class="quick-comment-pill" onclick="postQuickComment(<?= $item['id'] ?>, 'Chia lộc đi idol! 💰')">Chia lộc đi idol! 💰</button>
+                        <button class="quick-comment-pill" onclick="postQuickComment(<?= $item['id'] ?>, 'Khóc cùng idol... 😭')">Khóc cùng idol... 😭</button>
+                        <button class="quick-comment-pill" onclick="postQuickComment(<?= $item['id'] ?>, 'Đỉnh chóp! 🏆')">Đỉnh chóp! 🏆</button>
+                    </div>
                     
                     <div class="comments-section" id="comments-<?= $item['id'] ?>" style="display: none;">
                         <?php if (!empty($item['comments'])): ?>
@@ -511,6 +606,54 @@ unset($item);
                 success: function(response) {
                     if (response.status === 'success') {
                         input.value = '';
+                        location.reload();
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Lỗi!',
+                            text: response.message
+                        });
+                    }
+                }
+            });
+        }
+
+        function toggleReaction(feedId, reactionType) {
+            $.ajax({
+                url: 'api_social_feed.php',
+                method: 'POST',
+                data: {
+                    action: 'toggle_reaction',
+                    feed_id: feedId,
+                    reaction_type: reactionType
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        location.reload();
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Lỗi!',
+                            text: response.message
+                        });
+                    }
+                }
+            });
+        }
+
+        function postQuickComment(feedId, commentText) {
+            $.ajax({
+                url: 'api_social_feed.php',
+                method: 'POST',
+                data: {
+                    action: 'add_comment',
+                    feed_id: feedId,
+                    comment_text: commentText
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
                         location.reload();
                     } else {
                         Swal.fire({

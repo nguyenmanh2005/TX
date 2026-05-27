@@ -6,6 +6,12 @@ if (!isset($_SESSION['Iduser'])) {
     exit();
 }
 
+// CSRF Token
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+$csrfToken = $_SESSION['csrf_token'];
+
 require 'db_connect.php';
 
 // Load theme
@@ -30,6 +36,10 @@ $messageType = '';
 
 // Xử lý xóa chat frame
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_chat_frame'])) {
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        $message = '❌ Yêu cầu không hợp lệ (CSRF)!';
+        $messageType = 'error';
+    } else {
     $frameId = (int) $_POST['chat_frame_id'];
     $deleteSql = "DELETE FROM chat_frames WHERE id = ?";
     $deleteStmt = $conn->prepare($deleteSql);
@@ -44,10 +54,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_chat_frame']))
         }
         $deleteStmt->close();
     }
+    } // end CSRF check
 }
 
 // Xử lý xóa avatar frame
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_avatar_frame'])) {
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        $message = '❌ Yêu cầu không hợp lệ (CSRF)!';
+        $messageType = 'error';
+    } else {
     $frameId = (int) $_POST['avatar_frame_id'];
     $deleteSql = "DELETE FROM avatar_frames WHERE id = ?";
     $deleteStmt = $conn->prepare($deleteSql);
@@ -62,6 +77,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_avatar_frame']
         }
         $deleteStmt->close();
     }
+    } // end CSRF check
 }
 
 // Lấy danh sách chat frames
@@ -456,6 +472,7 @@ if ($avatarFramesResult) {
                                 <a href="admin_edit_frame.php?type=chat&id=<?= $frame['id'] ?>" class="btn-edit">✏️ Sửa</a>
                                 <form method="POST" style="display: inline; flex: 1;"
                                     onsubmit="return confirm('Bạn có chắc muốn xóa khung chat này?');">
+                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                                     <input type="hidden" name="chat_frame_id" value="<?= $frame['id'] ?>">
                                     <button type="submit" name="delete_chat_frame" class="btn-delete">🗑️ Xóa</button>
                                 </form>
@@ -498,6 +515,7 @@ if ($avatarFramesResult) {
                                 <a href="admin_edit_frame.php?type=avatar&id=<?= $frame['id'] ?>" class="btn-edit">✏️ Sửa</a>
                                 <form method="POST" style="display: inline; flex: 1;"
                                     onsubmit="return confirm('Bạn có chắc muốn xóa khung avatar này?');">
+                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                                     <input type="hidden" name="avatar_frame_id" value="<?= $frame['id'] ?>">
                                     <button type="submit" name="delete_avatar_frame" class="btn-delete">🗑️ Xóa</button>
                                 </form>

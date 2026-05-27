@@ -1,6 +1,11 @@
 <?php
-session_start();
-require_once 'db_connect.php';
+$isDirectCall = (isset($_SERVER['SCRIPT_FILENAME']) && basename(__FILE__) == basename($_SERVER['SCRIPT_FILENAME']));
+
+if ($isDirectCall) {
+    if (session_status() === PHP_SESSION_NONE) {
+        @session_start();
+    }
+    require_once 'db_connect.php';
 
 // 1. Khởi tạo Database Jackpot
 $sql = "CREATE TABLE IF NOT EXISTS global_jackpot (
@@ -26,11 +31,18 @@ switch ($action) {
         echo json_encode(['success' => true, 'amount' => $jackpot['amount'], 'last_winner' => $jackpot['winner_name'], 'last_amount' => $jackpot['last_win_amount']]);
         break;
 }
+} // End $isDirectCall check
 
 // Hàm để cộng  Gtlm vào hũ (gọi từ game_history_helper)
 function contributeToJackpot(mysqli $conn, float $betAmount) {
+    if ($betAmount <= 0) return;
     $contribution = $betAmount * 0.001; // 0.1% mỗi lượt cược
-    $conn->query("UPDATE global_jackpot SET amount = amount + $contribution WHERE id = 1");
+    
+    // FIX: Prepared statement + GREATEST(0) để tránh lỗi số âm hoặc race condition
+    $stmt = $conn->prepare("UPDATE global_jackpot SET amount = GREATEST(0, amount + ?) WHERE id = 1");
+    $stmt->bind_param("d", $contribution);
+    $stmt->execute();
+    $stmt->close();
 }
 
 // Hàm để kiểm tra nổ hũ (Ví dụ: tỉ lệ 1/10,000)

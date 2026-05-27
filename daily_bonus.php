@@ -147,7 +147,7 @@ $stmt->close();
     <title>Daily Bonus</title>
     <link rel="stylesheet" href="assets/css/main.css">
     <link rel="stylesheet" href="assets/css/components.css">
-    <link rel="stylesheet" href="assets/css/game-ui-enhanced.css">
+    <link rel="stylesheet" href="assets/css/game-ui-enhancements.css">
     <link rel="stylesheet" href="assets/css/daily-bonus.css">
     <style>
         body {

@@ -188,6 +188,14 @@ Khi nhận yêu cầu, **phải xác nhận** các điểm sau nếu chưa rõ:
 - API trả về JSON phải set header: `header('Content-Type: application/json; charset=utf-8');`
 - Dùng prepared statements (`$conn->prepare(...)`) cho mọi query có input từ user — không bao giờ nối string trực tiếp vào SQL.
 
+## 8. ⚡ Khi làm xong phải viết vào file Công-Việc-Phát-Triển.
+
+- Tạo file với tên file là ngày + tháng 
+- trong file .md sẽ ghi các thứ đã làm được trong ngày ghi rõ ràng
+- Nếu hôm đó làm nhiều việc 1 lúc thì ghi theo số thứ tự tăng dần không được ghi đè lên những cái cũ đã viết 
+
+
+
 ---
 
 *Rules này được xây dựng từ codebase thực tế — cập nhật khi có pattern mới.*

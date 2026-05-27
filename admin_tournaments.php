@@ -6,6 +6,12 @@ require 'admin_helper.php';
 $userId = $_SESSION['Iduser'] ?? 0;
 requireAdmin($conn, $userId);
 
+// CSRF Token
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+$csrfToken = $_SESSION['csrf_token'];
+
 $msg = '';
 if (isset($_GET['msg'])) {
     if ($_GET['msg'] === 'started') $msg = '🚀 Giải đấu đã bắt đầu!';
@@ -14,39 +20,64 @@ if (isset($_GET['msg'])) {
 
 // Xử lý hành động
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // CSRF check
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die('❌ Yêu cầu không hợp lệ (CSRF)!');
+    }
+
     $action = $_POST['action'] ?? '';
     $tourId = (int)($_POST['id'] ?? 0);
 
     if ($action === 'start') {
-        $conn->query("UPDATE tournaments SET status = 'Ongoing', start_time = NOW() WHERE id = $tourId");
+        $stmt = $conn->prepare("UPDATE tournaments SET status = 'Ongoing', start_time = NOW() WHERE id = ?");
+        $stmt->bind_param("i", $tourId);
+        $stmt->execute();
+        $stmt->close();
         header("Location: admin_tournaments.php?msg=started");
         exit;
     } elseif ($action === 'end') {
         $conn->begin_transaction();
         try {
             // 1. Lấy thông tin giải đấu
-            $tour = $conn->query("SELECT * FROM tournaments WHERE id = $tourId")->fetch_assoc();
+            $stmtTour = $conn->prepare("SELECT * FROM tournaments WHERE id = ?");
+            $stmtTour->bind_param("i", $tourId);
+            $stmtTour->execute();
+            $tour = $stmtTour->get_result()->fetch_assoc();
+            $stmtTour->close();
             $prizePool = $tour['prize_pool'];
 
             // 2. Lấy Top 3 người chơi có điểm cao nhất
-            $scores = $conn->query("SELECT user_id, score FROM tournament_scores WHERE tournament_id = $tourId ORDER BY score DESC LIMIT 3")->fetch_all(MYSQLI_ASSOC);
+            $stmtScores = $conn->prepare("SELECT user_id, score FROM tournament_scores WHERE tournament_id = ? ORDER BY score DESC LIMIT 3");
+            $stmtScores->bind_param("i", $tourId);
+            $stmtScores->execute();
+            $scores = $stmtScores->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmtScores->close();
 
             $ratios = [0.5, 0.3, 0.2]; // 50%, 30%, 20%
             foreach ($scores as $index => $s) {
                 if (!isset($ratios[$index])) break;
                 $reward = $prizePool * $ratios[$index];
-                $uId = $s['user_id'];
+                $uId = (int)$s['user_id'];
                 
                 // Trao thưởng
-                $conn->query("UPDATE users SET Money = Money + $reward WHERE Iduser = $uId");
+                $stmtReward = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
+                $stmtReward->bind_param("di", $reward, $uId);
+                $stmtReward->execute();
+                $stmtReward->close();
                 
                 // Ghi log thắng giải
                 $winMsg = "Chúc mừng! Bạn đã đạt Top " . ($index + 1) . " trong giải đấu {$tour['name']} và nhận được " . number_format($reward) . " GTLM!";
-                $conn->query("INSERT INTO chat_messages (user_id, username, message, avatar) VALUES (0, 'Hệ Thống', '$winMsg', 'https://cdn-icons-png.flaticon.com/512/1041/1041044.png')");
+                $stmtChat = $conn->prepare("INSERT INTO chat_messages (user_id, username, message, avatar) VALUES (0, 'Hệ Thống', ?, 'https://cdn-icons-png.flaticon.com/512/1041/1041044.png')");
+                $stmtChat->bind_param("s", $winMsg);
+                $stmtChat->execute();
+                $stmtChat->close();
             }
 
             // 3. Cập nhật trạng thái
-            $conn->query("UPDATE tournaments SET status = 'Finished', end_time = NOW() WHERE id = $tourId");
+            $stmtFinish = $conn->prepare("UPDATE tournaments SET status = 'Finished', end_time = NOW() WHERE id = ?");
+            $stmtFinish->bind_param("i", $tourId);
+            $stmtFinish->execute();
+            $stmtFinish->close();
             
             $conn->commit();
             header("Location: admin_tournaments.php?msg=ended");
@@ -123,15 +154,17 @@ $tournaments = $conn->query("SELECT t.*, (SELECT COUNT(*) FROM tournament_partic
                         <td>
                             <?php if ($t['status'] === 'Pending'): ?>
                                 <form method="POST" style="display:inline;">
+                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                                     <input type="hidden" name="action" value="start">
                                     <input type="hidden" name="id" value="<?= $t['id'] ?>">
                                     <button class="btn btn-start"><i class="fas fa-play"></i> Bắt Đầu</button>
                                 </form>
                             <?php elseif ($t['status'] === 'Ongoing'): ?>
                                 <form method="POST" style="display:inline;">
+                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                                     <input type="hidden" name="action" value="end">
                                     <input type="hidden" name="id" value="<?= $t['id'] ?>">
-                                    <button class="btn btn-end"><i class="fas fa-stop"></i> Kết Thúc & Trao Giải</button>
+                                    <button class="btn btn-end"><i class="fas fa-stop"></i> Kết Thúc &amp; Trao Giải</button>
                                 </form>
                             <?php else: ?>
                                 <span style="color: #64748b; font-size: 12px;">Đã hoàn thành</span>

@@ -5,13 +5,14 @@
  */
 
 /**
- * Cộng điểm Guild War khi thành viên thắng game
+ * Cộng điểm Guild War và Lãnh thổ khi thành viên thắng game
  * @param mysqli $conn
  * @param int $userId
  * @param float $winAmount
  * @param float $betAmount
+ * @param string $gameName
  */
-function updateGuildWarPoints(mysqli $conn, int $userId, float $winAmount, float $betAmount) {
+function updateGuildWarPoints(mysqli $conn, int $userId, float $winAmount, float $betAmount, string $gameName = '') {
     if ($winAmount <= $betAmount) return;
     
     // Tìm guild của user
@@ -64,6 +65,50 @@ function updateGuildWarPoints(mysqli $conn, int $userId, float $winAmount, float
     $challengeStmt->bind_param("ididii", $guildId, $profit, $guildId, $profit, $guildId, $guildId);
     $challengeStmt->execute();
     $challengeStmt->close();
+
+    // --- 🗺️ TERRITORY WAR LOGIC ---
+    if ($points > 0 && !empty($gameName)) {
+        $gameToTerritory = [
+            'Tài Xỉu' => 1, 'Thiên Thần Ác Quỷ' => 1, 'Xanh Đỏ Đối Kháng' => 1,
+            'Rồng Hổ' => 2, 'Poker Texas' => 2, 'Baccarat' => 2, 'Trận Địa Trắng Đỏ' => 2,
+            'Bầu Cua' => 3, 'Thế Giới Linh Thú' => 3,
+            'Đá Gà' => 4, 'Đua Ngựa' => 4, 'Đại Chiến Thần Kê' => 4
+        ];
+
+        $territoryId = 0;
+        foreach ($gameToTerritory as $g => $tid) {
+            if (stripos($gameName, $g) !== false) { $territoryId = $tid; break; }
+        }
+
+        if ($territoryId > 0) {
+            // 1. Cộng TP cho Guild tại vùng này
+            $conn->query("INSERT INTO guild_territory_points (guild_id, territory_id, tp_amount) 
+                          VALUES ($guildId, $territoryId, $points) 
+                          ON DUPLICATE KEY UPDATE tp_amount = tp_amount + $points");
+
+            // 2. Cập nhật tổng TP của vùng
+            $conn->query("UPDATE territories SET total_tp = total_tp + $points WHERE id = $territoryId");
+
+            // 3. Kiểm tra xem Guild này có đủ điều kiện chiếm đóng không
+            // Điều kiện: Top TP tại vùng đó và TP > 5000 (Ví dụ)
+            $topGuild = $conn->query("SELECT guild_id, tp_amount FROM guild_territory_points 
+                                      WHERE territory_id = $territoryId ORDER BY tp_amount DESC LIMIT 1")->fetch_assoc();
+            
+            if ($topGuild && $topGuild['guild_id'] == $guildId && $topGuild['tp_amount'] >= 5000) {
+                // Kiểm tra xem đã là chủ sở hữu chưa
+                $currentOwner = $conn->query("SELECT occupying_guild_id FROM territories WHERE id = $territoryId")->fetch_assoc();
+                if ($currentOwner['occupying_guild_id'] != $guildId) {
+                    $conn->query("UPDATE territories SET occupying_guild_id = $guildId WHERE id = $territoryId");
+                    
+                    // Ghi log vào arena_memory để Bot hóng hớt
+                    $gName = $conn->query("SELECT Name FROM guilds WHERE id = $guildId")->fetch_assoc()['Name'];
+                    $tName = $conn->query("SELECT name FROM territories WHERE id = $territoryId")->fetch_assoc()['name'];
+                    $conn->query("INSERT INTO arena_memory (event_type, target_name, value) 
+                                  VALUES ('territory_capture', '$gName', '{\"territory\":\"$tName\"}')");
+                }
+            }
+        }
+    }
 }
 
 /**

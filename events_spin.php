@@ -222,8 +222,11 @@ require_once 'load_theme.php';
         <div id="lights-container"></div>
     </div>
 
-    <div class="controls">
-        <button class="btn-spin" id="spin-btn" onclick="spin()">QUAY NGAY</button>
+    <div class="controls" style="display:flex; flex-direction:column; align-items:center; gap:15px;">
+        <div style="display:flex; gap:15px; flex-wrap:wrap; justify-content:center;">
+            <button class="btn-spin" id="spin-btn" onclick="spin()">QUAY NGAY</button>
+            <button class="btn-preview" onclick="showRewardsPreview()" style="background:rgba(255,255,255,0.08); color:white; padding:18px 30px; border-radius:50px; border:1px solid rgba(255,255,255,0.1); font-size:24px; font-weight:900; cursor:pointer; backdrop-filter:blur(10px); transition:all 0.3s; text-transform:uppercase;"><i class="fa fa-list-ul"></i> BẢNG THƯỞNG</button>
+        </div>
         <div class="spin-cost" id="spin-cost">Chi phí: 10,000 gtlm</div>
     </div>
 
@@ -232,6 +235,53 @@ require_once 'load_theme.php';
         let rewards = [];
         let isSpinning = false;
         let currentRotation = 0;
+
+        function showRewardsPreview() {
+            if (!rewards || rewards.length === 0) {
+                Swal.fire('Thông báo', 'Không thể tải danh sách phần thưởng.', 'info');
+                return;
+            }
+            
+            let htmlTable = `
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table style="width:100%; border-collapse:collapse; color:#fff; text-align:left;">
+                        <thead>
+                            <tr style="border-bottom:2px solid rgba(255,255,255,0.1); font-weight:800; font-size:14px;">
+                                <th style="padding:10px;">Vật Phẩm</th>
+                                <th style="padding:10px; text-align:center;">Số Lượng Còn</th>
+                                <th style="padding:10px; text-align:right;">Tỷ Lệ Trúng</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            rewards.forEach(r => {
+                const stock = r.quantity_left < 0 ? 'Vô hạn' : r.quantity_left;
+                htmlTable += `
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05); font-size:14px;">
+                        <td style="padding:12px 10px; display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:24px;">${r.reward_icon}</span>
+                            <span>${r.reward_name}</span>
+                        </td>
+                        <td style="padding:12px 10px; text-align:center; opacity:0.7;">${stock}</td>
+                        <td style="padding:12px 10px; text-align:right; font-weight:800; color:#f59e0b;">${r.chance_percent}%</td>
+                    </tr>
+                `;
+            });
+            htmlTable += `</tbody></table></div>`;
+
+            Swal.fire({
+                title: '🎁 BẢNG THƯỞNG VÒNG QUAY',
+                html: htmlTable,
+                background: '#1e293b',
+                color: '#fff',
+                confirmButtonColor: '#f59e0b',
+                confirmButtonText: 'Đóng',
+                customClass: {
+                    popup: 'premium-modal'
+                }
+            });
+        }
 
         function loadEvent() {
             $.get('api_events.php?action=get_active_event', function(res) {

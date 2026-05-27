@@ -141,7 +141,8 @@ switch ($action) {
         $questionSql = "SELECT * FROM trivia_questions WHERE is_active = 1";
 
         if ($game['category_id']) {
-            $questionSql .= " AND category_id = " . $game['category_id'];
+            $catId = (int)$game['category_id']; // safe: came from DB
+            $questionSql .= " AND category_id = $catId";
         }
 
         if ($game['difficulty'] !== 'mixed') {
@@ -149,7 +150,9 @@ switch ($action) {
         }
 
         if (!empty($answeredIds)) {
-            $questionSql .= " AND id NOT IN (" . implode(',', $answeredIds) . ")";
+            // safe: all IDs came from DB (trivia_answers.question_id)
+            $safeIds = implode(',', array_map('intval', $answeredIds));
+            $questionSql .= " AND id NOT IN ($safeIds)";
         }
 
         $questionSql .= " ORDER BY RAND() LIMIT 1";
@@ -347,7 +350,7 @@ switch ($action) {
                 WHERE tg.completed_at IS NOT NULL";
 
         if ($categoryId) {
-            $sql .= " AND tg.category_id = " . $categoryId;
+            $sql .= " AND tg.category_id = " . (int)$categoryId; // safe: already cast to int above
         }
 
         $sql .= " ORDER BY tg.total_points DESC, tg.correct_answers DESC

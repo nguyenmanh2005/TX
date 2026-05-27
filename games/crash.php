@@ -511,6 +511,8 @@ if (isset($_GET['action'])) {
                     CRASH</h1>
                 <p style="margin:0; opacity:0.4; font-size: 0.8rem; letter-spacing: 2px;">Vegas Royale Premium 3D</p>
 
+                <?php include __DIR__ . '/daily_challenge_widget.php'; ?>
+
                 <div id="winFeed"
                     style="margin-top: 1rem; height: 120px; overflow: hidden; background: rgba(0,0,0,0.4); border-radius: 1rem; padding: 0.8rem; border: 1px solid rgba(255,255,255,0.05); font-size: 0.75rem;">
                     <div

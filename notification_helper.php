@@ -107,7 +107,7 @@ function notifyAchievement(mysqli $conn, int $userId, int $achievementId, string
     $checkTable = $conn->query("SHOW TABLES LIKE 'achievement_notifications'");
     if ($checkTable && $checkTable->num_rows > 0) {
         // Lấy thông tin achievement
-        $sql = "SELECT name, icon, rarity, reward_money, reward_xp FROM achievements WHERE id = ?";
+        $sql = "SELECT * FROM achievements WHERE id = ?";
         $stmt = $conn->prepare($sql);
         if ($stmt) {
             $stmt->bind_param("i", $achievementId);
@@ -118,7 +118,9 @@ function notifyAchievement(mysqli $conn, int $userId, int $achievementId, string
 
             if ($achievement) {
                 $message = "Bạn đã đạt được danh hiệu: " . $achievement['name'];
-                if ($achievement['reward_money'] > 0 || $achievement['reward_xp'] > 0) {
+                $rewardMoney = $achievement['reward_money'] ?? 0;
+                $rewardXp = $achievement['reward_xp'] ?? 0;
+                if ($rewardMoney > 0 || $rewardXp > 0) {
                     $message .= " và nhận được phần thưởng!";
                 }
 

@@ -1,9 +1,14 @@
 <?php
-session_start();
-require_once 'db_connect.php';
+$isDirectCall = (isset($_SERVER['SCRIPT_FILENAME']) && basename(__FILE__) == basename($_SERVER['SCRIPT_FILENAME']));
 
-$userId = $_SESSION['Iduser'] ?? 0;
-if (!$userId) exit(json_encode(['success' => false]));
+if ($isDirectCall) {
+    if (session_status() === PHP_SESSION_NONE) {
+        @session_start();
+    }
+    require_once 'db_connect.php';
+
+    $userId = $_SESSION['Iduser'] ?? 0;
+    if (!$userId) exit(json_encode(['success' => false]));
 
 // 1. Khởi tạo Database nếu chưa có
 $setupSql = "
@@ -134,6 +139,7 @@ switch ($action) {
         }
         break;
 }
+} // End $isDirectCall check
 
 // Hàm helper để cập nhật tiến độ (sẽ được gọi từ các file game)
 function updateBPMission(mysqli $conn, int $userId, string $actionType, int $amount = 1) {

@@ -6,6 +6,7 @@ require_once 'user_progress_helper.php';
 
 function jsonResponse(array $payload)
 {
+    while (ob_get_level() > 0) ob_end_clean();
     header('Content-Type: application/json');
     echo json_encode($payload);
     exit();
@@ -16,6 +17,10 @@ if ($conn->connect_error) {
 }
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    // Debug log for bots
+    if (isset($_SERVER['HTTP_USER_AGENT']) && strpos($_SERVER['HTTP_USER_AGENT'], 'OmniBot') !== false) {
+        error_log("OmniBot Login Attempt: " . $_POST['email'] . " [Method: " . $_SERVER['REQUEST_METHOD'] . "]");
+    }
     $email = trim($_POST['email'] ?? '');
     $password = trim($_POST['password'] ?? '');
 
@@ -76,6 +81,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         "Name" => $row['Name'],
         "Money" => $row['Money']
     ]);
+} else {
+    if (isset($_SERVER['HTTP_USER_AGENT']) && strpos($_SERVER['HTTP_USER_AGENT'], 'OmniBot') !== false) {
+        jsonResponse(["status" => "error", "message" => "Bot request must be POST, received " . $_SERVER['REQUEST_METHOD']]);
+    }
 }
 ?>
 

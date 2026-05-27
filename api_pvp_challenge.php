@@ -26,6 +26,17 @@ if (!$checkTable || $checkTable->num_rows == 0) {
 
 switch ($action) {
     case 'create_challenge':
+        // Rate limiting: 1 request per 3 seconds
+        $now = microtime(true) * 1000;
+        if (isset($_SESSION['last_challenge_time'])) {
+            $diff = $now - $_SESSION['last_challenge_time'];
+            if ($diff < 3000) {
+                echo json_encode(['success' => false, 'message' => 'Thao tác quá nhanh! Vui lòng đợi 3 giây.']);
+                exit;
+            }
+        }
+        $_SESSION['last_challenge_time'] = $now;
+
         // Tạo challenge mới
         $opponentId = (int) ($_POST['opponent_id'] ?? 0);
         $gameType = $_POST['game_type'] ?? 'coinflip';
@@ -534,8 +545,11 @@ switch ($action) {
         $gameType = $old['game_type'];
 
         // Kiểm tra  Gtlm
-        $userMoneyRes = $conn->query("SELECT Money FROM users WHERE Iduser = $userId");
-        $userMoney = $userMoneyRes->fetch_assoc()['Money'];
+        $stmtMoney = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
+        $stmtMoney->bind_param("i", $userId);
+        $stmtMoney->execute();
+        $userMoney = $stmtMoney->get_result()->fetch_assoc()['Money'];
+        $stmtMoney->close();
         if ($userMoney < $betAmount) {
             echo json_encode(['success' => false, 'message' => 'Bạn không đủ  Gtlm để tái đấu!']);
             break;
@@ -544,7 +558,10 @@ switch ($action) {
         // Tạo challenge mới - trừ  Gtlm luôn như luồng create_challenge
         $conn->begin_transaction();
         try {
-            $conn->query("UPDATE users SET Money = Money - $betAmount WHERE Iduser = $userId");
+            $stmtDeduct = $conn->prepare("UPDATE users SET Money = Money - ? WHERE Iduser = ?");
+            $stmtDeduct->bind_param("di", $betAmount, $userId);
+            $stmtDeduct->execute();
+            $stmtDeduct->close();
             
             $sqlInsert = "INSERT INTO pvp_challenges (challenger_id, opponent_id, game_type, bet_amount, status) VALUES (?, ?, ?, ?, 'pending')";
             $stmt = $conn->prepare($sqlInsert);

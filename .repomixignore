@@ -1,0 +1,82 @@
+# ==============================================================================
+# REPOMIX IGNORE CONFIGURATION
+# File này giúp loại bỏ các file nhạy cảm, file rác, file ảnh hoặc file dung lượng lớn
+# để tiết kiệm token và đảm bảo an toàn bảo mật khi gửi code cho AI.
+# ==============================================================================
+
+# --- CẤU HÌNH NHẠY CẢM (Bảo mật tối đa) ---
+db_connect.php
+db_connect_backup_local.php
+.env.php
+.env
+bot/cookies.txt
+.gemini/
+.git/
+
+# --- THƯ MỤC RÁC & CÔNG CỤ (Local / AI Cache) ---
+scratch/
+.vscode/
+.idea/
+node_modules/
+vendor/
+Thư mục xuất/
+xuat-toan-bo-du-an/
+Công-Việc-Phát-Triển/
+
+# --- LOGS, TEMPORARY & SESSIONS ---
+php_errors.log
+error_log
+*.log
+bot/sessions/
+bot/cycle_logs/
+bot/logs/
+bot/tester_session.txt
+*.tmp
+*.bak
+*.swp
+*.local
+*.dev
+.user.ini
+.php-cs-fixer.cache
+.phpunit.result.cache
+
+# --- FILES NÉN DUNG LƯỢNG LỚN ---
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+123.zip
+
+# --- HÌNH ẢNH & ĐỒ HỌA (Loại bỏ vì AI không đọc được ảnh trực tiếp dạng văn bản) ---
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.gif
+**/*.cur
+**/*.ani
+**/*.ico
+cursors/
+uploads/
+
+# NGOẠI LỆ: Giữ lại ảnh trong thư mục Shared/img và favicon nếu cần
+!Shared/img/
+!Shared/img/**
+!img/favicon.ico
+
+# --- CÁC FILE KẾT QUẢ CỦA REPOMIX ---
+repomix-output.xml
+repomix-output.txt
+repomix-output.json
+*.state.json
+bot_sync.json
+economy_history.json
+
+# --- CÁC SCRIPT CHẠY THỬ / LOCAL ONLY ---
+setup_sample_event.php
+setup_features_v3.php
+export_missing_tables.php
+check_db_tables.php
+tester_bot.php
+composer.phar
+.htaccess

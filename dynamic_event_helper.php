@@ -1,5 +1,5 @@
 <?php
-require_once 'db_connect.php';
+require_once __DIR__ . '/db_connect.php';
 
 class DynamicEventHelper {
     /**
@@ -7,17 +7,20 @@ class DynamicEventHelper {
      */
     public static function getModifier(mysqli $conn, string $gameType) {
         $now = date('Y-m-d H:i:s');
-        $sql = "SELECT multiplier FROM dynamic_events 
-                WHERE status = 'active' 
-                AND starts_at <= '$now' 
-                AND ends_at >= '$now' 
-                AND (game_type = '$gameType' OR game_type = 'all')
-                ORDER BY multiplier DESC LIMIT 1";
-        $res = $conn->query($sql);
-        if ($res && $row = $res->fetch_assoc()) {
-            return (float)$row['multiplier'];
-        }
-        return 1.0;
+        // FIX: dùng prepared statement thay vì ghép biến vào SQL
+        $stmt = $conn->prepare("
+            SELECT multiplier FROM dynamic_events 
+            WHERE status = 'active' 
+            AND starts_at <= ?
+            AND ends_at >= ?
+            AND (game_type = ? OR game_type = 'all')
+            ORDER BY multiplier DESC LIMIT 1
+        ");
+        $stmt->bind_param("sss", $now, $now, $gameType);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ? (float)$row['multiplier'] : 1.0;
     }
 
     /**
@@ -25,7 +28,12 @@ class DynamicEventHelper {
      */
     public static function autoGenerate(mysqli $conn) {
         $now = date('Y-m-d H:i:s');
-        $check = $conn->query("SELECT id FROM dynamic_events WHERE status = 'active' AND ends_at >= '$now' LIMIT 1");
+        // FIX: dùng prepared statement
+        $stmtCheck = $conn->prepare("SELECT id FROM dynamic_events WHERE status = 'active' AND ends_at >= ? LIMIT 1");
+        $stmtCheck->bind_param("s", $now);
+        $stmtCheck->execute();
+        $check = $stmtCheck->get_result();
+        $stmtCheck->close();
         
         if ($check && $check->num_rows === 0) {
             // Không có sự kiện nào, sinh ngẫu nhiên
@@ -45,6 +53,10 @@ class DynamicEventHelper {
             $stmt->bind_param("sssdss", $e['name'], $e['desc'], $e['game'], $e['mult'], $starts, $ends);
             $stmt->execute();
             
+            // Announce ra chat chung
+            $chatMsg = "🌟 [SỰ KIỆN ĐỘNG] " . $e['name'] . " - " . $e['desc'];
+            $conn->query("INSERT INTO chat_messages (user_id, username, message, avatar) VALUES (0, 'Hệ Thống', '" . $conn->real_escape_string($chatMsg) . "', 'https://cdn-icons-png.flaticon.com/512/1041/1041044.png')");
+            
             return $e; // Trả về để announce
         }
         return null;
@@ -52,7 +64,13 @@ class DynamicEventHelper {
     
     public static function getActiveEvent(mysqli $conn) {
         $now = date('Y-m-d H:i:s');
-        return $conn->query("SELECT * FROM dynamic_events WHERE status = 'active' AND starts_at <= '$now' AND ends_at >= '$now' LIMIT 1")->fetch_assoc();
+        // FIX: dùng prepared statement
+        $stmt = $conn->prepare("SELECT * FROM dynamic_events WHERE status = 'active' AND starts_at <= ? AND ends_at >= ? LIMIT 1");
+        $stmt->bind_param("ss", $now, $now);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $result;
     }
 }
 ?>

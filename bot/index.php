@@ -1,3 +1,4 @@
+<?php
 session_start();
 if ((!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) && (!isset($_SESSION['Role']) || $_SESSION['Role'] != 1)) {
     header('Location: ../login.php');
@@ -27,6 +28,16 @@ $syncFile = 'sessions/bot_sync.json';
 $historyFile = 'sessions/economy_history.json';
 $syncData = file_exists($syncFile) ? json_decode(file_get_contents($syncFile), true) : [];
 $history = file_exists($historyFile) ? json_decode(file_get_contents($historyFile), true) : [];
+
+// 1.2 Handle Random Event Trigger
+if (isset($_GET['action']) && $_GET['action'] === 'trigger_event') {
+    define('ALLOW_EVENT_WEB', true);
+    $_GET['force'] = 1;
+    require_once '../cron_random_events.php';
+    header("Location: index.php?msg=Đã kích hoạt sự kiện ngẫu nhiên!");
+    exit;
+}
+
 $sessionFiles = glob('sessions/*.state.json');
 
 // 2. Phân tích trạng thái bot từ Files
@@ -60,8 +71,13 @@ $stats = [
     'moods' => ['happy' => 0, 'excited' => 0, 'tilted' => 0, 'depressed' => 0],
     'total_bot_money' => 0,
     'total_human_money' => 0,
-    'top_bots_today' => []
+    'top_bots_today' => [],
+    'active_event' => null
 ];
+
+// Lấy event đang chạy
+$activeEv = $conn->query("SELECT event_name, description, ends_at FROM random_events WHERE is_active = 1 AND ends_at > NOW() LIMIT 1")->fetch_assoc();
+$stats['active_event'] = $activeEv;
 
 // Lấy Top Bot thắng nhiều nhất hôm nay
 $today = date('Y-m-d');
@@ -276,6 +292,7 @@ if (isset($_GET['ajax'])) {
                 <a href="../chat3.php" class="btn" style="background: #334155; border: 1px solid rgba(255,255,255,0.1)">📋 Báo Cáo Tester</a>
                 <a href="../games/megaspin.php" class="btn" style="background: #065f46; border: 1px solid rgba(255,255,255,0.1)">🎡 Mega Spin</a>
                 <a href="bot_buff.php" class="btn" style="background: #1e293b; border: 1px solid rgba(255,255,255,0.1)">💰 Buff  Gtlm</a>
+                <a href="bot_intelligence.php" class="btn" style="background: linear-gradient(135deg, #38bdf8, #6366f1); border: 1px solid rgba(255,255,255,0.1)">🧠 Trí Tuệ Bot</a>
                 <a href="bot_runner.php" class="btn" style="background: linear-gradient(135deg, #6366f1, #a855f7)">🚀 Trình Điều Khiển Web</a>
                 <a href="javascript:void(0)" onclick="spawnBots()" class="btn" style="background: var(--status-warn)">➕ Sinh Bot</a>
             </div>
@@ -348,6 +365,28 @@ if (isset($_GET['ajax'])) {
                         <span>👑 OP BOT HÔM NAY</span>
                         <span style="font-size: 10px; background: var(--status-warn); color: black; padding: 2px 6px; border-radius: 4px;">TOP PROFIT</span>
                     </h2>
+                    
+                    <!-- 🎲 Random Event Management -->
+                    <div class="panel" style="margin-bottom: 20px; border-color: var(--primary);">
+                        <h2 style="font-size: 18px; margin-top:0; color: var(--primary);">🎲 Sự Kiện Ngẫu Nhiên</h2>
+                        <div id="activeEventAdmin">
+                            <?php if ($stats['active_event']): ?>
+                                <div style="background: rgba(99, 102, 241, 0.1); padding: 15px; border-radius: 15px; border: 1px solid rgba(99, 102, 241, 0.2);">
+                                    <div style="font-weight: 800; font-size: 14px; margin-bottom: 5px;"><?= $stats['active_event']['event_name'] ?></div>
+                                    <div style="font-size: 11px; color: #94a3b8; margin-bottom: 10px;"><?= $stats['active_event']['description'] ?></div>
+                                    <div style="font-size: 12px; font-weight: 700; color: var(--status-warn);">⏰ Kết thúc: <?= date('H:i:s', strtotime($stats['active_event']['ends_at'])) ?></div>
+                                </div>
+                            <?php else: ?>
+                                <div style="text-align: center; padding: 10px;">
+                                    <div style="font-size: 11px; color: #64748b; margin-bottom: 10px;">Không có sự kiện nào đang diễn ra.</div>
+                                    <a href="index.php?action=trigger_event" style="background: var(--primary); color: white; text-decoration: none; padding: 8px 15px; border-radius: 10px; font-size: 12px; font-weight: 700; display: inline-block; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                                        ⚡ Kích hoạt ngay
+                                    </a>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
                     <div id="opBotSection">
                         <?php if (!empty($stats['top_bots_today'])): 
                             $opBot = $stats['top_bots_today'][0]; ?>
@@ -792,6 +831,29 @@ if (isset($_GET['ajax'])) {
                                 </div>
                             </div>
                         `).join('');
+                    }
+                }
+
+                // Update Event Admin
+                const eventAdminEl = document.getElementById('activeEventAdmin');
+                if (eventAdminEl) {
+                    if (data.stats.active_event) {
+                        eventAdminEl.innerHTML = `
+                            <div style="background: rgba(99, 102, 241, 0.1); padding: 15px; border-radius: 15px; border: 1px solid rgba(99, 102, 241, 0.2);">
+                                <div style="font-weight: 800; font-size: 14px; margin-bottom: 5px;">${data.stats.active_event.event_name}</div>
+                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 10px;">${data.stats.active_event.description}</div>
+                                <div style="font-size: 12px; font-weight: 700; color: var(--status-warn);">⏰ Kết thúc: ${data.stats.active_event.ends_at.split(' ')[1]}</div>
+                            </div>
+                        `;
+                    } else {
+                        eventAdminEl.innerHTML = `
+                            <div style="text-align: center; padding: 10px;">
+                                <div style="font-size: 11px; color: #64748b; margin-bottom: 10px;">Không có sự kiện nào đang diễn ra.</div>
+                                <a href="index.php?action=trigger_event" style="background: var(--primary); color: white; text-decoration: none; padding: 8px 15px; border-radius: 10px; font-size: 12px; font-weight: 700; display: inline-block; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                                    ⚡ Kích hoạt ngay
+                                </a>
+                            </div>
+                        `;
                     }
                 }
 

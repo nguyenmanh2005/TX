@@ -37,12 +37,22 @@ while ($row = $res->fetch_assoc()) {
     $stmt->execute();
     $stmt->close();
 
-    // Trao thưởng cho Guild Fund (giả sử có cột guild_money trong bảng guilds)
+    // Trao thưởng cho Guild Fund (giả sử có cột guild_xp trong bảng guilds)
     // Nếu không có, có thể chia đều cho các thành viên hoặc cộng vào XP bang hội
     $conn->query("UPDATE guilds SET guild_xp = guild_xp + " . ($points * 10) . " WHERE id = $guildId");
     
-    // Gửi thông báo cho chủ bang
-    // $notifSql = "INSERT INTO notifications ...";
+    // --- 🎭 GUILD WAR HIGHLIGHT REEL ---
+    if ($rank <= 3) {
+        $gData = $conn->query("SELECT Name FROM guilds WHERE id = $guildId")->fetch_assoc();
+        $gName = $gData['Name'] ?? 'Bang hội ẩn danh';
+        $recapMsg = "🏆 [VINH DANH BANG CHIẾN] Bang hội **$gName** đã xuất sắc đạt TOP $rank mùa giải này với $points điểm chiến công! Phần thưởng " . number_format($reward) . " GTLM đã được trao. 🔥🚀";
+        
+        // Gửi tin nhắn vinh danh vào chat tổng (Dùng user_id 0 làm hệ thống)
+        $stmtChat = $conn->prepare("INSERT INTO chat (user_id, username, message, is_admin) VALUES (0, 'Vệ Binh Trận Địa', ?, 1)");
+        $stmtChat->bind_param("s", $recapMsg);
+        $stmtChat->execute();
+        $stmtChat->close();
+    }
     
     $rank++;
 }

@@ -118,8 +118,9 @@ if (isset($_GET['action'])) {
 
             if ($board[$cell] === -1) {
                 // Thua
+                // Track quest progress + Game of Day + Combo Streak + Random Events
                 require_once '../game_history_helper.php';
-                logGameHistory($conn, $userId, 'Minesweeper', $_SESSION['mines_cuoc'], 0, false);
+                logGameHistoryWithAll($conn, $userId, 'Minesweeper', $_SESSION['mines_cuoc'], 0, false);
 
                 $historyStmt = $conn->prepare("INSERT INTO history_minesweeper (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, 'Thua', 0, NOW())");
                 $historyStmt->bind_param("ii", $userId, $_SESSION['mines_cuoc']);
@@ -147,8 +148,9 @@ if (isset($_GET['action'])) {
                     $capNhat->bind_param("di", $soDu, $userId);
                     $capNhat->execute();
 
+                    // Track quest progress + Game of Day + Combo Streak + Random Events
                     require_once '../game_history_helper.php';
-                    logGameHistory($conn, $userId, 'Minesweeper', $_SESSION['mines_cuoc'], $thang, true);
+                    logGameHistoryWithAll($conn, $userId, 'Minesweeper', $_SESSION['mines_cuoc'], $thang, true);
 
                     $historyStmt = $conn->prepare("INSERT INTO history_minesweeper (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, 'Thắng', ?, NOW())");
                     $historyStmt->bind_param("iii", $userId, $_SESSION['mines_cuoc'], $thang);

@@ -1,603 +1,358 @@
 <?php
 session_start();
+if (!isset($_SESSION['Iduser'])) { header("Location: login.php"); exit; }
 require 'db_connect.php';
 
-if (!isset($_SESSION['Iduser'])) {
-    header("Location: login.php");
-    exit();
-}
+// Tuần hiện tại bắt đầu từ thứ 2
+$weekStart = date('Y-m-d', strtotime('monday this week'));
+$weekEnd   = date('Y-m-d', strtotime('sunday this week'));
 
-// Load theme
-require_once 'load_theme.php';
-
-$userId = $_SESSION['Iduser'];
-
-// Kiểm tra và tạo bảng weekly_leaderboard nếu chưa có
-$checkTable = $conn->query("SHOW TABLES LIKE 'weekly_leaderboard'");
-if (!$checkTable || $checkTable->num_rows == 0) {
-    $createTable = "CREATE TABLE IF NOT EXISTS weekly_leaderboard (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        week_start DATE NOT NULL,
-        user_id INT NOT NULL,
-        total_earned DECIMAL(15,2) DEFAULT 0,
-        total_games INT DEFAULT 0,
-        total_wins INT DEFAULT 0,
-        win_rate DECIMAL(5,2) DEFAULT 0,
-        rank_position INT DEFAULT 0,
-        reward_claimed TINYINT(1) DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(Iduser) ON DELETE CASCADE,
-        UNIQUE KEY unique_week_user (week_start, user_id),
-        INDEX idx_week_rank (week_start, rank_position),
-        INDEX idx_week_earned (week_start, total_earned DESC)
-    )";
-    $conn->query($createTable);
-
-    $createRewards = "CREATE TABLE IF NOT EXISTS weekly_leaderboard_rewards (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        week_start DATE NOT NULL,
-        rank_position INT NOT NULL,
-        reward_money INT NOT NULL,
-        reward_xp INT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE KEY unique_week_rank (week_start, rank_position)
-    )";
-    $conn->query($createRewards);
-}
-
-// Tính tuần hiện tại (bắt đầu từ thứ 2)
-$today = new DateTime();
-$dayOfWeek = $today->format('w'); // 0 = Chủ nhật, 1 = Thứ 2, ...
-if ($dayOfWeek == 0) {
-    $dayOfWeek = 7; // Chuyển Chủ nhật thành 7
-}
-$daysToMonday = $dayOfWeek - 1;
-$weekStart = clone $today;
-$weekStart->modify("-$daysToMonday days");
-$weekStartStr = $weekStart->format('Y-m-d');
-$weekEnd = clone $weekStart;
-$weekEnd->modify('+6 days');
-$weekEndStr = $weekEnd->format('Y-m-d');
-
-// Lấy thông tin người dùng
-$sql = "SELECT Iduser, Name, Money FROM users WHERE Iduser = ?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $userId);
+// BXH tuần hiện tại (tính real-time từ game_history)
+$stmt = $conn->prepare("
+    SELECT 
+        u.Iduser, u.Name, u.ImageURL,
+        SUM(CASE WHEN gh.is_win = 1 
+            THEN gh.win_amount - gh.bet_amount 
+            ELSE -gh.bet_amount END) as net_winnings,
+        COUNT(*) as total_games,
+        SUM(gh.is_win) as wins
+    FROM game_history gh
+    JOIN users u ON gh.user_id = u.Iduser
+    WHERE gh.played_at >= ? 
+      AND u.Email NOT REGEXP '^bot[0-9]+@'
+    GROUP BY gh.user_id
+    HAVING net_winnings > 0
+    ORDER BY net_winnings DESC
+    LIMIT 20
+");
+$stmt->bind_param("s", $weekStart);
 $stmt->execute();
-$result = $stmt->get_result();
-$user = $result->fetch_assoc();
+$currentRankings = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// Cập nhật leaderboard từ game_history
-$checkGameHistory = $conn->query("SHOW TABLES LIKE 'game_history'");
-if ($checkGameHistory && $checkGameHistory->num_rows > 0) {
-    // Tính toán stats cho tất cả users
-    $sql = "SELECT 
-                user_id,
-                SUM(CASE WHEN is_win = 1 THEN win_amount - bet_amount ELSE 0 END) as total_earned,
-                COUNT(*) as total_games,
-                SUM(CASE WHEN is_win = 1 THEN 1 ELSE 0 END) as total_wins
-            FROM game_history
-            WHERE DATE(played_at) BETWEEN ? AND ?
-            GROUP BY user_id";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ss", $weekStartStr, $weekEndStr);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    $leaderboardData = [];
-    while ($row = $result->fetch_assoc()) {
-        $winRate = $row['total_games'] > 0 ? round(($row['total_wins'] / $row['total_games']) * 100, 2) : 0;
-        $leaderboardData[] = [
-            'user_id' => $row['user_id'],
-            'total_earned' => $row['total_earned'] ?? 0,
-            'total_games' => $row['total_games'],
-            'total_wins' => $row['total_wins'],
-            'win_rate' => $winRate
-        ];
-    }
-    $stmt->close();
-
-    // Sắp xếp theo total_earned
-    usort($leaderboardData, function ($a, $b) {
-        return $b['total_earned'] <=> $a['total_earned'];
-    });
-
-    // Cập nhật vào database
-    $conn->begin_transaction();
-    try {
-        foreach ($leaderboardData as $rank => $data) {
-            $rankPosition = $rank + 1;
-            $sql = "INSERT INTO weekly_leaderboard 
-                    (week_start, user_id, total_earned, total_games, total_wins, win_rate, rank_position)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                    ON DUPLICATE KEY UPDATE
-                    total_earned = VALUES(total_earned),
-                    total_games = VALUES(total_games),
-                    total_wins = VALUES(total_wins),
-                    win_rate = VALUES(win_rate),
-                    rank_position = VALUES(rank_position)";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param(
-                "sidiidi",
-                $weekStartStr,
-                $data['user_id'],
-                $data['total_earned'],
-                $data['total_games'],
-                $data['total_wins'],
-                $data['win_rate'],
-                $rankPosition
-            );
-            $stmt->execute();
-            $stmt->close();
-        }
-        $conn->commit();
-    } catch (Exception $e) {
-        $conn->rollback();
-    }
-}
-
-// Lấy top 100 leaderboard
-$sql = "SELECT wl.*, u.Name, u.ImageURL
-        FROM weekly_leaderboard wl
-        JOIN users u ON wl.user_id = u.Iduser
-        WHERE wl.week_start = ?
-        ORDER BY wl.rank_position ASC
-        LIMIT 100";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("s", $weekStartStr);
-$stmt->execute();
-$result = $stmt->get_result();
-$leaderboard = [];
-while ($row = $result->fetch_assoc()) {
-    $leaderboard[] = $row;
-}
-$stmt->close();
-
-// Lấy rank của user hiện tại
-$userRank = null;
-$userStats = null;
-foreach ($leaderboard as $entry) {
-    if ($entry['user_id'] == $userId) {
-        $userRank = $entry['rank_position'];
-        $userStats = $entry;
+// Vị trí của user hiện tại
+$myRank = null;
+$myUserId = (int)$_SESSION['Iduser'];
+foreach ($currentRankings as $i => $row) {
+    if ((int)$row['Iduser'] === $myUserId) {
+        $myRank = $i + 1;
         break;
     }
 }
 
-// Nếu user không có trong top 100, tìm rank thực tế
-if (!$userRank) {
-    $sql = "SELECT rank_position, total_earned, total_games, total_wins, win_rate
-            FROM weekly_leaderboard
-            WHERE week_start = ? AND user_id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("si", $weekStartStr, $userId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    if ($result->num_rows > 0) {
-        $userStats = $result->fetch_assoc();
-        $userRank = $userStats['rank_position'];
-    }
-    $stmt->close();
-}
+// Reset tiếp theo (thứ 2 tuần sau)
+$nextReset  = date('Y-m-d H:i:s', strtotime('next monday 00:05'));
+$secondsLeft = strtotime($nextReset) - time();
 
-// Phần thưởng theo rank
-$rankRewards = [
-    1 => ['money' => 5000000, 'xp' => 5000, 'name' => '👑 Hạng 1'],
-    2 => ['money' => 3000000, 'xp' => 3000, 'name' => '🥈 Hạng 2'],
-    3 => ['money' => 2000000, 'xp' => 2000, 'name' => '🥉 Hạng 3'],
-    4 => ['money' => 1000000, 'xp' => 1000, 'name' => '🏅 Top 4-10'],
-    10 => ['money' => 500000, 'xp' => 500, 'name' => '⭐ Top 11-50'],
-    50 => ['money' => 200000, 'xp' => 200, 'name' => '🎯 Top 51-100']
-];
-
-// Kiểm tra đã claim reward chưa
-$rewardClaimed = false;
-if ($userRank && $userRank <= 100) {
-    $sql = "SELECT reward_claimed FROM weekly_leaderboard WHERE week_start = ? AND user_id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("si", $weekStartStr, $userId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    if ($result->num_rows > 0) {
-        $rewardClaimed = $result->fetch_assoc()['reward_claimed'] == 1;
-    }
-    $stmt->close();
-}
+$rewards = [1 => 5000000, 2 => 2000000, 3 => 1000000];
 ?>
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weekly Leaderboard - Bảng Xếp Hạng Tuần</title>
+    <title>BXH Tuần - Trận Địa Giao Lưu</title>
     <link rel="stylesheet" href="assets/css/main.css">
-    <link rel="stylesheet" href="assets/css/animations.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #a855f7;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --bg: #0f172a;
+            --card: rgba(255, 255, 255, 0.05);
+            --gold: #fbbf24;
+            --silver: #94a3b8;
+            --bronze: #b45309;
+        }
+
         body {
-            cursor: url('chuot.png'), url('../chuot.png'), auto !important;
-            background:
-                <?= $bgGradientCSS ?>
-            ;
-            background-attachment: fixed;
-            min-height: 100vh;
-            padding: 20px;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            animation: fadeIn 0.6s ease;
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: #f8fafc;
+            margin: 0;
+            padding: 0;
+            background-image: radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 50%);
         }
 
-        * {
-            cursor: inherit;
+        .leaderboard-wrap {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
         }
 
-        button,
-        a,
-        input[type="button"],
-        input[type="submit"],
-        label,
-        select {
-            cursor: url('img/tay.png'), url('../img/tay.png'), pointer !important;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .header-leaderboard {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            padding: 40px;
-            border-radius: 24px;
-            margin-bottom: 30px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3),
-                0 0 0 1px rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+        .header-section {
             text-align: center;
-            animation: fadeInDown 0.6s ease;
-            position: relative;
-            overflow: hidden;
+            margin-bottom: 40px;
         }
 
-        .header-leaderboard::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(102, 126, 234, 0.05) 0%, transparent 70%);
-            animation: float 6s ease-in-out infinite;
-        }
-
-        .header-leaderboard h1 {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-size: 42px;
+        .header-section h1 {
+            font-size: 32px;
             font-weight: 800;
-            letter-spacing: -1px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .week-info {
-            margin-top: 15px;
-            color: #666;
-            font-size: 18px;
-        }
-
-        .user-rank-card {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            padding: 30px;
-            border-radius: 20px;
-            margin-bottom: 30px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            animation: fadeInUp 0.6s ease 0.2s backwards;
-        }
-
-        .user-rank-display {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .user-rank-number {
-            font-size: 64px;
-            font-weight: 900;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
         }
 
-        .user-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
+        .timer-box {
+            background: var(--card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
         }
 
-        .stat-box {
-            padding: 20px;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-            border-radius: 16px;
-            text-align: center;
-        }
-
-        .stat-label {
+        .timer-label {
             font-size: 14px;
-            color: #666;
+            color: #94a3b8;
+            margin-bottom: 4px;
+        }
+
+        .timer-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .week-range {
+            text-align: right;
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .reward-strip {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .reward-card {
+            flex: 1;
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: var(--card);
+            transition: transform 0.3s ease;
+        }
+
+        .reward-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .reward-card.gold { border-color: rgba(251, 191, 36, 0.3); background: linear-gradient(180deg, rgba(251, 191, 36, 0.1) 0%, transparent 100%); }
+        .reward-card.silver { border-color: rgba(148, 163, 184, 0.3); background: linear-gradient(180deg, rgba(148, 163, 184, 0.1) 0%, transparent 100%); }
+        .reward-card.bronze { border-color: rgba(180, 83, 9, 0.3); background: linear-gradient(180deg, rgba(180, 83, 9, 0.1) 0%, transparent 100%); }
+
+        .reward-icon {
+            font-size: 32px;
             margin-bottom: 8px;
         }
 
-        .stat-value {
-            font-size: 24px;
-            font-weight: 700;
-            color: #667eea;
-        }
-
-        .leaderboard-table {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px;
-            text-align: left;
-            font-weight: 700;
-        }
-
-        td {
-            padding: 15px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        tr:hover {
-            background: rgba(102, 126, 234, 0.05);
-        }
-
-        .rank-badge {
-            display: inline-block;
-            width: 40px;
-            height: 40px;
-            line-height: 40px;
-            text-align: center;
-            border-radius: 50%;
-            font-weight: 700;
-            color: white;
-        }
-
-        .rank-1 {
-            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-        }
-
-        .rank-2 {
-            background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
-        }
-
-        .rank-3 {
-            background: linear-gradient(135deg, #cd7f32 0%, #e6a85c 100%);
-        }
-
-        .rank-other {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        .claim-reward-btn {
-            padding: 12px 24px;
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            color: white;
-            border: none;
-            border-radius: 12px;
+        .reward-amount {
             font-size: 16px;
             font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 20px;
+            color: #fff;
+            margin-top: 4px;
         }
 
-        .claim-reward-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.5);
+        .rank-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 20px;
+            border-radius: 20px;
+            margin-bottom: 12px;
+            background: var(--card);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease;
         }
 
-        .claim-reward-btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
+        .rank-row:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .rank-row.is-me {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .rank-num {
+            width: 40px;
+            text-align: center;
+            font-weight: 800;
+            font-size: 18px;
+            color: #64748b;
+        }
+
+        .rank-row.top-1 .rank-num { color: var(--gold); }
+        .rank-row.top-2 .rank-num { color: var(--silver); }
+        .rank-row.top-3 .rank-num { color: var(--bronze); }
+
+        .rank-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            object-fit: cover;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .rank-name {
+            flex: 1;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .rank-stats {
+            text-align: right;
+        }
+
+        .rank-gtlm {
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--success);
+        }
+
+        .rank-games {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        .my-rank-banner {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.1), transparent);
+            border-radius: 20px;
+            margin-top: 30px;
+            font-size: 15px;
+            color: #94a3b8;
+        }
+
+        .my-rank-banner strong {
+            color: #fff;
+            font-size: 18px;
+        }
+
+        @media (max-width: 600px) {
+            .reward-strip { flex-direction: column; }
+            .timer-box { flex-direction: column; text-align: center; gap: 15px; }
+            .week-range { text-align: center; }
         }
     </style>
 </head>
-
 <body>
-    <div class="container">
-        <div class="header-leaderboard">
-            <h1>🏆 Weekly Leaderboard</h1>
-            <div class="week-info">
-                Tuần từ <?= date('d/m/Y', strtotime($weekStartStr)) ?> đến <?= date('d/m/Y', strtotime($weekEndStr)) ?>
-            </div>
+<div class="leaderboard-wrap">
+
+    <div class="header-section">
+        <h1>🏆 Bảng Xếp Hạng Tuần</h1>
+        <p style="color: #64748b; margin-top: 10px;">Ra chiêu ngay để húp GTLM khủng từ giải đấu hàng tuần!</p>
+    </div>
+
+    <div class="timer-box">
+        <div>
+            <div class="timer-label">Reset & trao thưởng sau</div>
+            <div class="timer-value" id="countdown">--:--:--</div>
         </div>
-
-        <?php if ($userRank && $userStats): ?>
-            <div class="user-rank-card">
-                <div class="user-rank-display">
-                    <div style="font-size: 20px; color: #666; margin-bottom: 10px;">Xếp Hạng Của Bạn</div>
-                    <div class="user-rank-number">#<?= $userRank ?></div>
-                </div>
-
-                <div class="user-stats">
-                    <div class="stat-box">
-                        <div class="stat-label">Tổng Kiếm Được</div>
-                        <div class="stat-value"><?= number_format($userStats['total_earned']) ?> GTLM</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-label">Số Game</div>
-                        <div class="stat-value"><?= number_format($userStats['total_games']) ?></div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-label">Số Thắng</div>
-                        <div class="stat-value"><?= number_format($userStats['total_wins']) ?></div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-label">Tỷ Lệ Thắng</div>
-                        <div class="stat-value"><?= number_format($userStats['win_rate'], 1) ?>%</div>
-                    </div>
-                </div>
-
-                <?php
-                $reward = null;
-                if ($userRank == 1) {
-                    $reward = $rankRewards[1];
-                } elseif ($userRank == 2) {
-                    $reward = $rankRewards[2];
-                } elseif ($userRank == 3) {
-                    $reward = $rankRewards[3];
-                } elseif ($userRank <= 10) {
-                    $reward = $rankRewards[4];
-                } elseif ($userRank <= 50) {
-                    $reward = $rankRewards[10];
-                } elseif ($userRank <= 100) {
-                    $reward = $rankRewards[50];
-                }
-
-                if ($reward && !$rewardClaimed):
-                    ?>
-                    <div
-                        style="text-align: center; margin-top: 20px; padding: 20px; background: rgba(40, 167, 69, 0.1); border-radius: 16px;">
-                        <div style="font-size: 18px; font-weight: 700; color: #28a745; margin-bottom: 10px;">
-                            <?= $reward['name'] ?> - Phần Thưởng
-                        </div>
-                        <div style="color: #666; margin-bottom: 15px;">
-                            <?= number_format($reward['money']) ?> GTLM + <?= number_format($reward['xp']) ?> XP
-                        </div>
-                        <button class="claim-reward-btn" onclick="claimReward()">
-                            🎁 Nhận Phần Thưởng
-                        </button>
-                    </div>
-                <?php elseif ($reward && $rewardClaimed): ?>
-                    <div
-                        style="text-align: center; margin-top: 20px; padding: 20px; background: rgba(108, 117, 125, 0.1); border-radius: 16px; color: #666;">
-                        ✅ Đã nhận phần thưởng tuần này
-                    </div>
-                <?php endif; ?>
-            </div>
-        <?php endif; ?>
-
-        <div class="leaderboard-table">
-            <h2 style="margin-bottom: 20px; text-align: center; color: #333;">Top 100 Người Chơi</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Hạng</th>
-                        <th>Người Chơi</th>
-                        <th>Tổng Kiếm Được</th>
-                        <th>Số Game</th>
-                        <th>Số Thắng</th>
-                        <th>Tỷ Lệ Thắng</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($leaderboard)): ?>
-                        <tr>
-                            <td colspan="6" style="text-align: center; padding: 40px; color: #666;">
-                                Chưa có dữ liệu tuần này. Hãy chơi game để xuất hiện trên bảng xếp hạng!
-                            </td>
-                        </tr>
-                    <?php else: ?>
-                        <?php foreach ($leaderboard as $entry):
-                            $isCurrentUser = $entry['user_id'] == $userId;
-                            $rankClass = $entry['rank_position'] == 1 ? 'rank-1' :
-                                ($entry['rank_position'] == 2 ? 'rank-2' :
-                                    ($entry['rank_position'] == 3 ? 'rank-3' : 'rank-other'));
-                            ?>
-                            <tr style="<?= $isCurrentUser ? 'background: rgba(102, 126, 234, 0.1); font-weight: 700;' : '' ?>">
-                                <td>
-                                    <span class="rank-badge <?= $rankClass ?>">
-                                        <?= $entry['rank_position'] ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <div style="display: flex; align-items: center; gap: 10px;">
-                                        <img src="<?= htmlspecialchars($entry['ImageURL'] ?? 'img/default-avatar.png') ?>"
-                                            style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
-                                        <span><?= htmlspecialchars($entry['Name']) ?></span>
-                                        <?= $isCurrentUser ? '<span style="color: #667eea;">(Bạn)</span>' : '' ?>
-                                    </div>
-                                </td>
-                                <td><?= number_format($entry['total_earned']) ?> GTLM</td>
-                                <td><?= number_format($entry['total_games']) ?></td>
-                                <td><?= number_format($entry['total_wins']) ?></td>
-                                <td><?= number_format($entry['win_rate'], 1) ?>%</td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-
-        <div style="text-align: center; margin-top: 30px;">
-            <a href="index.php"
-                style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 12px; font-weight: 600;">
-                🏠 Về Trang Chủ
-            </a>
+        <div class="week-range">
+            Tuần <?= date('d/m', strtotime($weekStart)) ?> – <?= date('d/m', strtotime($weekEnd)) ?>
         </div>
     </div>
 
-    <script>
-        function claimReward() {
-            $.ajax({
-                url: 'api_weekly_leaderboard.php',
-                method: 'POST',
-                data: {
-                    action: 'claim_reward'
-                },
-                dataType: 'json',
-                success: function (response) {
-                    if (response.status === 'success') {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Thành Công!',
-                            text: response.message,
-                            timer: 2000,
-                            showConfirmButton: false
-                        }).then(() => {
-                            location.reload();
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Lỗi!',
-                            text: response.message
-                        });
-                    }
-                },
-                error: function () {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Lỗi!',
-                        text: 'Không thể kết nối đến server!'
-                    });
-                }
-            });
-        }
-    </script>
-</body>
+    <div class="reward-strip">
+        <div class="reward-card gold">
+            <div class="reward-icon">🏆</div>
+            <div style="font-size:12px; color: var(--gold); font-weight: 700;">HẠNG 1</div>
+            <div class="reward-amount"><?= number_format($rewards[1], 0, ',', '.') ?> GTLM</div>
+        </div>
+        <div class="reward-card silver">
+            <div class="reward-icon">🥈</div>
+            <div style="font-size:12px; color: var(--silver); font-weight: 700;">HẠNG 2</div>
+            <div class="reward-amount"><?= number_format($rewards[2], 0, ',', '.') ?> GTLM</div>
+        </div>
+        <div class="reward-card bronze">
+            <div class="reward-icon">🥉</div>
+            <div style="font-size:12px; color: #b45309; font-weight: 700;">HẠNG 3</div>
+            <div class="reward-amount"><?= number_format($rewards[3], 0, ',', '.') ?> GTLM</div>
+        </div>
+    </div>
 
+    <?php if (empty($currentRankings)): ?>
+        <div style="text-align:center; color: #64748b; padding: 60px 0; background: var(--card); border-radius: 30px; border: 1px dashed rgba(255,255,255,0.1);">
+            <div style="font-size: 48px; margin-bottom: 20px;">🎮</div>
+            Chưa có cao thủ nào xuất hiện tuần này.<br>Hãy là người đầu tiên ghi danh vào sử ký!
+        </div>
+    <?php else: ?>
+        <div class="rank-list">
+            <?php foreach ($currentRankings as $i => $player):
+                $pos   = $i + 1;
+                $isMe  = (int)$player['Iduser'] === $myUserId;
+                $topClass = $pos <= 3 ? "top-$pos" : "";
+                $meClass  = $isMe ? "is-me" : "";
+                $medal = ['', '🥇', '🥈', '🥉'][$pos] ?? $pos;
+                $avatar = $player['ImageURL'] ?: "https://ui-avatars.com/api/?name=" . urlencode($player['Name']) . "&background=random";
+                $winRate = $player['total_games'] > 0 ? round($player['wins'] / $player['total_games'] * 100) : 0;
+            ?>
+            <div class="rank-row <?= $topClass ?> <?= $meClass ?>">
+                <div class="rank-num"><?= $medal ?></div>
+                <img class="rank-avatar" src="<?= htmlspecialchars($avatar) ?>" alt="">
+                <div class="rank-name">
+                    <?= htmlspecialchars($player['Name']) ?>
+                    <?php if ($isMe): ?><span style="font-size:11px; color: var(--primary); font-weight: 700; margin-left: 5px;">BẠN</span><?php endif; ?>
+                </div>
+                <div class="rank-stats">
+                    <div class="rank-gtlm">+<?= number_format($player['net_winnings'], 0, ',', '.') ?></div>
+                    <div class="rank-games"><?= $player['total_games'] ?> ván · <?= $winRate ?>% húp</div>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
+
+    <div class="my-rank-banner">
+        <?php if ($myRank): ?>
+            Vị trí hiện tại: <strong>Hạng <?= $myRank ?></strong>
+            <?php if ($myRank <= 3): ?> — 🎉 Đang húp quà top!<?php endif; ?>
+        <?php else: ?>
+            Bạn chưa có mặt trong BXH. Ra chiêu ngay để húp quà! 🎮
+        <?php endif; ?>
+    </div>
+
+</div>
+
+<script>
+const secondsLeft = <?= $secondsLeft ?>;
+let remaining = secondsLeft;
+
+function updateCountdown() {
+    if (remaining <= 0) {
+        document.getElementById('countdown').textContent = 'Đang tổng kết...';
+        setTimeout(() => location.reload(), 5000);
+        return;
+    }
+    const d = Math.floor(remaining / 86400);
+    const h = Math.floor((remaining % 86400) / 3600);
+    const m = Math.floor((remaining % 3600) / 60);
+    const s = remaining % 60;
+    
+    let parts = '';
+    if (d > 0) parts += d + 'n ';
+    parts += String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+    
+    document.getElementById('countdown').textContent = parts;
+    remaining--;
+}
+updateCountdown();
+setInterval(updateCountdown, 1000);
+</script>
+</body>
 </html>

@@ -29,6 +29,17 @@ $frameType = $_GET['type'] ?? 'chat'; // 'chat' or 'avatar'
 $message = '';
 $messageType = '';
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+$csrfToken = $_SESSION['csrf_token'];
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die("CSRF Token verification failed.");
+    }
+}
+
 // Xử lý thêm khung
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $frame_name = trim($_POST['frame_name']);
@@ -334,6 +345,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         <div class="form-container">
             <form method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                 <div class="form-group">
                     <label for="frame_name">Tên khung *</label>
                     <input type="text" id="frame_name" name="frame_name" required

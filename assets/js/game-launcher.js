@@ -33,6 +33,8 @@ class GameLauncher {
             { id: 'fantan', name: 'Fan Tan', icon: '🟡', url: 'games/fantan.php', category: 'casino', new: true },
             
             // Mini Games Category
+            { id: 'combo_bet', name: 'Combo Bet Slip', icon: '🔥', url: 'combo_bet.php', category: 'mini', new: true },
+            { id: 'spectator_mode', name: 'Trận Địa Live', icon: '📺', url: 'spectator.php', category: 'mini', new: true },
             { id: 'crash', name: 'Crash Rocket', icon: '🚀', url: 'games/crash.php', category: 'mini', new: true },
             { id: 'plinko', name: 'Plinko', icon: '⚪', url: 'games/plinko.php', category: 'mini', new: true },
             { id: 'mines', name: 'Mines', icon: '💣', url: 'games/mines.php', category: 'mini', new: true },

@@ -46,6 +46,11 @@ try {
     $betPlayer = (int)$rawPlayer;
     $betBanker = (int)$rawBanker;
     $betTie = (int)$rawTie;
+
+    if ($betPlayer < 0 || $betBanker < 0 || $betTie < 0) {
+        echo json_encode(['error' => 'Dữ liệu cược không hợp lệ (Số âm)']); exit;
+    }
+
     $totalBet = $betPlayer + $betBanker + $betTie;
     $minBet = 1000;
 

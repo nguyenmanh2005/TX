@@ -141,9 +141,9 @@ if ($action === 'start') {
         $stmt->execute();
         $stmt->close();
 
-        // Track quest progress
+        // Track quest progress + Game of Day + Combo Streak + Random Events
         require_once '../game_history_helper.php';
-        logGameHistory($conn, $userId, 'Blackjack', $cuoc, 0, false);
+        logGameHistoryWithAll($conn, $userId, 'Blackjack', $cuoc, 0, false);
 
         // Insert vào history_bj table
         $historyStmt = $conn->prepare("INSERT INTO history_bj (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
@@ -203,7 +203,7 @@ if ($action === 'start') {
     $stmt->execute();
     $stmt->close();
 
-    // Track quest progress
+    // Track quest progress + Game of Day + Combo Streak + Random Events
     require_once '../game_history_helper.php';
     $winAmount = 0;
     $isWin = false;
@@ -213,7 +213,7 @@ if ($action === 'start') {
     } elseif ($_SESSION['ketquaShort'] === 'Hòa') {
         $winAmount = $cuoc; // Hòa thì hoàn gtlm
     }
-    logGameHistory($conn, $userId, 'Blackjack', $cuoc, $winAmount, $isWin);
+    logGameHistoryWithAll($conn, $userId, 'Blackjack', $cuoc, $winAmount, $isWin);
 
     // Track tournament progress
     require_once '../tournament_helper.php';

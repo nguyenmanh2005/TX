@@ -246,7 +246,7 @@ function finishGame(mysqli $conn, $table) {
         }
         
         // Log game history
-        logGameHistory($conn, (int)$p['user_id'], 'Blackjack Multiplayer', (float)$p['bet_amount'], (float)$winAmount, $isWin);
+        logGameHistoryWithAll($conn, (int)$p['user_id'], 'Blackjack Multiplayer', (float)$p['bet_amount'], (float)$winAmount, $isWin);
     }
     
     $stmt = $conn->prepare("UPDATE blackjack_multi_tables SET status = 'waiting' WHERE id = ?");

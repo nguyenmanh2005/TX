@@ -179,6 +179,29 @@ if (!isset($_SESSION['Iduser'])) { header("Location: login.php"); exit(); }
                                             <span class="sale-date">${l.created_at}</span>
                                         </div>
                                     </div>
+
+                                    <!-- 🏺 ITEM LORE & HISTORY -->
+                                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.1); font-size: 11px;">
+                                        <div style="color: var(--market-gold); font-weight: 800; margin-bottom: 5px;">
+                                            <i class="fa fa-scroll"></i> TRUYỀN THUYẾT VẬT PHẨM
+                                        </div>
+                                        <div style="color: #94a3b8; font-style: italic; margin-bottom: 10px;">
+                                            "${l.item_story || 'Vật phẩm này mới xuất hiện trong trận địa, chưa có lịch sử hào hùng.'}"
+                                        </div>
+                                        
+                                        <div style="display:flex; justify-content: space-between; opacity: 0.7;">
+                                            <span><i class="fa fa-history"></i> Chủ cũ:</span>
+                                            <span style="color: #fff;">${l.original_owner_name || 'Khởi nguyên'}</span>
+                                        </div>
+                                        <div style="display:flex; justify-content: space-between; opacity: 0.7; margin-top: 3px;">
+                                            <span><i class="fa fa-chart-line"></i> Giá cao nhất:</span>
+                                            <span style="color: #fbbf24;">${Number(l.highest_price || 0).toLocaleString()} GTLM</span>
+                                        </div>
+                                        <div style="display:flex; justify-content: space-between; opacity: 0.7; margin-top: 3px;">
+                                            <span><i class="fa fa-eye"></i> Đang theo dõi:</span>
+                                            <span style="color: #10b981;">${l.total_views || 0} người</span>
+                                        </div>
+                                    </div>
                                 </div>
                             `;
                         });

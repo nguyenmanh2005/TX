@@ -69,7 +69,7 @@ function manageRoom(mysqli $conn) {
             }
             
             // Log game history cho từng người chơi
-            logGameHistory($conn, (int)$b['user_id'], 'PvP Horse Racing', (float)$b['amount'], (float)$winAmount, $isWin);
+            logGameHistoryWithAll($conn, (int)$b['user_id'], 'PvP Horse Racing', (float)$b['amount'], (float)$winAmount, $isWin);
         }
         
         $room['status'] = 'finished';

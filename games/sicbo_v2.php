@@ -490,6 +490,8 @@ if (isset($_GET['action'])) {
             <button onclick="showFullRules()" style="background: var(--accent); color: #000; border: none; padding: 8px 20px; border-radius: 50px; cursor: pointer; margin-top: 10px; font-weight: 800; text-transform: uppercase; font-size: 0.7rem; box-shadow: 0 5px 15px rgba(251, 191, 36, 0.4);">📜 Xem chi tiết luật</button>
         </div>
 
+        <?php include __DIR__ . '/daily_challenge_widget.php'; ?>
+
         <div class="glass-card">
             <div class="trend-bar" style="display: flex; gap: 12px; justify-content: center; margin-bottom: 2.5rem; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 50px; border: 1px solid rgba(255,255,255,0.1);">
                 <span style="font-size: 0.75rem; opacity: 0.5; align-self: center; margin-right: 10px; font-weight: 800; letter-spacing: 1px;">TRENDING:</span>

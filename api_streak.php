@@ -22,12 +22,12 @@ if ($action === 'claim_milestone') {
     }
 
     $milestones = [
-        3 => ['reward' => 50000, 'xp' => 50],
-        7 => ['reward' => 150000, 'xp' => 150],
-        14 => ['reward' => 350000, 'xp' => 350],
-        30 => ['reward' => 1000000, 'xp' => 1000],
-        60 => ['reward' => 2500000, 'xp' => 2500],
-        100 => ['reward' => 5000000, 'xp' => 5000]
+        3 => ['reward' => 50000, 'xp' => 100],
+        7 => ['reward' => 1000000, 'xp' => 1000], // 🔥 SIÊU CẤP FOMO (x5 so với 7 ngày cũ)
+        14 => ['reward' => 2500000, 'xp' => 2500],
+        30 => ['reward' => 10000000, 'xp' => 10000],
+        60 => ['reward' => 25000000, 'xp' => 25000],
+        100 => ['reward' => 100000000, 'xp' => 100000]
     ];
 
     if (!isset($milestones[$milestoneDays])) {

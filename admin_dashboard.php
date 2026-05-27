@@ -27,6 +27,8 @@ if (!isAdmin($conn, $currentUserId)) { header("Location: 403.php"); exit(); }
 
 $stats = [
     'users'  => ['total' => null, 'new7d' => null, 'active15m' => null, 'warnings' => []],
+    'economy'=> ['total' => 0],
+    'bots'   => ['total' => 0],
     'games'  => ['warnings' => []],
     'system' => ['dbOk' => true, 'warnings' => [], 'errors' => []],
     'logs'   => []
@@ -48,6 +50,14 @@ if (tableExists($conn, 'users')) {
     } else {
         $stats['users']['warnings'][] = "Thiếu cột last_active → không tính được user online 15 phút.";
     }
+    
+    // Kinh tế
+    $row = fetchOne($conn, "SELECT SUM(Money) AS total_money FROM users");
+    $stats['economy']['total'] = $row ? (float)$row['total_money'] : 0;
+    
+    // Bot
+    $row = fetchOne($conn, "SELECT COUNT(*) AS c FROM users WHERE Email REGEXP '^bot[0-9]+@'");
+    $stats['bots']['total'] = $row ? (int)$row['c'] : 0;
 } else {
     $stats['system']['errors'][] = "Bảng users chưa tồn tại.";
 }
@@ -263,6 +273,46 @@ body::after{
 .win-bar-track{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;}
 .win-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--purple),var(--blue));transition:width .8s cubic-bezier(.4,0,.2,1);}
 
+/* ── Action Grid ── */
+.action-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 30px;
+}
+@media(max-width: 900px) { .action-grid { grid-template-columns: repeat(2, 1fr); } }
+@media(max-width: 500px) { .action-grid { grid-template-columns: 1fr; } }
+
+.action-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    text-decoration: none;
+    color: var(--text);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+.action-card:hover {
+    transform: translateY(-3px) scale(1.02);
+    border-color: var(--blue);
+    box-shadow: 0 10px 30px rgba(79,141,255,0.15);
+    background: var(--surface2);
+}
+.action-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; color: #fff;
+    flex-shrink: 0;
+}
+.action-content h4 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.action-content p { font-size: 12px; color: var(--muted); line-height: 1.4; }
+
 /* ── Divider ── */
 .divider{border:none;border-top:1px solid var(--border);margin:8px 0 16px;}
 </style>
@@ -277,16 +327,10 @@ body::after{
             <h1>Dashboard <span>Overview</span></h1>
         </div>
         <div class="header-right">
-            <a href="bot/tester_bot.php" target="_blank" class="btn btn-ghost" style="color: #ff7185; border-color: #fb7185;">
-                <i class="fa fa-robot"></i> Chạy Tester Bot
+            <a href="index.php" class="btn btn-ghost">
+                <i class="fa fa-home"></i> Trang Chủ
             </a>
-            <a href="chat3.php" class="btn btn-ghost">
-                <i class="fa fa-bug"></i> Báo Cáo Lỗi
-            </a>
-            <a href="admin_analytics.php" class="btn btn-primary">
-                <i class="fa fa-chart-line"></i> Phân Tích Website
-            </a>
-            <a href="logout.php" class="btn btn-ghost">
+            <a href="logout.php" class="btn btn-ghost" style="color: var(--red); border-color: rgba(251,113,133,0.3);">
                 <i class="fa fa-sign-out-alt"></i> Đăng xuất
             </a>
         </div>
@@ -316,6 +360,68 @@ body::after{
             <?php endif; ?>
         </div>
 
+        <div class="metric-card amber">
+            <div class="metric-icon"><i class="fa fa-coins"></i></div>
+            <div class="metric-label">Tổng khối lượng GTLM</div>
+            <div class="metric-value" style="font-size: 24px;"><?= number_format($stats['economy']['total']) ?></div>
+            <div class="metric-badge badge-amber"><i class="fa fa-vault"></i> Dữ liệu hệ thống</div>
+        </div>
+
+        <div class="metric-card purple">
+            <div class="metric-icon"><i class="fa fa-robot"></i></div>
+            <div class="metric-label">Quân đoàn AI (Bot Army)</div>
+            <div class="metric-value"><?= number_format($stats['bots']['total']) ?></div>
+            <div class="metric-badge badge-blue"><i class="fa fa-brain"></i> Vận hành tự động</div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="section-card" style="margin-bottom: 24px; padding-bottom: 10px;">
+        <h3><span class="icon"><i class="fa fa-bolt"></i></span> Trung Tâm Điều Khiển Vĩ Mô</h3>
+        <div class="action-grid">
+            <a href="bot/bot_intelligence.php" class="action-card">
+                <div class="action-icon" style="background: linear-gradient(135deg, #8b5cf6, #d946ef);"><i class="fa fa-network-wired"></i></div>
+                <div class="action-content">
+                    <h4>Bot Intelligence Center</h4>
+                    <p>Giám sát tiến trình tiến hóa, cấp độ và tâm trạng của 136 Bot AI.</p>
+                </div>
+            </a>
+            <a href="admin_advanced_center.php" class="action-card">
+                <div class="action-icon" style="background: linear-gradient(135deg, #3b82f6, #06b6d4);"><i class="fa fa-shield-halved"></i></div>
+                <div class="action-content">
+                    <h4>Master Trận Địa</h4>
+                    <p>Trung tâm quản lý an ninh, can thiệp vào các trò chơi đang chạy.</p>
+                </div>
+            </a>
+            <a href="admin_analytics.php" class="action-card">
+                <div class="action-icon" style="background: linear-gradient(135deg, #10b981, #34d399);"><i class="fa fa-chart-line"></i></div>
+                <div class="action-content">
+                    <h4>Phân Tích Website</h4>
+                    <p>Xem biểu đồ doanh thu, thống kê người dùng và lưu lượng truy cập.</p>
+                </div>
+            </a>
+            <a href="bot/tester_bot.php?action=scan" target="_blank" class="action-card">
+                <div class="action-icon" style="background: linear-gradient(135deg, #ef4444, #f97316);"><i class="fa fa-bug-slash"></i></div>
+                <div class="action-content">
+                    <h4>Hệ thống Tester Bot</h4>
+                    <p>Chạy tool kiểm toán bảo mật, dò tìm lỗ hổng hack xu tự động.</p>
+                </div>
+            </a>
+            <a href="events.php" class="action-card">
+                <div class="action-icon" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);"><i class="fa fa-calendar-star"></i></div>
+                <div class="action-content">
+                    <h4>Đại Sảnh Sự Kiện</h4>
+                    <p>Quản lý các sự kiện theo mùa và các chuỗi nhiệm vụ Event Hub.</p>
+                </div>
+            </a>
+            <a href="chat3.php" class="action-card">
+                <div class="action-icon" style="background: linear-gradient(135deg, #64748b, #94a3b8);"><i class="fa fa-comments"></i></div>
+                <div class="action-content">
+                    <h4>Quản lý Báo Cáo</h4>
+                    <p>Xem tin nhắn báo cáo lỗi từ người chơi để hỗ trợ kịp thời.</p>
+                </div>
+            </a>
+        </div>
     </div>
 
     <!-- System Status -->

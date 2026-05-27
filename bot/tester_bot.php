@@ -31,6 +31,15 @@ $cookieFile = __DIR__ . '/tester_session.txt';
 // --- Action Handlers ---
 $action = $_GET['action'] ?? '';
 
+// Support CLI args
+if (php_sapi_name() === 'cli' && empty($action)) {
+    foreach ($argv as $arg) {
+        if (strpos($arg, 'action=') === 0) {
+            $action = explode('=', $arg)[1];
+        }
+    }
+}
+
 if ($action === 'stop') {
     file_put_contents($stopFlag, 'STOP');
     echo json_encode(['status' => 'success', 'message' => 'Stop signal sent.']);
@@ -68,8 +77,15 @@ function runScan(mysqli $conn, array $env, string $stopFlag, string $cookieFile)
     $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
     $host = $_SERVER['HTTP_HOST'] ?? "127.0.0.1";
     $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
-    $baseDir = str_replace('\\', '/', dirname(dirname($scriptName)));
-    $baseUrl = "$protocol://$host" . rtrim($baseDir, '/') . '/';
+    
+    // Fix baseUrl for CLI
+    if (php_sapi_name() === 'cli') {
+        // Assume default XAMPP folder "1" or read from .env
+        $baseUrl = $env['BASE_URL'] ?? "http://127.0.0.1/1/";
+    } else {
+        $baseDir = str_replace('\\', '/', dirname(dirname($scriptName)));
+        $baseUrl = "$protocol://$host" . rtrim($baseDir, '/') . '/';
+    }
 
     $results = [
         'start_time' => date('Y-m-d H:i:s'),
@@ -119,6 +135,14 @@ function runScan(mysqli $conn, array $env, string $stopFlag, string $cookieFile)
         postToChat($conn, "[TESTER] 🏆 Đang chẩn đoán Competitive Integrity...");
         runCompetitiveAudit($conn, $baseUrl, $cookieFile, $results);
         $results['performance']['competitive_audit'] = round(microtime(true) - $t7, 2) . 's';
+    }
+
+    // 5.5. Event & Seasonal System Audit
+    if ($loginSuccess && !file_exists($stopFlag)) {
+        $t9 = microtime(true);
+        postToChat($conn, "[TESTER] 🎪 Đang kiểm toán Hệ thống Sự kiện & Lời Tiên Tri...");
+        runEventSystemAudit($conn, $baseUrl, $cookieFile, $results);
+        $results['performance']['event_audit'] = round(microtime(true) - $t9, 2) . 's';
     }
 
     // 6. Multi-Endpoint Rate Limit
@@ -194,6 +218,30 @@ function runCompetitiveAudit(mysqli $conn, string $baseUrl, string $cookieFile, 
     $resBp = apiPost($baseUrl . 'api_battle_pass.php', ['action' => 'claim_reward', 'level' => 99, 'track' => 'free'], $cookieFile);
     if (isset($resBp['success']) && $resBp['success']) {
         $results['findings'][] = ['type' => 'CRITICAL', 'file' => 'api_battle_pass.php', 'issue' => 'Reward: Bypass level Battle Pass!'];
+    }
+}
+
+// --- Event & Seasonal Audit ---
+/**
+ * Kiểm tra các rủi ro từ Hệ thống Sự Kiện và Lời Tiên Tri
+ */
+function runEventSystemAudit(mysqli $conn, string $baseUrl, string $cookieFile, array &$results) {
+    // 1. Mission Claim Spoofing (Thử nhận thưởng nhiệm vụ chưa hoàn thành)
+    $resClaim = apiPost($baseUrl . 'api_event_engine.php', ['action' => 'claim_reward', 'mission_id' => 99999], $cookieFile);
+    if (isset($resClaim['success']) && $resClaim['success']) {
+        $results['findings'][] = ['type' => 'CRITICAL', 'file' => 'api_event_engine.php', 'issue' => 'Event: Có thể claim nhiệm vụ không tồn tại hoặc chưa hoàn thành!'];
+    }
+
+    // 2. Event Exchange Shop Exploit (Mua hàng số lượng âm hoặc giá trị sai)
+    $resShop = apiPost($baseUrl . 'api_event_engine.php', ['action' => 'exchange_item', 'item_id' => 1, 'quantity' => -5], $cookieFile);
+    if (isset($resShop['success']) && $resShop['success']) {
+        $results['findings'][] = ['type' => 'CRITICAL', 'file' => 'api_event_engine.php', 'issue' => 'Event Shop: Lỗ hổng số lượng mua (Quantity Bypass)!'];
+    }
+
+    // 3. Oracle System Injection (Thử gửi lời tiên tri sai logic)
+    $resOracle = apiPost($baseUrl . 'api_oracle_prophecy.php', ['action' => 'submit_prophecy', 'message' => '<script>alert("XSS")</script>', 'bet' => -1000], $cookieFile);
+    if (isset($resOracle['success']) && $resOracle['success']) {
+         $results['findings'][] = ['type' => 'CRITICAL', 'file' => 'api_oracle_prophecy.php', 'issue' => 'Oracle: Bỏ qua kiểm tra XSS hoặc chấp nhận Bet âm!'];
     }
 }
 

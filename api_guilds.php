@@ -162,6 +162,15 @@ switch ($action) {
             $guild = $stmt->get_result()->fetch_assoc();
             
             if (!$guild) throw new Exception("Guild không tồn tại!");
+            
+            // FIX: Kiểm tra nếu guild yêu cầu duyệt đơn
+            $stmt = $conn->prepare("SELECT require_approval FROM guilds WHERE id = ?");
+            $stmt->bind_param("i", $guildId);
+            $stmt->execute();
+            $gSettings = $stmt->get_result()->fetch_assoc();
+            if ($gSettings && $gSettings['require_approval']) {
+                throw new Exception("Guild này yêu cầu gửi đơn duyệt (Apply), không thể tham gia trực tiếp!");
+            }
 
             // Kiểm tra user đã có guild chưa
             $stmt = $conn->prepare("SELECT guild_id FROM guild_members WHERE user_id = ?");
@@ -178,6 +187,12 @@ switch ($action) {
             $stmt->bind_param("ii", $guildId, $userId);
             $stmt->execute();
             
+            // Thông báo chat
+            $stmt = $conn->prepare("INSERT INTO guild_chat (guild_id, user_id, message) VALUES (?, 1, ?)"); // ID 1 là Hệ thống
+            $msg = "📢 Người chơi " . $_SESSION['Name'] . " đã tham gia Guild! Chào mừng bạn! 🥳";
+            $stmt->bind_param("is", $guildId, $msg);
+            $stmt->execute();
+
             $conn->commit();
             echo json_encode(['success' => true, 'message' => 'Tham gia guild thành công!']);
         } catch (Exception $e) {
@@ -208,13 +223,23 @@ switch ($action) {
         }
         
         // Xóa thành viên
-        $sql = "DELETE FROM guild_members WHERE guild_id = ? AND user_id = ?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("ii", $guildId, $userId);
-        
-        if ($stmt->execute()) {
+        $conn->begin_transaction();
+        try {
+            $sql = "DELETE FROM guild_members WHERE guild_id = ? AND user_id = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("ii", $guildId, $userId);
+            $stmt->execute();
+            
+            // Thông báo chat
+            $stmt = $conn->prepare("INSERT INTO guild_chat (guild_id, user_id, message) VALUES (?, 1, ?)");
+            $msg = "📢 Thành viên " . $_SESSION['Name'] . " đã rời khỏi Guild. Tạm biệt! 👋";
+            $stmt->bind_param("is", $guildId, $msg);
+            $stmt->execute();
+            
+            $conn->commit();
             echo json_encode(['success' => true, 'message' => 'Rời guild thành công!']);
-        } else {
+        } catch (Exception $e) {
+            $conn->rollback();
             echo json_encode(['success' => false, 'message' => 'Lỗi khi rời guild!']);
         }
         $stmt->close();
@@ -480,6 +505,16 @@ switch ($action) {
         // Chấp nhận đơn
         $conn->begin_transaction();
         try {
+            // FIX: Kiểm tra user đã có guild khác chưa (Tránh double guild)
+            $stmt = $conn->prepare("SELECT guild_id FROM guild_members WHERE user_id = ?");
+            $stmt->bind_param("i", $application['user_id']);
+            $stmt->execute();
+            if ($stmt->get_result()->num_rows > 0) {
+                // Tự động từ chối đơn vì user đã có guild
+                $conn->query("UPDATE guild_applications SET status = 'rejected', reviewed_at = NOW(), reviewed_by = $userId WHERE id = $applicationId");
+                throw new Exception("Người chơi này đã tham gia guild khác rồi!");
+            }
+
             // Thêm thành viên
             $sql1 = "INSERT INTO guild_members (guild_id, user_id, role) VALUES (?, ?, 'member')";
             $stmt1 = $conn->prepare($sql1);
@@ -494,6 +529,12 @@ switch ($action) {
             $stmt2->execute();
             $stmt2->close();
             
+            // Thông báo chat
+            $stmt = $conn->prepare("INSERT INTO guild_chat (guild_id, user_id, message) VALUES (?, 1, ?)");
+            $msg = "📢 Chào mừng thành viên mới được duyệt: " . $application['user_id'] . "! 🎉";
+            $stmt->bind_param("is", $application['guild_id'], $msg);
+            $stmt->execute();
+
             $conn->commit();
             echo json_encode(['success' => true, 'message' => 'Chấp nhận đơn thành công!']);
         } catch (Exception $e) {
@@ -798,6 +839,33 @@ switch ($action) {
         
         // Tổng số guild
         $totalSql = "SELECT COUNT(*) as total FROM guilds";
+        $totalRes = $conn->query($totalSql)->fetch_assoc();
+        
+        echo json_encode(['success' => true, 'rank' => $rankData['rank'], 'total' => $totalRes['total'], 'guild' => $guild]);
+        break;
+
+    case 'settings':
+        // Cập nhật cài đặt guild
+        $guildId = (int)($_POST['guild_id'] ?? 0);
+        $requireApp = isset($_POST['require_approval']) ? (int)$_POST['require_approval'] : 1;
+        $desc = trim($_POST['description'] ?? '');
+
+        if (!isLeaderOrOfficer($conn, $userId, $guildId)) {
+            echo json_encode(['success' => false, 'message' => 'Bạn không có quyền thay đổi cài đặt!']);
+            exit;
+        }
+
+        $stmt = $conn->prepare("UPDATE guilds SET require_approval = ?, description = ? WHERE id = ?");
+        $stmt->bind_param("isi", $requireApp, $desc, $guildId);
+        
+        if ($stmt->execute()) {
+            echo json_encode(['success' => true, 'message' => 'Cập nhật cài đặt thành công!']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Lỗi khi cập nhật!']);
+        }
+        $stmt->close();
+        break;
+}
         $totalResult = $conn->query($totalSql);
         $totalData = $totalResult->fetch_assoc();
         

@@ -6,6 +6,12 @@ if (!isset($_SESSION['Iduser'])) {
     exit();
 }
 
+// CSRF Token
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+$csrfToken = $_SESSION['csrf_token'];
+
 require 'db_connect.php';
 
 // Load theme
@@ -30,6 +36,10 @@ $messageType = '';
 
 // Xử lý xóa cursor
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_cursor'])) {
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        $message = '❌ Yêu cầu không hợp lệ (CSRF)!';
+        $messageType = 'error';
+    } else {
     $cursorId = (int) $_POST['cursor_id'];
     $deleteSql = "DELETE FROM cursors WHERE id = ?";
     $deleteStmt = $conn->prepare($deleteSql);
@@ -44,10 +54,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_cursor'])) {
         }
         $deleteStmt->close();
     }
+    } // end CSRF check
 }
 
 // Xử lý xóa achievement
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_achievement'])) {
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        $message = '❌ Yêu cầu không hợp lệ (CSRF)!';
+        $messageType = 'error';
+    } else {
     $achievementId = (int) $_POST['achievement_id'];
     $deleteSql = "DELETE FROM achievements WHERE id = ?";
     $deleteStmt = $conn->prepare($deleteSql);
@@ -62,10 +77,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_achievement'])
         }
         $deleteStmt->close();
     }
+    } // end CSRF check
 }
 
 // Xử lý xóa theme
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_theme'])) {
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        $message = '❌ Yêu cầu không hợp lệ (CSRF)!';
+        $messageType = 'error';
+    } else {
     $themeId = (int) $_POST['theme_id'];
     $deleteSql = "DELETE FROM themes WHERE id = ?";
     $deleteStmt = $conn->prepare($deleteSql);
@@ -80,6 +100,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_theme'])) {
         }
         $deleteStmt->close();
     }
+    } // end CSRF check
 }
 
 // Lấy danh sách cursors
@@ -493,6 +514,7 @@ if ($themesResult) {
                                             Sửa</a>
                                         <form method="POST" style="display: inline;"
                                             onsubmit="return confirm('Bạn có chắc muốn xóa cursor này?');">
+                                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                                             <input type="hidden" name="cursor_id" value="<?= $cursor['id'] ?>">
                                             <button type="submit" name="delete_cursor" class="btn-delete">🗑️ Xóa</button>
                                         </form>
@@ -561,6 +583,7 @@ if ($themesResult) {
                                             class="btn-edit">✏️ Sửa</a>
                                         <form method="POST" style="display: inline;"
                                             onsubmit="return confirm('Bạn có chắc muốn xóa achievement này?');">
+                                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                                             <input type="hidden" name="achievement_id" value="<?= $achievement['id'] ?>">
                                             <button type="submit" name="delete_achievement" class="btn-delete">🗑️ Xóa</button>
                                         </form>
@@ -630,6 +653,7 @@ if ($themesResult) {
                                             Sửa</a>
                                         <form method="POST" style="display: inline;"
                                             onsubmit="return confirm('Bạn có chắc muốn xóa theme này?');">
+                                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                                             <input type="hidden" name="theme_id" value="<?= $theme['id'] ?>">
                                             <button type="submit" name="delete_theme" class="btn-delete">🗑️ Xóa</button>
                                         </form>

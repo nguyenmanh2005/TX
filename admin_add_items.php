@@ -28,6 +28,17 @@ if (!isAdmin($conn, $userId)) {
 $message = '';
 $messageType = '';
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+$csrfToken = $_SESSION['csrf_token'];
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die("CSRF Token verification failed.");
+    }
+}
+
 // Xử lý thêm cursor
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['add_cursor'])) {
     $name = trim($_POST['cursor_name']);
@@ -451,6 +462,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['add_achievement'])) {
         <div id="cursor-tab" class="tab-content active">
             <h2>🖱️ Thêm Cursor Mới</h2>
             <form method="POST">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                 <div class="form-group">
                     <label for="cursor_name">Tên cursor *</label>
                     <input type="text" id="cursor_name" name="cursor_name" required placeholder="Ví dụ: Magic Wand">
@@ -490,6 +502,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['add_achievement'])) {
         <div id="theme-tab" class="tab-content">
             <h2>🎨 Thêm Theme Mới (Three.js Background)</h2>
             <form method="POST">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                 <div class="form-group">
                     <label for="theme_name">Tên theme *</label>
                     <input type="text" id="theme_name" name="theme_name" required placeholder="Ví dụ: Dark Mode">
@@ -585,6 +598,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['add_achievement'])) {
         <div id="achievement-tab" class="tab-content">
             <h2>🏆 Thêm Achievement Mới</h2>
             <form method="POST">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                 <div class="form-group">
                     <label for="achievement_name">Tên achievement *</label>
                     <input type="text" id="achievement_name" name="achievement_name" required
