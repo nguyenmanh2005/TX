@@ -1512,14 +1512,14 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
         }
 
         // 3. Events
-        $eventRes = executeBotAction($baseUrl . "/api_events.php?action=get_list&status=active", null, $cFile);
+        $eventRes = executeBotAction($baseUrl . "/api_daily_challenges.php?action=get_list&status=active", null, $cFile);
         if (isset($eventRes['events'])) {
             foreach ($eventRes['events'] as $ev) {
                 if (!$ev['is_joined']) {
-                    executeBotAction($baseUrl . "/api_events.php", ['action' => 'join', 'event_id' => $ev['id']], $cFile);
+                    executeBotAction($baseUrl . "/api_daily_challenges.php", ['action' => 'join', 'event_id' => $ev['id']], $cFile);
                 }
                 if (isset($ev['user_completed']) && $ev['user_completed'] && isset($ev['user_claimed']) && !$ev['user_claimed']) {
-                    executeBotAction($baseUrl . "/api_events.php", ['action' => 'claim_reward', 'event_id' => $ev['id']], $cFile);
+                    executeBotAction($baseUrl . "/api_daily_challenges.php", ['action' => 'claim_reward', 'event_id' => $ev['id']], $cFile);
                 }
             }
         }

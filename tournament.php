@@ -205,6 +205,7 @@ $tournamentsTableExists = $checkTable && $checkTable->num_rows > 0;
             background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
             opacity: 0;
             transition: opacity 0.4s ease;
+            pointer-events: none;
         }
 
         .tournament-card::after {
@@ -216,6 +217,7 @@ $tournamentsTableExists = $checkTable && $checkTable->num_rows > 0;
             height: 100%;
             background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
             transition: left 0.5s ease;
+            pointer-events: none;
         }
 
         .tournament-card:hover {
@@ -592,6 +594,12 @@ $tournamentsTableExists = $checkTable && $checkTable->num_rows > 0;
             });
         });
 
+        // Format money
+        function formatMoney(amount) {
+            const val = parseFloat(amount);
+            return new Intl.NumberFormat('vi-VN').format(isNaN(val) ? 0 : val) + ' gtlm';
+        }
+
         // Load tournaments list
         function loadTournaments() {
             $.ajax({
@@ -606,14 +614,15 @@ $tournamentsTableExists = $checkTable && $checkTable->num_rows > 0;
                             html = '<div class="no-data">Chưa có giải đấu nào</div>';
                         } else {
                             response.tournaments.forEach(tournament => {
-                                const badgeClass = 'badge-' + tournament.tournament_type;
-                                const statusClass = 'status-' + tournament.status;
+                                const badgeClass = 'badge-' + (tournament.tournament_type || 'special');
+                                const statusClass = 'status-' + (tournament.status || 'registration');
                                 const statusText = {
                                     'upcoming': 'Sắp Diễn Ra',
                                     'registration': 'Đang Đăng Ký',
                                     'active': 'Đang Diễn Ra',
                                     'ended': 'Đã Kết Thúc',
-                                    'cancelled': 'Đã Hủy'
+                                    'cancelled': 'Đã Hủy',
+                                    'paused': 'Tạm Dừng'
                                 };
 
                                 const typeText = {
@@ -623,15 +632,24 @@ $tournamentsTableExists = $checkTable && $checkTable->num_rows > 0;
                                     'special': 'Đặc Biệt'
                                 };
 
-                                const rewards = JSON.parse(tournament.reward_structure || '{}');
+                                let rewards = {};
+                                try {
+                                    rewards = JSON.parse(tournament.reward_structure || '{}');
+                                } catch (e) {
+                                    rewards = {};
+                                }
+                                
                                 let rewardsHtml = '';
                                 Object.keys(rewards).forEach(key => {
                                     rewardsHtml += `<span class="reward-item">Top ${key}: ${formatMoney(rewards[key])}</span>`;
                                 });
 
-                                const startTime = new Date(tournament.start_time).toLocaleString('vi-VN');
-                                const endTime = new Date(tournament.end_time).toLocaleString('vi-VN');
-                                const regEnd = new Date(tournament.registration_end).toLocaleString('vi-VN');
+                                const startTime = tournament.start_time ? new Date(tournament.start_time).toLocaleString('vi-VN') : 'N/A';
+                                const endTime = tournament.end_time ? new Date(tournament.end_time).toLocaleString('vi-VN') : 'N/A';
+                                const regEnd = tournament.registration_end ? new Date(tournament.registration_end).toLocaleString('vi-VN') : 'N/A';
+
+                                const participantCount = tournament.participant_count ?? tournament.registered_players ?? 0;
+                                const maxParticipants = tournament.max_participants ?? tournament.max_players ?? 100;
 
                                 html += `
                                     <div class="tournament-card">
@@ -639,20 +657,20 @@ $tournamentsTableExists = $checkTable && $checkTable->num_rows > 0;
                                             <div>
                                                 <div class="tournament-title">
                                                     ${tournament.name}
-                                                    <span class="tournament-badge ${badgeClass}">${typeText[tournament.tournament_type]}</span>
+                                                    <span class="tournament-badge ${badgeClass}">${typeText[tournament.tournament_type] || 'Đặc Biệt'}</span>
                                                 </div>
-                                                <span class="tournament-status ${statusClass}">${statusText[tournament.status]}</span>
+                                                <span class="tournament-status ${statusClass}">${statusText[tournament.status] || 'Đang Đăng Ký'}</span>
                                             </div>
                                         </div>
                                         <div class="tournament-info">${tournament.description || 'Chưa có mô tả'}</div>
                                         <div class="tournament-details">
                                             <div class="detail-item">
                                                 <span class="detail-label">Game</span>
-                                                <span class="detail-value">${tournament.game_type}</span>
+                                                <span class="detail-value">${tournament.game_type || 'Tài Xỉu'}</span>
                                             </div>
                                             <div class="detail-item">
                                                 <span class="detail-label">Thành Viên</span>
-                                                <span class="detail-value">${tournament.participant_count}/${tournament.max_participants}</span>
+                                                <span class="detail-value">${participantCount}/${maxParticipants}</span>
                                             </div>
                                             <div class="detail-item">
                                                 <span class="detail-label">Bắt Đầu</span>
@@ -665,7 +683,7 @@ $tournamentsTableExists = $checkTable && $checkTable->num_rows > 0;
                                         </div>
                                         <div class="tournament-rewards">
                                             <div class="rewards-title">💰 Phần Thưởng:</div>
-                                            <div class="rewards-list">${rewardsHtml}</div>
+                                            <div class="rewards-list">${rewardsHtml || '<span class="reward-item">Cập nhật sau</span>'}</div>
                                         </div>
                                         <div class="action-buttons">
                                             ${tournament.status === 'registration' && !tournament.is_registered ?
@@ -683,7 +701,13 @@ $tournamentsTableExists = $checkTable && $checkTable->num_rows > 0;
                             });
                         }
                         $('#tournaments-list').html(html);
+                    } else {
+                        $('#tournaments-list').html(`<div class="no-data" style="color: #ff4d4f;">⚠️ Lỗi: ${response.message || 'Không thể tải danh sách.'}</div>`);
                     }
+                },
+                error: function (xhr, status, error) {
+                    console.error("AJAX Error (loadTournaments):", xhr.responseText);
+                    $('#tournaments-list').html(`<div class="no-data" style="color: #ff4d4f;">⚠️ Không thể kết nối với máy chủ.</div>`);
                 }
             });
         }
@@ -714,13 +738,28 @@ $tournamentsTableExists = $checkTable && $checkTable->num_rows > 0;
                             });
                         }
                         $('#my-tournaments-list').html(html);
+                    } else {
+                        $('#my-tournaments-list').html(`<div class="no-data" style="color: #ff4d4f;">⚠️ Lỗi: ${response.message || 'Không thể tải dữ liệu.'}</div>`);
                     }
+                },
+                error: function (xhr, status, error) {
+                    console.error("AJAX Error (loadMyTournaments):", xhr.responseText);
+                    $('#my-tournaments-list').html(`<div class="no-data" style="color: #ff4d4f;">⚠️ Không thể kết nối với máy chủ.</div>`);
                 }
             });
         }
 
         // Register tournament
         function registerTournament(tournamentId) {
+            Swal.fire({
+                title: 'Đang xử lý...',
+                text: 'Vui lòng chờ trong giây lát',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
             $.ajax({
                 url: 'api_tournament.php',
                 method: 'POST',
@@ -730,12 +769,17 @@ $tournamentsTableExists = $checkTable && $checkTable->num_rows > 0;
                 },
                 dataType: 'json',
                 success: function (response) {
+                    Swal.close();
                     if (response.success) {
                         Swal.fire('Thành công', response.message, 'success');
                         loadTournaments();
                     } else {
-                        Swal.fire('Lỗi', response.message, 'error');
+                        Swal.fire('Lỗi', response.message || 'Không thể đăng ký giải đấu.', 'error');
                     }
+                },
+                error: function (xhr, status, error) {
+                    Swal.close();
+                    Swal.fire('Lỗi hệ thống', 'Không thể gửi yêu cầu: ' + (xhr.responseText || error), 'error');
                 }
             });
         }
@@ -744,13 +788,21 @@ $tournamentsTableExists = $checkTable && $checkTable->num_rows > 0;
         function unregisterTournament(tournamentId) {
             Swal.fire({
                 title: 'Xác nhận hủy đăng ký?',
-                text: 'Bạn có chắc chắn muốn hủy đăng ký giải đấu này?',
+                text: 'Bạn có chắc chắn muốn hủy đăng ký giải đấu này? Tiền cược sẽ được hoàn lại ví của bạn.',
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonText: 'Hủy Đăng Ký',
                 cancelButtonText: 'Không'
             }).then((result) => {
                 if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Đang xử lý...',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
                     $.ajax({
                         url: 'api_tournament.php',
                         method: 'POST',
@@ -760,12 +812,17 @@ $tournamentsTableExists = $checkTable && $checkTable->num_rows > 0;
                         },
                         dataType: 'json',
                         success: function (response) {
+                            Swal.close();
                             if (response.success) {
                                 Swal.fire('Thành công', response.message, 'success');
                                 loadTournaments();
                             } else {
-                                Swal.fire('Lỗi', response.message, 'error');
+                                Swal.fire('Lỗi', response.message || 'Không thể hủy đăng ký.', 'error');
                             }
+                        },
+                        error: function (xhr, status, error) {
+                            Swal.close();
+                            Swal.fire('Lỗi hệ thống', 'Không thể kết nối máy chủ: ' + (xhr.responseText || error), 'error');
                         }
                     });
                 }
@@ -774,6 +831,14 @@ $tournamentsTableExists = $checkTable && $checkTable->num_rows > 0;
 
         // View tournament details
         function viewTournament(tournamentId) {
+            Swal.fire({
+                title: 'Đang tải thông tin...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
             // Open modal with tournament details
             $.ajax({
                 url: 'api_tournament.php',
@@ -784,14 +849,21 @@ $tournamentsTableExists = $checkTable && $checkTable->num_rows > 0;
                     if (response.success) {
                         const tournament = response.tournament;
                         showTournamentModal(tournament);
+                    } else {
+                        Swal.close();
+                        Swal.fire('Lỗi', response.message || 'Không thể tải thông tin giải đấu.', 'error');
                     }
+                },
+                error: function (xhr, status, error) {
+                    Swal.close();
+                    Swal.fire('Lỗi hệ thống', 'Không thể kết nối máy chủ: ' + (xhr.responseText || error), 'error');
                 }
             });
         }
 
         // Show tournament modal
         function showTournamentModal(tournament) {
-            // Load leaderboard and stats
+            // Load leaderboard
             $.ajax({
                 url: 'api_tournament.php',
                 method: 'GET',
@@ -800,20 +872,24 @@ $tournamentsTableExists = $checkTable && $checkTable->num_rows > 0;
                 success: function (leaderboardResponse) {
                     if (leaderboardResponse.success) {
                         let leaderboardHtml = '<table class="leaderboard-table"><thead><tr><th>Hạng</th><th>Tên</th><th>Điểm</th><th>Thắng</th><th>Game</th></tr></thead><tbody>';
-                        leaderboardResponse.leaderboard.forEach((entry, index) => {
-                            const rankClass = entry.current_rank === 1 ? 'rank-1' :
-                                entry.current_rank === 2 ? 'rank-2' :
-                                    entry.current_rank === 3 ? 'rank-3' : 'rank-other';
-                            leaderboardHtml += `
-                                <tr>
-                                    <td><span class="rank-badge ${rankClass}">${entry.current_rank}</span></td>
-                                    <td>${entry.Name}</td>
-                                    <td>${formatMoney(entry.score)}</td>
-                                    <td>${entry.total_wins}/${entry.total_games}</td>
-                                    <td>${entry.total_games}</td>
-                                </tr>
-                            `;
-                        });
+                        if (leaderboardResponse.leaderboard.length === 0) {
+                            leaderboardHtml += '<tr><td colspan="5" style="text-align: center; color: #999;">Chưa có dữ liệu bảng xếp hạng</td></tr>';
+                        } else {
+                            leaderboardResponse.leaderboard.forEach((entry, index) => {
+                                const rankClass = entry.current_rank === 1 ? 'rank-1' :
+                                    entry.current_rank === 2 ? 'rank-2' :
+                                        entry.current_rank === 3 ? 'rank-3' : 'rank-other';
+                                leaderboardHtml += `
+                                    <tr>
+                                        <td><span class="rank-badge ${rankClass}">${entry.current_rank}</span></td>
+                                        <td>${entry.Name || 'Ẩn danh'}</td>
+                                        <td>${formatMoney(entry.score)}</td>
+                                        <td>${entry.total_wins}/${entry.total_games}</td>
+                                        <td>${entry.total_games}</td>
+                                    </tr>
+                                `;
+                            });
+                        }
                         leaderboardHtml += '</tbody></table>';
 
                         // Load my stats
@@ -823,6 +899,7 @@ $tournamentsTableExists = $checkTable && $checkTable->num_rows > 0;
                             data: { action: 'get_my_stats', tournament_id: tournament.id },
                             dataType: 'json',
                             success: function (statsResponse) {
+                                Swal.close();
                                 let statsHtml = '';
                                 if (statsResponse.success) {
                                     const stats = statsResponse.stats;
@@ -848,33 +925,44 @@ $tournamentsTableExists = $checkTable && $checkTable->num_rows > 0;
                                     `;
                                 }
 
+                                const startTime = tournament.start_time ? new Date(tournament.start_time).toLocaleString('vi-VN') : 'N/A';
+                                const endTime = tournament.end_time ? new Date(tournament.end_time).toLocaleString('vi-VN') : 'N/A';
+
                                 Swal.fire({
                                     title: tournament.name,
                                     html: `
                                         <div style="text-align: left;">
                                             <p><strong>Mô tả:</strong> ${tournament.description || 'Chưa có mô tả'}</p>
-                                            <p><strong>Game:</strong> ${tournament.game_type}</p>
-                                            <p><strong>Thời gian:</strong> ${new Date(tournament.start_time).toLocaleString('vi-VN')} - ${new Date(tournament.end_time).toLocaleString('vi-VN')}</p>
+                                            <p><strong>Game:</strong> ${tournament.game_type || 'Tài Xỉu'}</p>
+                                            <p><strong>Thời gian:</strong> ${startTime} - ${endTime}</p>
                                             <p><strong>Thành viên:</strong> ${tournament.participant_count}/${tournament.max_participants}</p>
                                             ${statsHtml}
                                             <h3 style="margin-top: 20px;">Bảng Xếp Hạng</h3>
-                                            ${leaderboardHtml}
+                                            <div style="max-height: 300px; overflow-y: auto;">
+                                                ${leaderboardHtml}
+                                            </div>
                                         </div>
                                     `,
                                     width: '800px',
                                     showCloseButton: true,
                                     showConfirmButton: false
                                 });
+                            },
+                            error: function (xhr, status, error) {
+                                Swal.close();
+                                Swal.fire('Lỗi', 'Không thể tải thống kê cá nhân: ' + (xhr.responseText || error), 'error');
                             }
                         });
+                    } else {
+                        Swal.close();
+                        Swal.fire('Lỗi', leaderboardResponse.message || 'Không thể tải bảng xếp hạng.', 'error');
                     }
+                },
+                error: function (xhr, status, error) {
+                    Swal.close();
+                    Swal.fire('Lỗi hệ thống', 'Không thể kết nối máy chủ bảng xếp hạng: ' + (xhr.responseText || error), 'error');
                 }
             });
-        }
-
-        // Format money
-        function formatMoney(amount) {
-            return new Intl.NumberFormat('vi-VN').format(amount) + ' gtlm';
         }
 
         // Load initial data

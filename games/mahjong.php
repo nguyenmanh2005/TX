@@ -10,16 +10,6 @@ if (!isset($_SESSION['Iduser'])) {
 
 $userId = $_SESSION['Iduser'];
 
-// Auto-create history table
-$conn->query("CREATE TABLE IF NOT EXISTS history_mahjong (
-    Id INT AUTO_INCREMENT PRIMARY KEY,
-    Iduser INT NOT NULL,
-    Bet DECIMAL(30,2) NOT NULL,
-    Result VARCHAR(255) NOT NULL,
-    WinAmount DECIMAL(30,2) NOT NULL,
-    Time DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
 $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
@@ -74,7 +64,7 @@ if (isset($_GET['action'])) {
     if ($action === 'play') {
         $bet = (int) ($_POST['bet'] ?? 0);
         if ($bet <= 0 || $bet > $money) {
-            echo json_encode(['success' => false, 'message' => 'Cược không hợp lệ!']);
+            echo json_encode(['success' => false, 'message' => 'CÆ°á»£c khÃ´ng há»£p lá»‡!']);
             exit;
         }
 
@@ -88,12 +78,12 @@ if (isset($_GET['action'])) {
         $status = "";
         if ($pEval['score'] > $dEval['score']) {
             $winAmount = $bet;
-            $status = "Bạn thắng! (" . $pEval['name'] . ")";
+            $status = "Báº¡n tháº¯ng! (" . $pEval['name'] . ")";
         } elseif ($pEval['score'] < $dEval['score']) {
-            $status = "Dealer thắng! (" . $dEval['name'] . ")";
+            $status = "Dealer tháº¯ng! (" . $dEval['name'] . ")";
         } else {
             $winAmount = 0;
-            $status = "Hòa!";
+            $status = "HÃ²a!";
         }
 
         $newMoney = $money + $winAmount;
@@ -136,7 +126,7 @@ if (isset($_GET['action'])) {
 
 <head>
     <meta charset="UTF-8">
-    <title>Mahjong Clash - Đại Chiến Mạt Chược</title>
+    <title>Mahjong Clash - Äáº¡i Chiáº¿n Máº¡t ChÆ°á»£c</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../assets/css/main.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -442,7 +432,7 @@ if (isset($_GET['action'])) {
 
     <div class="main-container">
         <h1 class="game-title">MAHJONG CLASH</h1>
-        <div class="balance-pill">💰 Số Gtlm: <span id="balance-val"><?= number_format($money, 0, ',', '.') ?></span>
+        <div class="balance-pill">ðŸ’° Sá»‘ Gtlm: <span id="balance-val"><?= number_format($money, 0, ',', '.') ?></span>
             gtlm
         </div>
 
@@ -450,9 +440,9 @@ if (isset($_GET['action'])) {
             <div id="dealer-view">
                 <div class="area-label">Queen GTLM (DEALER)</div>
                 <div id="dealer-tiles" class="tile-area">
-                    <div class="tile">🀫</div>
-                    <div class="tile">🀫</div>
-                    <div class="tile">🀫</div>
+                    <div class="tile">ðŸ€«</div>
+                    <div class="tile">ðŸ€«</div>
+                    <div class="tile">ðŸ€«</div>
                 </div>
                 <div id="dealer-rank" class="rank-badge">---</div>
             </div>
@@ -461,40 +451,40 @@ if (isset($_GET['action'])) {
 
             <div id="player-view">
                 <div id="player-tiles" class="tile-area">
-                    <div class="tile">🀫</div>
-                    <div class="tile">🀫</div>
-                    <div class="tile">🀫</div>
+                    <div class="tile">ðŸ€«</div>
+                    <div class="tile">ðŸ€«</div>
+                    <div class="tile">ðŸ€«</div>
                 </div>
                 <div id="player-rank" class="rank-badge">---</div>
-                <div class="area-label" style="margin-top: 1rem;">NGƯỜI CHƠI (YOU)</div>
+                <div class="area-label" style="margin-top: 1rem;">NGÆ¯á»œI CHÆ I (YOU)</div>
             </div>
 
             <div class="bet-input-container">
-                <span>gtlm CƯỢC</span>
+                <span>gtlm CÆ¯á»¢C</span>
                 <input type="number" id="bet-amt" value="1000" min="100" step="100">
             </div>
 
-            <button id="play-btn" class="btn-play">XUẤT QUÂN</button>
+            <button id="play-btn" class="btn-play">XUáº¤T QUÃ‚N</button>
         </div>
 
         <div class="history-section">
-            <h2 style="font-size: 1.1rem; letter-spacing: 2px; margin-bottom: 1rem;">LỊCH SỬ THI ĐẤU</h2>
+            <h2 style="font-size: 1.1rem; letter-spacing: 2px; margin-bottom: 1rem;">Lá»ŠCH Sá»¬ THI Äáº¤U</h2>
             <div style="overflow-x: auto;">
                 <table class="history-table">
                     <thead>
                         <tr>
-                            <th>Thời gian</th>
-                            <th>gtlm cược</th>
-                            <th>Trận đấu</th>
-                            <th>Kết quả</th>
+                            <th>Thá»i gian</th>
+                            <th>gtlm cÆ°á»£c</th>
+                            <th>Tráº­n Ä‘áº¥u</th>
+                            <th>Káº¿t quáº£</th>
                         </tr>
                     </thead>
                     <tbody id="history-body"></tbody>
                 </table>
             </div>
             <div style="margin-top: 2.5rem;"><a href="../index.php"
-                    style="color: var(--primary); text-decoration: none; font-weight: 700; border: 1px solid var(--primary); padding: 0.8rem 2.5rem; border-radius: 50px; transition: 0.3s; font-size: 0.9rem;">🏠
-                    QUAY LẠI SẢNH</a></div>
+                    style="color: var(--primary); text-decoration: none; font-weight: 700; border: 1px solid var(--primary); padding: 0.8rem 2.5rem; border-radius: 50px; transition: 0.3s; font-size: 0.9rem;">ðŸ 
+                    QUAY Láº I Sáº¢NH</a></div>
         </div>
     </div>
 

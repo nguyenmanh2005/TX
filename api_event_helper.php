@@ -13,6 +13,14 @@ require_once 'db_connect.php';
  * @return array|null        Row dữ liệu hoặc null nếu không có event active
  */
 function getActiveSeasonalEvent(mysqli $conn, bool $forUpdate = false, string $columns = '*'): ?array {
+    static $cache = [];
+    $cacheKey = ($forUpdate ? 'update_' : 'read_') . $columns;
+    
+    // Trả về cache nếu đã query trong scope request hiện tại
+    if (isset($cache[$cacheKey])) {
+        return $cache[$cacheKey];
+    }
+
     $lock = $forUpdate ? ' FOR UPDATE' : '';
     // Dùng starts_at/ends_at để tránh event bị đánh dấu active nhưng chưa/đã hết thời gian
     $sql = "SELECT {$columns} FROM seasonal_events
@@ -23,7 +31,10 @@ function getActiveSeasonalEvent(mysqli $conn, bool $forUpdate = false, string $c
     $result = $conn->query($sql);
     if (!$result) return null;
     $row = $result->fetch_assoc();
-    return $row ?: null;
+    
+    $data = $row ?: null;
+    $cache[$cacheKey] = $data;
+    return $data;
 }
 
 class EventHelper {
@@ -334,8 +345,9 @@ class EventHelper {
             
             // Bắn tin thông báo lên Chat hệ thống để tạo FOMO cực mạnh!
             $announceMsg = "⚡ SỰ KIỆN CHỚP NHOÁNG (FLASH EVENT)! Cổng trời mở ra x2 phần thưởng GTLM cho TOÀN BỘ trận địa trong {$duration} phút tiếp theo! Cơ hội duy nhất trong ngày, mau ra chiêu!";
-            $stmtChat = $conn->prepare("INSERT INTO chat (username, message, color) VALUES ('Hệ Thống', ?, '#ef4444')");
-            $stmtChat->bind_param("s", $announceMsg);
+            $sysAvatar = 'https://cdn-icons-png.flaticon.com/512/1041/1041044.png';
+            $stmtChat = $conn->prepare("INSERT INTO chat_messages (user_id, username, message, avatar, created_at) VALUES (0, 'Hệ Thống', ?, ?, NOW())");
+            $stmtChat->bind_param("ss", $announceMsg, $sysAvatar);
             $stmtChat->execute();
             $stmtChat->close();
         }

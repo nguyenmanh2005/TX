@@ -10,16 +10,6 @@ if (!isset($_SESSION['Iduser'])) {
 
 $userId = $_SESSION['Iduser'];
 
-// Auto-create history table
-$conn->query("CREATE TABLE IF NOT EXISTS history_paigow (
-    Id INT AUTO_INCREMENT PRIMARY KEY,
-    Iduser INT NOT NULL,
-    Bet DECIMAL(30,2) NOT NULL,
-    Result VARCHAR(255) NOT NULL,
-    WinAmount DECIMAL(30,2) NOT NULL,
-    Time DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
 $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
@@ -29,7 +19,7 @@ $stmt->close();
 
 function getCard()
 {
-    $suits = ['♠', '♥', '♦', '♣'];
+    $suits = ['â™ ', 'â™¥', 'â™¦', 'â™£'];
     $vals = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
     $vIdx = rand(0, 12);
     $sIdx = rand(0, 3);
@@ -145,7 +135,7 @@ if (isset($_GET['action'])) {
     if ($action === 'deal') {
         $bet = (int) ($_POST['bet'] ?? 0);
         if ($bet <= 0 || $bet > $money) {
-            echo json_encode(['success' => false, 'message' => 'Cược không hợp lệ!']);
+            echo json_encode(['success' => false, 'message' => 'CÆ°á»£c khÃ´ng há»£p lá»‡!']);
             exit;
         }
         $_SESSION['paigow_bet'] = $bet;
@@ -159,7 +149,7 @@ if (isset($_GET['action'])) {
     } elseif ($action === 'submit_split') {
         $lowIndices = json_decode($_POST['lowIndices']); // indexes of cards for low hand
         if (count($lowIndices) !== 2) {
-            echo json_encode(['success' => false, 'message' => 'Bạn phải chọn đúng 2 lá cho tay bài thấp!']);
+            echo json_encode(['success' => false, 'message' => 'Báº¡n pháº£i chá»n Ä‘Ãºng 2 lÃ¡ cho tay bÃ i tháº¥p!']);
             exit;
         }
 
@@ -177,7 +167,7 @@ if (isset($_GET['action'])) {
         $evalP_L = evaluateHand($lowHand);
 
         if ($evalP_L['score'] > $evalP_H['score']) {
-            echo json_encode(['success' => false, 'message' => 'Tay 5 lá (Cao) phải mạnh hơn tay 2 lá (Thấp)!']);
+            echo json_encode(['success' => false, 'message' => 'Tay 5 lÃ¡ (Cao) pháº£i máº¡nh hÆ¡n tay 2 lÃ¡ (Tháº¥p)!']);
             exit;
         }
 
@@ -198,13 +188,13 @@ if (isset($_GET['action'])) {
 
         if ($highWin && $lowWin) {
             $winAmount = $bet * 0.95; // 5% commission
-            $status = "Bạn thắng cả 2 tay! +95%";
+            $status = "Báº¡n tháº¯ng cáº£ 2 tay! +95%";
         } elseif (!$highWin && !$lowWin) {
             $winAmount = -$bet;
-            $status = "Dealer thắng cả 2 tay!";
+            $status = "Dealer tháº¯ng cáº£ 2 tay!";
         } else {
             $winAmount = 0;
-            $status = "Hòa (Push) - Bạn thắng 1 tay và Dealer thắng 1 tay.";
+            $status = "HÃ²a (Push) - Báº¡n tháº¯ng 1 tay vÃ  Dealer tháº¯ng 1 tay.";
         }
 
         $newMoney = $money + $winAmount;
@@ -246,7 +236,7 @@ if (isset($_GET['action'])) {
 
 <head>
     <meta charset="UTF-8">
-    <title>Pai Gow Poker - Bậc Thầy Phân Loại</title>
+    <title>Pai Gow Poker - Báº­c Tháº§y PhÃ¢n Loáº¡i</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../assets/css/main.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -511,7 +501,7 @@ if (isset($_GET['action'])) {
 
     <div class="main-container">
         <h1 class="game-title">PAI GOW POKER</h1>
-        <div class="balance-pill">💰 Số Gtlm: <span id="balance-val"><?= number_format($money, 0, ',', '.') ?></span>
+        <div class="balance-pill">ðŸ’° Sá»‘ Gtlm: <span id="balance-val"><?= number_format($money, 0, ',', '.') ?></span>
             gtlm
         </div>
 
@@ -533,16 +523,16 @@ if (isset($_GET['action'])) {
             <div id="player-view">
                 <div id="bet-form">
                     <div class="input-group">
-                        <span>Số gtlm đặt cược</span>
+                        <span>Sá»‘ gtlm Ä‘áº·t cÆ°á»£c</span>
                         <input type="number" id="bet-amt" value="1000" min="100" step="100">
                     </div>
-                    <button id="deal-btn" class="btn btn-gold">CHIA 7 LÁ BÀI</button>
+                    <button id="deal-btn" class="btn btn-gold">CHIA 7 LÃ BÃ€I</button>
                 </div>
 
                 <div id="split-controls" style="display: none;">
-                    <h3 id="split-instruction" style="margin-bottom: 1.5rem;">Chọn 2 lá cho tay BÀI THẤP (Low Hand)</h3>
+                    <h3 id="split-instruction" style="margin-bottom: 1.5rem;">Chá»n 2 lÃ¡ cho tay BÃ€I THáº¤P (Low Hand)</h3>
                     <div id="player-hand" class="hand-area"></div>
-                    <button id="submit-btn" class="btn btn-gold">XÁC NHẬN PHÂN TAY</button>
+                    <button id="submit-btn" class="btn btn-gold">XÃC NHáº¬N PHÃ‚N TAY</button>
                 </div>
             </div>
 
@@ -550,28 +540,28 @@ if (isset($_GET['action'])) {
                 <h2 id="result-status"
                     style="color: var(--primary); font-size: 2rem; font-weight: 900; margin-bottom: 0.5rem;"></h2>
                 <h3 id="result-amount" style="font-size: 1.5rem; margin-bottom: 1.5rem;"></h3>
-                <button id="reset-btn" class="btn btn-gold">VÁN MỚI</button>
+                <button id="reset-btn" class="btn btn-gold">VÃN Má»šI</button>
             </div>
         </div>
 
         <div class="history-section">
-            <h2 style="font-size: 1.2rem; letter-spacing: 2px; margin-bottom: 1rem;">LỊCH SỬ GẦN ĐÂY</h2>
+            <h2 style="font-size: 1.2rem; letter-spacing: 2px; margin-bottom: 1rem;">Lá»ŠCH Sá»¬ Gáº¦N ÄÃ‚Y</h2>
             <div style="overflow-x: auto;">
                 <table class="history-table">
                     <thead>
                         <tr>
-                            <th>Thời gian</th>
-                            <th>gtlm cược</th>
-                            <th>Kết quả</th>
-                            <th>Thắng/Thua</th>
+                            <th>Thá»i gian</th>
+                            <th>gtlm cÆ°á»£c</th>
+                            <th>Káº¿t quáº£</th>
+                            <th>Tháº¯ng/Thua</th>
                         </tr>
                     </thead>
                     <tbody id="history-body"></tbody>
                 </table>
             </div>
             <div style="margin-top: 2.5rem;"><a href="../index.php"
-                    style="color: var(--primary); text-decoration: none; font-weight: 700; border: 1px solid var(--primary); padding: 0.8rem 2.5rem; border-radius: 50px; transition: 0.3s;">🏠
-                    QUAY LẠI SẢNH</a></div>
+                    style="color: var(--primary); text-decoration: none; font-weight: 700; border: 1px solid var(--primary); padding: 0.8rem 2.5rem; border-radius: 50px; transition: 0.3s;">ðŸ 
+                    QUAY Láº I Sáº¢NH</a></div>
         </div>
     </div>
 

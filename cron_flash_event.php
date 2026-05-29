@@ -78,9 +78,10 @@ if ($stmtChat) {
 // Fallback: thử bảng chat nếu chat_messages không tồn tại
 $chatCheck = $conn->query("SHOW TABLES LIKE 'chat'");
 if ($chatCheck && $chatCheck->num_rows > 0) {
-    $stmtChat2 = $conn->prepare("INSERT INTO chat (username, message, color) VALUES ('Hệ Thống', ?, '#ef4444')");
+    $sysAvatar = 'https://cdn-icons-png.flaticon.com/512/1041/1041044.png';
+    $stmtChat2 = $conn->prepare("INSERT INTO chat_messages (user_id, username, message, avatar, created_at) VALUES (0, 'Hệ Thống', ?, ?, NOW())");
     if ($stmtChat2) {
-        $stmtChat2->bind_param("s", $announceMsg);
+        $stmtChat2->bind_param("ss", $announceMsg, $sysAvatar);
         $stmtChat2->execute();
         $stmtChat2->close();
     }

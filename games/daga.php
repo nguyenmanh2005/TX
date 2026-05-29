@@ -16,17 +16,6 @@ $user = $stmt->get_result()->fetch_assoc();
 $money = $user['Money'];
 $stmt->close();
 
-// Auto-create history table
-$conn->query("CREATE TABLE IF NOT EXISTS history_daga (
-    Id INT AUTO_INCREMENT PRIMARY KEY,
-    Iduser INT NOT NULL,
-    BetSide VARCHAR(20) NOT NULL,
-    BetAmount DECIMAL(30,2) NOT NULL,
-    Winner VARCHAR(20) NOT NULL,
-    WinAmount DECIMAL(30,2) NOT NULL,
-    Time DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
 if (isset($_GET['action']) && $_GET['action'] === 'bet') {
     header('Content-Type: application/json');
     $side = $_POST['side']; // meron, wala, draw

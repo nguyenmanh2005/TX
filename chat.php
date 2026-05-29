@@ -7,6 +7,7 @@ if (!isset($_SESSION['Iduser'])) {
 require 'db_connect.php';
 
 // Load theme
+$bypassThemeScripts = true;
 require_once 'load_theme.php';
 // Đảm bảo $bgGradientCSS có giá trị
 if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
@@ -25,6 +26,18 @@ $avatarFrame = $user['avatar_frame_id'] ?? null;
 $stmt->close();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message'])) {
+    // Rate limit: Tối đa 1 tin nhắn mỗi 1.5 giây để tránh spam
+    $now = microtime(true);
+    if (isset($_SESSION['last_chat_time'])) {
+        $diff = $now - $_SESSION['last_chat_time'];
+        if ($diff < 1.5) {
+            http_response_code(429);
+            echo json_encode(['success' => false, 'message' => 'Bạn gửi quá nhanh! Vui lòng giãn cách 1.5 giây.']);
+            exit;
+        }
+    }
+    $_SESSION['last_chat_time'] = $now;
+
     $username = $_SESSION['Name'];
     $message = trim($_POST['message']);
     if (!empty($message)) {
@@ -142,6 +155,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'load') {
         LEFT JOIN users u ON cm.user_id = u.Iduser
         LEFT JOIN achievements a ON u.active_title_id = a.id
         LEFT JOIN avatar_frames af ON u.avatar_frame_id = af.id
+        WHERE cm.username != 'Admin Tester Bot'
         ORDER BY cm.id DESC LIMIT 50
     ");
     $messages = [];
@@ -358,10 +372,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'react' && isset($_GET['msg_id
     
     #chat-form { 
         max-width: 900px; 
-        display: flex; 
-        gap: 15px; 
         margin: 20px auto; 
         padding: 15px; 
+    }
+    
+    #chat-form form {
+        display: flex;
+        width: 100%;
+        gap: 15px;
     }
     
     #message { 
@@ -590,7 +608,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'react' && isset($_GET['msg_id
 </head>
 <body>
     
-
   <h2 style="text-align:center;">💬 Kênh Chat Thế Giới</h2>
   <div id="chat-box"></div>
   <div id="chat-form">
@@ -645,57 +662,33 @@ if (isset($_GET['action']) && $_GET['action'] === 'react' && isset($_GET['msg_id
 
     function loadMessages() {
       fetch("chat.php?action=load")
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`Server returned HTTP ${res.status}`);
+          }
+          return res.json();
+        })
         .then(data => {
-          if (!data || data.length === 0) return;
+          if (!data || !Array.isArray(data)) return;
+          if (data.length === 0) return;
           
           const chatBox = document.getElementById("chat-box");
-          let newMessages = [];
           
-          let isFirst = false;
           if (isInitialLoad) {
-            // Lần đầu load: hiển thị tất cả và lưu lastMessageId
             chatBox.innerHTML = '';
-            newMessages = data;
-            isFirst = true;
-          } else {
-            // Các lần sau: chỉ lấy tin nhắn có ID lớn hơn lastMessageId
-            newMessages = data.filter(msg => msg.id > lastMessageId);
           }
           
-          if (newMessages.length > 0) {
-            newMessages.forEach((msg, index) => {
-              const avatarUrl = msg.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(msg.username);
+          data.forEach((msg, index) => {
+            try {
+              const avatarUrl = msg.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(msg.username || 'User');
               const frameImage = msg.frame_image || null;
               const avatarFrameImage = msg.avatar_frame_image || null;
               
-              const safeUsername = msg.username.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-              const safeMessage = msg.message.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+              const safeUsername = (msg.username || 'User').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+              const safeMessage = (msg.message || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
               const titleIcon = msg.title_icon ? msg.title_icon.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
               const titleName = msg.title_name ? msg.title_name.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
               const titleDisplay = titleIcon ? `<span style="font-size: 18px; margin-right: 5px;" title="${titleName}">${titleIcon}</span>` : '';
-
-              let avatarHtml = `<div class="avatar-frame">`;
-              if (avatarFrameImage && avatarFrameImage.trim() !== '') {
-                avatarHtml += `<div class="frame-overlay" style="pointer-events: none !important;"><img src="${avatarFrameImage.replace(/</g, '&lt;').replace(/>/g, '&gt;')}" alt="Frame" style="pointer-events: none !important;" onerror="this.style.display='none'"></div>`;
-              }
-              avatarHtml += `<img src="${avatarUrl}" alt="${safeUsername}" style="pointer-events: auto;" onerror="this.src='images.ico'"></div>`;
-
-              let messageDiv = document.createElement('div');
-              // Nếu là load lần đầu thì mới dùng animation delay theo index
-              const delay = isFirst ? (index * 0.05) : 0;
-              
-              if (frameImage && frameImage.startsWith('uploads/')) {
-                messageDiv.className = 'chat-message';
-                messageDiv.style.backgroundImage = `url('${frameImage.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, "\\'")}')`;
-                messageDiv.style.backgroundSize = 'cover';
-                messageDiv.style.backgroundRepeat = 'no-repeat';
-                messageDiv.style.backgroundPosition = 'center';
-                messageDiv.style.animationDelay = `${delay}s`;
-              } else {
-                messageDiv.className = 'chat-message default-frame';
-                messageDiv.style.animationDelay = `${delay}s`;
-              }
 
               let reactionHtml = '<div class="reaction-bar">';
               if (msg.reactions && msg.reactions.length > 0) {
@@ -708,7 +701,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'react' && isset($_GET['msg_id
                 });
               }
               
-              // Nút thêm reaction nhanh
               const quickEmojis = ['👍', '😂', '🔥', '❤️', '😮', '😢'];
               let pickerHtml = '<div class="message-actions"><div class="emoji-picker">';
               quickEmojis.forEach(e => {
@@ -718,27 +710,64 @@ if (isset($_GET['action']) && $_GET['action'] === 'react' && isset($_GET['msg_id
               
               reactionHtml += '</div>';
 
-              messageDiv.innerHTML = `
-                ${avatarHtml}
-                <div class="message-content">
-                  <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <strong>${titleDisplay}${safeUsername}</strong>
-                    ${pickerHtml}
+              // Check if message is already rendered
+              const existingDiv = chatBox.querySelector(`.chat-message[data-msg-id="${msg.id}"]`);
+              if (existingDiv) {
+                // Update only the reaction bar in real-time
+                const existingBar = existingDiv.querySelector('.reaction-bar');
+                if (existingBar) {
+                  existingBar.outerHTML = reactionHtml;
+                }
+              } else {
+                // Render new message
+                let avatarHtml = `<div class="avatar-frame">`;
+                if (avatarFrameImage && typeof avatarFrameImage === 'string' && avatarFrameImage.trim() !== '') {
+                  avatarHtml += `<div class="frame-overlay" style="pointer-events: none !important;"><img src="${avatarFrameImage.replace(/</g, '&lt;').replace(/>/g, '&gt;')}" alt="Frame" style="pointer-events: none !important;" onerror="this.style.display='none'"></div>`;
+                }
+                avatarHtml += `<img src="${avatarUrl}" alt="${safeUsername}" style="pointer-events: auto;" onerror="this.src='images.ico'"></div>`;
+
+                let messageDiv = document.createElement('div');
+                messageDiv.setAttribute('data-msg-id', msg.id);
+                
+                const delay = isInitialLoad ? (index * 0.05) : 0;
+                
+                if (frameImage && typeof frameImage === 'string' && frameImage.startsWith('uploads/')) {
+                  messageDiv.className = 'chat-message';
+                  messageDiv.style.backgroundImage = `url('${frameImage.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, "\\'")}')`;
+                  messageDiv.style.backgroundSize = 'cover';
+                  messageDiv.style.backgroundRepeat = 'no-repeat';
+                  messageDiv.style.backgroundPosition = 'center';
+                  messageDiv.style.animationDelay = `${delay}s`;
+                } else {
+                  messageDiv.className = 'chat-message default-frame';
+                  messageDiv.style.animationDelay = `${delay}s`;
+                }
+
+                messageDiv.innerHTML = `
+                  ${avatarHtml}
+                  <div class="message-content">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                      <strong>${titleDisplay}${safeUsername}</strong>
+                      ${pickerHtml}
+                    </div>
+                    <p>${safeMessage}</p>
+                    ${reactionHtml}
+                    <small>(${msg.created_at})</small>
                   </div>
-                  <p>${safeMessage}</p>
-                  ${reactionHtml}
-                  <small>(${msg.created_at})</small>
-                </div>
-              `;
-              
-              chatBox.appendChild(messageDiv);
-              
-              // Cập nhật lastMessageId
-              if (parseInt(msg.id) > lastMessageId) {
-                lastMessageId = parseInt(msg.id);
+                `;
+                
+                chatBox.appendChild(messageDiv);
+                
+                if (parseInt(msg.id) > lastMessageId) {
+                  lastMessageId = parseInt(msg.id);
+                }
               }
-            });
-            
+            } catch (err) {
+              console.error("Error rendering message:", msg, err);
+            }
+          });
+          
+          if (isInitialLoad) {
             chatBox.scrollTop = chatBox.scrollHeight;
             isInitialLoad = false;
           }
@@ -776,23 +805,25 @@ if (isset($_GET['action']) && $_GET['action'] === 'react' && isset($_GET['msg_id
       formData.append("message", message);
 
       fetch("chat.php", { method: "POST", body: formData })
-        .then(() => {
-          messageInput.value = '';
-          messageInput.disabled = false;
-          if (submitButton) {
-            submitButton.disabled = false;
-            submitButton.textContent = 'Gửi';
+        .then(async res => {
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.message || 'Có lỗi xảy ra khi gửi tin nhắn!');
           }
+          messageInput.value = '';
           loadMessages();
         })
         .catch(err => {
           console.error('Error sending message:', err);
-          alert('Có lỗi xảy ra khi gửi tin nhắn!');
+          alert(err.message || 'Có lỗi xảy ra khi gửi tin nhắn!');
+        })
+        .finally(() => {
           messageInput.disabled = false;
           if (submitButton) {
             submitButton.disabled = false;
             submitButton.textContent = 'Gửi';
           }
+          messageInput.focus();
         });
     }
     

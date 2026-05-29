@@ -30,9 +30,6 @@ if ($bossId <= 0) {
     exit;
 }
 
-// ⚡ TỰ ĐỘNG BẢO TRÌ CƠ SỞ DỮ LIỆU (SELF-HEALING SCHEMA)
-$conn->query("ALTER TABLE world_boss_damage ADD COLUMN role VARCHAR(20) DEFAULT 'dps'");
-
 // ⚡ LỊCH TRÌNH HỒI SINH CỐ ĐỊNH & KIỂM TRA TRẠNG THÁI
 $spawnInfo = checkAndSpawnBoss($conn);
 $boss = $spawnInfo['boss'];
@@ -156,8 +153,14 @@ if ($action === 'attack') {
         // 🛡️ Hệ thống vai trò: Tank được giảm 30% chi phí tấn công
         $cost = ($role === 'tank') ? 3500 : 5000;
 
-        // Kiểm tra tiền
-        $user = $conn->query("SELECT Money, level, Name FROM users WHERE Iduser = $userId FOR UPDATE")->fetch_assoc();
+        // Kiểm tra tiền & cấp độ
+        $user = $conn->query("
+            SELECT u.Money, u.Name, COALESCE(p.level, 1) as level 
+            FROM users u 
+            LEFT JOIN user_progress p ON u.Iduser = p.user_id 
+            WHERE u.Iduser = $userId 
+            FOR UPDATE
+        ")->fetch_assoc();
         if ($user['Money'] < $cost) {
             throw new Exception("Không đủ GTLM để tung chiêu! Bạn cần " . number_format($cost) . " GTLM.");
         }
@@ -280,8 +283,9 @@ if ($action === 'attack') {
             $conn->query("UPDATE world_boss SET status = 'defeated' WHERE id = $bossId");
             // Ghi log vinh danh
             $msg = "🔥 MA THẦN ĐÃ BỊ TIÊU DIỆT! Người kết liễu: $uName. Phần thưởng vinh quang đang được phát!";
-            $stmtChat = $conn->prepare("INSERT INTO chat (username, message, color) VALUES ('Hệ Thống', ?, '#ef4444')");
-            $stmtChat->bind_param("s", $msg);
+            $sysAvatar = 'https://cdn-icons-png.flaticon.com/512/1041/1041044.png';
+            $stmtChat = $conn->prepare("INSERT INTO chat_messages (user_id, username, message, avatar, created_at) VALUES (0, 'Hệ Thống', ?, ?, NOW())");
+            $stmtChat->bind_param("ss", $msg, $sysAvatar);
             $stmtChat->execute();
             $stmtChat->close();
             
@@ -368,7 +372,8 @@ function checkAndSpawnBoss(mysqli $conn): array {
         $conn->query("DELETE FROM world_boss_damage WHERE boss_id = 1");
         
         // Gửi thông báo hệ thống
-        $conn->query("INSERT INTO chat (username, message, color) VALUES ('Hệ Thống', '🌋 MA THẦN HỦY DIỆT đã hồi sinh! Hãy tiến vào chiến trường tranh đoạt S-Tier!', '#ef4444')");
+        $sysAvatar = 'https://cdn-icons-png.flaticon.com/512/1041/1041044.png';
+        $conn->query("INSERT INTO chat_messages (user_id, username, message, avatar, created_at) VALUES (0, 'Hệ Thống', '🌋 MA THẦN HỦY DIỆT đã hồi sinh! Hãy tiến vào chiến trường tranh đoạt S-Tier!', '$sysAvatar', NOW())");
         
         // Truy vấn lại thông tin mới
         $boss = $conn->query("SELECT * FROM world_boss WHERE id = 1")->fetch_assoc();
@@ -438,8 +443,9 @@ function distributeBossRewards(int $bossId, mysqli $conn): void {
     // Thông báo toàn server
     $top1Name = $participants[0]['Name'] ?? 'Vô Danh';
     $top1Dmg  = number_format($participants[0]['damage'] ?? 0);
-    $conn->query("INSERT INTO chat (username, message, color)
-        VALUES ('Hệ Thống',
+    $sysAvatar = 'https://cdn-icons-png.flaticon.com/512/1041/1041044.png';
+    $conn->query("INSERT INTO chat_messages (user_id, username, message, avatar, created_at)
+        VALUES (0, 'Hệ Thống',
                 '🏆 PHẦN THƯỜNG WORLD BOSS ĐÃ ĐƯỢC PHÁT! Top 1: $top1Name ($top1Dmg sát thương). Xin chúc mừng toàn bộ dũng sĩ!',
-                '#f59e0b')");
+                '$sysAvatar', NOW())");
 }

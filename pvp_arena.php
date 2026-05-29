@@ -4,6 +4,7 @@
  * Nơi diễn ra các trận thách đấu giữa các cao thủ Trận Địa.
  */
 require_once 'db_connect.php';
+require_once 'admin_helper.php';
 session_start();
 
 if (!isset($_SESSION['Iduser'])) {
@@ -13,27 +14,43 @@ if (!isset($_SESSION['Iduser'])) {
 
 $userId = $_SESSION['Iduser'];
 $challengeId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$isAdmin = isAdmin($conn, $userId);
 
 // Lấy thông tin trận đấu
-$stmt = $conn->prepare("
-    SELECT c.*, 
-           u1.Name as challenger_name, u1.ImageURL as challenger_avatar,
-           u2.Name as challenged_name, u2.ImageURL as challenged_avatar
-    FROM pvp_challenges c
-    JOIN users u1 ON c.challenger_id = u1.Iduser
-    JOIN users u2 ON c.challenged_id = u2.Iduser
-    WHERE c.id = ? AND (c.challenger_id = ? OR c.challenged_id = ?)
-");
-$stmt->bind_param("iii", $challengeId, $userId, $userId);
+if ($isAdmin) {
+    $stmt = $conn->prepare("
+        SELECT c.*, 
+               u1.Name as challenger_name, u1.ImageURL as challenger_avatar,
+               u2.Name as challenged_name, u2.ImageURL as challenged_avatar
+        FROM pvp_challenges c
+        JOIN users u1 ON c.challenger_id = u1.Iduser
+        JOIN users u2 ON c.opponent_id = u2.Iduser
+        WHERE c.id = ?
+    ");
+    $stmt->bind_param("i", $challengeId);
+} else {
+    $stmt = $conn->prepare("
+        SELECT c.*, 
+               u1.Name as challenger_name, u1.ImageURL as challenger_avatar,
+               u2.Name as challenged_name, u2.ImageURL as challenged_avatar
+        FROM pvp_challenges c
+        JOIN users u1 ON c.challenger_id = u1.Iduser
+        JOIN users u2 ON c.opponent_id = u2.Iduser
+        WHERE c.id = ? AND (c.challenger_id = ? OR c.opponent_id = ?)
+    ");
+    $stmt->bind_param("iii", $challengeId, $userId, $userId);
+}
+
 $stmt->execute();
 $match = $stmt->get_result()->fetch_assoc();
+$stmt->close();
 
 if (!$match) {
     die("Trận đấu không tồn tại hoặc bạn không thuộc trận đấu này.");
 }
 
 $isChallenger = ($userId == $match['challenger_id']);
-$opponentId = $isChallenger ? $match['challenged_id'] : $match['challenger_id'];
+$opponentId = $isChallenger ? $match['opponent_id'] : $match['challenger_id'];
 
 ?>
 <!DOCTYPE html>
@@ -63,11 +80,7 @@ $opponentId = $isChallenger ? $match['challenged_id'] : $match['challenger_id'];
         /* 🏟️ Arena Background */
         .arena-container {
             width: 100vw; height: 100vh;
-            background: 
-                linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)),
-                url('https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=2071&auto=format&fit=crop');
-            background-size: cover;
-            background-position: center;
+            background: radial-gradient(circle at center, #312e81 0%, #020617 100%);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             position: relative;
         }
@@ -188,6 +201,16 @@ $opponentId = $isChallenger ? $match['challenged_id'] : $match['challenger_id'];
             <div class="result-reward" id="resultReward">+0 GTLM</div>
             <button class="btn-return" onclick="location.href='index.php'">RỜI ĐẤU TRƯỜNG</button>
         </div>
+
+        <?php if ($isAdmin): ?>
+            <!-- ⚡ Admin Control Panel Overlay -->
+            <div id="admin-panel" style="position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.95); border: 2px solid var(--gold); padding: 15px 30px; border-radius: 20px; box-shadow: 0 0 25px rgba(251, 191, 36, 0.4); text-align: center; z-index: 150; display: flex; gap: 15px; align-items: center; backdrop-filter: blur(10px);">
+                <div style="font-size: 14px; font-weight: bold; color: var(--gold); letter-spacing: 1px; text-transform: uppercase;"><i class="fas fa-shield-alt"></i> QUẢN TRỊ VIÊN:</div>
+                <button class="btn" style="background: linear-gradient(135deg, #ef4444, #b91c1c); padding: 10px 18px; border-radius: 10px; color: #fff; font-weight: bold; border: none;" onclick="adminCancelMatch()">❌ HỦY TRẬN ĐẤU</button>
+                <button class="btn" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); padding: 10px 18px; border-radius: 10px; color: #fff; font-weight: bold; border: none;" onclick="adminForceResult(<?= (int)$match['challenger_id'] ?>, '<?= htmlspecialchars($match['challenger_name']) ?>')">⚡ XỬ THẮNG P1</button>
+                <button class="btn" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); padding: 10px 18px; border-radius: 10px; color: #fff; font-weight: bold; border: none;" onclick="adminForceResult(<?= (int)$match['opponent_id'] ?>, '<?= htmlspecialchars($match['challenged_name']) ?>')">⚡ XỬ THẮNG P2</button>
+            </div>
+        <?php endif; ?>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -274,6 +297,60 @@ $opponentId = $isChallenger ? $match['challenged_id'] : $match['challenger_id'];
         }
 
         setInterval(syncState, 2000);
+
+        <?php if ($isAdmin): ?>
+        function adminCancelMatch() {
+            Swal.fire({
+                title: 'Xác nhận hủy?',
+                text: "Trận đấu sẽ bị hủy và tiền cược cược sẽ hoàn trả lại cho cả 2 đấu thủ!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'Đồng ý hủy',
+                cancelButtonText: 'Không'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(`api_pvp.php?action=admin_cancel&id=${matchId}`)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire('Thành công', data.message, 'success').then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Lỗi', data.message, 'error');
+                            }
+                        });
+                }
+            });
+        }
+
+        function adminForceResult(winnerId, winnerName) {
+            Swal.fire({
+                title: 'Xử thắng cuộc?',
+                text: `Bạn có chắc muốn trực tiếp quyết định chiến thắng cho [${winnerName}]?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3b82f6',
+                confirmButtonText: 'Đồng ý xử thắng',
+                cancelButtonText: 'Không'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(`api_pvp.php?action=admin_force_result&id=${matchId}&winner_id=${winnerId}`)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire('Thành công', data.message, 'success').then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Lỗi', data.message, 'error');
+                            }
+                        });
+                }
+            });
+        }
+        <?php endif; ?>
     </script>
 </body>
 </html>

@@ -172,11 +172,14 @@ if ($action === 'claim') {
         if ($activeSeasonalEvent) {
             $seId          = (int)$activeSeasonalEvent['id'];
             $pointsToAdd   = max(1, (int)ceil($reward / 10000)); // tối thiểu 1 điểm/chương
-            $conn->query("
+            $stmtSE = $conn->prepare("
                 INSERT INTO user_event_data (user_id, event_id, points, event_currency)
-                VALUES ($userId, $seId, $pointsToAdd, 0)
-                ON DUPLICATE KEY UPDATE points = points + $pointsToAdd
+                VALUES (?, ?, ?, 0)
+                ON DUPLICATE KEY UPDATE points = points + ?
             ");
+            $stmtSE->bind_param("iiii", $userId, $seId, $pointsToAdd, $pointsToAdd);
+            $stmtSE->execute();
+            $stmtSE->close();
         }
         // ────────────────────────────────────────────────────────────────────────
 

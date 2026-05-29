@@ -76,6 +76,24 @@ $rankData = $rankResult->fetch_assoc();
 $userRank = $rankData['rank'] ?? 999;
 $rankStmt->close();
 
+// Lấy tổng số người chơi thực tế từ database
+$totalUsers = 0;
+$userCountResult = $conn->query("SELECT COUNT(*) AS total FROM users");
+if ($userCountResult) {
+    $row = $userCountResult->fetch_assoc();
+    $totalUsers = (int) $row['total'];
+}
+
+// Tính tổng số game có sẵn từ file index.php
+$totalGames = 0;
+if (file_exists(__FILE__)) {
+    $indexContent = file_get_contents(__FILE__);
+    $totalGames = substr_count($indexContent, 'class="game-card"');
+}
+if ($totalGames <= 0) {
+    $totalGames = 61; // Fallback to 61 if file read fails
+}
+
 // Lấy thống kê cá nhân từ game_history
 $personalStats = [
     'totalGames' => 0,
@@ -2929,6 +2947,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
         </div>
     </div>
 
+    <!-- Flash Event Banner -->
+    <div id="flashEventBanner" style="display: none; background: linear-gradient(90deg, #ff007f, #7928ca); padding: 15px; border-bottom: 2px solid #fff; text-align: center; color: white; box-shadow: 0 4px 15px rgba(255,0,127,0.5); position: relative; z-index: 1000; animation: notificationPulse 2s infinite;">
+        <div style="font-weight: 800; font-size: 18px; letter-spacing: 1px; text-transform: uppercase;">
+            ⚡ SỰ KIỆN CHỚP NHOÁNG ĐANG DIỄN RA! ⚡
+        </div>
+        <div style="font-size: 14px; margin-top: 5px;">
+            Nhân <strong id="feMultiplier" style="color: #ffeb3b; font-size: 18px;">x2</strong> GTLM cho tất cả phần thưởng! Kết thúc sau: <strong id="feCountdown">00:00:00</strong>
+        </div>
+    </div>
+
     <!-- Community Lottery Jackpot Meter -->
     <div style="background: linear-gradient(90deg, #1e1b4b, #312e81); padding: 15px; border-bottom: 2px solid #fbbf24; text-align: center; color: white; display: flex; align-items: center; justify-content: center; gap: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); position: relative; z-index: 1000;">
         <div style="display: flex; align-items: center; gap: 10px;">
@@ -3075,12 +3103,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
             <div class="stats-container">
                 <div class="stat-card tooltip" data-tooltip="Tổng số game có sẵn">
                     <div class="stat-icon">🎮</div>
-                    <div class="stat-value" data-target="20">0</div>
+                    <div class="stat-value" data-target="<?= $totalGames ?>">0</div>
                     <div class="stat-label">Game</div>
                 </div>
-                <div class="stat-card tooltip" data-tooltip="Số người trong bảng xếp hạng">
+                <div class="stat-card tooltip" data-tooltip="Tổng số người chơi">
                     <div class="stat-icon">👥</div>
-                    <div class="stat-value" data-target="<?= count($ranking) ?>">0</div>
+                    <div class="stat-value" data-target="<?= $totalUsers ?>">0</div>
                     <div class="stat-label">Người chơi</div>
                 </div>
                 <div class="stat-card tooltip" data-tooltip="Vị trí của bạn">
@@ -4752,6 +4780,44 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
         </div>
     </div>
     <script src="assets/js/event_banner.js"></script>
+    <!-- Flash Event Checker -->
+    <script>
+        function checkFlashEvent() {
+            $.get('api_flash_event.php', function(res) {
+                if (res.active) {
+                    $('#flashEventBanner').show();
+                    $('#feMultiplier').text('x' + res.multiplier);
+                    
+                    // Simple countdown
+                    const endDate = new Date(res.end_time).getTime();
+                    const now = new Date(res.current_time).getTime(); // Sync with server roughly
+                    let distance = endDate - now;
+                    
+                    const interval = setInterval(function() {
+                        distance -= 1000;
+                        if (distance < 0) {
+                            clearInterval(interval);
+                            $('#flashEventBanner').slideUp();
+                            return;
+                        }
+                        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                        
+                        $('#feCountdown').text(
+                            String(hours).padStart(2, '0') + ':' + 
+                            String(minutes).padStart(2, '0') + ':' + 
+                            String(seconds).padStart(2, '0')
+                        );
+                    }, 1000);
+                }
+            }, 'json');
+        }
+        
+        $(document).ready(function() {
+            checkFlashEvent();
+        });
+    </script>
 </body>
 
 

@@ -176,22 +176,34 @@ if ($action === 'get_history') {
 }
 
 if ($action === 'get_daily_count') {
-    $row = $conn->query("SELECT COUNT(*) as count FROM gifts WHERE from_user_id = $userId AND DATE(created_at) = CURDATE()")->fetch_assoc();
-    echo json_encode(['success' => true, 'count' => (int)$row['count'], 'max' => 10]); // Nâng lên 10 cho thoải mái
+    $stmt = $conn->prepare("SELECT COUNT(*) as count FROM gifts WHERE from_user_id = ? AND DATE(created_at) = CURDATE()");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    echo json_encode(['success' => true, 'count' => (int)$row['count'], 'max' => 10]);
     exit();
 }
 
 if ($action === 'get_user_items') {
-    $itemType = $_GET['item_type'];
+    $itemType = $_GET['item_type'] ?? '';
     $tableMap = [
         'theme' => ['table' => 'user_themes', 'id_col' => 'theme_id', 'name_table' => 'themes', 'name_col' => 'theme_name'],
         'cursor' => ['table' => 'user_cursors', 'id_col' => 'cursor_id', 'name_table' => 'cursors', 'name_col' => 'cursor_name'],
         'chat_frame' => ['table' => 'user_chat_frames', 'id_col' => 'chat_frame_id', 'name_table' => 'chat_frames', 'name_col' => 'frame_name'],
         'avatar_frame' => ['table' => 'user_avatar_frames', 'id_col' => 'avatar_frame_id', 'name_table' => 'avatar_frames', 'name_col' => 'frame_name']
     ];
+    if (!isset($tableMap[$itemType])) {
+        echo json_encode(['success' => false, 'message' => 'Loại item không hợp lệ!']);
+        exit();
+    }
     $config = $tableMap[$itemType];
-    $sql = "SELECT ut.{$config['id_col']}, i.{$config['name_col']} as name FROM {$config['table']} ut JOIN {$config['name_table']} i ON ut.{$config['id_col']} = i.id WHERE ut.user_id = $userId";
-    $res = $conn->query($sql);
+    // Table/column names are whitelisted above — safe to interpolate
+    $stmt = $conn->prepare("SELECT ut.{$config['id_col']}, i.{$config['name_col']} as name FROM {$config['table']} ut JOIN {$config['name_table']} i ON ut.{$config['id_col']} = i.id WHERE ut.user_id = ?");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $stmt->close();
     $items = [];
     while ($r = $res->fetch_assoc()) $items[] = ['id' => $r[$config['id_col']], 'name' => $r['name']];
     echo json_encode(['success' => true, 'items' => $items]);

@@ -24,7 +24,14 @@ $stmt->close();
 
 if (!$pet) {
     // Tặng Pet tân thủ nếu chưa có
-    $conn->query("INSERT INTO user_pets (user_id, pet_name, hourly_rate, max_capacity) VALUES ($userId, 'Linh Khuyển Trận Địa', 500, 12000)");
+    $petName = 'Linh Khuyển Trận Địa';
+    $rate = 500;
+    $capacity = 12000;
+    $stmtIns = $conn->prepare("INSERT INTO user_pets (user_id, pet_name, hourly_rate, max_capacity) VALUES (?, ?, ?, ?)");
+    $stmtIns->bind_param("isii", $userId, $petName, $rate, $capacity);
+    $stmtIns->execute();
+    $stmtIns->close();
+    
     $pet = ['hourly_rate' => 500, 'max_capacity' => 12000, 'last_claim' => date('Y-m-d H:i:s')];
 }
 

@@ -13,7 +13,7 @@ if (!isset($_SESSION['Iduser'])) {
 $userId = $_SESSION['Iduser'];
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
-if ($action === 'get_list') {
+if ($action === 'get_list' || $action === 'get_active_event') {
     $today = date('Y-m-d');
     $sql = "SELECT dc.*, 
             COALESCE(dcp.progress, 0) as user_progress,
@@ -29,18 +29,35 @@ if ($action === 'get_list') {
     $result = $stmt->get_result();
     $challenges = [];
     while ($row = $result->fetch_assoc()) {
+        $row['user_completed'] = (int)$row['is_completed'];
+        $row['user_claimed'] = (int)$row['claimed'];
+        $row['is_joined'] = 1; // Bot luôn coi như đã tham gia thử thách hàng ngày
         $challenges[] = $row;
     }
     $stmt->close();
-    echo json_encode(['status' => 'success', 'challenges' => $challenges]);
+    echo json_encode([
+        'status' => 'success',
+        'success' => true,
+        'challenges' => $challenges,
+        'events' => $challenges
+    ]);
     exit();
 }
 
-if ($action === 'claim') {
-    $challengeId = (int) ($_POST['challenge_id'] ?? 0);
+if ($action === 'join') {
+    echo json_encode([
+        'status' => 'success',
+        'success' => true,
+        'message' => 'Tham gia thành công!'
+    ]);
+    exit();
+}
+
+if ($action === 'claim' || $action === 'claim_reward') {
+    $challengeId = (int) ($_POST['challenge_id'] ?? $_POST['event_id'] ?? 0);
 
     if ($challengeId <= 0) {
-        echo json_encode(['status' => 'error', 'message' => 'ID thử thách không hợp lệ!']);
+        echo json_encode(['status' => 'error', 'success' => false, 'message' => 'ID thử thách không hợp lệ!']);
         exit();
     }
 
@@ -57,17 +74,17 @@ if ($action === 'claim') {
     $stmt->close();
 
     if (!$challenge) {
-        echo json_encode(['status' => 'error', 'message' => 'Không tìm thấy thử thách!']);
+        echo json_encode(['status' => 'error', 'success' => false, 'message' => 'Không tìm thấy thử thách!']);
         exit();
     }
 
     if ($challenge['is_completed'] != 1) {
-        echo json_encode(['status' => 'error', 'message' => 'Chưa hoàn thành thử thách!']);
+        echo json_encode(['status' => 'error', 'success' => false, 'message' => 'Chưa hoàn thành thử thách!']);
         exit();
     }
 
     if ($challenge['claimed'] == 1) {
-        echo json_encode(['status' => 'error', 'message' => 'Đã nhận phần thưởng rồi!']);
+        echo json_encode(['status' => 'error', 'success' => false, 'message' => 'Đã nhận phần thưởng rồi!']);
         exit();
     }
 
@@ -100,13 +117,18 @@ if ($action === 'claim') {
 
         echo json_encode([
             'status' => 'success',
-            'message' => 'Nhận phần thưởng thành công! +' . number_format($challenge['reward_money']) . ' gtlm, +' . number_format($challenge['reward_xp']) . ' XP'
+            'success' => true,
+            'message' => 'Nhận phần thưởng thành công! +' . number_format($challenge['reward_money']) . ' gtlm, +' . number_format($challenge['reward_xp']) . ' XP',
+            'reward' => [
+                'money' => (int)$challenge['reward_money'],
+                'xp' => (int)$challenge['reward_xp']
+            ]
         ]);
     } catch (Exception $e) {
         $conn->rollback();
-        echo json_encode(['status' => 'error', 'message' => 'Lỗi: ' . $e->getMessage()]);
+        echo json_encode(['status' => 'error', 'success' => false, 'message' => 'Lỗi: ' . $e->getMessage()]);
     }
 } else {
-    echo json_encode(['status' => 'error', 'message' => 'Action không hợp lệ!']);
+    echo json_encode(['status' => 'error', 'success' => false, 'message' => 'Action không hợp lệ!']);
 }
 ?>

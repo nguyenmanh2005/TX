@@ -17,16 +17,6 @@ $money = $user['Money'];
 $userName = $user['Name'];
 $stmt->close();
 
-// history table
-$conn->query("CREATE TABLE IF NOT EXISTS history_caribbean (
-    Id INT AUTO_INCREMENT PRIMARY KEY,
-    Iduser INT NOT NULL,
-    Bet DECIMAL(30,2) NOT NULL,
-    Result VARCHAR(255) NOT NULL,
-    WinAmount DECIMAL(30,2) NOT NULL,
-    Time DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
     $action = $_GET['action'];

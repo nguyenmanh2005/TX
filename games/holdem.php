@@ -17,16 +17,6 @@ $money = $user['Money'];
 $userName = $user['Name'];
 $stmt->close();
 
-// history table
-$conn->query("CREATE TABLE IF NOT EXISTS history_holdem (
-    Id INT AUTO_INCREMENT PRIMARY KEY,
-    Iduser INT NOT NULL,
-    Bet DECIMAL(30,2) NOT NULL,
-    Result VARCHAR(255) NOT NULL,
-    WinAmount DECIMAL(30,2) NOT NULL,
-    Time DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
     $action = $_GET['action'];
@@ -35,7 +25,7 @@ if (isset($_GET['action'])) {
     if ($action === 'deal') {
         $bet = (float) ($_POST['bet'] ?? 0);
         if ($bet <= 0 || $bet > $money) {
-            $response['message'] = "gtlm cược không hợp lệ!";
+            $response['message'] = "gtlm cÆ°á»£c khÃ´ng há»£p lá»‡!";
         } else {
             $conn->query("UPDATE users SET Money = Money - $bet WHERE Iduser = $userId");
             // Standard deck
@@ -82,7 +72,7 @@ if (isset($_GET['action'])) {
 
         $totalBet = $bet + $callBet;
         $profit = $winAmount - $totalBet;
-        $resMsg = $win ? "Bạn THẮNG với kết quả tốt hơn Dealer!" : "Dealer thắng! Bạn đã thua.";
+        $resMsg = $win ? "Báº¡n THáº®NG vá»›i káº¿t quáº£ tá»‘t hÆ¡n Dealer!" : "Dealer tháº¯ng! Báº¡n Ä‘Ã£ thua.";
 
         $his = $conn->prepare("INSERT INTO history_holdem (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
         $his->bind_param("idss", $userId, $totalBet, $resMsg, $profit);
@@ -233,7 +223,7 @@ if (isset($_GET['action'])) {
                 <div id="userMoney" style="font-weight:900; font-size:1.5rem; color:#f1c40f">
                     <?php echo number_format($money, 0, ',', '.'); ?> gtlm</div>
                 <a href="../index.php"
-                    style="color:#fff; text-decoration:none; border:1px solid rgba(255,255,255,0.2); padding:0.5rem 1.5rem; border-radius:50px;">THOÁT</a>
+                    style="color:#fff; text-decoration:none; border:1px solid rgba(255,255,255,0.2); padding:0.5rem 1.5rem; border-radius:50px;">THOÃT</a>
             </div>
         </div>
 

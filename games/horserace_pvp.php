@@ -6,6 +6,15 @@ if (!isset($_SESSION['Iduser'])) {
 }
 require_once '../db_connect.php';
 require_once '../load_theme.php';
+
+// Fetch current balance
+$userId = $_SESSION['Iduser'];
+$stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$user = $stmt->get_result()->fetch_assoc();
+$currentBalance = $user['Money'];
+$stmt->close();
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -14,6 +23,7 @@ require_once '../load_theme.php';
     <title>PvP Horse Racing | Real-time Arena</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/game-horserace-pvp.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         /* Background Dynamic */
         canvas#bg { position: fixed; top: 0; left: 0; z-index: -1; }
@@ -26,6 +36,9 @@ require_once '../load_theme.php';
         <header style="text-align: center; margin-bottom: 30px;">
             <h1 style="font-size: 3rem; font-weight: 800; margin: 0; background: linear-gradient(to right, #818cf8, #f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">PVP HORSE RACING</h1>
             <p style="color: #94a3b8;">Chọn ngựa, đặt cược và cùng hàng ngàn người xem trực tiếp!</p>
+            <div style="margin-top: 10px; font-size: 1.2rem; color: #fff;">
+                Số dư: <strong style="color: #4ade80;" id="user-balance"><?= number_format($currentBalance, 0, ',', '.') ?></strong> GTLM
+            </div>
         </header>
 
         <div class="status-bar">
@@ -57,9 +70,10 @@ require_once '../load_theme.php';
                 <?php endfor; ?>
             </div>
 
-            <div style="text-align: center; margin-top: 30px;">
-                <button id="place-bet-btn" style="background: linear-gradient(135deg, #6366f1, #a855f7); border: none; color: #fff; padding: 15px 60px; border-radius: 15px; font-size: 1.2rem; font-weight: 800; cursor: pointer; box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);">
-                    ĐẶT CƯỢC 10.000 GTLM
+            <div style="text-align: center; margin-top: 30px; display: flex; justify-content: center; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <input type="number" id="bet-amount" value="10000" min="1000" style="padding: 15px; border-radius: 15px; border: 2px solid #6366f1; background: rgba(0,0,0,0.5); color: #fff; font-size: 1.2rem; font-weight: 800; width: 200px; text-align: center; outline: none;" placeholder="Số GTLM cược">
+                <button id="place-bet-btn" style="background: linear-gradient(135deg, #6366f1, #a855f7); border: none; color: #fff; padding: 15px 40px; border-radius: 15px; font-size: 1.2rem; font-weight: 800; cursor: pointer; box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);">
+                    ĐẶT CƯỢC
                 </button>
             </div>
         </div>

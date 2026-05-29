@@ -9,31 +9,6 @@ require_once 'db_connect.php';
 $userId = $_SESSION['Iduser'] ?? 0;
 if (!$userId) exit(json_encode(['success' => false]));
 
-// 1. Khởi tạo & Cập nhật Database
-$setup = "
-CREATE TABLE IF NOT EXISTS marketplace_listings (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    seller_id INT,
-    item_type ENUM('title', 'frame', 'item', 'theme', 'cursor', 'chat_frame', 'avatar_frame', 'frame'),
-    item_id INT,
-    item_name VARCHAR(255),
-    price BIGINT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    status ENUM('active', 'sold', 'cancelled') DEFAULT 'active',
-    original_owner_name VARCHAR(100),
-    highest_price BIGINT DEFAULT 0,
-    total_views INT DEFAULT 0,
-    item_story TEXT
-);
-";
-$conn->query($setup);
-
-// Đảm bảo các cột mới tồn tại (dành cho server đã có bảng cũ)
-$conn->query("ALTER TABLE marketplace_listings ADD COLUMN IF NOT EXISTS original_owner_name VARCHAR(100)");
-$conn->query("ALTER TABLE marketplace_listings ADD COLUMN IF NOT EXISTS highest_price BIGINT DEFAULT 0");
-$conn->query("ALTER TABLE marketplace_listings ADD COLUMN IF NOT EXISTS total_views INT DEFAULT 0");
-$conn->query("ALTER TABLE marketplace_listings ADD COLUMN IF NOT EXISTS item_story TEXT");
-
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 // 🎭 Hàm sinh cốt truyện vật phẩm

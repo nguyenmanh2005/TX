@@ -17,16 +17,6 @@ $money = $user['Money'];
 $userName = $user['Name'];
 $stmt->close();
 
-// Auto-create history table
-$conn->query("CREATE TABLE IF NOT EXISTS history_keno (
-    Id INT AUTO_INCREMENT PRIMARY KEY,
-    Iduser INT NOT NULL,
-    Bet DECIMAL(30,2) NOT NULL,
-    Result VARCHAR(255) NOT NULL,
-    WinAmount DECIMAL(30,2) NOT NULL,
-    Time DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
 // Keno Paytable (Balanced)
 // Indices: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 matches
 $paytable = [
@@ -53,20 +43,20 @@ if (isset($_GET['action'])) {
         $count = count($selected);
 
         if ($bet <= 0 || $count < 1 || $count > 10) {
-            echo json_encode(['success' => false, 'message' => "Yêu cầu không hợp lệ!"]);
+            echo json_encode(['success' => false, 'message' => "YÃªu cáº§u khÃ´ng há»£p lá»‡!"]);
             exit;
         }
 
         $conn->begin_transaction();
         try {
-            // SELECT FOR UPDATE để khóa bản ghi user
+            // SELECT FOR UPDATE Ä‘á»ƒ khÃ³a báº£n ghi user
             $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
             $stmt->bind_param("i", $userId);
             $stmt->execute();
             $u = $stmt->get_result()->fetch_assoc();
 
             if (!$u || $u['Money'] < $bet) {
-                throw new Exception("Ngân khố không đủ để quay số!");
+                throw new Exception("NgÃ¢n khá»‘ khÃ´ng Ä‘á»§ Ä‘á»ƒ quay sá»‘!");
             }
 
             $pool = range(1, 80);
@@ -82,7 +72,7 @@ if (isset($_GET['action'])) {
             $winAmount = $bet * $mult;
             $profit = $winAmount - $bet;
 
-            // Cập nhật số dư tương đối
+            // Cáº­p nháº­t sá»‘ dÆ° tÆ°Æ¡ng Ä‘á»‘i
             $stmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
             $stmt->bind_param("di", $profit, $userId);
             $stmt->execute();
@@ -123,7 +113,7 @@ if (isset($_GET['action'])) {
 
 <head>
     <meta charset="UTF-8">
-    <title>Keno - Xổ Số Cao Cấp</title>
+    <title>Keno - Xá»• Sá»‘ Cao Cáº¥p</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../assets/css/main.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -305,13 +295,13 @@ if (isset($_GET['action'])) {
             style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 3rem;">
             <div>
                 <h1 style="margin:0; font-size: 2.5rem; font-weight: 900; color: var(--primary-color);">KENO</h1>
-                <p style="margin:0; opacity:0.5">Xổ số 80 số - Payout Cân Bằng</p>
+                <p style="margin:0; opacity:0.5">Xá»• sá»‘ 80 sá»‘ - Payout CÃ¢n Báº±ng</p>
             </div>
             <div style="display:flex; align-items:center; gap:2rem;">
                 <div id="userMoney" style="font-weight:900; font-size:1.8rem; color:var(--accent-color)">
                     <?php echo number_format($money, 0, ',', '.'); ?> gtlm</div>
                 <a href="../index.php"
-                    style="color: #fff; text-decoration: none; border: 1px solid rgba(255,255,255,0.2); padding: 0.5rem 1.5rem; border-radius: 50px; font-weight: 900;">THOÁT</a>
+                    style="color: #fff; text-decoration: none; border: 1px solid rgba(255,255,255,0.2); padding: 0.5rem 1.5rem; border-radius: 50px; font-weight: 900;">THOÃT</a>
             </div>
         </div>
 
@@ -325,25 +315,25 @@ if (isset($_GET['action'])) {
 
                 <div class="sidebar">
                     <div class="info-card">
-                        <h3 style="margin-bottom:10px">MỨC CƯỢC</h3>
+                        <h3 style="margin-bottom:10px">Má»¨C CÆ¯á»¢C</h3>
                         <input type="number" id="betAmount" value="10000"
                             style="width:100%; background:none; border:none; border-bottom:2px solid var(--primary-color); color:#fff; font-size:1.5rem; font-weight:900; outline:none;">
-                        <p style="margin-top:15px">Chọn: <span id="selectCount"
-                                style="color:var(--primary-color); font-weight:900">0</span>/10 số</p>
+                        <p style="margin-top:15px">Chá»n: <span id="selectCount"
+                                style="color:var(--primary-color); font-weight:900">0</span>/10 sá»‘</p>
 
                         <div style="margin-top:10px; font-size:0.9rem; color:var(--accent-color); cursor:pointer;"
                             onclick="$('#payTable').toggleClass('show')">
-                            ▶ Xem Bảng Thưởng (Paytable)
+                            â–¶ Xem Báº£ng ThÆ°á»Ÿng (Paytable)
                         </div>
                         <div class="pay-table" id="payTable">
                             <!-- Populated by JS -->
                         </div>
                     </div>
-                    <button class="btn-draw" id="drawBtn" disabled onclick="drawKeno()">QUAY SỐ</button>
+                    <button class="btn-draw" id="drawBtn" disabled onclick="drawKeno()">QUAY Sá»</button>
                     <div class="info-card">
-                        <h3>KẾT QUẢ</h3>
-                        <div id="resultText" style="font-size:1.1rem; font-weight:700; margin-top:10px;">Vui lòng chọn
-                            từ 1-10 số.</div>
+                        <h3>Káº¾T QUáº¢</h3>
+                        <div id="resultText" style="font-size:1.1rem; font-weight:700; margin-top:10px;">Vui lÃ²ng chá»n
+                            tá»« 1-10 sá»‘.</div>
                     </div>
                 </div>
             </div>
@@ -419,11 +409,11 @@ if (isset($_GET['action'])) {
 
         function updatePaytableUI() {
             const count = selectedNumbers.length;
-            if (count === 0) { $('#payTable').html('Vui lòng chọn số.'); return; }
+            if (count === 0) { $('#payTable').html('Vui lÃ²ng chá»n sá»‘.'); return; }
             const mults = paytable[count];
-            let html = `<strong>Thưởng cho ${count} số chọn:</strong><br>`;
+            let html = `<strong>ThÆ°á»Ÿng cho ${count} sá»‘ chá»n:</strong><br>`;
             mults.forEach((m, idx) => {
-                if (m > 0) html += `<div class="pay-row"><span>Khớp ${idx}:</span> <span>x${m}</span></div>`;
+                if (m > 0) html += `<div class="pay-row"><span>Khá»›p ${idx}:</span> <span>x${m}</span></div>`;
             });
             $('#payTable').html(html);
         }
@@ -445,21 +435,21 @@ if (isset($_GET['action'])) {
                         if (i >= 20) {
                             clearInterval(interval);
                             const icon = res.matchCount > 0 ? 'success' : 'error';
-                            const title = res.matchCount > 0 ? 'KẾT QUẢ' : 'THUA RỒI';
+                            const title = res.matchCount > 0 ? 'Káº¾T QUáº¢' : 'THUA Rá»’I';
                             Swal.fire({
                                 icon: icon,
                                 title: title,
-                                html: `Số khớp: <span style="color:var(--primary-color); font-weight:900">${res.matchCount}</span><br>gtlm thắng: <span style="color:var(--accent-color); font-weight:900">${res.winAmount} gtlm</span>`,
+                                html: `Sá»‘ khá»›p: <span style="color:var(--primary-color); font-weight:900">${res.matchCount}</span><br>gtlm tháº¯ng: <span style="color:var(--accent-color); font-weight:900">${res.winAmount} gtlm</span>`,
                                 background: 'rgba(0,0,0,0.9)',
                                 color: '#fff'
                             });
-                            $('#resultText').html(`Số khớp: ${res.matchCount}<br>Thắng: ${res.winAmount} gtlm`);
+                            $('#resultText').html(`Sá»‘ khá»›p: ${res.matchCount}<br>Tháº¯ng: ${res.winAmount} gtlm`);
                             $('#userMoney').text(res.money + ' gtlm');
                             $('#drawBtn').prop('disabled', false);
                         }
                     }, 80);
                 } else {
-                    Swal.fire({ icon: 'error', title: 'Lỗi', text: res.message, background: 'rgba(0,0,0,0.9)', color: '#fff' });
+                    Swal.fire({ icon: 'error', title: 'Lá»—i', text: res.message, background: 'rgba(0,0,0,0.9)', color: '#fff' });
                     $('#drawBtn').prop('disabled', false);
                 }
             });

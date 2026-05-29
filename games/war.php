@@ -3,7 +3,7 @@ session_start();
 require '../db_connect.php';
 require_once '../load_theme.php';
 
-// Kiểm tra đăng nhập
+// Kiá»ƒm tra Ä‘Äƒng nháº­p
 if (!isset($_SESSION['Iduser'])) {
     header("Location: ../login.php");
     exit();
@@ -11,7 +11,7 @@ if (!isset($_SESSION['Iduser'])) {
 
 $userId = $_SESSION['Iduser'];
 
-// Lấy thông tin user
+// Láº¥y thÃ´ng tin user
 $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
@@ -20,33 +20,23 @@ $money = $user['Money'];
 $userName = $user['Name'];
 $stmt->close();
 
-// Auto-create history table
-$conn->query("CREATE TABLE IF NOT EXISTS history_war (
-    Id INT AUTO_INCREMENT PRIMARY KEY,
-    Iduser INT NOT NULL,
-    Bet DECIMAL(30,2) NOT NULL,
-    Result VARCHAR(255) NOT NULL,
-    WinAmount DECIMAL(30,2) NOT NULL,
-    Time DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
 // AJAX handler
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
     $action = $_GET['action'];
     $response = ['success' => false, 'message' => ''];
 
-    // Khởi tạo bộ bài
-    $suits = ['♠', '♥', '♦', '♣'];
+    // Khá»Ÿi táº¡o bá»™ bÃ i
+    $suits = ['â™ ', 'â™¥', 'â™¦', 'â™£'];
     $values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
     $valueMap = array_flip($values); // 2=0, ..., A=12
 
     if ($action === 'deal') {
         $bet = (int) ($_POST['bet'] ?? 0);
         if ($bet <= 0 || $bet > $money) {
-            $response['message'] = "gtlm cược không hợp lệ!";
+            $response['message'] = "gtlm cÆ°á»£c khÃ´ng há»£p lá»‡!";
         } else {
-            // Rút 2 lá
+            // RÃºt 2 lÃ¡
             $pValIdx = rand(0, 12);
             $pSuitIdx = rand(0, 3);
             $dValIdx = rand(0, 12);
@@ -64,7 +54,7 @@ if (isset($_GET['action'])) {
             $over = false;
 
             if ($playerCard['score'] > $dealerCard['score']) {
-                $winAmount = $bet; // Thắng ăn 1-1
+                $winAmount = $bet; // Tháº¯ng Äƒn 1-1
                 $status = "WIN";
                 $over = true;
             } elseif ($playerCard['score'] < $dealerCard['score']) {
@@ -83,7 +73,7 @@ if (isset($_GET['action'])) {
                 $stmt->execute();
                 $stmt->close();
 
-                // Lưu lịch sử
+                // LÆ°u lá»‹ch sá»­
                 $resStr = "P: " . $playerCard['val'] . $playerCard['suit'] . " vs D: " . $dealerCard['val'] . $dealerCard['suit'];
                 $his = $conn->prepare("INSERT INTO history_war (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
                 $his->bind_param("idss", $userId, $bet, $resStr, $winAmount);
@@ -103,9 +93,9 @@ if (isset($_GET['action'])) {
     } elseif ($action === 'war') {
         $bet = $_SESSION['war_bet'];
         if ($money < $bet) {
-            $response['message'] = "Không đủ gtlm để tham chiến!";
+            $response['message'] = "KhÃ´ng Ä‘á»§ gtlm Ä‘á»ƒ tham chiáº¿n!";
         } else {
-            // Rút thêm 2 lá sau khi bỏ qua 3 lá (visual only, here we just pick 2)
+            // RÃºt thÃªm 2 lÃ¡ sau khi bá» qua 3 lÃ¡ (visual only, here we just pick 2)
             $pValIdx = rand(0, 12);
             $pSuitIdx = rand(0, 3);
             $dValIdx = rand(0, 12);
@@ -117,13 +107,13 @@ if (isset($_GET['action'])) {
             $winAmount = 0;
             $status = "";
             if ($playerCardNew['score'] >= $dealerCardNew['score']) {
-                // Thắng trận War: Ăn cược War (1-1) và đẩy (push) cược Ante. Tổng là thắng 1 đơn vị bet ban đầu.
-                // User requirement says "Thắng -> nhân đôi bet". In War context, usually player pays 1 more unit.
+                // Tháº¯ng tráº­n War: Ä‚n cÆ°á»£c War (1-1) vÃ  Ä‘áº©y (push) cÆ°á»£c Ante. Tá»•ng lÃ  tháº¯ng 1 Ä‘Æ¡n vá»‹ bet ban Ä‘áº§u.
+                // User requirement says "Tháº¯ng -> nhÃ¢n Ä‘Ã´i bet". In War context, usually player pays 1 more unit.
                 // If they win, they get 2 units back (the new bet + 1 win).
                 $winAmount = $bet;
                 $status = "WIN_WAR";
             } else {
-                // Thua trận War: Mất cả Ante và War bet. Tổng là mất 2 đơn vị bet ban đầu.
+                // Thua tráº­n War: Máº¥t cáº£ Ante vÃ  War bet. Tá»•ng lÃ  máº¥t 2 Ä‘Æ¡n vá»‹ bet ban Ä‘áº§u.
                 $winAmount = -($bet * 2);
                 $status = "LOSE_WAR";
             }
@@ -134,7 +124,7 @@ if (isset($_GET['action'])) {
             $stmt->execute();
             $stmt->close();
 
-            // Lưu lịch sử
+            // LÆ°u lá»‹ch sá»­
             $resStr = "WAR! P: " . $playerCardNew['val'] . $playerCardNew['suit'] . " vs D: " . $dealerCardNew['val'] . $dealerCardNew['suit'];
             $totalBet = $bet * 2;
             $his = $conn->prepare("INSERT INTO history_war (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
@@ -161,7 +151,7 @@ if (isset($_GET['action'])) {
         $stmt->execute();
         $stmt->close();
 
-        // Lưu lịch sử
+        // LÆ°u lá»‹ch sá»­
         $resStr = "Surrender";
         $his = $conn->prepare("INSERT INTO history_war (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
         $winAmt = -$loss;
@@ -197,7 +187,7 @@ if (isset($_GET['action'])) {
 
 <head>
     <meta charset="UTF-8">
-    <title>Casino War - Trận Chiến Bài Tây</title>
+    <title>Casino War - Tráº­n Chiáº¿n BÃ i TÃ¢y</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../assets/css/main.css">
     <link rel="stylesheet" href="../assets/css/animations.css">
@@ -489,10 +479,10 @@ if (isset($_GET['action'])) {
 
     <div class="main-container">
         <h1 class="game-title">CASINO WAR</h1>
-        <p style="color: rgba(255,255,255,0.6); margin-bottom: 2rem;">Lớn hơn là thắng - Đơn giản & Kịch tính</p>
+        <p style="color: rgba(255,255,255,0.6); margin-bottom: 2rem;">Lá»›n hÆ¡n lÃ  tháº¯ng - ÄÆ¡n giáº£n & Ká»‹ch tÃ­nh</p>
 
         <div class="glass-card">
-            <div class="balance-pill">💰 Số Gtlm: <span id="balance-display"
+            <div class="balance-pill">ðŸ’° Sá»‘ Gtlm: <span id="balance-display"
                     style="color: var(--secondary);"><?= number_format($money, 0, ',', '.') ?></span> gtlm</div>
 
             <div class="card-area">
@@ -500,14 +490,14 @@ if (isset($_GET['action'])) {
                     <div class="card-label">Dealer</div>
                     <div id="dealer-card" class="playing-card">
                         <div class="card-value">?</div>
-                        <div class="card-suit">🂠</div>
+                        <div class="card-suit">ðŸ‚ </div>
                     </div>
                 </div>
                 <div class="card-container">
-                    <div class="card-label">Bạn</div>
+                    <div class="card-label">Báº¡n</div>
                     <div id="player-card" class="playing-card">
                         <div class="card-value">?</div>
-                        <div class="card-suit">🂠</div>
+                        <div class="card-suit">ðŸ‚ </div>
                     </div>
                 </div>
             </div>
@@ -517,32 +507,32 @@ if (isset($_GET['action'])) {
             <div class="controls">
                 <div id="betting-controls" class="bet-input-wrapper">
                     <input type="number" id="bet-amount" value="1000" min="100" step="100">
-                    <button id="deal-btn" class="btn">Chia bài</button>
+                    <button id="deal-btn" class="btn">Chia bÃ i</button>
                 </div>
 
                 <div id="tie-controls" style="display: none;">
-                    <p style="margin-bottom: 15px; font-weight: 600;">HÒA! Bạn muốn làm gì?</p>
-                    <button id="war-btn" class="btn btn-war">THAM CHIẾN (WAR)</button>
-                    <button id="surrender-btn" class="btn btn-secondary">ĐẦU HÀNG (Lose 1/2)</button>
+                    <p style="margin-bottom: 15px; font-weight: 600;">HÃ’A! Báº¡n muá»‘n lÃ m gÃ¬?</p>
+                    <button id="war-btn" class="btn btn-war">THAM CHIáº¾N (WAR)</button>
+                    <button id="surrender-btn" class="btn btn-secondary">Äáº¦U HÃ€NG (Lose 1/2)</button>
                 </div>
 
                 <div id="result-controls" style="display: none;">
-                    <button id="reset-btn" class="btn">Ván mới</button>
+                    <button id="reset-btn" class="btn">VÃ¡n má»›i</button>
                 </div>
             </div>
         </div>
 
         <div class="glass-card" style="margin-top: 3rem;">
-            <h2 style="margin-bottom: 2rem; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 2px;">Lịch sử
-                ván đấu</h2>
+            <h2 style="margin-bottom: 2rem; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 2px;">Lá»‹ch sá»­
+                vÃ¡n Ä‘áº¥u</h2>
             <div class="history-container">
                 <table class="history-table">
                     <thead>
                         <tr>
-                            <th>Thời gian</th>
-                            <th>gtlm cược</th>
-                            <th>Kết quả</th>
-                            <th>Thắng/Thua</th>
+                            <th>Thá»i gian</th>
+                            <th>gtlm cÆ°á»£c</th>
+                            <th>Káº¿t quáº£</th>
+                            <th>Tháº¯ng/Thua</th>
                         </tr>
                     </thead>
                     <tbody id="history-body">
@@ -553,7 +543,7 @@ if (isset($_GET['action'])) {
         </div>
 
         <a href="../index.php" class="btn btn-secondary"
-            style="margin-top: 2rem; display: inline-block; text-decoration: none; width: auto;">Quay lại gtlm sảnh</a>
+            style="margin-top: 2rem; display: inline-block; text-decoration: none; width: auto;">Quay láº¡i gtlm sáº£nh</a>
     </div>
 
 

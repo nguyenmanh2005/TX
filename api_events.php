@@ -146,11 +146,16 @@ switch ($action) {
             // 7. Trao giải
             deliverReward($userId, $winner, $conn);
 
+            $finalMoney = $userMoney - $spinCost;
+            if ($winner['reward_type'] === 'money') {
+                $finalMoney += (int)$winner['reward_value'];
+            }
+
             $conn->commit();
             echo json_encode([
                 'success' => true, 
                 'reward' => $winner, 
-                'new_money' => $userMoney - $spinCost
+                'new_money' => $finalMoney
             ]);
 
         } catch (Exception $e) {

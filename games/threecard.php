@@ -10,16 +10,6 @@ if (!isset($_SESSION['Iduser'])) {
 
 $userId = $_SESSION['Iduser'];
 
-// Auto-create history table
-$conn->query("CREATE TABLE IF NOT EXISTS history_threecard (
-    Id INT AUTO_INCREMENT PRIMARY KEY,
-    Iduser INT NOT NULL,
-    Bet DECIMAL(30,2) NOT NULL,
-    Result VARCHAR(255) NOT NULL,
-    WinAmount DECIMAL(30,2) NOT NULL,
-    Time DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
 $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
@@ -32,7 +22,7 @@ const RANK_NAMES = ['High Card', 'Pair', 'Flush', 'Straight', 'Three of a Kind',
 
 function getCard()
 {
-    $suits = ['♠', '♥', '♦', '♣'];
+    $suits = ['â™ ', 'â™¥', 'â™¦', 'â™£'];
     $vals = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
     $vIdx = rand(0, 12);
     $sIdx = rand(0, 3);
@@ -82,7 +72,7 @@ if (isset($_GET['action'])) {
         $pairPlus = (int) ($_POST['pairPlus'] ?? 0);
 
         if ($ante <= 0 || ($ante + $pairPlus) > $money) {
-            echo json_encode(['success' => false, 'message' => 'Cược không hợp lệ!']);
+            echo json_encode(['success' => false, 'message' => 'CÆ°á»£c khÃ´ng há»£p lá»‡!']);
             exit;
         }
 
@@ -134,16 +124,16 @@ if (isset($_GET['action'])) {
 
         if (!$dQualifies) {
             $winAmount += ($ante * 2) + $play; // Ante wins 1:1, Play pushes
-            $msg = "Dealer không đủ điều kiện (Qualify). Ante thắng, Play hòa.";
+            $msg = "Dealer khÃ´ng Ä‘á»§ Ä‘iá»u kiá»‡n (Qualify). Ante tháº¯ng, Play hÃ²a.";
         } else {
             if ($pEval['score'] > $dEval['score']) {
                 $winAmount += ($ante * 2) + ($play * 2);
-                $msg = "Bạn thắng Dealer!";
+                $msg = "Báº¡n tháº¯ng Dealer!";
             } elseif ($pEval['score'] < $dEval['score']) {
-                $msg = "Dealer thắng bạn.";
+                $msg = "Dealer tháº¯ng báº¡n.";
             } else {
                 $winAmount += $ante + $play;
-                $msg = "Hòa (Push).";
+                $msg = "HÃ²a (Push).";
             }
         }
 
@@ -201,7 +191,7 @@ if (isset($_GET['action'])) {
 
 <head>
     <meta charset="UTF-8">
-    <title>Three Card Poker - Đỉnh Cao Trí Tuệ</title>
+    <title>Three Card Poker - Äá»‰nh Cao TrÃ­ Tuá»‡</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../assets/css/main.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -462,7 +452,7 @@ if (isset($_GET['action'])) {
 
     <div class="main-container">
         <h1 class="game-title">THREE CARD POKER</h1>
-        <div class="balance-pill">💰 Số Gtlm: <span id="balance-val"><?= number_format($money, 0, ',', '.') ?></span>
+        <div class="balance-pill">ðŸ’° Sá»‘ Gtlm: <span id="balance-val"><?= number_format($money, 0, ',', '.') ?></span>
             gtlm
         </div>
 
@@ -470,18 +460,18 @@ if (isset($_GET['action'])) {
             <div id="dealer-area" class="hand-section">
                 <div class="label">Dealer</div>
                 <div id="dealer-hand" class="card-row">
-                    <div class="card">🃟</div>
-                    <div class="card">🃟</div>
-                    <div class="card">🃟</div>
+                    <div class="card">ðŸƒŸ</div>
+                    <div class="card">ðŸƒŸ</div>
+                    <div class="card">ðŸƒŸ</div>
                 </div>
             </div>
 
             <div id="player-area" class="hand-section">
-                <div class="label">Bạn</div>
+                <div class="label">Báº¡n</div>
                 <div id="player-hand" class="card-row">
-                    <div class="card">🃟</div>
-                    <div class="card">🃟</div>
-                    <div class="card">🃟</div>
+                    <div class="card">ðŸƒŸ</div>
+                    <div class="card">ðŸƒŸ</div>
+                    <div class="card">ðŸƒŸ</div>
                 </div>
                 <div id="player-rank"
                     style="font-weight: 900; margin-top: 1rem; color: var(--secondary); font-size: 1.2rem;"></div>
@@ -490,48 +480,48 @@ if (isset($_GET['action'])) {
             <div id="bet-area">
                 <div class="bet-grid">
                     <div class="bet-input-box">
-                        <span>ANTE (Bắt buộc)</span>
+                        <span>ANTE (Báº¯t buá»™c)</span>
                         <input type="number" id="ante" value="1000" min="100" step="100">
                     </div>
                     <div class="bet-input-box">
-                        <span>PAIR PLUS (Tùy chọn)</span>
+                        <span>PAIR PLUS (TÃ¹y chá»n)</span>
                         <input type="number" id="pairplus" value="0" min="0" step="100">
                     </div>
                 </div>
-                <button id="deal-btn" class="btn btn-ante">Chia Bài</button>
+                <button id="deal-btn" class="btn btn-ante">Chia BÃ i</button>
             </div>
 
             <div id="play-area" style="display: none; margin-top: 2rem;">
-                <p style="margin-bottom: 1.5rem; font-weight: 700;">Bạn muốn Theo hay Úp bài?</p>
+                <p style="margin-bottom: 1.5rem; font-weight: 700;">Báº¡n muá»‘n Theo hay Ãšp bÃ i?</p>
                 <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
                     <button id="play-btn" class="btn btn-play">PLAY (Theo)</button>
-                    <button id="fold-btn" class="btn btn-fold">FOLD (Úp bài)</button>
+                    <button id="fold-btn" class="btn btn-fold">FOLD (Ãšp bÃ i)</button>
                 </div>
             </div>
 
             <div id="result-area" style="display: none; margin-top: 2rem;">
                 <h2 id="result-msg" style="margin-bottom: 1.5rem;"></h2>
-                <button id="reset-btn" class="btn btn-ante">Ván Mới</button>
+                <button id="reset-btn" class="btn btn-ante">VÃ¡n Má»›i</button>
             </div>
         </div>
 
         <div class="history-section">
-            <h2 style="font-size: 1.2rem; letter-spacing: 2px;">LỊCH SỬ ĐẶT CƯỢC</h2>
+            <h2 style="font-size: 1.2rem; letter-spacing: 2px;">Lá»ŠCH Sá»¬ Äáº¶T CÆ¯á»¢C</h2>
             <div style="overflow-x: auto;">
                 <table class="history-table">
                     <thead>
                         <tr>
-                            <th>Thời gian</th>
-                            <th>gtlm cược</th>
-                            <th>Kết quả</th>
-                            <th>Thắng/Thua</th>
+                            <th>Thá»i gian</th>
+                            <th>gtlm cÆ°á»£c</th>
+                            <th>Káº¿t quáº£</th>
+                            <th>Tháº¯ng/Thua</th>
                         </tr>
                     </thead>
                     <tbody id="history-body"></tbody>
                 </table>
             </div>
             <div style="margin-top: 2rem;"><a href="../index.php"
-                    style="color: var(--primary); text-decoration: none; font-weight: 700;">🏠 Về Trang Chủ</a></div>
+                    style="color: var(--primary); text-decoration: none; font-weight: 700;">ðŸ  Vá» Trang Chá»§</a></div>
         </div>
     </div>
 

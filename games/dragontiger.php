@@ -10,16 +10,6 @@ if (!isset($_SESSION['Iduser'])) {
 
 $userId = $_SESSION['Iduser'];
 
-// Auto-create history table if missing
-$conn->query("CREATE TABLE IF NOT EXISTS history_dragontiger (
-    Id INT AUTO_INCREMENT PRIMARY KEY,
-    Iduser INT NOT NULL,
-    Bet DECIMAL(30,2) NOT NULL,
-    Result VARCHAR(255) NOT NULL,
-    WinAmount DECIMAL(30,2) NOT NULL,
-    Time DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
 // Lấy thông tin user
 $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
@@ -79,6 +69,10 @@ if (isset($_GET['action'])) {
             $his->bind_param("idss", $userId, $totalBet, $resStr, $winAmount);
             $his->execute();
             $his->close();
+
+            // Tích hợp hệ thống Nhiệm vụ Sự kiện, Battle Pass, XP, v.v.
+            require_once '../game_history_helper.php';
+            logGameHistoryWithAll($conn, $userId, 'Rồng Hổ', $totalBet, $winAmount > 0 ? $winAmount + $totalBet : 0, $winAmount > 0);
 
             $response = [
                 'success' => true,

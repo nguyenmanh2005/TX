@@ -4,8 +4,9 @@ class HorseRacePvP {
         this.status = 'waiting';
         this.horses = [0, 0, 0, 0, 0, 0];
         this.selectedHorse = null;
-        this.betAmount = 10000;
         this.pollInterval = null;
+        this.myBet = null;
+        this.notifiedFinishedRoomId = null;
 
         this.init();
     }
@@ -71,6 +72,11 @@ class HorseRacePvP {
             statusEl.innerText = "CUỘC ĐUA KẾT THÚC!";
             countdownEl.innerText = "Winner: Horse #" + room.winner_horse;
             this.showFinishPositions(room.winner_horse);
+            
+            if (this.roomId !== this.notifiedFinishedRoomId) {
+                this.notifiedFinishedRoomId = this.roomId;
+                this.checkResult(room.winner_horse);
+            }
         }
 
         // Update Bets
@@ -123,16 +129,55 @@ class HorseRacePvP {
         `).join('');
     }
 
+    checkResult(winner) {
+        if (!this.myBet) return;
+        
+        const winAmount = this.myBet.amount * 6;
+        
+        if (this.myBet.horseId == winner) {
+            Swal.fire({
+                icon: 'success',
+                title: 'CHIẾN THẮNG!',
+                html: `Chúc mừng! Chiến mã #${winner} đã về nhất.<br>Bạn nhận được <b>+${new Intl.NumberFormat('vi-VN').format(winAmount)}</b> GTLM!`,
+                confirmButtonText: 'Tuyệt vời'
+            });
+            // Cộng tiền hiển thị
+            const balanceEl = document.getElementById('user-balance');
+            if (balanceEl) {
+                let currentBal = parseInt(balanceEl.innerText.replace(/\./g, ''));
+                currentBal += winAmount;
+                balanceEl.innerText = new Intl.NumberFormat('vi-VN').format(currentBal);
+            }
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'THẤT BẠI!',
+                html: `Chiến mã #${winner} đã về nhất.<br>Bạn đã mất <b>${new Intl.NumberFormat('vi-VN').format(this.myBet.amount)}</b> GTLM!`,
+                confirmButtonText: 'Thử lại'
+            });
+        }
+        
+        this.myBet = null;
+    }
+
     async placeBet() {
         if (!this.selectedHorse) {
-            alert("Vui lòng chọn ngựa!");
+            Swal.fire({icon: 'warning', title: 'Oops...', text: 'Vui lòng chọn ngựa!'});
+            return;
+        }
+
+        const betAmountInput = document.getElementById('bet-amount');
+        const betAmount = parseInt(betAmountInput.value) || 0;
+
+        if (betAmount < 1000) {
+            Swal.fire({icon: 'warning', title: 'Lỗi', text: 'Tối thiểu 1.000 GTLM'});
             return;
         }
 
         try {
             const formData = new FormData();
             formData.append('horse_id', this.selectedHorse);
-            formData.append('amount', this.betAmount);
+            formData.append('amount', betAmount);
 
             const response = await fetch('../api_horserace_pvp.php?action=place_bet', {
                 method: 'POST',
@@ -140,9 +185,18 @@ class HorseRacePvP {
             });
             const data = await response.json();
             if (data.success) {
-                alert("Đặt cược thành công!");
+                Swal.fire({icon: 'success', title: 'Thành công!', text: 'Đặt cược thành công!', timer: 1500, showConfirmButton: false});
+                this.myBet = { horseId: parseInt(this.selectedHorse), amount: betAmount };
+                
+                // Trừ tiền hiển thị
+                const balanceEl = document.getElementById('user-balance');
+                if (balanceEl) {
+                    let currentBal = parseInt(balanceEl.innerText.replace(/\./g, ''));
+                    currentBal -= betAmount;
+                    balanceEl.innerText = new Intl.NumberFormat('vi-VN').format(currentBal);
+                }
             } else {
-                alert(data.message);
+                Swal.fire({icon: 'error', title: 'Lỗi', text: data.message});
             }
         } catch (e) {
             console.error(e);

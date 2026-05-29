@@ -6,27 +6,17 @@ header('Content-Type: application/json');
 
 $userId = $_SESSION['Iduser'] ?? 0;
 
-// 1. Khởi tạo Database
-$conn->query("CREATE TABLE IF NOT EXISTS history_banharc (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT,
-    fish_name VARCHAR(50),
-    multiplier INT,
-    reward BIGINT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)");
-
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 switch ($action) {
     case 'shoot':
-        if (!$userId) exit(json_encode(['success' => false, 'message' => 'Chưa đăng nhập']));
+        if (!$userId) exit(json_encode(['success' => false, 'message' => 'ChÆ°a Ä‘Äƒng nháº­p']));
         
         $bulletPrice = (int)$_POST['bullet_price'];
-        $fishType = $_POST['fish_type'] ?? ''; // Loại cá muốn bắn (tùy chọn)
+        $fishType = $_POST['fish_type'] ?? ''; // Loáº¡i cÃ¡ muá»‘n báº¯n (tÃ¹y chá»n)
         
         $allowed = [100, 500, 1000, 5000];
-        if (!in_array($bulletPrice, $allowed)) exit(json_encode(['success' => false, 'message' => 'Mức đạn không hợp lệ']));
+        if (!in_array($bulletPrice, $allowed)) exit(json_encode(['success' => false, 'message' => 'Má»©c Ä‘áº¡n khÃ´ng há»£p lá»‡']));
 
         $conn->begin_transaction();
         try {
@@ -36,10 +26,10 @@ switch ($action) {
             $user = $stmt->get_result()->fetch_assoc();
 
             if ($user['Money'] < $bulletPrice) {
-                throw new Exception('Hết đạn ( Gtlm)!');
+                throw new Exception('Háº¿t Ä‘áº¡n ( Gtlm)!');
             }
 
-            // 1. Luôn trừ  Gtlm đạn
+            // 1. LuÃ´n trá»«  Gtlm Ä‘áº¡n
             $newBalance = $user['Money'] - $bulletPrice;
             $upd = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
             $upd->bind_param("di", $newBalance, $userId);
@@ -49,16 +39,16 @@ switch ($action) {
             $reward = 0;
             $fishName = '';
 
-            // 2. Nếu có nhắm vào cá, thực hiện roll xác suất ngay tại đây
+            // 2. Náº¿u cÃ³ nháº¯m vÃ o cÃ¡, thá»±c hiá»‡n roll xÃ¡c suáº¥t ngay táº¡i Ä‘Ã¢y
             if (!empty($fishType)) {
                 $fishConfig = [
-                    'small' => ['x' => 2, 'name' => 'Cá Xanh', 'p' => 0.4],
-                    'medium' => ['x' => 5, 'name' => 'Cá Vàng', 'p' => 0.15],
-                    'large' => ['x' => 10, 'name' => 'Cá Đỏ', 'p' => 0.08],
-                    'shark' => ['x' => 20, 'name' => 'Cá Mập', 'p' => 0.04],
-                    'octopus' => ['x' => 50, 'name' => 'Bạch Tuộc', 'p' => 0.015],
-                    'gold_crab' => ['x' => 100, 'name' => 'Cua Vàng', 'p' => 0.008],
-                    'dragon' => ['x' => 500, 'name' => 'Rồng Biển', 'p' => 0.002]
+                    'small' => ['x' => 2, 'name' => 'CÃ¡ Xanh', 'p' => 0.4],
+                    'medium' => ['x' => 5, 'name' => 'CÃ¡ VÃ ng', 'p' => 0.15],
+                    'large' => ['x' => 10, 'name' => 'CÃ¡ Äá»', 'p' => 0.08],
+                    'shark' => ['x' => 20, 'name' => 'CÃ¡ Máº­p', 'p' => 0.04],
+                    'octopus' => ['x' => 50, 'name' => 'Báº¡ch Tuá»™c', 'p' => 0.015],
+                    'gold_crab' => ['x' => 100, 'name' => 'Cua VÃ ng', 'p' => 0.008],
+                    'dragon' => ['x' => 500, 'name' => 'Rá»“ng Biá»ƒn', 'p' => 0.002]
                 ];
 
                 if (isset($fishConfig[$fishType])) {
@@ -69,12 +59,12 @@ switch ($action) {
                         $fishName = $fishConfig[$fishType]['name'];
                         $newBalance += $reward;
                         
-                        // Cập nhật lại  Gtlm sau khi trúng
+                        // Cáº­p nháº­t láº¡i  Gtlm sau khi trÃºng
                         $updReward = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
                         $updReward->bind_param("di", $newBalance, $userId);
                         $updReward->execute();
 
-                        // Lưu lịch sử
+                        // LÆ°u lá»‹ch sá»­
                         $his = $conn->prepare("INSERT INTO history_banharc (user_id, fish_name, multiplier, reward) VALUES (?, ?, ?, ?)");
                         $his->bind_param("isii", $userId, $fishName, $fishConfig[$fishType]['x'], $reward);
                         $his->execute();

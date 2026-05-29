@@ -8,25 +8,16 @@ if (!$userId) {
     exit;
 }
 
-// 1. Tạo bảng guild_messages nếu chưa có
-$sqlCreate = "CREATE TABLE IF NOT EXISTS guild_messages (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    guild_id INT,
-    user_id INT,
-    username VARCHAR(100),
-    message TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX (guild_id)
-)";
-$conn->query($sqlCreate);
-
 // 2. Lấy guild_id của user
-$userRes = $conn->query("SELECT guild_id FROM users WHERE Iduser = $userId");
-$userData = $userRes->fetch_assoc();
+$stmtGuild = $conn->prepare("SELECT guild_id FROM users WHERE Iduser = ?");
+$stmtGuild->bind_param("i", $userId);
+$stmtGuild->execute();
+$userData = $stmtGuild->get_result()->fetch_assoc();
 $guildId = $userData['guild_id'] ?? 0;
+$stmtGuild->close();
 
 if (!$guildId && $_GET['action'] !== 'get_status') {
-    echo json_encode(['success' => false, 'message' => 'Bạn chưa gia nhập Bang hội nào!']);
+    echo json_encode(['success' => false, 'message' => 'Báº¡n chÆ°a gia nháº­p Bang há»™i nÃ o!']);
     exit;
 }
 
@@ -55,9 +46,20 @@ switch ($action) {
         break;
 
     case 'send':
+        // Rate limit: Tối đa 1 tin nhắn mỗi 1.5 giây để tránh spam
+        $now = microtime(true);
+        if (isset($_SESSION['last_chat_time'])) {
+            $diff = $now - $_SESSION['last_chat_time'];
+            if ($diff < 1.5) {
+                echo json_encode(['success' => false, 'message' => 'Bạn gửi quá nhanh! Vui lòng giãn cách 1.5 giây.']);
+                exit;
+            }
+        }
+        $_SESSION['last_chat_time'] = $now;
+
         $message = trim($_POST['message'] ?? '');
         if (empty($message)) {
-            echo json_encode(['success' => false, 'message' => 'Nội dung trống']);
+            echo json_encode(['success' => false, 'message' => 'Ná»™i dung trá»‘ng']);
             break;
         }
 
@@ -70,7 +72,7 @@ switch ($action) {
         if ($stmt->execute()) {
             echo json_encode(['success' => true]);
         } else {
-            echo json_encode(['success' => false, 'message' => 'Lỗi gửi tin nhắn']);
+            echo json_encode(['success' => false, 'message' => 'Lá»—i gá»­i tin nháº¯n']);
         }
         break;
 

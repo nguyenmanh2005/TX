@@ -1,7 +1,7 @@
 <?php
 /**
  * API Save Feedback
- * Lưu feedback từ người dùng
+ * LÆ°u feedback tá»« ngÆ°á»i dÃ¹ng
  */
 
 header('Content-Type: application/json');
@@ -32,21 +32,6 @@ if (empty($message)) {
     echo json_encode(['success' => false, 'message' => 'Message is required']);
     exit;
 }
-
-// Create feedback table if not exists
-$createTableSql = "CREATE TABLE IF NOT EXISTS user_feedback (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT DEFAULT 0,
-    type VARCHAR(50) NOT NULL,
-    message TEXT NOT NULL,
-    email VARCHAR(255),
-    url VARCHAR(500),
-    user_agent TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_user_id (user_id),
-    INDEX idx_type (type),
-    INDEX idx_created_at (created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
 $conn->query($createTableSql);
 

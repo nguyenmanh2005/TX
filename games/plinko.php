@@ -19,15 +19,6 @@ $money = $user['Money'];
 $userName = $user['Name'];
 $stmt->close();
 
-$conn->query("CREATE TABLE IF NOT EXISTS history_plinko (
-    Id INT AUTO_INCREMENT PRIMARY KEY,
-    Iduser INT NOT NULL,
-    Bet DECIMAL(30,2) NOT NULL,
-    Result VARCHAR(255) NOT NULL,
-    WinAmount DECIMAL(30,2) NOT NULL,
-    Time DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
 $multipliers = [5.0, 2.0, 1.2, 0.5, 0.2, 0.5, 1.2, 2.0, 5.0];
 
 if (isset($_GET['action'])) {

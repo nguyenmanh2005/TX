@@ -415,6 +415,10 @@ $friendsTableExists = $checkTable && $checkTable->num_rows > 0;
 
             <!-- Lời mời -->
             <div id="requests-tab" class="tab-content">
+                <div id="bulk-actions-container" style="display: none; margin-bottom: 20px; text-align: right;">
+                    <button class="btn btn-success" onclick="acceptAllRequests()">✅ Chấp Nhận Tất Cả</button>
+                    <button class="btn btn-danger" onclick="declineAllRequests()">❌ Từ Chối Tất Cả</button>
+                </div>
                 <div id="requests-list" class="user-list">
                     <div class="no-data">Đang tải...</div>
                 </div>
@@ -479,7 +483,9 @@ $friendsTableExists = $checkTable && $checkTable->num_rows > 0;
                 .then(r => r.json())
                 .then(data => {
                     const container = document.getElementById('requests-list');
+                    const bulkContainer = document.getElementById('bulk-actions-container');
                     if (data.success && data.requests.length > 0) {
+                        if (bulkContainer) bulkContainer.style.display = 'block';
                         container.innerHTML = data.requests.map(req => `
                             <div class="user-card">
                                 <img src="${req.ImageURL || 'images.ico'}" alt="${req.Name}" class="user-avatar" onerror="this.src='images.ico'">
@@ -490,9 +496,75 @@ $friendsTableExists = $checkTable && $checkTable->num_rows > 0;
                             </div>
                         `).join('');
                     } else {
+                        if (bulkContainer) bulkContainer.style.display = 'none';
                         container.innerHTML = '<div class="no-data">Không có lời mời kết bạn nào.</div>';
                     }
                 });
+        }
+
+        function acceptAllRequests() {
+            Swal.fire({
+                title: 'Xác nhận',
+                text: 'Bạn có chắc chắn muốn chấp nhận tất cả lời mời kết bạn?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Đồng ý',
+                cancelButtonText: 'Hủy'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const formData = new FormData();
+                    formData.append('action', 'accept_all_requests');
+
+                    fetch('api_friends.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(r => r.json())
+                        .then(data => {
+                            Swal.fire({
+                                icon: data.success ? 'success' : 'error',
+                                title: data.success ? 'Thành công!' : 'Lỗi!',
+                                text: data.message
+                            });
+                            if (data.success) {
+                                loadPendingRequests();
+                                loadFriends();
+                            }
+                        });
+                }
+            });
+        }
+
+        function declineAllRequests() {
+            Swal.fire({
+                title: 'Xác nhận',
+                text: 'Bạn có chắc chắn muốn từ chối tất cả lời mời kết bạn?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Từ chối tất cả',
+                cancelButtonText: 'Hủy'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const formData = new FormData();
+                    formData.append('action', 'decline_all_requests');
+
+                    fetch('api_friends.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(r => r.json())
+                        .then(data => {
+                            Swal.fire({
+                                icon: data.success ? 'success' : 'error',
+                                title: data.success ? 'Thành công!' : 'Lỗi!',
+                                text: data.message
+                            });
+                            if (data.success) {
+                                loadPendingRequests();
+                            }
+                        });
+                }
+            });
         }
 
         function sendFriendRequest(friendId) {

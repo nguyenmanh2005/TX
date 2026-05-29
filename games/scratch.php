@@ -19,16 +19,7 @@ $money = $user['Money'];
 $userName = $user['Name'];
 $stmt->close();
 
-$conn->query("CREATE TABLE IF NOT EXISTS history_scratch (
-    Id INT AUTO_INCREMENT PRIMARY KEY,
-    Iduser INT NOT NULL,
-    Bet DECIMAL(30,2) NOT NULL,
-    Result VARCHAR(255) NOT NULL,
-    WinAmount DECIMAL(30,2) NOT NULL,
-    Time DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
-$symbols = ['🍒' => 2, '🍋' => 5, '🔔' => 10, '⭐' => 20, '💎' => 50, '🎰' => 100];
+$symbols = ['ðŸ’' => 2, 'ðŸ‹' => 5, 'ðŸ””' => 10, 'â­' => 20, 'ðŸ’Ž' => 50, 'ðŸŽ°' => 100];
 
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
@@ -38,7 +29,7 @@ if (isset($_GET['action'])) {
     if ($action === 'buy') {
         $bet = (float) ($_POST['bet'] ?? 0);
         if ($bet <= 0 || $bet > $money) {
-            $response['message'] = "gtlm cược không hợp lệ!";
+            $response['message'] = "gtlm cÆ°á»£c khÃ´ng há»£p lá»‡!";
         } else {
             $conn->query("UPDATE users SET Money = Money - $bet WHERE Iduser = $userId");
             $grid = [];
@@ -47,17 +38,17 @@ if (isset($_GET['action'])) {
             if (rand(1, 100) <= 35) {
                 $roll = rand(1, 100);
                 if ($roll <= 50)
-                    $matchSymbol = '🍒';
+                    $matchSymbol = 'ðŸ’';
                 elseif ($roll <= 75)
-                    $matchSymbol = '🍋';
+                    $matchSymbol = 'ðŸ‹';
                 elseif ($roll <= 88)
-                    $matchSymbol = '🔔';
+                    $matchSymbol = 'ðŸ””';
                 elseif ($roll <= 95)
-                    $matchSymbol = '⭐';
+                    $matchSymbol = 'â­';
                 elseif ($roll <= 99)
-                    $matchSymbol = '💎';
+                    $matchSymbol = 'ðŸ’Ž';
                 else
-                    $matchSymbol = '🎰';
+                    $matchSymbol = 'ðŸŽ°';
                 $winAmount = round($bet * $symbols[$matchSymbol]);
                 $grid = array_fill(0, 3, $matchSymbol);
                 $keys = array_keys($symbols);
@@ -379,33 +370,33 @@ if (isset($_GET['action'])) {
             <div class="sidebar">
                 <h1 style="margin:0;font-size:2rem;font-weight:900;color:var(--primary);font-family:'Orbitron'">SCRATCH
                     CARD</h1>
-                <p style="margin:0;opacity:0.5">Cào Vé Số - Thắng Lớn ✨</p>
+                <p style="margin:0;opacity:0.5">CÃ o VÃ© Sá»‘ - Tháº¯ng Lá»›n âœ¨</p>
 
                 <div class="input-group">
-                    <label>gtlm mua vé</label>
+                    <label>gtlm mua vÃ©</label>
                     <input type="number" id="betAmount" value="5000" step="1000">
                 </div>
 
                 <div class="paytable">
-                    <b style="display:block;margin-bottom:10px;color:var(--accent)">BẢNG THƯỞNG (x3 khớp)</b>
-                    <div class="paytable-item"><span>🍒 Cherry</span><b>x2</b></div>
-                    <div class="paytable-item"><span>🍋 Lemon</span><b>x5</b></div>
-                    <div class="paytable-item"><span>🔔 Bell</span><b>x10</b></div>
-                    <div class="paytable-item"><span>⭐ Star</span><b>x20</b></div>
-                    <div class="paytable-item"><span>💎 Diamond</span><b>x50</b></div>
-                    <div class="paytable-item"><span>🎰 Jackpot</span><b>x100</b></div>
+                    <b style="display:block;margin-bottom:10px;color:var(--accent)">Báº¢NG THÆ¯á»žNG (x3 khá»›p)</b>
+                    <div class="paytable-item"><span>ðŸ’ Cherry</span><b>x2</b></div>
+                    <div class="paytable-item"><span>ðŸ‹ Lemon</span><b>x5</b></div>
+                    <div class="paytable-item"><span>ðŸ”” Bell</span><b>x10</b></div>
+                    <div class="paytable-item"><span>â­ Star</span><b>x20</b></div>
+                    <div class="paytable-item"><span>ðŸ’Ž Diamond</span><b>x50</b></div>
+                    <div class="paytable-item"><span>ðŸŽ° Jackpot</span><b>x100</b></div>
                 </div>
 
-                <button id="buyBtn" class="btn-buy" onclick="buyCard()">🎫 Mua Vé</button>
+                <button id="buyBtn" class="btn-buy" onclick="buyCard()">ðŸŽ« Mua VÃ©</button>
 
                 <button id="btn-howto"
                     style="background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.2);padding:0.9rem;border-radius:1rem;font-size:0.9rem;font-weight:700;width:100%;cursor:pointer;transition:0.2s;margin-top:4px"
                     onmouseover="this.style.background='rgba(196,113,237,0.2)'"
-                    onmouseout="this.style.background='rgba(255,255,255,0.08)'">📖 Hướng Dẫn Chơi</button>
+                    onmouseout="this.style.background='rgba(255,255,255,0.08)'">ðŸ“– HÆ°á»›ng Dáº«n ChÆ¡i</button>
 
                 <div style="margin-top:auto;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.1)">
                     <div style="display:flex;justify-content:space-between;align-items:center">
-                        <span style="opacity:0.5">Số Gtlm:</span>
+                        <span style="opacity:0.5">Sá»‘ Gtlm:</span>
                         <span id="userMoney"
                             style="font-weight:900;color:var(--accent);font-size:1.5rem"><?php echo number_format($money, 0, ',', '.'); ?>
                             gtlm</span>
@@ -422,11 +413,11 @@ if (isset($_GET['action'])) {
                         </div>
                     <?php endfor; ?>
                 </div>
-                <p style="text-align:center;margin-top:15px;opacity:0.5;font-size:0.8rem">Nhấp vào từng ô để cào và nhận
-                    thưởng! ✋</p>
+                <p style="text-align:center;margin-top:15px;opacity:0.5;font-size:0.8rem">Nháº¥p vÃ o tá»«ng Ã´ Ä‘á»ƒ cÃ o vÃ  nháº­n
+                    thÆ°á»Ÿng! âœ‹</p>
                 <div style="text-align:center">
-                    <a href="../index.php" style="color:#fff;text-decoration:none;font-size:0.8rem;opacity:0.3">← Quay
-                        về Dashboard</a>
+                    <a href="../index.php" style="color:#fff;text-decoration:none;font-size:0.8rem;opacity:0.3">â† Quay
+                        vá» Dashboard</a>
                 </div>
             </div>
         </div>
@@ -442,7 +433,7 @@ if (isset($_GET['action'])) {
             if (isBuying) return;
             const bet = $('#betAmount').val();
             isBuying = true;
-            $('#buyBtn').prop('disabled', true).text('ĐANG XỬ LÝ...');
+            $('#buyBtn').prop('disabled', true).text('ÄANG Xá»¬ LÃ...');
             // Reset tiles
             gsap.to('.scrapper-cover', { scale: 1, opacity: 1, rotation: 0, duration: 0.3 });
             $('.scratch-tile').removeClass('revealed match-highlight');
@@ -453,12 +444,12 @@ if (isset($_GET['action'])) {
                     currentGrid = res.grid;
                     lastResult = res;
                     isBuying = false;
-                    $('#buyBtn').prop('disabled', false).text('✋ Cào Đi!');
+                    $('#buyBtn').prop('disabled', false).text('âœ‹ CÃ o Äi!');
                     $('#userMoney').text(res.money + ' gtlm');
                 } else {
-                    Swal.fire('Lỗi', res.message, 'error');
+                    Swal.fire('Lá»—i', res.message, 'error');
                     isBuying = false;
-                    $('#buyBtn').prop('disabled', false).text('🎫 Mua Vé');
+                    $('#buyBtn').prop('disabled', false).text('ðŸŽ« Mua VÃ©');
                 }
             });
         }
@@ -502,19 +493,19 @@ if (isset($_GET['action'])) {
                     else window.GameEffects.showWin(rawWin);
                 }
                 Swal.fire({
-                    title: '🎉 TRÚNG THƯỞNG!',
-                    html: `Chúc mừng bạn đã trúng: <b style="color:#f1c40f;font-size:1.8rem">${lastResult.winAmount} gtlm</b>`,
+                    title: 'ðŸŽ‰ TRÃšNG THÆ¯á»žNG!',
+                    html: `ChÃºc má»«ng báº¡n Ä‘Ã£ trÃºng: <b style="color:#f1c40f;font-size:1.8rem">${lastResult.winAmount} gtlm</b>`,
                     icon: 'success', background: '#1a1a1a', color: '#fff'
                 });
             } else {
                 if (window.GameEffects) window.GameEffects.showLoss(0);
                 Swal.fire({
-                    title: '😅 CHÚC MAY MẮN LẦN SAU!',
-                    text: 'Rất tiếc không có bộ 3 nào trùng khớp.',
+                    title: 'ðŸ˜… CHÃšC MAY Máº®N Láº¦N SAU!',
+                    text: 'Ráº¥t tiáº¿c khÃ´ng cÃ³ bá»™ 3 nÃ o trÃ¹ng khá»›p.',
                     icon: 'info', background: '#1a1a1a', color: '#fff'
                 });
             }
-            $('#buyBtn').prop('disabled', false).text('🎫 Mua Vé Tiếp');
+            $('#buyBtn').prop('disabled', false).text('ðŸŽ« Mua VÃ© Tiáº¿p');
             currentGrid = [];
         }
     </script>

@@ -681,7 +681,7 @@ function logGameHistoryWithAll(mysqli $conn, int $userId, string $gameName, floa
         updateGuildWarPoints($conn, $userId, $winAmount, $betAmount, $gameName);
 
         // Cập nhật Battle Pass missions
-        require_once __DIR__ . '/api_battle_pass.php';
+        require_once __DIR__ . '/battle_pass_helper.php';
         updateBPMission($conn, $userId, 'play_game', 1);
         if ($winAmount > 0) {
             updateBPMission($conn, $userId, 'win_money', $winAmount);
@@ -1062,6 +1062,7 @@ function updateEventMissionProgress(mysqli $conn, int $userId, string $gameName,
         'keno' => 'Keno',
         'plinko' => 'Plinko',
         'mines' => 'Mines',
+        'fantan' => 'Fan-Tan',
     ];
 
     foreach ($missions as $m) {

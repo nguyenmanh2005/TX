@@ -98,10 +98,13 @@ if (!$boss) {
             height: 100%; width: 100%;
             background: linear-gradient(90deg, var(--hp-red), var(--hp-yellow));
             transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative; z-index: 1;
         }
         .hp-text {
-            position: absolute; width: 100%; text-align: center;
-            line-height: 30px; font-weight: 900; font-size: 14px; text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            position: absolute; top: 0; left: 0; width: 100%; text-align: center;
+            line-height: 30px; font-weight: 900; font-size: 14px; color: #ffffff;
+            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 10px rgba(0,0,0,0.9);
+            z-index: 2;
         }
 
         .boss-name {

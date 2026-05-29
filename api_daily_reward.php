@@ -5,14 +5,6 @@ require_once 'db_connect.php';
 $userId = $_SESSION['Iduser'] ?? 0;
 if (!$userId) exit(json_encode(['success' => false]));
 
-// 1. Tạo bảng stats nếu chưa có
-$sqlCreate = "CREATE TABLE IF NOT EXISTS daily_login_stats (
-    user_id INT PRIMARY KEY,
-    last_claim_date DATE,
-    streak INT DEFAULT 0
-)";
-$conn->query($sqlCreate);
-
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 $today = date('Y-m-d');
 
@@ -34,7 +26,7 @@ switch ($action) {
         $data = $res->fetch_assoc();
         
         if ($data && $data['last_claim_date'] == $today) {
-            echo json_encode(['success' => false, 'message' => 'Hôm nay bạn đã nhận quà rồi!']);
+            echo json_encode(['success' => false, 'message' => 'HÃ´m nay báº¡n Ä‘Ã£ nháº­n quÃ  rá»“i!']);
             break;
         }
 
@@ -48,7 +40,7 @@ switch ($action) {
             }
         }
 
-        // Tính thưởng
+        // TÃ­nh thÆ°á»Ÿng
         $rewards = [
             1 => 10000,
             2 => 25000,
@@ -62,10 +54,10 @@ switch ($action) {
 
         $conn->begin_transaction();
         try {
-            // Cộng  Gtlm
+            // Cá»™ng  Gtlm
             $conn->query("UPDATE users SET Money = Money + $amount WHERE Iduser = $userId");
             
-            // Cập nhật stats
+            // Cáº­p nháº­t stats
             if ($data) {
                 $conn->query("UPDATE daily_login_stats SET last_claim_date = '$today', streak = $streak WHERE user_id = $userId");
             } else {
@@ -76,7 +68,7 @@ switch ($action) {
             echo json_encode(['success' => true, 'amount' => $amount, 'streak' => $streak]);
         } catch (Exception $e) {
             $conn->rollback();
-            echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()]);
+            echo json_encode(['success' => false, 'message' => 'Lá»—i: ' . $e->getMessage()]);
         }
         break;
 }

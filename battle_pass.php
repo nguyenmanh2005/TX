@@ -222,7 +222,8 @@ if (!isset($_SESSION['Iduser'])) {
                 <span class="level-number" id="bp-level">1</span>
             </div>
             <div class="progress-section">
-                <h2 class="bp-title">BATTLE PASS: SEASON 1</h2>
+                <h2 class="bp-title" id="bp-season-title">BATTLE PASS</h2>
+                <div id="bp-countdown" style="color: #ff8c00; font-weight: bold; font-size: 0.9em; margin-top: 5px;"></div>
                 <div class="bp-progress-bar">
                     <div class="bp-progress-fill" id="bp-progress-fill"></div>
                 </div>
@@ -266,9 +267,41 @@ if (!isset($_SESSION['Iduser'])) {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        let countdownInterval;
+        function startCountdown(endTimeStr) {
+            if (countdownInterval) clearInterval(countdownInterval);
+            const endDate = new Date(endTimeStr).getTime();
+            
+            countdownInterval = setInterval(() => {
+                const now = new Date().getTime();
+                const distance = endDate - now;
+                
+                if (distance < 0) {
+                    clearInterval(countdownInterval);
+                    $('#bp-countdown').text('Mùa giải đã kết thúc!');
+                    return;
+                }
+                
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                
+                $('#bp-countdown').text(`Kết thúc sau: ${days}d ${hours}h ${minutes}m ${seconds}s`);
+            }, 1000);
+        }
+
         function loadBP() {
             $.get('api_battle_pass.php', { action: 'get_status' }, function(res) {
                 if (res.success) {
+                    if (res.season) {
+                        $('#bp-season-title').text(res.season.name.toUpperCase());
+                        startCountdown(res.season.end_time);
+                    } else {
+                        $('#bp-season-title').text('BATTLE PASS');
+                        $('#bp-countdown').text('Không có mùa giải nào đang diễn ra');
+                    }
+                    
                     $('#bp-level').text(res.level);
                     $('#bp-xp-text').text(`${res.xp.toLocaleString()} / ${res.xp_max.toLocaleString()} XP`);
                     const percent = (res.xp / res.xp_max) * 100;

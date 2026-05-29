@@ -10,16 +10,6 @@ if (!isset($_SESSION['Iduser'])) {
 
 $userId = $_SESSION['Iduser'];
 
-// Auto-create history table
-$conn->query("CREATE TABLE IF NOT EXISTS history_sicbo (
-    Id INT AUTO_INCREMENT PRIMARY KEY,
-    Iduser INT NOT NULL,
-    Bet DECIMAL(30,2) NOT NULL,
-    Result VARCHAR(255) NOT NULL,
-    WinAmount DECIMAL(30,2) NOT NULL,
-    Time DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
 $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
@@ -38,7 +28,7 @@ if (isset($_GET['action'])) {
             $totalBet += (int) $b['amount'];
 
         if ($totalBet <= 0 || $totalBet > $money) {
-            echo json_encode(['success' => false, 'message' => 'Cược không hợp lệ!']);
+            echo json_encode(['success' => false, 'message' => 'CÆ°á»£c khÃ´ng há»£p lá»‡!']);
             exit;
         }
 
@@ -156,7 +146,7 @@ if (isset($_GET['action'])) {
 
 <head>
     <meta charset="UTF-8">
-    <title>Sic Bo - Đỉnh Cao Xúc Xắc</title>
+    <title>Sic Bo - Äá»‰nh Cao XÃºc Xáº¯c</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../assets/css/main.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -429,15 +419,15 @@ if (isset($_GET['action'])) {
 
     <div class="main-container">
         <h1 class="game-title">SIC BO</h1>
-        <div class="balance-pill">💰 Số Gtlm: <span id="balance-val"><?= number_format($money, 0, ',', '.') ?></span>
+        <div class="balance-pill">ðŸ’° Sá»‘ Gtlm: <span id="balance-val"><?= number_format($money, 0, ',', '.') ?></span>
             gtlm
         </div>
 
         <div class="glass-card">
             <div class="dice-area" id="dice-container">
-                <div class="die">🎲</div>
-                <div class="die">🎲</div>
-                <div class="die">🎲</div>
+                <div class="die">ðŸŽ²</div>
+                <div class="die">ðŸŽ²</div>
+                <div class="die">ðŸŽ²</div>
             </div>
 
             <div class="chip-selector">
@@ -447,104 +437,104 @@ if (isset($_GET['action'])) {
                 <div class="chip-btn" data-val="50000" style="background: #ef4444;">50K</div>
                 <div class="chip-btn" data-val="100000" style="background: #8b5cf6;">100K</div>
                 <button onclick="clearBets()"
-                    style="background: transparent; color: #fff; border: 1px solid var(--glass-border); border-radius: 12px; cursor: pointer; padding: 0.5rem 1.5rem; margin-left: 1rem; font-weight: 700; font-size: 0.8rem;">XÓA
-                    CƯỢC</button>
+                    style="background: transparent; color: #fff; border: 1px solid var(--glass-border); border-radius: 12px; cursor: pointer; padding: 0.5rem 1.5rem; margin-left: 1rem; font-weight: 700; font-size: 0.8rem;">XÃ“A
+                    CÆ¯á»¢C</button>
             </div>
 
             <div class="bet-grid">
                 <div class="bet-item" data-type="small">
-                    <div class="label">Ác quỷ (4-10)</div>
+                    <div class="label">Ãc quá»· (4-10)</div>
                     <div class="odds">1:1</div>
                 </div>
                 <div class="bet-item" data-type="odd">
-                    <div class="label">LẺ</div>
+                    <div class="label">Láºº</div>
                     <div class="odds">1:1</div>
                 </div>
                 <div class="bet-item" data-type="any_triple" style="grid-column: span 2;">
-                    <div class="label">BẤT KỲ BỘ BA</div>
+                    <div class="label">Báº¤T Ká»² Bá»˜ BA</div>
                     <div class="odds">1:30</div>
                 </div>
                 <div class="bet-item" data-type="even">
-                    <div class="label">CHẴN</div>
+                    <div class="label">CHáº´N</div>
                     <div class="odds">1:1</div>
                 </div>
                 <div class="bet-item" data-type="big">
-                    <div class="label">Thiên thần (11-17)</div>
+                    <div class="label">ThiÃªn tháº§n (11-17)</div>
                     <div class="odds">1:1</div>
                 </div>
 
                 <div class="bet-item" data-type="single_1">
-                    <div class="label">Số 1</div>
+                    <div class="label">Sá»‘ 1</div>
                     <div class="odds">x1,x2,x3</div>
                 </div>
                 <div class="bet-item" data-type="single_2">
-                    <div class="label">Số 2</div>
+                    <div class="label">Sá»‘ 2</div>
                     <div class="odds">x1,x2,x3</div>
                 </div>
                 <div class="bet-item" data-type="single_3">
-                    <div class="label">Số 3</div>
+                    <div class="label">Sá»‘ 3</div>
                     <div class="odds">x1,x2,x3</div>
                 </div>
                 <div class="bet-item" data-type="single_4">
-                    <div class="label">Số 4</div>
+                    <div class="label">Sá»‘ 4</div>
                     <div class="odds">x1,x2,x3</div>
                 </div>
                 <div class="bet-item" data-type="single_5">
-                    <div class="label">Số 5</div>
+                    <div class="label">Sá»‘ 5</div>
                     <div class="odds">x1,x2,x3</div>
                 </div>
                 <div class="bet-item" data-type="single_6">
-                    <div class="label">Số 6</div>
+                    <div class="label">Sá»‘ 6</div>
                     <div class="odds">x1,x2,x3</div>
                 </div>
 
                 <div class="bet-item" data-type="total_9">
-                    <div class="label">Tổng 9</div>
+                    <div class="label">Tá»•ng 9</div>
                     <div class="odds">1:7</div>
                 </div>
                 <div class="bet-item" data-type="total_10">
-                    <div class="label">Tổng 10</div>
+                    <div class="label">Tá»•ng 10</div>
                     <div class="odds">1:6</div>
                 </div>
                 <div class="bet-item" data-type="total_11">
-                    <div class="label">Tổng 11</div>
+                    <div class="label">Tá»•ng 11</div>
                     <div class="odds">1:6</div>
                 </div>
                 <div class="bet-item" data-type="total_12">
-                    <div class="label">Tổng 12</div>
+                    <div class="label">Tá»•ng 12</div>
                     <div class="odds">1:7</div>
                 </div>
                 <div class="bet-item" data-type="total_4">
-                    <div class="label">Tổng 4</div>
+                    <div class="label">Tá»•ng 4</div>
                     <div class="odds">1:60</div>
                 </div>
                 <div class="bet-item" data-type="total_17">
-                    <div class="label">Tổng 17</div>
+                    <div class="label">Tá»•ng 17</div>
                     <div class="odds">1:60</div>
                 </div>
             </div>
 
-            <button id="roll-btn" class="btn-roll">LẮC XÚC XẮC</button>
+            <button id="roll-btn" class="btn-roll">Láº®C XÃšC Xáº®C</button>
         </div>
 
         <div class="history-section">
-            <h2 style="font-size: 1.2rem; letter-spacing: 2px; margin-bottom: 1rem;">LỊCH SỬ GẦN ĐÂY</h2>
+            <h2 style="font-size: 1.2rem; letter-spacing: 2px; margin-bottom: 1rem;">Lá»ŠCH Sá»¬ Gáº¦N ÄÃ‚Y</h2>
             <div style="overflow-x: auto;">
                 <table class="history-table">
                     <thead>
                         <tr>
-                            <th>Thời gian</th>
-                            <th>gtlm cược</th>
-                            <th>Kết quả</th>
-                            <th>Thắng/Thua</th>
+                            <th>Thá»i gian</th>
+                            <th>gtlm cÆ°á»£c</th>
+                            <th>Káº¿t quáº£</th>
+                            <th>Tháº¯ng/Thua</th>
                         </tr>
                     </thead>
                     <tbody id="history-body"></tbody>
                 </table>
             </div>
             <div style="margin-top: 2.5rem;"><a href="../index.php"
-                    style="color: var(--primary); text-decoration: none; font-weight: 700; border: 1px solid var(--primary); padding: 0.8rem 2.5rem; border-radius: 50px; transition: 0.3s;">🏠
-                    QUAY LẠI SẢNH</a></div>
+                    style="color: var(--primary); text-decoration: none; font-weight: 700; border: 1px solid var(--primary); padding: 0.8rem 2.5rem; border-radius: 50px; transition: 0.3s;">ðŸ 
+                    QUAY Láº I Sáº¢NH</a></div>
         </div>
     </div>
 

@@ -14,7 +14,7 @@ $userId = $_SESSION['Iduser'];
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
 // Lấy event_id của sự kiện đang active — dùng helper tập trung
-$activeEvent = getActiveSeasonalEvent($conn, false, 'id');
+$activeEvent = getActiveSeasonalEvent($conn, false, 'id, ends_at');
 $eventId = (int)($activeEvent['id'] ?? 0);
 
 // NOTE: Bảng event_voting_options, user_event_votes, event_vote_results
@@ -80,6 +80,10 @@ switch ($action) {
         
         $conn->begin_transaction();
         try {
+            if ($activeEvent && !empty($activeEvent['ends_at']) && strtotime($activeEvent['ends_at']) < time()) {
+                throw new Exception("Sự kiện bình chọn đã kết thúc!");
+            }
+
             // FIX Bug 4: Kiểm tra đã vote TRONG SỰ KIỆN NÀY chưa
             $stmtHasVoted = $conn->prepare("SELECT 1 FROM user_event_votes WHERE user_id = ? AND event_id = ?");
             $stmtHasVoted->bind_param("ii", $userId, $eventId);

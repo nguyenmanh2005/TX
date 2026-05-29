@@ -51,18 +51,20 @@ if (!isset($_SESSION['Iduser'])) { header("Location: ../login.php"); exit(); }
             content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
             background: conic-gradient(from 0deg, transparent, rgba(251, 191, 36, 0.1), transparent 40%);
             animation: rotate 10s linear infinite;
+            pointer-events: none;
         }
 
         @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-        .jackpot-label { font-size: 18px; font-weight: 700; color: #94a3b8; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 10px; }
+        .jackpot-label { position: relative; z-index: 1; font-size: 18px; font-weight: 700; color: #94a3b8; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 10px; }
         .jackpot-value { 
+            position: relative; z-index: 1;
             font-size: 80px; font-weight: 800; color: var(--gold); 
             text-shadow: 0 0 40px rgba(251, 191, 36, 0.4);
             font-family: 'JetBrains Mono', monospace;
         }
 
-        .countdown-box { margin-top: 20px; font-size: 20px; font-weight: 600; color: #64748b; }
+        .countdown-box { position: relative; z-index: 1; margin-top: 20px; font-size: 20px; font-weight: 600; color: #64748b; }
         .countdown-timer { color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 32px; margin-top: 10px; display: block; }
 
         /* --- Ticket Picker --- */
@@ -152,9 +154,61 @@ if (!isset($_SESSION['Iduser'])) { header("Location: ../login.php"); exit(); }
 
         @keyframes bounceIn { 0% { transform: scale(0); } 60% { transform: scale(1.2); } 100% { transform: scale(1); } }
 
+        /* --- GLOBAL HOME BUTTON --- */
+        .home-fab {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 10001;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 22px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 999px;
+            color: white;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer !important;
+        }
+
+        .home-fab:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.4);
+            color: white;
+            text-decoration: none;
+        }
+
+        .home-fab-icon {
+            font-size: 20px;
+            line-height: 1;
+        }
+
+        @media (max-width: 768px) {
+            .home-fab {
+                top: 15px;
+                left: 15px;
+                padding: 10px 18px;
+                font-size: 14px;
+            }
+        }
+
     </style>
 </head>
 <body>
+
+<a href="../index.php" class="home-fab fade-in">
+    <span class="home-fab-icon">🏠</span>
+    <span class="home-fab-text">Trang chủ</span>
+</a>
 
 <div class="container">
     <div class="jackpot-card">
@@ -163,6 +217,14 @@ if (!isset($_SESSION['Iduser'])) { header("Location: ../login.php"); exit(); }
         <div class="countdown-box">
             QUAY THƯỞNG LÚC 20:00 HẰNG NGÀY<br>
             <span class="countdown-timer" id="countdown">00:00:00</span>
+            <?php 
+            $isAdmin = (isset($_SESSION['admin']) && $_SESSION['admin'] === true) || (isset($_SESSION['Role']) && $_SESSION['Role'] == 1);
+            if ($isAdmin && isset($_SERVER['REMOTE_ADDR']) && ($_SERVER['REMOTE_ADDR'] === '127.0.0.1' || $_SERVER['REMOTE_ADDR'] === '::1' || $_SERVER['SERVER_NAME'] === 'localhost')): 
+            ?>
+                <div style="margin-top: 15px;">
+                    <button class="buy-btn" style="background: linear-gradient(135deg, #f43f5e, #be123c); font-size: 14px; padding: 8px 16px;" onclick="triggerTestDraw()">⚡ QUAY THƯỞNG NGAY (TEST)</button>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -351,6 +413,30 @@ if (!isset($_SESSION['Iduser'])) { header("Location: ../login.php"); exit(); }
                     </tr>
                 `);
             });
+        });
+    }
+
+    function triggerTestDraw() {
+        $.post('../api_lottery.php?action=test_draw', function(data) {
+            if (data.success) {
+                $('#winning-balls').empty();
+                $('#live-draw-area').hide();
+                
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Bắt đầu quay số thử nghiệm!',
+                    text: 'Hệ thống đang thực hiện quay số...',
+                    showConfirmButton: false,
+                    timer: 1500
+                });
+                
+                setTimeout(() => {
+                    refreshStatus();
+                    loadHistory();
+                }, 1500);
+            } else {
+                Swal.fire('Lỗi', data.message, 'error');
+            }
         });
     }
 

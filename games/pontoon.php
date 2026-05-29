@@ -17,16 +17,6 @@ $money = $user['Money'];
 $userName = $user['Name'];
 $stmt->close();
 
-// history table
-$conn->query("CREATE TABLE IF NOT EXISTS history_pontoon (
-    Id INT AUTO_INCREMENT PRIMARY KEY,
-    Iduser INT NOT NULL,
-    Bet DECIMAL(30,2) NOT NULL,
-    Result VARCHAR(255) NOT NULL,
-    WinAmount DECIMAL(30,2) NOT NULL,
-    Time DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
     $action = $_GET['action'];
@@ -35,7 +25,7 @@ if (isset($_GET['action'])) {
     if ($action === 'deal') {
         $bet = (float) ($_POST['bet'] ?? 0);
         if ($bet <= 0 || $bet > $money) {
-            $response['message'] = "gtlm cược không hợp lệ!";
+            $response['message'] = "gtlm cÆ°á»£c khÃ´ng há»£p lá»‡!";
         } else {
             $conn->query("UPDATE users SET Money = Money - $bet WHERE Iduser = $userId");
             // Standard deck
@@ -66,7 +56,7 @@ if (isset($_GET['action'])) {
 
         $response = ['success' => true, 'card' => $card, 'isBust' => (calculatePontoonScore($player) > 21)];
         if ($response['isBust']) {
-            resolvePontoon(false, "Quá 21 điểm! Bạn đã thua.");
+            resolvePontoon(false, "QuÃ¡ 21 Ä‘iá»ƒm! Báº¡n Ä‘Ã£ thua.");
         }
     } elseif ($action === 'stick') {
         $player = $_SESSION['pontoon_player'];
@@ -86,22 +76,22 @@ if (isset($_GET['action'])) {
 
         if ($dScore > 21) {
             $win = true;
-            $msg = "Dealer Quá 21 điểm! Bạn THẮNG.";
+            $msg = "Dealer QuÃ¡ 21 Ä‘iá»ƒm! Báº¡n THáº®NG.";
         } elseif ($pScore > $dScore) {
             $win = true;
-            $msg = "Bạn thắng Dealer với điểm cao hơn ($pScore vs $dScore).";
+            $msg = "Báº¡n tháº¯ng Dealer vá»›i Ä‘iá»ƒm cao hÆ¡n ($pScore vs $dScore).";
         } elseif (count($player) >= 5 && $pScore <= 21) {
             $win = true;
-            $msg = "5-Card Trick! Bạn thắng tuyệt đối.";
+            $msg = "5-Card Trick! Báº¡n tháº¯ng tuyá»‡t Ä‘á»‘i.";
         } else {
             $win = false;
-            $msg = "Dealer thắng ($dScore vs $pScore). Bạn đã thua.";
+            $msg = "Dealer tháº¯ng ($dScore vs $pScore). Báº¡n Ä‘Ã£ thua.";
         }
 
         // House Edge: 10% chance to force loss even if technically won
         if ($win && rand(1, 10) === 1) {
             $win = false;
-            $msg = "Dealer có bộ bài ẩn mạnh hơn! Bạn đã thua.";
+            $msg = "Dealer cÃ³ bá»™ bÃ i áº©n máº¡nh hÆ¡n! Báº¡n Ä‘Ã£ thua.";
         }
 
         $res = resolvePontoon($win, $msg, $dealer);
@@ -247,7 +237,7 @@ function resolvePontoon($win, $msg, $dealer = null)
                 <div id="userMoney" style="font-weight:900; font-size:1.5rem; color:#f1c40f">
                     <?php echo number_format($money, 0, ',', '.'); ?> gtlm</div>
                 <a href="../index.php"
-                    style="color:#fff; text-decoration:none; border:1px solid rgba(255,255,255,0.2); padding:0.5rem 1.5rem; border-radius:50px;">THOÁT</a>
+                    style="color:#fff; text-decoration:none; border:1px solid rgba(255,255,255,0.2); padding:0.5rem 1.5rem; border-radius:50px;">THOÃT</a>
             </div>
         </div>
 

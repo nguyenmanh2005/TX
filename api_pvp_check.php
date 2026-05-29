@@ -20,7 +20,7 @@ $stmt = $conn->prepare("
     SELECT c.id, c.bet_amount, u.Name as challenger_name 
     FROM pvp_challenges c
     JOIN users u ON c.challenger_id = u.Iduser
-    WHERE c.challenged_id = ? AND c.status = 'pending'
+    WHERE c.opponent_id = ? AND c.status = 'pending'
     ORDER BY c.created_at DESC LIMIT 1
 ");
 $stmt->bind_param("i", $userId);

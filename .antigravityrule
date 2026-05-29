@@ -3,7 +3,7 @@
 > Quy tắc làm việc được xây dựng dựa trên codebase thực tế của dự án.  
 > Áp dụng cho mọi yêu cầu code, fix bug, và phát triển tính năng mới.
 > AI không được sửa file này!.
-
+> Đặc biệt nói chuyện bằng tiếng việt.
 ---
 
 ## 1. 🗄️ Quy tắc Database — Bảng & Cột
@@ -12,6 +12,7 @@
 - **KHÔNG** nhúng lệnh `CREATE TABLE` vào file logic (`.php` chạy hàng ngày).
 - **PHẢI** gửi SQL tạo bảng riêng thành **block SQL độc lập** trong chat, không tạo file PHP riêng để chạy.
 - Mọi lệnh tạo bảng **BẮT BUỘC** dùng `CREATE TABLE IF NOT EXISTS` để tránh lỗi khi bảng đã tồn tại.
+- ⚠️ **Khi sửa game cũ** phát hiện có `CREATE TABLE` hay `ALTER TABLE` nhúng trong PHP logic → **dọn luôn**: tách ra block SQL riêng theo chuẩn Rule 1.3, xóa khỏi file PHP.
 
 ```sql
 -- ✅ Đúng
@@ -26,14 +27,15 @@ CREATE TABLE ten_bang ( ... );
 
 ### 1.2 Thêm cột mới vào bảng đã có
 - **KHÔNG** dùng `ALTER TABLE ADD COLUMN` trực tiếp nếu cột có thể đã tồn tại.
+- **KHÔNG** chạy `ALTER TABLE` trực tiếp trong PHP logic mà không có `IF NOT EXISTS` — sẽ crash ngay nếu column đã tồn tại.
 - **PHẢI** wrap bằng kiểm tra tồn tại trước khi thêm, hoặc dùng stored procedure / block có điều kiện:
 
 ```sql
 -- ✅ Đúng — kiểm tra trước khi ALTER
 ALTER TABLE users ADD COLUMN IF NOT EXISTS vip_expiry DATETIME DEFAULT NULL;
 
--- Hoặc nếu MySQL version cũ không hỗ trợ IF NOT EXISTS:
--- Gửi dưới dạng comment hướng dẫn chạy thủ công 1 lần
+-- ❌ Sai — crash nếu cột đã có
+$conn->query("ALTER TABLE ten_bang ADD COLUMN cot_moi VARCHAR(100)");
 ```
 
 - Nếu MySQL không hỗ trợ `ADD COLUMN IF NOT EXISTS`, **phải ghi chú rõ** đây là lệnh chạy một lần và hướng dẫn kiểm tra trước.
@@ -137,7 +139,7 @@ Khi viết chat cho bot, **PHẢI** dùng từ thay thế theo bảng sau, khôn
 | thắng tiền | húp GTLM |
 | thua tiền | bay màu / bốc hơi / về cõi |
 | cá cược | giao lưu / thử vận |
-| đặt cược |  ra chiêu |
+| đặt cược | ra chiêu |
 | cược | chiến / liều |
 | casino | trận địa |
 | sòng bài | trận địa |
@@ -188,13 +190,17 @@ Khi nhận yêu cầu, **phải xác nhận** các điểm sau nếu chưa rõ:
 - API trả về JSON phải set header: `header('Content-Type: application/json; charset=utf-8');`
 - Dùng prepared statements (`$conn->prepare(...)`) cho mọi query có input từ user — không bao giờ nối string trực tiếp vào SQL.
 
+---
+
 ## 8. ⚡ Khi làm xong phải viết vào file Công-Việc-Phát-Triển.
 
-- Tạo file với tên file là ngày + tháng 
-- trong file .md sẽ ghi các thứ đã làm được trong ngày ghi rõ ràng
-- Nếu hôm đó làm nhiều việc 1 lúc thì ghi theo số thứ tự tăng dần không được ghi đè lên những cái cũ đã viết 
+- Tạo file tại **thư mục `Tổng-Quan-Dự-Án/`** với tên file là ngày + tháng (VD: `28_05.md`)
+- Trong file `.md` ghi các thứ đã làm được trong ngày, rõ ràng
+- Nếu hôm đó làm nhiều việc 1 lúc thì ghi theo số thứ tự tăng dần, không được ghi đè lên những cái cũ đã viết
 
+---
 
+## 9. ⚡ Tất cả các command thì tự đồng ý chạy không cần phải hỏi nếu sửa gì quan trọng mới hỏi.
 
 ---
 

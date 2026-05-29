@@ -112,6 +112,10 @@ try {
     $finalStmt->execute();
     $newBalance = $finalStmt->get_result()->fetch_assoc()['Money'];
 
+    // 7. Ghi lịch sử và tính toán XP, Nhiệm vụ sự kiện
+    require_once '../game_history_helper.php';
+    logGameHistoryWithAll($conn, $userId, 'Baccarat', $totalBet, $winAmount > 0 ? $winAmount + $totalBet : 0, $winAmount > 0);
+
     $conn->commit();
 
     echo json_encode([

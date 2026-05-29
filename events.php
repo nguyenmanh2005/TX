@@ -22,6 +22,26 @@ $upcomingSeasonal = $conn->query("SELECT * FROM seasonal_events WHERE status = '
 // Lấy thông tin World Boss
 $worldBoss = $conn->query("SELECT * FROM world_boss WHERE status = 'active' LIMIT 1")->fetch_assoc();
 
+// Tính toán thời gian World Boss hồi sinh
+$scheduleHours = [9, 15, 21];
+$nowTime = time();
+$currentDate = date('Y-m-d');
+$todaySpawns = [];
+foreach ($scheduleHours as $hour) { $todaySpawns[] = strtotime("$currentDate $hour:00:00"); }
+sort($todaySpawns);
+$nextUpcomingSpawn = 0;
+foreach ($todaySpawns as $time) {
+    if ($nowTime < $time) { $nextUpcomingSpawn = $time; break; }
+}
+if ($nextUpcomingSpawn === 0) {
+    $nextUpcomingSpawn = strtotime(date('Y-m-d', strtotime('+1 day')) . " 09:00:00");
+}
+$nextBossSpawnStr = date('Y-m-d H:i:s', $nextUpcomingSpawn);
+
+// Lấy thông tin mùa Battle Pass
+$bpSeasonRes = $conn->query("SELECT name FROM bp_seasons WHERE is_active = 1 AND NOW() BETWEEN start_time AND end_time LIMIT 1")->fetch_assoc();
+$bpSeasonName = $bpSeasonRes ? mb_strtoupper($bpSeasonRes['name']) : 'MÙA MỚI';
+
 // Kiểm tra bảng events
 $checkTable = $conn->query("SHOW TABLES LIKE 'events'");
 $eventsTableExists = $checkTable && $checkTable->num_rows > 0;
@@ -130,7 +150,7 @@ $eventsTableExists = $checkTable && $checkTable->num_rows > 0;
                 <div>
                     <div class="mc-status <?= $worldBoss ? 'active' : '' ?>" <?= $worldBoss ? '' : 'style="background:#ef4444;"' ?>><?= $worldBoss ? 'BOSS ĐÃ XUẤT HIỆN' : 'CHỜ HỒI SINH' ?></div>
                     <?php if (!$worldBoss): ?>
-                        <br><div class="live-countdown" data-ends="<?= date('Y-m-d 20:00:00') ?>">⏳ Nộ Long Phase: Tính toán...</div>
+                        <br><div class="live-countdown" data-ends="<?= $nextBossSpawnStr ?>">⏳ Đang tính toán...</div>
                     <?php endif; ?>
                 </div>
             </a>
@@ -139,7 +159,7 @@ $eventsTableExists = $checkTable && $checkTable->num_rows > 0;
                 <div class="mc-title">Battle Pass</div>
                 <div class="mc-desc">Hoàn thành nhiệm vụ hàng ngày/tuần để thăng cấp và nhận quà độc quyền.</div>
                 <div>
-                    <div class="mc-status active">MÙA 1</div>
+                    <div class="mc-status active"><?= htmlspecialchars($bpSeasonName) ?></div>
                 </div>
             </a>
             <a href="storyline_event.php" class="major-card" style="background: linear-gradient(135deg, rgba(139,92,246,0.2), rgba(0,0,0,0.4)); border-color: rgba(139,92,246,0.3);">
@@ -163,11 +183,13 @@ $eventsTableExists = $checkTable && $checkTable->num_rows > 0;
             </div>
             <?php endif; ?>
             
+            <?php foreach ($scheduleHours as $hour): ?>
             <div class="cal-item">
-                <div class="cal-time">20:00 Hàng Ngày</div>
+                <div class="cal-time"><?= str_pad($hour, 2, '0', STR_PAD_LEFT) ?>:00 Hàng Ngày</div>
                 <div class="cal-name">Đại Chiến Ma Thần - Phase Nộ Long</div>
                 <div class="cal-badge badge-daily">HẰNG NGÀY</div>
             </div>
+            <?php endforeach; ?>
 
             <?php foreach ($upcomingSeasonal as $up): ?>
             <div class="cal-item">
@@ -256,53 +278,41 @@ $eventsTableExists = $checkTable && $checkTable->num_rows > 0;
         function loadEvents() {
             if ($('#events-list').length === 0) return;
             renderSkeleton();
-            $.get('api_events.php?action=get_list&status=all', function(res) {
-                if(!res.success) return;
-                if(res.events.length === 0) {
-                    $('#events-list').html('<div style="grid-column: 1/-1; text-align:center; padding:40px; opacity:0.5;">Không có sự kiện cơ bản nào đang diễn ra.</div>');
+            $.get('api_daily_challenges.php?action=get_list', function(res) {
+                if(res.status !== 'success') return;
+                if(!res.challenges || res.challenges.length === 0) {
+                    $('#events-list').html('<div style="grid-column: 1/-1; text-align:center; padding:40px; opacity:0.5;">Không có nhiệm vụ cơ bản nào hôm nay.</div>');
                     return;
                 }
 
                 let html = '';
-                res.events.forEach(e => {
+                res.challenges.forEach(e => {
                     const progress = e.user_progress || 0;
-                    const isCompleted = e.user_completed;
-                    const isClaimed = e.user_claimed;
-                    const isJoined = e.is_joined;
+                    const isCompleted = e.is_completed;
+                    const isClaimed = e.claimed;
+                    const requirement = e.requirement_value || e.target_value || 1;
+                    const rewardMoney = e.reward_money || e.reward_value || 0;
                     
                     let btnHTML = '';
-                    if(!isJoined) {
-                        btnHTML = `<button class="bc-btn btn-join" onclick="joinEvent(${e.id})">NHẬN NHIỆM VỤ</button>`;
-                    } else if(isClaimed) {
+                    if(isClaimed) {
                         btnHTML = `<button class="bc-btn btn-claimed" disabled>ĐÃ NHẬN THƯỞNG</button>`;
                     } else if(isCompleted) {
-                        btnHTML = `<button class="bc-btn btn-claim" onclick="claimReward(${e.id})">NHẬN ${formatMoney(e.reward_value)}</button>`;
+                        btnHTML = `<button class="bc-btn btn-claim" onclick="claimReward(${e.id})">NHẬN ${formatMoney(rewardMoney)}</button>`;
                     } else {
-                        const pct = Math.min(100, Math.round((progress/e.requirement_value)*100));
+                        const pct = Math.min(100, Math.round((progress/requirement)*100));
                         btnHTML = `
-                            <div style="font-size:12px; margin-bottom:5px; font-weight:700;">TIẾN ĐỘ: ${formatNum(progress)}/${formatNum(e.requirement_value)}</div>
+                            <div style="font-size:12px; margin-bottom:5px; font-weight:700;">TIẾN ĐỘ: ${formatNum(progress)}/${formatNum(requirement)}</div>
                             <div style="height:8px; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden;">
                                 <div style="height:100%; width:${pct}%; background:#3b82f6;"></div>
                             </div>
                         `;
                     }
 
-                    let badgeHtml = '';
-                    if (e.starts_at && (Date.now() - new Date(e.starts_at).getTime()) <= 2 * 86400000) {
-                        badgeHtml = '<div style="position:absolute;top:10px;right:10px;background:#ef4444;color:#fff;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:900;animation:pulse 2s infinite;">MỚI</div>';
-                    } else if (e.ends_at) {
-                        const diff = new Date(e.ends_at).getTime() - Date.now();
-                        if (diff > 0 && diff <= 2 * 86400000) {
-                            badgeHtml = '<div style="position:absolute;top:10px;right:10px;background:#f59e0b;color:#000;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:900;animation:pulse 2s infinite;">SẮP HẾT</div>';
-                        }
-                    }
-
                     html += `
                         <div class="basic-card" style="position:relative;">
-                            ${badgeHtml}
-                            <div class="bc-title">${e.name}</div>
-                            <div style="font-size:13px; opacity:0.7;">${e.description}</div>
-                            <div class="bc-reward">🎁 ${formatMoney(e.reward_value)}</div>
+                            <div class="bc-title">${e.challenge_name || e.name || 'Nhiệm Vụ'}</div>
+                            <div style="font-size:13px; opacity:0.7;">${e.description || ''}</div>
+                            <div class="bc-reward">🎁 ${formatMoney(rewardMoney)}</div>
                             <div style="margin-top: 15px;">${btnHTML}</div>
                         </div>
                     `;
@@ -311,17 +321,14 @@ $eventsTableExists = $checkTable && $checkTable->num_rows > 0;
             }, 'json');
         }
 
-        function joinEvent(id) {
-            $.post('api_events.php', { action: 'join', event_id: id }, function(res) {
-                if(res.success) { Swal.fire('Nhận thành công!', '', 'success'); loadEvents(); }
-                else Swal.fire('Lỗi', res.message, 'error');
-            }, 'json');
-        }
-
         function claimReward(id) {
-            $.post('api_events.php', { action: 'claim_reward', event_id: id }, function(res) {
-                if(res.success) { Swal.fire('Thành công!', 'Bạn đã nhận ' + formatMoney(res.reward.money), 'success'); loadEvents(); }
-                else Swal.fire('Lỗi', res.message, 'error');
+            $.post('api_daily_challenges.php', { action: 'claim', challenge_id: id }, function(res) {
+                if(res.status === 'success') { 
+                    Swal.fire('Thành công!', res.message, 'success'); 
+                    loadEvents(); 
+                } else {
+                    Swal.fire('Lỗi', res.message, 'error');
+                }
             }, 'json');
         }
 

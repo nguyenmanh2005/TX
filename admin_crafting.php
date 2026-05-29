@@ -64,7 +64,9 @@ $recipes = $conn->query("SELECT * FROM crafting_recipes ORDER BY id DESC")->fetc
 <head>
     <meta charset="UTF-8">
     <title>Admin - Quản Lý Crafting</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Preload fonts and icons asynchronously to prevent render-blocking and enable instant load -->
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"></noscript>
     <style>
         :root {
             --primary: #f97316;

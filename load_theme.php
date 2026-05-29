@@ -118,6 +118,7 @@ if (isset($_SESSION['Iduser'])) {
     MentorHelper::trackMenteeActivity($conn, (int)$_SESSION['Iduser']);
 }
 
+if (!isset($bypassThemeScripts) || !$bypassThemeScripts) {
 // 1. Secret Lucky Hours & General pending alerts
 if (isset($_SESSION['pending_notifications']) && !empty($_SESSION['pending_notifications'])) {
     echo "<script>
@@ -183,48 +184,69 @@ if (isset($_SESSION['new_mentor_assigned']) && !empty($_SESSION['new_mentor_assi
     unset($_SESSION['new_mentor_assigned']);
 }
 
-// 4. Server-Sent Events cho Sự kiện mới
-echo "<script>
-document.addEventListener('DOMContentLoaded', () => {
-    if (typeof EventSource !== 'undefined' && typeof Swal !== 'undefined') {
-        const evtSource = new EventSource('api_sse_events.php');
-        evtSource.addEventListener('new_event', (e) => {
-            try {
-                const data = JSON.parse(e.data);
-                Swal.fire({
-                    title: '🎉 SỰ KIỆN MÙA GIẢI MỚI!',
-                    html: `Sự kiện <b>\${data.emoji} \${data.name}</b> vừa chính thức bắt đầu!<br><br>Hãy vào Đại Sảnh Sự Kiện để tham gia và nhận thưởng!`,
-                    icon: 'info',
-                    confirmButtonText: 'Tham Gia Ngay',
-                    confirmButtonColor: '#38bdf8',
-                    showCancelButton: true,
-                    cancelButtonText: 'Đóng',
-                    background: '#0f172a',
-                    color: '#f8fafc'
-                }).then((res) => {
-                    if (res.isConfirmed) {
-                        window.location.href = 'event_center.php';
-                    }
-                });
-            } catch (err) {}
-        });
-
-        evtSource.addEventListener('new_random_event', (e) => {
-            try {
-                const data = JSON.parse(e.data);
-                Swal.fire({
-                    title: '🚨 SỰ KIỆN ĐỘT XUẤT!',
-                    html: `<b>\${data.name}</b> đang diễn ra!<br><br>Nhanh chân tham gia trước khi hết thời gian!`,
-                    icon: 'warning',
-                    confirmButtonText: 'Đã Hiểu',
-                    confirmButtonColor: '#f43f5e',
-                    background: '#0f172a',
-                    color: '#f8fafc'
-                });
-            } catch (err) {}
-        });
-    }
-});
-</script>";
+// 4. Polling Sự kiện mới (Thay thế SSE để giảm tải server)
 ?>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof Swal === 'undefined') return;
+
+    let lastSeenSeasonalId = sessionStorage.getItem('last_seen_seasonal') || 0;
+    let lastSeenRandomId = sessionStorage.getItem('last_seen_random') || 0;
+
+    function pollEvents() {
+        fetch('api_sse_events.php')
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) return;
+
+                if (data.seasonal_event && data.seasonal_event.id != lastSeenSeasonalId) {
+                    lastSeenSeasonalId = data.seasonal_event.id;
+                    sessionStorage.setItem('last_seen_seasonal', lastSeenSeasonalId);
+                    
+                    if (lastSeenSeasonalId > 0) { // Đảm bảo event hợp lệ
+                        Swal.fire({
+                            title: '🎉 SỰ KIỆN MÙA GIẢI MỚI!',
+                            html: `Sự kiện <b>${data.seasonal_event.emoji} ${data.seasonal_event.name}</b> vừa chính thức bắt đầu!<br><br>Hãy vào Đại Sảnh Sự Kiện để tham gia và nhận thưởng!`,
+                            icon: 'info',
+                            confirmButtonText: 'Tham Gia Ngay',
+                            confirmButtonColor: '#38bdf8',
+                            showCancelButton: true,
+                            cancelButtonText: 'Đóng',
+                            background: '#0f172a',
+                            color: '#f8fafc'
+                        }).then((res) => {
+                            if (res.isConfirmed) {
+                                window.location.href = 'event_center.php';
+                            }
+                        });
+                    }
+                }
+
+                if (data.random_event && data.random_event.id != lastSeenRandomId) {
+                    lastSeenRandomId = data.random_event.id;
+                    sessionStorage.setItem('last_seen_random', lastSeenRandomId);
+                    
+                    if (lastSeenRandomId > 0) { // Đảm bảo event hợp lệ
+                        Swal.fire({
+                            title: '🚨 SỰ KIỆN ĐỘT XUẤT!',
+                            html: `<b>${data.random_event.name}</b> đang diễn ra!<br><br>Nhanh chân tham gia trước khi hết thời gian!`,
+                            icon: 'warning',
+                            confirmButtonText: 'Đã Hiểu',
+                            confirmButtonColor: '#f43f5e',
+                            background: '#0f172a',
+                            color: '#f8fafc'
+                        });
+                    }
+                }
+            })
+            .catch(err => console.error('Polling error', err));
+    }
+
+    // Poll lần đầu và thiết lập chu kỳ
+    pollEvents();
+    setInterval(pollEvents, 15000);
+});
+</script>
+<?php
+}
 

@@ -211,6 +211,54 @@ if ($action === 'remove_friend') {
     exit();
 }
 
+// Chấp nhận tất cả lời mời kết bạn
+if ($action === 'accept_all_requests') {
+    $conn->begin_transaction();
+    try {
+        $stmt = $conn->prepare("UPDATE friends SET status = 'accepted' WHERE ((user_id = ? AND requested_by != ?) OR (friend_id = ? AND requested_by != ?)) AND status = 'pending'");
+        $stmt->bind_param("iiii", $userId, $userId, $userId, $userId);
+        $stmt->execute();
+        $affected = $stmt->affected_rows;
+        $stmt->close();
+        
+        $conn->commit();
+        
+        if ($affected > 0) {
+            echo json_encode(['success' => true, 'message' => 'Đã chấp nhận tất cả lời mời kết bạn!']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Không có lời mời kết bạn nào cần chấp nhận!']);
+        }
+    } catch (Exception $e) {
+        $conn->rollback();
+        echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()]);
+    }
+    exit();
+}
+
+// Từ chối tất cả lời mời kết bạn
+if ($action === 'decline_all_requests') {
+    $conn->begin_transaction();
+    try {
+        $stmt = $conn->prepare("DELETE FROM friends WHERE ((user_id = ? AND requested_by != ?) OR (friend_id = ? AND requested_by != ?)) AND status = 'pending'");
+        $stmt->bind_param("iiii", $userId, $userId, $userId, $userId);
+        $stmt->execute();
+        $affected = $stmt->affected_rows;
+        $stmt->close();
+        
+        $conn->commit();
+        
+        if ($affected > 0) {
+            echo json_encode(['success' => true, 'message' => 'Đã từ chối tất cả lời mời kết bạn!']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Không có lời mời kết bạn nào cần từ chối!']);
+        }
+    } catch (Exception $e) {
+        $conn->rollback();
+        echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()]);
+    }
+    exit();
+}
+
 // Lấy danh sách bạn bè
 if ($action === 'get_friends') {
     $sql = "SELECT u.Iduser, u.Name, u.Money, u.ImageURL, u.active_title_id,

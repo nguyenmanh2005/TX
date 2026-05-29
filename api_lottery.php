@@ -88,6 +88,50 @@ if ($currentDraw['status'] === 'pending' && $now >= $drawTimestamp) {
 
 // --- ACTIONS ---
 
+if ($action === 'test_draw') {
+    $isAdmin = (isset($_SESSION['admin']) && $_SESSION['admin'] === true) || (isset($_SESSION['Role']) && $_SESSION['Role'] == 1);
+    if ($isAdmin && isset($_SERVER['REMOTE_ADDR']) && ($_SERVER['REMOTE_ADDR'] === '127.0.0.1' || $_SERVER['REMOTE_ADDR'] === '::1' || $_SERVER['SERVER_NAME'] === 'localhost')) {
+        if ($currentDraw['status'] !== 'pending') {
+            $conn->query("UPDATE lottery_draws SET status = 'pending', winning_numbers = NULL WHERE id = {$currentDraw['id']}");
+        }
+        
+        $nums = [];
+        while(count($nums) < 6) {
+            $n = str_pad(rand(1, 99), 2, '0', STR_PAD_LEFT);
+            if (!in_array($n, $nums)) $nums[] = $n;
+        }
+        sort($nums);
+        $winningStr = implode(',', $nums);
+        
+        $conn->query("UPDATE lottery_draws SET winning_numbers = '$winningStr', status = 'drawn' WHERE id = {$currentDraw['id']}");
+        $currentDraw = getDrawForDate($conn, $todayDate);
+        
+        $jackpot = (float)$currentDraw['jackpot_pool'];
+        $winners = $conn->query("SELECT user_id, id FROM lottery_tickets WHERE draw_id = {$currentDraw['id']} AND numbers = '$winningStr'");
+        $winnerCount = $winners->num_rows;
+        
+        if ($winnerCount > 0) {
+            $share = $jackpot / $winnerCount;
+            while($w = $winners->fetch_assoc()) {
+                $wUid = $w['user_id'];
+                $conn->query("UPDATE users SET Money = Money + $share WHERE Iduser = $wUid");
+            }
+            $conn->query("UPDATE lottery_draws SET status = 'paid' WHERE id = {$currentDraw['id']}");
+        } else {
+            $conn->query("UPDATE lottery_draws SET status = 'paid' WHERE id = {$currentDraw['id']}");
+        }
+        
+        echo json_encode([
+            'success' => true,
+            'winning_numbers' => $winningStr,
+            'message' => 'Quay thưởng thử nghiệm thành công!'
+        ]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Tính năng này chỉ dành cho Localhost']);
+    }
+    exit();
+}
+
 if ($action === 'status') {
     $userTickets = [];
     if ($userId) {

@@ -48,8 +48,9 @@ while ($row = $res->fetch_assoc()) {
         $recapMsg = "🏆 [VINH DANH BANG CHIẾN] Bang hội **$gName** đã xuất sắc đạt TOP $rank mùa giải này với $points điểm chiến công! Phần thưởng " . number_format($reward) . " GTLM đã được trao. 🔥🚀";
         
         // Gửi tin nhắn vinh danh vào chat tổng (Dùng user_id 0 làm hệ thống)
-        $stmtChat = $conn->prepare("INSERT INTO chat (user_id, username, message, is_admin) VALUES (0, 'Vệ Binh Trận Địa', ?, 1)");
-        $stmtChat->bind_param("s", $recapMsg);
+        $sysAvatar = 'https://cdn-icons-png.flaticon.com/512/1041/1041044.png';
+        $stmtChat = $conn->prepare("INSERT INTO chat_messages (user_id, username, message, avatar, created_at) VALUES (0, 'Vệ Binh Trận Địa', ?, ?, NOW())");
+        $stmtChat->bind_param("ss", $recapMsg, $sysAvatar);
         $stmtChat->execute();
         $stmtChat->close();
     }

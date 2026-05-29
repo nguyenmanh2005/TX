@@ -5,6 +5,7 @@ if (!isset($_SESSION['Iduser'])) {
 }
 
 require 'db_connect.php';
+$bypassThemeScripts = true;
 require_once 'load_theme.php';
 
 if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
@@ -21,6 +22,18 @@ $avatar = $user['ImageURL'] ?? "https://ui-avatars.com/api/?name=" . urlencode($
 $stmt->close();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message'])) {
+    // Rate limit: Tối đa 1 tin nhắn mỗi 1.5 giây để tránh spam
+    $now = microtime(true);
+    if (isset($_SESSION['last_chat_time'])) {
+        $diff = $now - $_SESSION['last_chat_time'];
+        if ($diff < 1.5) {
+            http_response_code(429);
+            echo json_encode(['success' => false, 'message' => 'Bạn gửi quá nhanh! Vui lòng giãn cách 1.5 giây.']);
+            exit;
+        }
+    }
+    $_SESSION['last_chat_time'] = $now;
+
     $username = $_SESSION['Name'];
     $message = trim($_POST['message']);
     if (!empty($message)) {
@@ -202,43 +215,72 @@ if (isset($_GET['action']) && $_GET['action'] === 'load') {
                     
                     if (newMessages.length > 0) {
                         newMessages.forEach((msg) => {
-                            const avatarUrl = msg.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(msg.username);
-                            const safeUsername = msg.username.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                            const safeMessage = msg.message.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                            
-                            const messageDiv = document.createElement('div');
-                            messageDiv.className = 'chat-message';
-                            messageDiv.innerHTML = `
-                                <img src="${avatarUrl}" class="avatar-img" onerror="this.src='images.ico'">
-                                <div class="message-content">
-                                    <strong>${safeUsername}</strong>
-                                    <p>${safeMessage}</p>
-                                    <small>(${msg.created_at})</small>
-                                </div>
-                            `;
-                            chatBox.appendChild(messageDiv);
-                            
-                            if (parseInt(msg.id) > lastMessageId) {
-                                lastMessageId = parseInt(msg.id);
+                            try {
+                                const avatarUrl = msg.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(msg.username || 'User');
+                                const safeUsername = (msg.username || 'User').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                                const safeMessage = (msg.message || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                                
+                                const messageDiv = document.createElement('div');
+                                messageDiv.className = 'chat-message';
+                                messageDiv.innerHTML = `
+                                    <img src="${avatarUrl}" class="avatar-img" onerror="this.src='images.ico'">
+                                    <div class="message-content">
+                                        <strong>${safeUsername}</strong>
+                                        <p>${safeMessage}</p>
+                                        <small>(${msg.created_at})</small>
+                                    </div>
+                                `;
+                                chatBox.appendChild(messageDiv);
+                                
+                                if (parseInt(msg.id) > lastMessageId) {
+                                    lastMessageId = parseInt(msg.id);
+                                }
+                            } catch (err) {
+                                console.error("Error rendering chat2 message:", msg, err);
                             }
                         });
                         chatBox.scrollTop = chatBox.scrollHeight;
                     }
-                });
+                })
+                .catch(err => console.error("Error loading chat2 messages:", err));
         }
 
         function sendMessage() {
             const input = document.getElementById("message");
             const message = input.value.trim();
+            const submitButton = document.querySelector('button[type="submit"]');
+            
             if (message === '') return;
+            
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Đang báo...';
+            }
+            input.disabled = true;
             
             const formData = new FormData();
             formData.append("message", message);
 
             fetch("chat2.php", { method: "POST", body: formData })
-                .then(() => {
+                .then(async res => {
+                    if (!res.ok) {
+                        const data = await res.json().catch(() => ({}));
+                        throw new Error(data.message || 'Có lỗi xảy ra!');
+                    }
                     input.value = '';
                     loadMessages();
+                })
+                .catch(err => {
+                    console.error('Error sending message:', err);
+                    alert(err.message || 'Có lỗi xảy ra!');
+                })
+                .finally(() => {
+                    input.disabled = false;
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.textContent = 'Báo Lỗi';
+                    }
+                    input.focus();
                 });
         }
 

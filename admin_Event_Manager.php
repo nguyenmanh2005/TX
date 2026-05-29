@@ -102,9 +102,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ends = $_POST['ends_at'];
         $cost = (int)$_POST['spin_cost'];
         $status = $_POST['status'];
-        $milestones = $_POST['milestone_config'] ?: '[]';
-        $theme = $_POST['theme_config'] ?: '{}';
-        $chains = $_POST['chain_config'] ?: '[]';
+        $milestones = trim($_POST['milestone_config'] ?: '[]');
+        if (json_decode($milestones) === null && json_last_error() !== JSON_ERROR_NONE) {
+            die("Lỗi: Cấu hình Milestone JSON không hợp lệ. Vui lòng kiểm tra lại syntax!");
+        }
+        $theme = trim($_POST['theme_config'] ?: '{}');
+        if (json_decode($theme) === null && json_last_error() !== JSON_ERROR_NONE) {
+            die("Lỗi: Cấu hình Theme JSON không hợp lệ.");
+        }
+        $chains = trim($_POST['chain_config'] ?: '[]');
+        if (json_decode($chains) === null && json_last_error() !== JSON_ERROR_NONE) {
+            die("Lỗi: Cấu hình Chain JSON không hợp lệ. Vui lòng kiểm tra lại syntax!");
+        }
 
         if ($id > 0) {
             $stmt = $conn->prepare("UPDATE seasonal_events SET name = ?, theme_emoji = ?, starts_at = ?, ends_at = ?, spin_cost = ?, status = ?, milestone_config = ?, theme_config = ?, chain_config = ? WHERE id = ?");
@@ -156,7 +165,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($newStatus === 'active') {
             // Đảm bảo chỉ 1 event được active tại 1 thời điểm
-            $conn->query("UPDATE seasonal_events SET status = 'inactive' WHERE status = 'active'");
+            $stmtResetActive = $conn->prepare("UPDATE seasonal_events SET status = 'inactive' WHERE status = 'active'");
+            $stmtResetActive->execute();
+            $stmtResetActive->close();
         }
 
         $stmt = $conn->prepare("UPDATE seasonal_events SET status = ? WHERE id = ?");
@@ -182,7 +193,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 9. DUPLICATE EVENT (Clone Event & Child Records)
     if (isset($_POST['duplicate_event'])) {
         $id = (int)$_POST['event_id'];
-        $orig = $conn->query("SELECT * FROM seasonal_events WHERE id = $id")->fetch_assoc();
+        
+        $stmtOrig = $conn->prepare("SELECT * FROM seasonal_events WHERE id = ?");
+        $stmtOrig->bind_param("i", $id);
+        $stmtOrig->execute();
+        $orig = $stmtOrig->get_result()->fetch_assoc();
+        $stmtOrig->close();
+        
         if ($orig) {
             $newName = "Bản sao - " . $orig['name'];
             $stmt = $conn->prepare("INSERT INTO seasonal_events (name, theme_emoji, starts_at, ends_at, spin_cost, status, milestone_config, theme_config, chain_config) VALUES (?, ?, ?, ?, ?, 'inactive', ?, ?, ?)");
@@ -192,7 +209,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->close();
 
             // Clone Missions — FIX: include cycle and prerequisite_mission_id
-            $missions = $conn->query("SELECT * FROM event_missions WHERE event_id = $id")->fetch_all(MYSQLI_ASSOC);
+            $stmtMis = $conn->prepare("SELECT * FROM event_missions WHERE event_id = ?");
+            $stmtMis->bind_param("i", $id);
+            $stmtMis->execute();
+            $missions = $stmtMis->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmtMis->close();
+            
             // Build old_id -> new_id map to remap prerequisite references
             $missionIdMap = [];
             foreach ($missions as $m) {
@@ -203,16 +225,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmtM->close();
             }
             // Second pass: update prerequisite_mission_id using the new mapped IDs
+            $stmtUpdPrereq = $conn->prepare("UPDATE event_missions SET prerequisite_mission_id = ? WHERE id = ?");
             foreach ($missions as $m) {
                 if (!empty($m['prerequisite_mission_id']) && isset($missionIdMap[$m['prerequisite_mission_id']])) {
                     $newMissionId  = $missionIdMap[$m['id']];
                     $newPrereqId   = $missionIdMap[$m['prerequisite_mission_id']];
-                    $conn->query("UPDATE event_missions SET prerequisite_mission_id = $newPrereqId WHERE id = $newMissionId");
+                    $stmtUpdPrereq->bind_param("ii", $newPrereqId, $newMissionId);
+                    $stmtUpdPrereq->execute();
                 }
             }
+            $stmtUpdPrereq->close();
 
             // Clone Rewards
-            $rewards = $conn->query("SELECT * FROM event_rewards WHERE event_id = $id")->fetch_all(MYSQLI_ASSOC);
+            $stmtRew = $conn->prepare("SELECT * FROM event_rewards WHERE event_id = ?");
+            $stmtRew->bind_param("i", $id);
+            $stmtRew->execute();
+            $rewards = $stmtRew->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmtRew->close();
+            
             foreach ($rewards as $r) {
                 $stmtR = $conn->prepare("INSERT INTO event_rewards (event_id, reward_type, reward_value, reward_name, reward_icon, weight, is_limited, quantity_left) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmtR->bind_param("issssiii", $newId, $r['reward_type'], $r['reward_value'], $r['reward_name'], $r['reward_icon'], $r['weight'], $r['is_limited'], $r['quantity_left']);
@@ -221,7 +251,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // Clone Exchange Shop Items
-            $shop = $conn->query("SELECT * FROM event_exchange_shop WHERE event_id = $id")->fetch_all(MYSQLI_ASSOC);
+            $stmtShp = $conn->prepare("SELECT * FROM event_exchange_shop WHERE event_id = ?");
+            $stmtShp->bind_param("i", $id);
+            $stmtShp->execute();
+            $shop = $stmtShp->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmtShp->close();
+            
             foreach ($shop as $s) {
                 $stmtS = $conn->prepare("INSERT INTO event_exchange_shop (event_id, item_name, item_type, item_id, cost_currency, limit_per_user, total_stock) VALUES (?, ?, ?, ?, ?, ?, ?)");
                 $stmtS->bind_param("isssiii", $newId, $s['item_name'], $s['item_type'], $s['item_id'], $s['cost_currency'], $s['limit_per_user'], $s['total_stock']);

@@ -12,7 +12,7 @@ $topWin = $conn->query("
     SELECT h.*, u.Name, u.ImageURL 
     FROM game_history h
     JOIN users u ON h.user_id = u.Iduser
-    WHERE h.is_win = 1 AND h.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+    WHERE h.is_win = 1 AND h.played_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
     ORDER BY h.win_amount DESC LIMIT 1
 ")->fetch_assoc();
 
@@ -21,7 +21,7 @@ $topStreak = $conn->query("
     SELECT s.*, u.Name, u.ImageURL 
     FROM user_streaks s
     JOIN users u ON s.user_id = u.Iduser
-    ORDER BY s.max_streak DESC LIMIT 5
+    ORDER BY s.longest_streak DESC LIMIT 5
 ")->fetch_all(MYSQLI_ASSOC);
 
 // 3. Top Đại Gia Burn GTLM (Highest Total Bet)
@@ -29,7 +29,7 @@ $topBurners = $conn->query("
     SELECT user_id, u.Name, u.ImageURL, SUM(bet_amount) as total_burned
     FROM game_history h
     JOIN users u ON h.user_id = u.Iduser
-    WHERE h.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+    WHERE h.played_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
     GROUP BY user_id ORDER BY total_burned DESC LIMIT 5
 ")->fetch_all(MYSQLI_ASSOC);
 
@@ -129,7 +129,7 @@ $topBurners = $conn->query("
                         <div class="rank">#<?= $i+1 ?></div>
                         <img src="<?= $s['ImageURL'] ?: 'img/avatar_default.png' ?>" class="item-avatar">
                         <div class="item-name"><?= htmlspecialchars($s['Name']) ?></div>
-                        <div class="item-val"><?= $s['max_streak'] ?> Ván</div>
+                        <div class="item-val"><?= $s['longest_streak'] ?> Ngày</div>
                     </div>
                     <?php endforeach; ?>
                 </div>

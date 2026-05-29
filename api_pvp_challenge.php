@@ -571,7 +571,7 @@ switch ($action) {
             $stmt->close();
 
             // Cập nhật Battle Pass mission
-            require_once 'api_battle_pass.php';
+            require_once 'battle_pass_helper.php';
             updateBPMission($conn, $userId, 'rematch_pvp', 1);
 
             $conn->commit();

@@ -17,16 +17,6 @@ $money = $user['Money'];
 $userName = $user['Name'];
 $stmt->close();
 
-// Auto-create history table
-$conn->query("CREATE TABLE IF NOT EXISTS history_yahtzee (
-    Id INT AUTO_INCREMENT PRIMARY KEY,
-    Iduser INT NOT NULL,
-    Bet DECIMAL(30,2) NOT NULL,
-    Result VARCHAR(255) NOT NULL,
-    WinAmount DECIMAL(30,2) NOT NULL,
-    Time DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
     $action = $_GET['action'];
@@ -39,7 +29,7 @@ if (isset($_GET['action'])) {
 
         if ($rollCount == 1) {
             if ($bet <= 0 || $bet > $money) {
-                $response['message'] = "gtlm cược không đủ hoặc không hợp lệ!";
+                $response['message'] = "gtlm cÆ°á»£c khÃ´ng Ä‘á»§ hoáº·c khÃ´ng há»£p lá»‡!";
                 echo json_encode($response);
                 exit;
             }
@@ -70,7 +60,7 @@ if (isset($_GET['action'])) {
         $bet = $_SESSION['yahtzee_bet'] ?? 0;
 
         if (!$dice || $bet <= 0) {
-            $response['message'] = "Phiên chơi đã kết thúc hoặc không hợp lệ!";
+            $response['message'] = "PhiÃªn chÆ¡i Ä‘Ã£ káº¿t thÃºc hoáº·c khÃ´ng há»£p lá»‡!";
         } else {
             $counts = array_count_values($dice);
             $winMult = 0;
@@ -140,7 +130,7 @@ if (isset($_GET['action'])) {
 
 <head>
     <meta charset="UTF-8">
-    <title>Yahtzee Royale - Cao Cấp</title>
+    <title>Yahtzee Royale - Cao Cáº¥p</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../assets/css/main.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -228,7 +218,7 @@ if (isset($_GET['action'])) {
         }
 
         .die.held::after {
-            content: "GIỮ";
+            content: "GIá»®";
             position: absolute;
             bottom: -25px;
             left: 50%;
@@ -313,13 +303,13 @@ if (isset($_GET['action'])) {
             style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 3rem;">
             <div>
                 <h1 style="margin:0; font-size: 2.5rem; font-weight: 900; color: var(--primary-color);">YAHTZEE</h1>
-                <p style="margin:0; opacity:0.5">Xúc xắc Royale - Premium</p>
+                <p style="margin:0; opacity:0.5">XÃºc xáº¯c Royale - Premium</p>
             </div>
             <div style="display:flex; align-items:center; gap:2rem;">
                 <div id="userMoney" style="font-weight:900; font-size:1.8rem; color:var(--accent-color)">
                     <?php echo number_format($money, 0, ',', '.'); ?> gtlm</div>
                 <a href="../index.php"
-                    style="color: #fff; text-decoration: none; border: 1px solid rgba(255,255,255,0.2); padding: 0.5rem 1.5rem; border-radius: 50px; font-weight: 900;">THOÁT</a>
+                    style="color: #fff; text-decoration: none; border: 1px solid rgba(255,255,255,0.2); padding: 0.5rem 1.5rem; border-radius: 50px; font-weight: 900;">THOÃT</a>
             </div>
         </div>
 
@@ -333,35 +323,35 @@ if (isset($_GET['action'])) {
             <div style="max-width: 600px; margin: 0 auto;">
                 <div
                     style="display:flex; justify-content: space-between; margin-bottom: 20px; font-weight: 900; font-size: 1.2rem;">
-                    <span>CƯỢC: <input type="number" id="betAmount" value="10000"
+                    <span>CÆ¯á»¢C: <input type="number" id="betAmount" value="10000"
                             style="background:none; border:none; border-bottom:2px solid var(--primary-color); color:#fff; width:100px; text-align:center; font-weight:900; outline:none;">
                         gtlm</span>
-                    <span>LẦN LẮC: <span id="rollCount" style="color:var(--primary-color)">0</span>/3</span>
+                    <span>Láº¦N Láº®C: <span id="rollCount" style="color:var(--primary-color)">0</span>/3</span>
                 </div>
 
-                <button class="btn-roll" id="rollBtn" onclick="rollDice()">LẮC XÚC XẮC</button>
+                <button class="btn-roll" id="rollBtn" onclick="rollDice()">Láº®C XÃšC Xáº®C</button>
 
-                <h3 style="margin: 3rem 0 1.5rem; text-align:center; text-transform:uppercase; letter-spacing:2px;">Bảng
-                    Điểm & Tổ Hợp</h3>
+                <h3 style="margin: 3rem 0 1.5rem; text-align:center; text-transform:uppercase; letter-spacing:2px;">Báº£ng
+                    Äiá»ƒm & Tá»• Há»£p</h3>
                 <div class="score-card" id="scoreCard">
-                    <div class="score-row" onclick="submitScore('ones')"><span class="score-label">Bộ 1</span><span
+                    <div class="score-row" onclick="submitScore('ones')"><span class="score-label">Bá»™ 1</span><span
                             class="score-mult">x0.5</span></div>
-                    <div class="score-row" onclick="submitScore('twos')"><span class="score-label">Bộ 2</span><span
+                    <div class="score-row" onclick="submitScore('twos')"><span class="score-label">Bá»™ 2</span><span
                             class="score-mult">x1.0</span></div>
-                    <div class="score-row" onclick="submitScore('threes')"><span class="score-label">Bộ 3</span><span
+                    <div class="score-row" onclick="submitScore('threes')"><span class="score-label">Bá»™ 3</span><span
                             class="score-mult">x1.5</span></div>
-                    <div class="score-row" onclick="submitScore('fours')"><span class="score-label">Bộ 4</span><span
+                    <div class="score-row" onclick="submitScore('fours')"><span class="score-label">Bá»™ 4</span><span
                             class="score-mult">x2.0</span></div>
-                    <div class="score-row" onclick="submitScore('fives')"><span class="score-label">Bộ 5</span><span
+                    <div class="score-row" onclick="submitScore('fives')"><span class="score-label">Bá»™ 5</span><span
                             class="score-mult">x2.5</span></div>
-                    <div class="score-row" onclick="submitScore('sixes')"><span class="score-label">Bộ 6</span><span
+                    <div class="score-row" onclick="submitScore('sixes')"><span class="score-label">Bá»™ 6</span><span
                             class="score-mult">x3.0</span></div>
-                    <div class="score-row" onclick="submitScore('threeofakind')"><span class="score-label">Bộ
+                    <div class="score-row" onclick="submitScore('threeofakind')"><span class="score-label">Bá»™
                             Ba</span><span class="score-mult">x5.0</span></div>
-                    <div class="score-row" onclick="submitScore('fourofakind')"><span class="score-label">Tứ
-                            Quý</span><span class="score-mult">x10.0</span></div>
-                    <div class="score-row" onclick="submitScore('fullhouse')"><span class="score-label">Cù
-                            Lũ</span><span class="score-mult">x15.0</span></div>
+                    <div class="score-row" onclick="submitScore('fourofakind')"><span class="score-label">Tá»©
+                            QuÃ½</span><span class="score-mult">x10.0</span></div>
+                    <div class="score-row" onclick="submitScore('fullhouse')"><span class="score-label">CÃ¹
+                            LÅ©</span><span class="score-mult">x15.0</span></div>
                     <div class="score-row" onclick="submitScore('yahtzee')"><span class="score-label"
                             style="color:var(--accent-color)">YAHTZEE</span><span class="score-mult">x50.0</span></div>
                 </div>

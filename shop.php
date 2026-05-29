@@ -843,7 +843,8 @@ if ($currentStmt) {
 
     
         /* CSS hỗ trợ xem thử con trỏ */
-        body.previewing-cursor {
+        body.previewing-cursor,
+        body.previewing-cursor .item-card {
             cursor: var(--preview-default), auto !important;
         }
         body.previewing-cursor button, 
@@ -921,8 +922,24 @@ if ($currentStmt) {
         <div id="themes-tab" class="tab-content active">
             <div class="items-grid">
                 <?php foreach ($themes as $theme): ?>
+                    <?php
+                    $bgGradient = !empty($theme['background_gradient']) ? json_decode($theme['background_gradient'], true) : ['#667eea', '#764ba2', '#4facfe'];
+                    $shapeColors = !empty($theme['shape_colors']) ? json_decode($theme['shape_colors'], true) : ['#667eea', '#764ba2', '#4facfe', '#00f2fe'];
+                    $themeConfigJSON = json_encode([
+                        'bgGradient' => $bgGradient,
+                        'particleCount' => (int)($theme['particle_count'] ?? 100),
+                        'particleSize' => (float)($theme['particle_size'] ?? 0.05),
+                        'particleColor' => $theme['particle_color'] ?? '#ffffff',
+                        'particleOpacity' => (float)($theme['particle_opacity'] ?? 0.6),
+                        'shapeCount' => (int)($theme['shape_count'] ?? 10),
+                        'shapeColors' => $shapeColors,
+                        'shapeOpacity' => (float)($theme['shape_opacity'] ?? 0.3)
+                    ]);
+                    ?>
                     <div
-                        class="item-card <?= $theme['owned'] > 0 ? 'owned' : '' ?> <?= $current['current_theme_id'] == $theme['id'] ? 'active' : '' ?>">
+                        class="item-card <?= $theme['owned'] > 0 ? 'owned' : '' ?> <?= $current['current_theme_id'] == $theme['id'] ? 'active' : '' ?>"
+                        onmouseenter="previewTheme(this, <?= htmlspecialchars($themeConfigJSON) ?>)"
+                        onmouseleave="resetTheme()">
                         <div class="item-preview"
                             style="background: <?php
                             $bgGradient = !empty($theme['background_gradient']) ? json_decode($theme['background_gradient'], true) : ['#667eea', '#764ba2', '#4facfe'];
@@ -1126,16 +1143,31 @@ if ($currentStmt) {
             filterItems();
         }
 
-                        function previewCursor(element, cursorUrl, pointerUrl) {
+        function previewCursor(element, cursorUrl, pointerUrl) {
             function getResizedCursor(url, callback) {
                 const img = new Image();
-                img.crossOrigin = "Anonymous";
+                if (url.startsWith('http://') || url.startsWith('https://')) {
+                    try {
+                        const urlObj = new URL(url, window.location.href);
+                        if (urlObj.origin !== window.location.origin) {
+                            img.crossOrigin = "Anonymous";
+                        }
+                    } catch (e) {}
+                }
                 img.onload = function() {
-                    const canvas = document.createElement("canvas");
-                    canvas.width = 32; canvas.height = 32;
-                    const ctx = canvas.getContext("2d");
-                    ctx.drawImage(img, 0, 0, 32, 32);
-                    callback(canvas.toDataURL("image/png"));
+                    try {
+                        const canvas = document.createElement("canvas");
+                        canvas.width = 32;
+                        canvas.height = 32;
+                        const ctx = canvas.getContext("2d");
+                        ctx.drawImage(img, 0, 0, 32, 32);
+                        callback(canvas.toDataURL("image/png"));
+                    } catch (e) {
+                        callback(url);
+                    }
+                };
+                img.onerror = function() {
+                    callback(url);
                 };
                 img.src = url;
             }
@@ -1156,6 +1188,60 @@ if ($currentStmt) {
             document.body.classList.remove('previewing-cursor');
             document.body.style.removeProperty('--preview-default');
             document.body.style.removeProperty('--preview-pointer');
+            document.querySelectorAll('.item-card').forEach(el => el.style.background = "");
+        }
+
+        let originalThemeConfig = null;
+        let originalCanvasBg = null;
+
+        function previewTheme(element, config) {
+            if (!originalThemeConfig && window.themeConfig) {
+                originalThemeConfig = {
+                    particleCount: window.themeConfig.particleCount,
+                    particleSize: window.themeConfig.particleSize,
+                    particleColor: window.themeConfig.particleColor,
+                    particleOpacity: window.themeConfig.particleOpacity,
+                    shapeCount: window.themeConfig.shapeCount,
+                    shapeColors: window.themeConfig.shapeColors,
+                    shapeOpacity: window.themeConfig.shapeOpacity,
+                    bgGradient: window.themeConfig.bgGradient
+                };
+                const canvas = document.getElementById('threejs-background');
+                if (canvas) {
+                    originalCanvasBg = canvas.style.backgroundImage;
+                }
+            }
+
+            if (window.threejsBackground && window.threejsBackground.updateTheme) {
+                window.threejsBackground.updateTheme(config);
+            }
+
+            const canvas = document.getElementById('threejs-background');
+            if (canvas && config.bgGradient && config.bgGradient.length >= 2) {
+                const col1 = config.bgGradient[0];
+                const col2 = config.bgGradient[1];
+                const col3 = config.bgGradient[2] || col2;
+                canvas.style.backgroundImage = `linear-gradient(135deg, ${col1} 0%, ${col2} 50%, ${col3} 100%)`;
+            }
+
+            element.style.background = "rgba(102, 126, 234, 0.1)";
+        }
+
+        function resetTheme() {
+            if (originalThemeConfig) {
+                if (window.threejsBackground && window.threejsBackground.updateTheme) {
+                    window.threejsBackground.updateTheme(originalThemeConfig);
+                }
+
+                const canvas = document.getElementById('threejs-background');
+                if (canvas) {
+                    canvas.style.backgroundImage = originalCanvasBg;
+                }
+
+                originalThemeConfig = null;
+                originalCanvasBg = null;
+            }
+
             document.querySelectorAll('.item-card').forEach(el => el.style.background = "");
         }
 

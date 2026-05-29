@@ -163,8 +163,16 @@ if ($action === 'guess_number' && $event['event_type'] === 'lucky_number') {
     $range = (int)($config['number_range'] ?? 10);
     if ($guess < 1 || $guess > $range) { echo json_encode(['status' => 'error', 'message' => "Nhập số từ 1 đến $range"]); exit; }
 
-    // Use truly random lucky number from config, fallback to deterministic hash for backward compatibility
-    $luckyNumber = $config['lucky_number'] ?? ((($eventId * 7 + 13) % $range) + 1);
+    // Sinh số random và lưu vào DB nếu config chưa có lucky_number
+    if (!isset($config['lucky_number'])) {
+        $config['lucky_number'] = rand(1, $range);
+        $newConfig = json_encode($config);
+        $stmtUpdateConfig = $conn->prepare("UPDATE random_events SET config = ? WHERE id = ?");
+        $stmtUpdateConfig->bind_param("si", $newConfig, $eventId);
+        $stmtUpdateConfig->execute();
+        $stmtUpdateConfig->close();
+    }
+    $luckyNumber = (int)$config['lucky_number'];
     
     $stmtWinners = $conn->prepare("SELECT COUNT(*) as c FROM random_event_participants WHERE event_id = ? AND reward_given = 1");
     $stmtWinners->bind_param("i", $eventId);

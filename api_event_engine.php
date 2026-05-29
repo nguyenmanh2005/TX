@@ -553,59 +553,12 @@ switch ($action) {
                 }
             }
 
-                // Lấy tổng điểm guild mới
-                $guildPoints = (int)$conn->query("
-                    SELECT total_points FROM event_guild_contributions
-                    WHERE event_id = $eventId AND guild_id = $guildId
-                ")->fetch_assoc()['total_points'];
-
-                // WARN fix: Đọc guild milestone config từ DB thay vì hardcode
-                // Admin có thể tùy chỉnh trong cột guild_milestone_config của seasonal_events
-                $guildMilestones = json_decode($event['guild_milestone_config'] ?? '[]', true) ?: [];
-
-                foreach ($guildMilestones as $gm) {
-                    if ($guildPoints >= $gm['points']) {
-                        // Kiểm tra chưa nhận milestone này
-                        $alreadyClaimed = $conn->query("
-                            SELECT 1 FROM event_guild_milestone_claimed
-                            WHERE event_id = $eventId AND guild_id = $guildId AND milestone = {$gm['points']}
-                        ")->num_rows;
-
-                        if (!$alreadyClaimed) {
-                            // Đánh dấu đã nhận
-                            $conn->query("
-                                INSERT IGNORE INTO event_guild_milestone_claimed (event_id, guild_id, milestone)
-                                VALUES ($eventId, $guildId, {$gm['points']})
-                            ");
-
-                            // Lấy thành viên active của guild (online trong 7 ngày gần nhất)
-                            $members = $conn->query("
-                                SELECT gm2.user_id FROM guild_members gm2
-                                JOIN users u ON gm2.user_id = u.Iduser
-                                WHERE gm2.guild_id = $guildId
-                                AND u.last_active >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-                            ")->fetch_all(MYSQLI_ASSOC);
-
-                            foreach ($members as $member) {
-                                $mUid = (int)$member['user_id'];
-                                deliverReward($mUid, ['reward_type' => $gm['reward_type'], 'reward_value' => $gm['reward_value']], $conn);
-                                createNotification($conn, $mUid, 'event_update',
-                                    "🏰 Guild Đạt Mốc: {$gm['label']}!",
-                                    "Guild của bạn đã đạt {$gm['points']} điểm sự kiện! Tất cả thành viên nhận thưởng!",
-                                    '⚔️', 'guilds.php', $guildId, true
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-
             $conn->commit();
 
             // ==========================================
             // ✅ BATTLE PASS XP HOOK (sau commit)
             // ==========================================
-            require_once 'api_battle_pass.php';
+            require_once 'battle_pass_helper.php';
             updateBPMission($conn, $userId, 'complete_event_mission', 1);
 
             echo json_encode(['success' => true, 'message' => 'Nhận thưởng thành công!', 'reward' => $mission['reward_currency']]);

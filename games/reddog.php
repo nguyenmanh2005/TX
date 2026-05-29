@@ -17,16 +17,6 @@ $money = $user['Money'];
 $userName = $user['Name'];
 $stmt->close();
 
-// history table
-$conn->query("CREATE TABLE IF NOT EXISTS history_reddog (
-    Id INT AUTO_INCREMENT PRIMARY KEY,
-    Iduser INT NOT NULL,
-    Bet DECIMAL(30,2) NOT NULL,
-    Result VARCHAR(255) NOT NULL,
-    WinAmount DECIMAL(30,2) NOT NULL,
-    Time DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
     $action = $_GET['action'];
@@ -35,7 +25,7 @@ if (isset($_GET['action'])) {
     if ($action === 'deal') {
         $bet = (float) ($_POST['bet'] ?? 0);
         if ($bet <= 0 || $bet > $money) {
-            $response['message'] = "gtlm cược không hợp lệ!";
+            $response['message'] = "gtlm cÆ°á»£c khÃ´ng há»£p lá»‡!";
         } else {
             $conn->query("UPDATE users SET Money = Money - $bet WHERE Iduser = $userId");
             $suits = ['s', 'c', 'h', 'd'];
@@ -100,7 +90,7 @@ if (isset($_GET['action'])) {
             $conn->query("UPDATE users SET Money = Money + $payout WHERE Iduser = $userId");
 
         $profit = $payout - $bet;
-        $resMsg = $win ? "Thắng! Lá thứ 3 nằm trong khoảng." : "THUA RỒI! Lá thứ 3 nằm ngoài khoảng.";
+        $resMsg = $win ? "Tháº¯ng! LÃ¡ thá»© 3 náº±m trong khoáº£ng." : "THUA Rá»’I! LÃ¡ thá»© 3 náº±m ngoÃ i khoáº£ng.";
         $his = $conn->prepare("INSERT INTO history_reddog (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
         $his->bind_param("idss", $userId, $bet, $resMsg, $profit);
         $his->execute();
@@ -241,7 +231,7 @@ function getCardValue($c)
                 <div id="userMoney" style="font-weight:900; font-size:1.5rem; color:#ffa502">
                     <?php echo number_format($money, 0, ',', '.'); ?> gtlm</div>
                 <a href="../index.php"
-                    style="color:#fff; text-decoration:none; border:1px solid rgba(255,255,255,0.2); padding:0.5rem 1.5rem; border-radius:50px;">THOÁT</a>
+                    style="color:#fff; text-decoration:none; border:1px solid rgba(255,255,255,0.2); padding:0.5rem 1.5rem; border-radius:50px;">THOÃT</a>
             </div>
         </div>
 
@@ -249,8 +239,8 @@ function getCardValue($c)
             <div class="table-area">
                 <div id="card1" class="card back"></div>
                 <div id="spreadInfo" style="display:none; flex-direction:column; gap:10px; align-items:center;">
-                    <div class="spread-badge">KHOẢNG: <span id="spreadValue">0</span></div>
-                    <div style="font-size:0.8rem; opacity:0.7">Lá thứ 3 phải nằm ở giữa</div>
+                    <div class="spread-badge">KHOáº¢NG: <span id="spreadValue">0</span></div>
+                    <div style="font-size:0.8rem; opacity:0.7">LÃ¡ thá»© 3 pháº£i náº±m á»Ÿ giá»¯a</div>
                 </div>
                 <div id="card3" class="card back" style="transform: scale(1.1); border: 3px solid #ffa502;"></div>
                 <div id="card2" class="card back"></div>
@@ -260,9 +250,9 @@ function getCardValue($c)
                 <input type="number" id="betAmount" value="10000" class="glass"
                     style="color:#fff; padding:12px; outline:none; font-size:1.3rem; font-weight:900; text-align:center; width:160px; border-radius:50px; border:1px solid rgba(255,255,255,0.2)">
                 <button class="btn-premium btn-red" id="dealBtn" onclick="deal()">DEAL</button>
-                <button class="btn-premium btn-gold" id="rideBtn" style="display:none" onclick="ride()">RIDE (Gấp đôi
-                    cược)</button>
-                <button class="btn-premium btn-red" id="showBtn" style="display:none" onclick="show()">MỞ THẺ</button>
+                <button class="btn-premium btn-gold" id="rideBtn" style="display:none" onclick="ride()">RIDE (Gáº¥p Ä‘Ã´i
+                    cÆ°á»£c)</button>
+                <button class="btn-premium btn-red" id="showBtn" style="display:none" onclick="show()">Má»ž THáºº</button>
             </div>
         </div>
     </div>

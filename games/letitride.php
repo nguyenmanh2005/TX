@@ -10,16 +10,6 @@ if (!isset($_SESSION['Iduser'])) {
 
 $userId = $_SESSION['Iduser'];
 
-// Auto-create history table
-$conn->query("CREATE TABLE IF NOT EXISTS history_letitride (
-    Id INT AUTO_INCREMENT PRIMARY KEY,
-    Iduser INT NOT NULL,
-    Bet DECIMAL(30,2) NOT NULL,
-    Result VARCHAR(255) NOT NULL,
-    WinAmount DECIMAL(30,2) NOT NULL,
-    Time DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
 $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
@@ -30,7 +20,7 @@ $stmt->close();
 
 function getCard()
 {
-    $suits = ['♠', '♥', '♦', '♣'];
+    $suits = ['â™ ', 'â™¥', 'â™¦', 'â™£'];
     $vals = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
     $vIdx = rand(0, 12);
     $sIdx = rand(0, 3);
@@ -95,7 +85,7 @@ if (isset($_GET['action'])) {
     if ($action === 'deal') {
         $bet = (int) ($_POST['bet'] ?? 0);
         if ($bet <= 0 || ($bet * 3) > $money) {
-            echo json_encode(['success' => false, 'message' => 'gtlm cược (x3) vượt quá Số Gtlm!']);
+            echo json_encode(['success' => false, 'message' => 'gtlm cÆ°á»£c (x3) vÆ°á»£t quÃ¡ Sá»‘ Gtlm!']);
             exit;
         }
 
@@ -175,7 +165,7 @@ if (isset($_GET['action'])) {
 
 <head>
     <meta charset="UTF-8">
-    <title>Let It Ride Poker - Đợi Chờ Hạnh Phúc</title>
+    <title>Let It Ride Poker - Äá»£i Chá» Háº¡nh PhÃºc</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../assets/css/main.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -484,7 +474,7 @@ if (isset($_GET['action'])) {
 
     <div class="main-container">
         <h1 class="game-title">LET IT RIDE POKER</h1>
-        <div class="balance-pill">💰 Số Gtlm: <span id="balance-val"><?= number_format($money, 0, ',', '.') ?></span>
+        <div class="balance-pill">ðŸ’° Sá»‘ Gtlm: <span id="balance-val"><?= number_format($money, 0, ',', '.') ?></span>
             gtlm
         </div>
 
@@ -492,15 +482,15 @@ if (isset($_GET['action'])) {
             <div class="hand-area">
                 <div class="section-label">Community Cards</div>
                 <div id="community-area" class="card-row">
-                    <div class="card-slot" id="comm-1">🃟</div>
-                    <div class="card-slot" id="comm-2">🃟</div>
+                    <div class="card-slot" id="comm-1">ðŸƒŸ</div>
+                    <div class="card-slot" id="comm-2">ðŸƒŸ</div>
                 </div>
 
                 <div class="section-label">Your Hand</div>
                 <div id="player-hand" class="card-row">
-                    <div class="card-slot">🃟</div>
-                    <div class="card-slot">🃟</div>
-                    <div class="card-slot">🃟</div>
+                    <div class="card-slot">ðŸƒŸ</div>
+                    <div class="card-slot">ðŸƒŸ</div>
+                    <div class="card-slot">ðŸƒŸ</div>
                 </div>
             </div>
 
@@ -512,25 +502,25 @@ if (isset($_GET['action'])) {
 
             <div id="bet-form">
                 <div class="input-group">
-                    <span>Cược cơ sở (Mỗi vị trí x3)</span>
+                    <span>CÆ°á»£c cÆ¡ sá»Ÿ (Má»—i vá»‹ trÃ­ x3)</span>
                     <input type="number" id="bet-amt" value="1000" min="100" step="100">
                 </div>
-                <button id="deal-btn" class="btn btn-blue">BẮT ĐẦU VÁN</button>
+                <button id="deal-btn" class="btn btn-blue">Báº®T Äáº¦U VÃN</button>
             </div>
 
             <div id="action-1" style="display: none;">
-                <h3 style="margin-bottom: 1.5rem;">Cược Lượt 1: Bạn muốn giữ lại hay rút về?</h3>
+                <h3 style="margin-bottom: 1.5rem;">CÆ°á»£c LÆ°á»£t 1: Báº¡n muá»‘n giá»¯ láº¡i hay rÃºt vá»?</h3>
                 <div style="display: flex; flex-direction: column; align-items: center;">
-                    <button onclick="sendAction(1, 'letitride')" class="btn btn-accent">LET IT RIDE (Giữ)</button>
-                    <button onclick="sendAction(1, 'pull')" class="btn btn-red">PULL (Rút về)</button>
+                    <button onclick="sendAction(1, 'letitride')" class="btn btn-accent">LET IT RIDE (Giá»¯)</button>
+                    <button onclick="sendAction(1, 'pull')" class="btn btn-red">PULL (RÃºt vá»)</button>
                 </div>
             </div>
 
             <div id="action-2" style="display: none;">
-                <h3 style="margin-bottom: 1.5rem;">Cược Lượt 2: Bạn muốn giữ lại hay rút về?</h3>
+                <h3 style="margin-bottom: 1.5rem;">CÆ°á»£c LÆ°á»£t 2: Báº¡n muá»‘n giá»¯ láº¡i hay rÃºt vá»?</h3>
                 <div style="display: flex; flex-direction: column; align-items: center;">
-                    <button onclick="sendAction(2, 'letitride')" class="btn btn-accent">LET IT RIDE (Giữ)</button>
-                    <button onclick="sendAction(2, 'pull')" class="btn btn-red">PULL (Rút về)</button>
+                    <button onclick="sendAction(2, 'letitride')" class="btn btn-accent">LET IT RIDE (Giá»¯)</button>
+                    <button onclick="sendAction(2, 'pull')" class="btn btn-red">PULL (RÃºt vá»)</button>
                 </div>
             </div>
 
@@ -538,27 +528,27 @@ if (isset($_GET['action'])) {
                 <h2 id="final-eval"
                     style="color: var(--accent); margin-bottom: 0.5rem; font-size: 2rem; font-weight: 900;"></h2>
                 <h3 id="win-msg" style="margin-bottom: 1.5rem; font-size: 1.5rem;"></h3>
-                <button id="reset-btn" class="btn btn-blue">VÁN MỚI</button>
+                <button id="reset-btn" class="btn btn-blue">VÃN Má»šI</button>
             </div>
         </div>
 
         <div class="history-section">
-            <h2 style="font-size: 1.2rem; letter-spacing: 2px; margin-bottom: 1rem;">LỊCH SỬ CHƠI</h2>
+            <h2 style="font-size: 1.2rem; letter-spacing: 2px; margin-bottom: 1rem;">Lá»ŠCH Sá»¬ CHÆ I</h2>
             <div style="overflow-x: auto;">
                 <table class="history-table">
                     <thead>
                         <tr>
-                            <th>Thời gian</th>
-                            <th>gtlm cược</th>
-                            <th>Kết quả</th>
-                            <th>Thắng/Thua</th>
+                            <th>Thá»i gian</th>
+                            <th>gtlm cÆ°á»£c</th>
+                            <th>Káº¿t quáº£</th>
+                            <th>Tháº¯ng/Thua</th>
                         </tr>
                     </thead>
                     <tbody id="history-body"></tbody>
                 </table>
             </div>
             <div style="margin-top: 2rem;"><a href="../index.php"
-                    style="color: var(--primary); text-decoration: none; font-weight: 700;">🏠 Về Trang Chủ</a></div>
+                    style="color: var(--primary); text-decoration: none; font-weight: 700;">ðŸ  Vá» Trang Chá»§</a></div>
         </div>
     </div>
 

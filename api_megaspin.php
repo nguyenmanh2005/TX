@@ -6,43 +6,22 @@ header('Content-Type: application/json');
 
 $userId = $_SESSION['Iduser'] ?? 0;
 
-// 1. Khởi tạo Database nếu chưa có
-$conn->query("CREATE TABLE IF NOT EXISTS megaspin_rounds (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    pool_amount BIGINT DEFAULT 0,
-    status ENUM('active', 'ended') DEFAULT 'active',
-    winner_id INT DEFAULT NULL,
-    start_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    end_at TIMESTAMP NULL
-)");
-
-$conn->query("CREATE TABLE IF NOT EXISTS megaspin_tickets (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    round_id INT,
-    user_id INT,
-    amount BIGINT,
-    tickets BIGINT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX(round_id),
-    INDEX(user_id)
-)");
-
 /**
- * Hàm lấy Round hiện tại hoặc tạo mới
+ * HÃ m láº¥y Round hiá»‡n táº¡i hoáº·c táº¡o má»›i
  */
 function getCurrentRound(mysqli $conn) {
     $res = $conn->query("SELECT * FROM megaspin_rounds WHERE status = 'active' LIMIT 1");
     if ($res->num_rows > 0) {
         $round = $res->fetch_assoc();
         
-        // Kiểm tra xem đã hết giờ chưa (60s)
+        // Kiá»ƒm tra xem Ä‘Ã£ háº¿t giá» chÆ°a (60s)
         $endTime = strtotime($round['start_at']) + 60;
         if (time() >= $endTime) {
             return processWinner($conn, $round);
         }
         return $round;
     } else {
-        // Tạo round mới
+        // Táº¡o round má»›i
         $endAt = date('Y-m-d H:i:s', time() + 60);
         $conn->query("INSERT INTO megaspin_rounds (start_at, end_at, status) VALUES (NOW(), '$endAt', 'active')");
         return getCurrentRound($conn);
@@ -50,7 +29,7 @@ function getCurrentRound(mysqli $conn) {
 }
 
 /**
- * Hàm xử lý chọn người chiến thắng
+ * HÃ m xá»­ lÃ½ chá»n ngÆ°á»i chiáº¿n tháº¯ng
  */
 function processWinner(mysqli $conn, array $round) {
     $roundId = $round['id'];
@@ -70,24 +49,24 @@ function processWinner(mysqli $conn, array $round) {
     if (!empty($allTickets)) {
         $winnerId = $allTickets[array_rand($allTickets)];
         
-        // Trao thưởng 95% pool
+        // Trao thÆ°á»Ÿng 95% pool
         $winAmount = $totalPool * 0.95;
         $conn->query("UPDATE users SET Money = Money + $winAmount WHERE Iduser = $winnerId");
         
-        // Gửi thông báo cho winner
+        // Gá»­i thÃ´ng bÃ¡o cho winner
         require_once 'notification_helper.php';
         $winnerNameRes = $conn->query("SELECT Name FROM users WHERE Iduser = $winnerId")->fetch_assoc();
-        $wName = $winnerNameRes['Name'] ?? "Người chơi ẩn danh";
+        $wName = $winnerNameRes['Name'] ?? "NgÆ°á»i chÆ¡i áº©n danh";
         
-        // Log vào chat hệ thống
-        $msg = "🎉 Chúc mừng [$wName] đã thắng hũ Mega Spin trị giá " . number_format($winAmount) . " GTLM!";
+        // Log vÃ o chat há»‡ thá»‘ng
+        $msg = "ðŸŽ‰ ChÃºc má»«ng [$wName] Ä‘Ã£ tháº¯ng hÅ© Mega Spin trá»‹ giÃ¡ " . number_format($winAmount) . " GTLM!";
         $conn->query("INSERT INTO chat_messages (user_id, username, message, avatar) VALUES (0, 'MEGA SPIN', '$msg', 'https://cdn-icons-png.flaticon.com/512/2583/2583150.png')");
     }
 
-    // Kết thúc round cũ
+    // Káº¿t thÃºc round cÅ©
     $conn->query("UPDATE megaspin_rounds SET status = 'ended', winner_id = " . ($winnerId ?? 'NULL') . ", pool_amount = $totalPool WHERE id = $roundId");
     
-    // Tạo round mới
+    // Táº¡o round má»›i
     return getCurrentRound($conn);
 }
 
@@ -98,7 +77,7 @@ switch ($action) {
         $round = getCurrentRound($conn);
         $roundId = $round['id'];
         
-        // Lấy danh sách người tham gia
+        // Láº¥y danh sÃ¡ch ngÆ°á»i tham gia
         $participantsRes = $conn->query("SELECT u.Name, u.ImageURL, SUM(t.amount) as total_bet 
                                        FROM megaspin_tickets t 
                                        JOIN users u ON t.user_id = u.Iduser 
@@ -109,7 +88,7 @@ switch ($action) {
         $myChance = 0;
         $currentPool = 0;
         
-        // Tính tổng pool thực tế từ các vé
+        // TÃ­nh tá»•ng pool thá»±c táº¿ tá»« cÃ¡c vÃ©
         $poolRes = $conn->query("SELECT SUM(amount) as pool FROM megaspin_tickets WHERE round_id = $roundId")->fetch_assoc();
         $currentPool = (float)($poolRes['pool'] ?? 0);
 
@@ -117,7 +96,7 @@ switch ($action) {
             $participants[] = $row;
         }
 
-        // Tính % thắng của bản thân
+        // TÃ­nh % tháº¯ng cá»§a báº£n thÃ¢n
         if ($userId > 0 && $currentPool > 0) {
             $myRes = $conn->query("SELECT SUM(amount) as my_bet FROM megaspin_tickets WHERE round_id = $roundId AND user_id = $userId")->fetch_assoc();
             $myBet = (float)($myRes['my_bet'] ?? 0);
@@ -136,18 +115,18 @@ switch ($action) {
         break;
 
     case 'join':
-        if (!$userId) exit(json_encode(['success' => false, 'message' => 'Chưa đăng nhập']));
+        if (!$userId) exit(json_encode(['success' => false, 'message' => 'ChÆ°a Ä‘Äƒng nháº­p']));
         
         $amount = (int)$_POST['amount'];
         $allowed = [1000, 5000, 10000, 50000, 100000, 500000];
-        if (!in_array($amount, $allowed)) exit(json_encode(['success' => false, 'message' => 'Mức cược không hợp lệ']));
+        if (!in_array($amount, $allowed)) exit(json_encode(['success' => false, 'message' => 'Má»©c cÆ°á»£c khÃ´ng há»£p lá»‡']));
 
         $round = getCurrentRound($conn);
         $roundId = $round['id'];
 
-        // Kiểm tra  Gtlm
+        // Kiá»ƒm tra  Gtlm
         $userMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
-        if ($userMoney < $amount) exit(json_encode(['success' => false, 'message' => 'Không đủ  Gtlm!']));
+        if ($userMoney < $amount) exit(json_encode(['success' => false, 'message' => 'KhÃ´ng Ä‘á»§  Gtlm!']));
 
         $conn->begin_transaction();
         try {
@@ -157,7 +136,7 @@ switch ($action) {
             echo json_encode(['success' => true]);
         } catch (Exception $e) {
             $conn->rollback();
-            echo json_encode(['success' => false, 'message' => 'Lỗi hệ thống']);
+            echo json_encode(['success' => false, 'message' => 'Lá»—i há»‡ thá»‘ng']);
         }
         break;
 

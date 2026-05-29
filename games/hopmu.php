@@ -33,9 +33,10 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) &&
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
-
+if (isset($_GET['action']) && $_GET['action'] === 'open_bag') {
+    $bypassThemeScripts = true;
+}
 require_once '../load_theme.php';
-
 
 
 

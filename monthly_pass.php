@@ -10,39 +10,15 @@ if (!isset($_SESSION['Iduser'])) {
 require_once 'load_theme.php';
 $userId = $_SESSION['Iduser'];
 
-// 1. Kiểm tra và tạo bảng nếu chưa có
-$conn->query("CREATE TABLE IF NOT EXISTS monthly_pass_types (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    price DECIMAL(15,2) NOT NULL,
-    daily_bonus INT NOT NULL,
-    instant_bonus INT DEFAULT 0,
-    duration_days INT DEFAULT 30,
-    icon VARCHAR(50) DEFAULT '🎫',
-    color VARCHAR(20) DEFAULT '#667eea',
-    description TEXT
-)");
-
-$conn->query("CREATE TABLE IF NOT EXISTS user_monthly_pass (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    pass_type_id INT NOT NULL,
-    expiry_date DATETIME NOT NULL,
-    last_claimed_date DATE NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(Iduser) ON DELETE CASCADE,
-    FOREIGN KEY (pass_type_id) REFERENCES monthly_pass_types(id)
-)");
-
-// 2. Thêm dữ liệu mẫu nếu bảng trống
+// 2. ThÃªm dá»¯ liá»‡u máº«u náº¿u báº£ng trá»‘ng
 $checkTypes = $conn->query("SELECT COUNT(*) as total FROM monthly_pass_types");
 if ($checkTypes->fetch_assoc()['total'] == 0) {
     $conn->query("INSERT INTO monthly_pass_types (name, price, daily_bonus, instant_bonus, icon, color, description) VALUES 
-    ('Silver Pass', 500000, 50000, 100000, '🥈', '#c0c0c0', 'Nhận ngay 100k GTLM. Mỗi ngày nhận 50k GTLM. x2 thưởng Vòng Quay May Mắn.'),
-    ('Gold Pass', 2000000, 250000, 500000, '🥇', '#ffd700', 'Nhận ngay 500k GTLM. Mỗi ngày nhận 250k GTLM. x2 thưởng Vòng Quay May Mắn. Ưu tiên hàng chờ VIP.')");
+    ('Silver Pass', 500000, 50000, 100000, 'ðŸ¥ˆ', '#c0c0c0', 'Nháº­n ngay 100k GTLM. Má»—i ngÃ y nháº­n 50k GTLM. x2 thÆ°á»Ÿng VÃ²ng Quay May Máº¯n.'),
+    ('Gold Pass', 2000000, 250000, 500000, 'ðŸ¥‡', '#ffd700', 'Nháº­n ngay 500k GTLM. Má»—i ngÃ y nháº­n 250k GTLM. x2 thÆ°á»Ÿng VÃ²ng Quay May Máº¯n. Æ¯u tiÃªn hÃ ng chá» VIP.')");
 }
 
-// 3. Lấy thông tin pass hiện tại của user
+// 3. Láº¥y thÃ´ng tin pass hiá»‡n táº¡i cá»§a user
 $sql = "SELECT ump.*, mpt.name, mpt.daily_bonus, mpt.icon, mpt.color, mpt.description
         FROM user_monthly_pass ump
         JOIN monthly_pass_types mpt ON ump.pass_type_id = mpt.id
@@ -54,10 +30,10 @@ $stmt->execute();
 $activePass = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
-// 4. Lấy danh sách các gói có sẵn
+// 4. Láº¥y danh sÃ¡ch cÃ¡c gÃ³i cÃ³ sáºµn
 $passTypes = $conn->query("SELECT * FROM monthly_pass_types ORDER BY price ASC")->fetch_all(MYSQLI_ASSOC);
 
-// 5. Lấy  Gtlm user
+// 5. Láº¥y  Gtlm user
 $userMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
 
 ?>
@@ -66,7 +42,7 @@ $userMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fet
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monthly Pass - Gói Thuê Bao Tháng</title>
+    <title>Monthly Pass - GÃ³i ThuÃª Bao ThÃ¡ng</title>
     <link rel="stylesheet" href="assets/css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -179,7 +155,7 @@ $userMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fet
         }
 
         .pass-card.popular::before {
-            content: 'PHỔ BIẾN';
+            content: 'PHá»” BIáº¾N';
             position: absolute;
             top: 20px;
             right: -30px;
@@ -271,8 +247,8 @@ $userMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fet
 
     <div class="container">
         <div class="pass-header">
-            <h1>✨ MONTHLY PASS</h1>
-            <p>Đặc quyền VIP hằng tháng - Tối ưu lợi nhuận chiến đấu</p>
+            <h1>âœ¨ MONTHLY PASS</h1>
+            <p>Äáº·c quyá»n VIP háº±ng thÃ¡ng - Tá»‘i Æ°u lá»£i nhuáº­n chiáº¿n Ä‘áº¥u</p>
         </div>
 
         <?php if ($activePass): 
@@ -282,14 +258,14 @@ $userMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fet
         <div class="active-pass-card">
             <div class="pass-icon"><?= $activePass['icon'] ?></div>
             <div class="pass-info">
-                <h2>Bạn đang sở hữu <?= $activePass['name'] ?></h2>
-                <div class="pass-expiry">Hết hạn: <?= date('d/m/Y H:i', strtotime($activePass['expiry_date'])) ?></div>
+                <h2>Báº¡n Ä‘ang sá»Ÿ há»¯u <?= $activePass['name'] ?></h2>
+                <div class="pass-expiry">Háº¿t háº¡n: <?= date('d/m/Y H:i', strtotime($activePass['expiry_date'])) ?></div>
                 <div style="margin-top: 10px; color: #28a745; font-weight: 600;">
-                    <i class="fas fa-check-circle"></i> Đang kích hoạt: x2 Thưởng Lucky Wheel
+                    <i class="fas fa-check-circle"></i> Äang kÃ­ch hoáº¡t: x2 ThÆ°á»Ÿng Lucky Wheel
                 </div>
             </div>
             <button class="claim-btn" id="claimBtn" onclick="claimDaily()" <?= $canClaim ? '' : 'disabled' ?>>
-                <?= $canClaim ? '🎁 Nhận '.number_format($activePass['daily_bonus']).' GTLM' : '✅ Đã nhận hôm nay' ?>
+                <?= $canClaim ? 'ðŸŽ Nháº­n '.number_format($activePass['daily_bonus']).' GTLM' : 'âœ… ÄÃ£ nháº­n hÃ´m nay' ?>
             </button>
         </div>
         <?php endif; ?>
@@ -299,46 +275,46 @@ $userMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fet
             <div class="pass-card <?= $type['name'] == 'Gold Pass' ? 'popular' : '' ?>">
                 <div style="font-size: 50px; margin-bottom: 15px;"><?= $type['icon'] ?></div>
                 <h3><?= $type['name'] ?></h3>
-                <div class="pass-price"><?= number_format($type['price'] / 1000) ?>k <span>/ 30 ngày</span></div>
+                <div class="pass-price"><?= number_format($type['price'] / 1000) ?>k <span>/ 30 ngÃ y</span></div>
                 
                 <ul class="benefits-list">
-                    <li><i class="fas fa-gift"></i> Nhận ngay <?= number_format($type['instant_bonus']) ?> GTLM</li>
-                    <li><i class="fas fa-calendar-check"></i> +<?= number_format($type['daily_bonus']) ?> GTLM mỗi ngày</li>
-                    <li><i class="fas fa-star"></i> x2 Thưởng Vòng Quay May Mắn</li>
+                    <li><i class="fas fa-gift"></i> Nháº­n ngay <?= number_format($type['instant_bonus']) ?> GTLM</li>
+                    <li><i class="fas fa-calendar-check"></i> +<?= number_format($type['daily_bonus']) ?> GTLM má»—i ngÃ y</li>
+                    <li><i class="fas fa-star"></i> x2 ThÆ°á»Ÿng VÃ²ng Quay May Máº¯n</li>
                     <?php if($type['name'] == 'Gold Pass'): ?>
-                    <li><i class="fas fa-crown"></i> Ưu tiên hàng chờ VIP</li>
-                    <li><i class="fas fa-shield-alt"></i> Badge Gold đặc biệt</li>
+                    <li><i class="fas fa-crown"></i> Æ¯u tiÃªn hÃ ng chá» VIP</li>
+                    <li><i class="fas fa-shield-alt"></i> Badge Gold Ä‘áº·c biá»‡t</li>
                     <?php endif; ?>
                 </ul>
 
                 <button class="buy-btn" onclick="buyPass(<?= $type['id'] ?>, '<?= $type['name'] ?>', <?= $type['price'] ?>)">
-                    <?= $activePass && $activePass['pass_type_id'] == $type['id'] ? 'GIA HẠN GÓI' : 'MUA NGAY' ?>
+                    <?= $activePass && $activePass['pass_type_id'] == $type['id'] ? 'GIA Háº N GÃ“I' : 'MUA NGAY' ?>
                 </button>
             </div>
             <?php endforeach; ?>
         </div>
 
         <div style="text-align: center; margin-top: 50px;">
-            <a href="index.php" style="color: rgba(255,255,255,0.5); text-decoration: none;"><i class="fas fa-arrow-left"></i> Quay lại trang chủ</a>
+            <a href="index.php" style="color: rgba(255,255,255,0.5); text-decoration: none;"><i class="fas fa-arrow-left"></i> Quay láº¡i trang chá»§</a>
         </div>
     </div>
 
     <script>
         function buyPass(id, name, price) {
             Swal.fire({
-                title: 'Xác nhận mua?',
-                text: `Bạn có muốn mua ${name} với giá ${price.toLocaleString()} GTLM không?`,
+                title: 'XÃ¡c nháº­n mua?',
+                text: `Báº¡n cÃ³ muá»‘n mua ${name} vá»›i giÃ¡ ${price.toLocaleString()} GTLM khÃ´ng?`,
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonText: 'Mua ngay',
-                cancelButtonText: 'Hủy'
+                cancelButtonText: 'Há»§y'
             }).then((result) => {
                 if (result.isConfirmed) {
                     $.post('api_monthly_pass.php', { action: 'buy', id: id }, function(res) {
                         if (res.status === 'success') {
-                            Swal.fire('Thành công!', res.message, 'success').then(() => location.reload());
+                            Swal.fire('ThÃ nh cÃ´ng!', res.message, 'success').then(() => location.reload());
                         } else {
-                            Swal.fire('Lỗi!', res.message, 'error');
+                            Swal.fire('Lá»—i!', res.message, 'error');
                         }
                     }, 'json');
                 }
@@ -348,9 +324,9 @@ $userMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fet
         function claimDaily() {
             $.post('api_monthly_pass.php', { action: 'claim' }, function(res) {
                 if (res.status === 'success') {
-                    Swal.fire('Đã nhận!', res.message, 'success').then(() => location.reload());
+                    Swal.fire('ÄÃ£ nháº­n!', res.message, 'success').then(() => location.reload());
                 } else {
-                    Swal.fire('Lỗi!', res.message, 'error');
+                    Swal.fire('Lá»—i!', res.message, 'error');
                 }
             }, 'json');
         }
