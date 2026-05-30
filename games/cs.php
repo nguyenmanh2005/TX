@@ -1,12 +1,41 @@
 <?php
 session_start();
 
+// Kiểm tra đăng nhập
 if (!isset($_SESSION['Iduser'])) {
     header("Location: ../login.php");
     exit();
 }
 
 require '../db_connect.php';
+
+// AJAX history endpoint
+$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_history') {
+    header('Content-Type: application/json; charset=utf-8');
+
+    $id = $_SESSION['Iduser'] ?? 0;
+    $sql = "SELECT * FROM history_cs WHERE Iduser = ? ORDER BY Time DESC LIMIT 20";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $history = [];
+    while ($row = $result->fetch_assoc()) {
+        $history[] = $row;
+    }
+    $stmt->close();
+
+    echo json_encode([
+        'success' => true,
+        'history' => $history
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// Load theme
 require_once '../load_theme.php';
 
 $userId = $_SESSION['Iduser'];
@@ -17,11 +46,10 @@ $stmt->execute();
 $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 
-
-// Get statistics from database for chart
+// Get statistics for chart
 $gameThang = 0;
 $gameThua = 0;
-$sqlStats = "SELECT COUNT(*) as total, SUM(CASE WHEN WinAmount > 0 THEN 1 ELSE 0 END) as wins FROM history_number WHERE Iduser = ?";
+$sqlStats = "SELECT COUNT(*) as total, SUM(CASE WHEN WinAmount > 0 THEN 1 ELSE 0 END) as wins FROM history_cs WHERE Iduser = ?";
 $stmtStats = $conn->prepare($sqlStats);
 $stmtStats->bind_param("i", $userId);
 $stmtStats->execute();
@@ -32,103 +60,105 @@ if ($rowStats = $resultStats->fetch_assoc()) {
 }
 $stmtStats->close();
 
-
-$soDu = $user['Money'];
+if (!$user) {
+    die("Không tìm thấy thông tin người dùng!");
+}
+$money = $user['Money'];
 $tenNguoiChoi = $user['Name'];
 
-// Khởi tạo số bí mật nếu chưa có
-if (!isset($_SESSION['so_bi_mat'])) {
-    $_SESSION['so_bi_mat'] = rand(1, 100);
-}
+$message = "";
+$winning = "";
 
-// AJAX handler
-if (isset($_GET['action'])) {
-    header('Content-Type: application/json');
-    $action = $_GET['action'];
-    $response = ['success' => false, 'message' => ''];
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['user_number'])) {
+    $userInput = trim($_POST['user_number']);
 
-    if ($action === 'new_game') {
-        $_SESSION['so_bi_mat'] = rand(1, 100);
-        $response = [
-            'success' => true,
-            'message' => '🆕 Trò chơi mới đã bắt đầu! Đoán số từ 1 đến 100.',
-            'newBalance' => number_format($soDu, 0, ',', '.') . ' gtlm'
-        ];
-    } elseif ($action === 'guess') {
-        $chon = (int) ($_POST['so'] ?? 0);
-        $cuoc = (int) ($_POST['cuoc'] ?? 0);
+    if (!preg_match('/^\d{5}$/', $userInput)) {
+        $message = "❌ Vui lòng nhập đúng 5 chữ số (VD: 12345, 00129)";
+    } else {
+        // Sinh chuỗi ngẫu nhiên 5 chữ số
+        $winning = "";
+        for ($i = 0; $i < 5; $i++) {
+            $winning .= strval(rand(0, 9));
+        }
 
-        if ($cuoc <= 0 || $cuoc > $soDu) {
-            $response['message'] = '⚠️ Số gtlm cược không hợp lệ hoặc không đủ Số Gtlm!';
-        } elseif ($chon < 1 || $chon > 100) {
-            $response['message'] = '❌ Vui lòng chọn số từ 1 đến 100!';
+        // So sánh từng chữ số theo vị trí
+        $correct = 0;
+        for ($i = 0; $i < 5; $i++) {
+            if ($userInput[$i] === $winning[$i]) {
+                $correct++;
+            }
+        }
+
+        // Tính thưởng theo số trúng
+        $prizeTable = [0, 10000, 20000, 50000, 100000, 1000000];
+        $prize = $prizeTable[$correct];
+        $isWin = ($prize > 0);
+
+        $newBalance = $money + $prize;
+        if ($isWin) {
+            $message = "🎉 Bạn trúng $correct số! Nhận thưởng: " . number_format($prize) . " gtlm.";
         } else {
-            $soBiMat = $_SESSION['so_bi_mat'];
-            $khoangCach = abs($chon - $soBiMat);
-            $thang = 0;
-            $isWin = false;
-
-            if ($chon === $soBiMat) {
-                $thang = $cuoc * 10;
-                $isWin = true;
-                $msg = "🎉 CHÍNH XÁC! Bạn thắng " . number_format($thang, 0, ',', '.') . " gtlm!";
-                $_SESSION['so_bi_mat'] = rand(1, 100); // Reset game mới
-            } elseif ($khoangCach <= 5) {
-                $thang = $cuoc * 2;
-                $isWin = true;
-                $msg = "🔥 Rất gần! Cách " . $khoangCach . " đơn vị. Thắng " . number_format($thang, 0, ',', '.') . " gtlm!";
-            } else {
-                $soDu -= $cuoc;
-                $isWin = false;
-                $huong = ($chon < $soBiMat) ? "LỚN HƠN" : "NHỎ HƠN";
-                $msg = "❌ Sai rồi! Số bí mật " . $huong . " số bạn chọn. Mất " . number_format($cuoc, 0, ',', '.') . " gtlm.";
-            }
-
-            if ($isWin) {
-                $soDu += $thang;
-            }
-
-            // Cập nhật database
-            $capNhat = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
-            $capNhat->bind_param("di", $soDu, $userId);
-            $capNhat->execute();
-
-            // Lưu lịch sử (optional but recommended for backend consistency)
-            require_once '../game_history_helper.php';
-            logGameHistory($conn, $userId, 'GuessNumber', $cuoc, $thang, $isWin);
-        
-        // Insert vào history_number table
-        $historyStmt = $conn->prepare("INSERT INTO history_number (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-        if ($historyStmt) {
-            $result = $_POST['result'] ?? 'Unknown';
-            $bet = (int)($_POST['bet'] ?? 0);
-            $winAmount = (int)($_POST['win'] ?? $reward ?? 0);
-            $userId = $_SESSION['Iduser'] ?? 0;
-            $historyStmt->bind_param("iisi", $userId, $bet, $result, $winAmount);
-            $historyStmt->execute();
-            $historyStmt->close();
+            $message = "😢 Không trúng số nào. Thử lại nhé!";
         }
 
-            $response = [
+        // Cập nhật Số Gtlm
+        $stmtUpd = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
+        if ($stmtUpd) {
+            $stmtUpd->bind_param("di", $newBalance, $userId);
+            $stmtUpd->execute();
+            $stmtUpd->close();
+        }
+
+        // Insert vào history_cs table
+        if (isset($_SESSION['Iduser'])) {
+            $betAmount = 0;
+            $resultStr = $winning;
+            $winAmount = $prize;
+
+            $historyStmt = $conn->prepare("INSERT INTO history_cs (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
+            if ($historyStmt) {
+                $historyStmt->bind_param("iisi", $userId, $betAmount, $resultStr, $winAmount);
+                $historyStmt->execute();
+                $historyStmt->close();
+            }
+        }
+
+        // Track quest progress
+        require_once '../game_history_helper.php';
+        logGameHistoryWithAll($conn, $userId, 'Cơ hội triệu phú', 0, $prize, $isWin);
+
+        require_once '../user_progress_helper.php';
+        up_add_xp($conn, $userId, 5 + ($isWin ? 10 : 0));
+
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
                 'success' => true,
-                'isWin' => $isWin,
-                'message' => $msg,
-                'newBalance' => number_format($soDu, 0, ',', '.') . ' gtlm'
-            ];
+                'winning' => $winning,
+                'message' => $message,
+                'correct' => $correct,
+                'win' => $isWin,
+                'balance' => number_format($newBalance, 0, ',', '.'),
+                'stats' => [
+                    'thang' => $gameThang + ($isWin ? 1 : 0),
+                    'thua' => $gameThua + (!$isWin ? 1 : 0)
+                ]
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
         }
+
+        $money = $newBalance;
     }
-    echo json_encode($response);
-    exit;
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="vi">
 
 <head>
-    <meta charset="UTF-8">
-    <title>Con Số May Mắn - Premium AJAX</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.6.0/confetti.browser.min.js"></script>
+    <meta charset="UTF-8">
+    <title>Vietlott Mini</title>
     <link rel="stylesheet" href="../assets/css/main.css">
     <link rel="stylesheet" href="../assets/css/components.css">
     <link rel="stylesheet" href="../assets/css/responsive.css">
@@ -138,212 +168,288 @@ if (isset($_GET['action'])) {
     <link rel="stylesheet" href="../assets/css/game-ui-enhancements.css">
     <style>
         body {
-            position: relative;
-            cursor: url('../img/chuot.png'), auto !important;
+            cursor: url('img/chuot.png'), auto !important;
             font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%);
             text-align: center;
-            background:
-                <?= $bgGradientCSS ?>
-            ;
-            background-attachment: fixed;
-            padding: 50px;
+            position: relative;
+            \n padding: 40px 20px;
             min-height: 100vh;
-            overflow-x: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
 
-        #threejs-background {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            pointer-events: none;
+        * {
+            cursor: inherit;
         }
 
-        .game-box {
-            background: rgba(40, 44, 52, 0.95);
+        button,
+        a,
+        input[type="button"],
+        input[type="submit"],
+        label,
+        select,
+        input[type="text"] {
+            cursor: url('img/tay.png'), pointer !important;
+        }
+
+        .game-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.98);
             padding: 40px;
-            border-radius: 24px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(15px);
-            width: 95%;
-            max-width: 550px;
-            color: white;
-            z-index: 1;
+            border-radius: var(--border-radius-lg);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.5);
         }
 
-        .game-title {
+        h1 {
+            color: var(--primary-color);
             font-size: 32px;
-            margin-bottom: 10px;
-            font-weight: 800;
-            color: #fff;
-        }
-
-        .balance {
-            font-size: 20px;
-            color: #ffd700;
-            margin-bottom: 25px;
-        }
-
-        .hint-box {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 15px;
-            border-radius: 12px;
-            font-size: 15px;
-            margin-bottom: 25px;
-            color: rgba(255, 255, 255, 0.8);
-            border: 1px dashed rgba(255, 255, 255, 0.2);
-        }
-
-        .input-group {
-            margin-bottom: 20px;
-            text-align: left;
-        }
-
-        .input-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.9);
-            padding-left: 5px;
-        }
-
-        input[type="number"] {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 14px 20px;
-            border-radius: 12px;
-            color: white;
-            font-size: 18px;
-            width: 100%;
-            box-sizing: border-box;
-            transition: 0.3s;
-        }
-
-        input:focus {
-            border-color: #ffd700;
-            outline: none;
-            background: rgba(255, 255, 255, 0.15);
-        }
-
-        .btn-game {
-            padding: 16px 32px;
-            border-radius: 12px;
             font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .balance-display {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--success-color);
+            padding: 15px;
+            background: rgba(232, 245, 233, 0.5);
+            border-radius: var(--border-radius);
+            border: 2px solid var(--success-color);
+            margin: 20px 0;
+        }
+
+        form {
+            margin: 30px 0;
+            padding: 25px;
+            background: rgba(240, 248, 255, 0.5);
+            border-radius: var(--border-radius);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        label {
+            display: block;
+            margin: 15px 0 10px;
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 18px;
+        }
+
+        input[type="text"] {
+            padding: 14px 20px;
+            font-size: 24px;
+            font-weight: 700;
+            width: 200px;
+            text-align: center;
+            border: 3px solid var(--border-color);
+            border-radius: var(--border-radius);
+            background: rgba(255, 255, 255, 0.95);
+            color: var(--text-dark);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            letter-spacing: 4px;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.2);
+        }
+
+        button {
+            padding: 14px 32px;
+            font-size: 18px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
             border: none;
             color: white;
-            transition: 0.3s;
-            cursor: url('../img/tay.png'), pointer !important;
-            width: 100%;
-            margin-top: 10px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .btn-guess {
-            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
-            font-size: 18px;
-            letter-spacing: 1px;
+        button:hover:not(:disabled) {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 8px 25px rgba(46, 204, 113, 0.6);
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
         }
 
-        .btn-new {
-            background: rgba(255, 255, 255, 0.1);
-            width: auto;
-            padding: 10px 20px;
-            font-size: 14px;
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed !important;
         }
 
-        .btn-game:hover {
-            transform: translateY(-2px);
-            filter: brightness(1.2);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        .result {
+            margin-top: 30px;
+            font-size: 20px;
+            font-weight: 700;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            animation: messageAppear 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            line-height: 1.8;
         }
 
-        .status-msg {
-            margin-top: 25px;
-            padding: 18px;
-            border-radius: 12px;
-            font-weight: 600;
-            min-height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            animation: fadeIn 0.4s ease;
+        .result.win {
+            color: #00ff00;
+            background: rgba(40, 167, 69, 0.2);
+            border: 3px solid #28a745;
+            box-shadow: 0 0 25px rgba(40, 167, 69, 0.6);
+            animation: messageAppear 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55), winPulse 1.5s ease infinite;
         }
 
-        .status-msg.win {
-            background: rgba(40, 167, 69, 0.15);
-            color: #4ade80;
-            border: 1px solid rgba(40, 167, 69, 0.3);
-        }
-
-        .status-msg.lose {
-            background: rgba(220, 53, 69, 0.15);
+        .result.lose {
             color: #ff6b6b;
-            border: 1px solid rgba(220, 53, 69, 0.3);
-            animation: shake 0.5s;
+            background: rgba(220, 53, 69, 0.2);
+            border: 3px solid #dc3545;
         }
 
-        @keyframes fadeIn {
-            from {
+        @keyframes messageAppear {
+            0% {
                 opacity: 0;
-                transform: translateY(10px);
+                transform: translateY(-30px) scale(0.8);
             }
 
-            to {
+            50% {
+                transform: translateY(5px) scale(1.1);
+            }
+
+            100% {
                 opacity: 1;
-                transform: translateY(0);
+                transform: translateY(0) scale(1);
             }
         }
 
-        @keyframes shake {
+        @keyframes winPulse {
 
             0%,
             100% {
-                transform: translateX(0);
+                transform: scale(1);
+                box-shadow: 0 0 25px rgba(40, 167, 69, 0.6);
             }
 
-            20% {
-                transform: translateX(-5px);
-            }
-
-            40% {
-                transform: translateX(5px);
-            }
-
-            60% {
-                transform: translateX(-5px);
-            }
-
-            80% {
-                transform: translateX(5px);
+            50% {
+                transform: scale(1.02);
+                box-shadow: 0 0 40px rgba(40, 167, 69, 0.9);
             }
         }
 
-        .home-link {
-            color: rgba(255, 255, 255, 0.5);
-            text-decoration: none;
-            font-size: 14px;
+        .winning {
+            font-weight: 700;
+            font-size: 24px;
+            color: #e67e22;
             margin-top: 20px;
-            display: inline-block;
-            transition: 0.3s;
+            padding: 15px;
+            background: rgba(230, 126, 34, 0.1);
+            border-radius: var(--border-radius);
+            border: 2px solid #e67e22;
+            animation: winningAppear 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
 
-        .home-link:hover {
+        @keyframes winningAppear {
+            0% {
+                opacity: 0;
+                transform: scale(0.5) rotate(-180deg);
+            }
+
+            50% {
+                transform: scale(1.2) rotate(10deg);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1) rotate(0deg);
+            }
+        }
+
+        a {
+            display: inline-block;
+            margin-top: 25px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--secondary-dark) 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        a:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.5);
+        }
+
+        .bottom-section {
+            margin-top: 50px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .history-box,
+        .chart-box {
+            background: rgba(0, 121, 107, 0.9);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
             color: white;
         }
-    
-        /* Statistics Container */
+
+        .history-box h3,
+        .chart-box h3 {
+            margin-top: 0;
+            font-size: 20px;
+            color: #ffd700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .history-box table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .history-box table tr {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            animation: slideIn 0.5s ease-out forwards;
+        }
+
+        .history-box table td,
+        .history-box table th {
+            padding: 10px;
+            text-align: center;
+        }
+
+        .history-box table th {
+            background: rgba(255, 255, 255, 0.1);
+            font-weight: 700;
+            color: #ffd700;
+        }
+
+        .history-box table tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        @media (max-width: 768px) {
+            .bottom-section {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+        }
+
         .stats-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
             margin-bottom: 20px;
         }
-        
+
         .stat-item {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -352,20 +458,20 @@ if (isset($_GET['action'])) {
             text-align: center;
             transition: all 0.3s ease;
         }
-        
+
         .stat-item:hover {
             background: rgba(255, 255, 255, 0.1);
             border-color: rgba(255, 255, 255, 0.2);
         }
-        
+
         .stat-item.wins {
             border-left: 4px solid #4ade80;
         }
-        
+
         .stat-item.losses {
             border-left: 4px solid #ff6b6b;
         }
-        
+
         .stat-item .label {
             font-size: 12px;
             color: rgba(255, 255, 255, 0.6);
@@ -373,1600 +479,56 @@ if (isset($_GET['action'])) {
             letter-spacing: 1px;
             margin-bottom: 8px;
         }
-        
+
         .stat-item .value {
             font-size: 28px;
             font-weight: 700;
             color: #ffd700;
         }
-        
+
         .chart-box {
             display: flex;
             flex-direction: column;
         }
-        
+
         .chart-box canvas {
             margin-top: 20px;
         }
 
+        \n
     </style>
 </head>
 
 <body>
 
 
-    <div class="game-box">
-        <h1 class="game-title">🎯 Con Số May Mắn</h1>
-        <div class="balance">💰 Số Gtlm: <b id="balance-val"><?= number_format($soDu, 0, ',', '.') ?> gtlm</b></div>
-
-        <div class="hint-box">
-            💡 Gợi ý: Đoán đúng con số bí mật (1-100) để nhận **x10** gtlm thưởng!<br>
-            Đoán gần đúng (sai lệch ≤ 5) vẫn nhận được **x2** gtlm thưởng.
+    <div class="game-container">
+        <h1>🎲 Vietlott Mini - Dự Đoán 5 Chữ Số</h1>
+        <div class="balance-display">
+            💰 Số Gtlm hiện tại: <strong><?= number_format($money, 0, ',', '.') ?> gtlm</strong>
         </div>
 
-        <div id="game-form">
-            <div class="input-group">
-                <label>🎯 Con số bạn chọn (1-100):</label>
-                <input type="number" id="guess-number" placeholder="Ví dụ: 50" min="1" max="100">
-            </div>
-            <div class="input-group">
-                <label>💰 Số gtlm cược (gtlm):</label>
-                <input type="number" id="bet-amount" placeholder="Ví dụ: 10000" min="1" max="<?= $soDu ?>">
-            </div>
-            <button id="btn-guess" class="btn-game btn-guess">🎯 ĐOÁN NGAY</button>
-            <div style="margin-top: 15px;">
-                <button id="btn-new" class="btn-game btn-new">🆕 Làm mới game</button>
-            </div>
-        </div>
+        <form method="POST" id="lotteryForm">
+            <label>🎯 Nhập 5 chữ số (VD: 12345):</label>
+            <input type="text" name="user_number" id="userNumber" maxlength="5" pattern="\d{5}" required
+                placeholder="00000">
+            <br>
+            <button type="submit" id="submitBtn">🎰 Quay số</button>
+            <p><a href="../index.php">🏠 Quay Lại Trang Chủ</a></p>
+        </form>
 
-        <div id="status-msg" class="status-msg" style="display: none;"></div>
-
-        <a href="../index.php" class="home-link">🏠 Quay lại trang chủ</a>
+        <?php if ($message): ?>
+            <div
+                class="result <?= strpos($message, 'trúng') !== false || strpos($message, '🎉') !== false ? 'win' : 'lose' ?>">
+                <?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?>
+            </div>
+            <?php if ($winning): ?>
+                <div class="winning">🎯 Kết quả: <strong><?= htmlspecialchars($winning) ?></strong></div>
+            <?php endif; ?>
+        <?php endif; ?>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        // Three.js Background
-        (function () {
-            window.themeConfig = {
-                particleCount: <?= $particleCount ?>,
-                particleSize: <?= $particleSize ?>,
-                particleColor: '<?= $particleColor ?>',
-                particleOpacity: <?= $particleOpacity ?>,
-                shapeCount: <?= $shapeCount ?>,
-                shapeColors: <?= json_encode($shapeColors) ?>,
-                shapeOpacity: <?= $shapeOpacity ?>,
-                bgGradient: <?= json_encode($bgGradient) ?>
-            };
-            const script = document.createElement('script');
-            script.src = '../threejs-background.js';
-            document.head.appendChild(script);
-        })();
-
-        document.addEventListener('DOMContentLoaded', function () {
-            const btnGuess = document.getElementById('btn-guess');
-            const btnNew = document.getElementById('btn-new');
-            const numInput = document.getElementById('guess-number');
-            const betInput = document.getElementById('bet-amount');
-            const statusMsg = document.getElementById('status-msg');
-            const balanceVal = document.getElementById('balance-val');
-
-            // Handle Guess
-            btnGuess.addEventListener('click', async () => {
-                const num = numInput.value;
-                const bet = betInput.value;
-
-                if (!num || num < 1 || num > 100) return Swal.fire('Lỗi', 'Vui lòng chọn số từ 1 đến 100!', 'error');
-                if (!bet || bet <= 0) return Swal.fire('Lỗi', 'Vui lòng nhập gtlm cược hợp lệ!', 'error');
-
-                btnGuess.disabled = true;
-                statusMsg.style.display = 'none';
-
-                try {
-                    const formData = new FormData();
-                    formData.append('so', num);
-                    formData.append('cuoc', bet);
-
-                    const res = await fetch('number.php?action=guess', { method: 'POST', body: formData });
-                    const data = await res.json();
-
-                    btnGuess.disabled = false;
-
-                    if (data.success) {
-                        balanceVal.textContent = data.newBalance;
-                        statusMsg.textContent = data.message;
-                        statusMsg.className = 'status-msg ' + (data.isWin ? 'win' : 'lose');
-                        statusMsg.style.display = 'flex';
-
-                        if (data.isWin && typeof confetti === 'function') {
-                            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-                        }
-                    } else {
-                        Swal.fire('Hệ thống', data.message, 'warning');
-                    }
-                } catch (e) {
-                    btnGuess.disabled = false;
-                    console.error(e);
-                }
-            });
-
-            // Handle New Game
-            btnNew.addEventListener('click', async () => {
-                try {
-                    const res = await fetch('number.php?action=new_game');
-                    const data = await res.json();
-                    if (data.success) {
-                        numInput.value = '';
-                        statusMsg.style.display = 'flex';
-                        statusMsg.className = 'status-msg';
-                        statusMsg.textContent = data.message;
-                        Swal.fire('Thành công', data.message, 'success');
-                    }
-                } catch (e) {
-                    console.error(e);
-                }
-            });
-        });
-    </script>
-
-
-
-
-
-
-
-
-
-
-
-    <!-- Premium Effects System -->
-    <canvas id="threejs-background"></canvas>
-    <script>
-        (function () {
-            window.themeConfig = {
-                particleCount: <?= $particleCount ?? 800 ?>,
-                particleSize: <?= $particleSize ?? 0.05 ?>,
-                particleColor: '<?= $particleColor ?? "#ffffff" ?>',
-                particleOpacity: <?= $particleOpacity ?? 0.6 ?>,
-                shapeCount: <?= $shapeCount ?? 10 ?>,
-                shapeColors: <?= json_encode($shapeColors ?? ["#667eea", "#764ba2", "#4facfe", "#00f2fe"]) ?>,
-                shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>,
-                bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>
-            };
-            const prefix = window.location.pathname.includes('/games/') ? '../' : '';
-            const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
-
-            scripts.forEach(src => {
-                const s = document.createElement('script');
-                s.src = prefix + src;
-                s.async = false;
-                document.head.appendChild(s);
-            });
-        })();
     
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for number game
-    const ctxNumber = document.getElementById('gameChart');
-    if (ctxNumber) {
-        const gameChart = new Chart(ctxNumber.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadNumberHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for number game
-    const ctxNumber = document.getElementById('gameChart');
-    if (ctxNumber) {
-        const gameChart = new Chart(ctxNumber.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadNumberHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for number game
-    const ctxNumber = document.getElementById('gameChart');
-    if (ctxNumber) {
-        const gameChart = new Chart(ctxNumber.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadNumberHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for number game
-    const ctxNumber = document.getElementById('gameChart');
-    if (ctxNumber) {
-        const gameChart = new Chart(ctxNumber.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadNumberHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for number game
-    const ctxNumber = document.getElementById('gameChart');
-    if (ctxNumber) {
-        const gameChart = new Chart(ctxNumber.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadNumberHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for number game
-    const ctxNumber = document.getElementById('gameChart');
-    if (ctxNumber) {
-        const gameChart = new Chart(ctxNumber.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadNumberHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for number game
-    const ctxNumber = document.getElementById('gameChart');
-    if (ctxNumber) {
-        const gameChart = new Chart(ctxNumber.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadNumberHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for number game
-    const ctxNumber = document.getElementById('gameChart');
-    if (ctxNumber) {
-        const gameChart = new Chart(ctxNumber.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadNumberHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for number game
-    const ctxNumber = document.getElementById('gameChart');
-    if (ctxNumber) {
-        const gameChart = new Chart(ctxNumber.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadNumberHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for number game
-    const ctxNumber = document.getElementById('gameChart');
-    if (ctxNumber) {
-        const gameChart = new Chart(ctxNumber.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadNumberHistory);
-
-
-
-    // Improved history loading function
-    
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for number game
-    const ctxNumber = document.getElementById('gameChart');
-    if (ctxNumber) {
-        const gameChart = new Chart(ctxNumber.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadNumberHistory);
-
-
-
-    // Improved history loading function
-    async function loadNumberHistory() {
-        try {
-            const response = await fetch('number.php?action=get_history', {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            
-            if (data.success && data.history && data.history.length > 0) {
-                const historyTable = document.querySelector('.history-box table');
-                
-                if (historyTable) {
-                    let tbody = historyTable.querySelector('tbody');
-                    if (!tbody) {
-                        tbody = document.createElement('tbody');
-                        historyTable.appendChild(tbody);
-                    }
-                    
-                    // Clear existing rows except if they have data
-                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
-                        tbody.innerHTML = '';
-                    }
-                    
-                    // Add up to 10 most recent records
-                    data.history.slice(0, 10).forEach((record, index) => {
-                        const newRow = document.createElement('tr');
-                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
-                        newRow.style.animationDelay = (index * 0.05) + 's';
-                        newRow.innerHTML = \`
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                ${record.Result || '-'}
-                            </td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
-                        \`;
-                        tbody.appendChild(newRow);
-                    });
-                    
-                    // Hide empty message
-                    const emptyMsg = document.querySelector('.history-box p');
-                    if (emptyMsg && data.history.length > 0) {
-                        emptyMsg.style.display = 'none';
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Load history error:', error);
-        }
-    }
-    
-    // Chart.js for number game
-    const ctxNumber = document.getElementById('gameChart');
-    if (ctxNumber) {
-        const gameChart = new Chart(ctxNumber.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Lần Thắng', 'Lần Thua'],
-                datasets: [{
-                    label: 'Kết quả',
-                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                    backgroundColor: [
-                        'rgba(74, 222, 128, 0.7)',
-                        'rgba(255, 107, 107, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(74, 222, 128, 1)',
-                        'rgba(255, 107, 107, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            font: { size: 13, weight: '600' },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                label += ' (' + percentage + '%)';
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-load history on page load
-    window.addEventListener('load', loadNumberHistory);
-
-</script>
-
-
 
 
 
@@ -2111,6 +673,1616 @@ if (isset($_GET['action'])) {
         <canvas id="gameChart" style="max-height: 300px;"></canvas>
     </div>
 </div>
+
+                <div class="stat-item losses">
+                    <div class="label">Lần Thua</div>
+                    <div class="value"><?= $gameThua ?></div>
+                </div>
+            </div>
+            <canvas id="gameChart" style="max-height: 300px;"></canvas>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert2/11.7.3/sweetalert2.all.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            let gameChart;
+
+            // Initialize Chart
+            const ctxCs = document.getElementById('gameChart');
+            if (ctxCs) {
+                gameChart = new Chart(ctxCs.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Lần Thắng', 'Lần Thua'],
+                        datasets: [{
+                            label: 'Kết quả',
+                            data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                            backgroundColor: ['rgba(74, 222, 128, 0.7)', 'rgba(255, 107, 107, 0.7)'],
+                            borderColor: ['rgba(74, 222, 128, 1)', 'rgba(255, 107, 107, 1)'],
+                            borderWidth: 2,
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: 'rgba(255, 255, 255, 0.8)',
+                                    font: { size: 13, weight: '600' },
+                                    padding: 15,
+                                    usePointStyle: true,
+                                    pointStyle: 'circle'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            function updateUI(data) {
+                if (!data.success) {
+                    Swal.fire('Lỗi', data.message || 'Có lỗi xảy ra', 'error');
+                    $('#submitBtn').prop('disabled', false).text('🎰 Quay số');
+                    return;
+                }
+
+                // Simulate "Spinning" effect
+                let count = 0;
+                const interval = setInterval(() => {
+                    const temp = String(Math.floor(Math.random() * 90000 + 10000));
+                    $('#userNumber').val(temp);
+                    count++;
+                    if (count > 20) {
+                        clearInterval(interval);
+
+                        // Show real result
+                        $('#userNumber').val(data.winning);
+
+                        // Update Balance
+                        $('.balance-display strong').text(data.balance + ' gtlm');
+
+                        // Show message
+                        Swal.fire({
+                            title: data.win ? 'Chúc mừng!' : 'Rất tiếc!',
+                            text: data.message + ' Kết quả đúng là: ' + data.winning,
+                            icon: data.win ? 'success' : 'info',
+                            confirmButtonText: 'Chơi tiếp'
+                        });
+
+                        // Update Stats
+                        $('.stat-item.wins .value').text(data.stats.thang);
+                        $('.stat-item.losses .value').text(data.stats.thua);
+
+                        if (gameChart) {
+                            gameChart.data.datasets[0].data = [data.stats.thang, data.stats.thua];
+                            gameChart.update();
+                        }
+
+                        // Reload History
+                        loadCsHistory();
+
+                        $('#submitBtn').prop('disabled', false).text('🎰 Quay số');
+                    }
+                }, 50);
+            }
+
+            function loadCsHistory() {
+                $.get('cs.php?action=get_history', function (data) {
+                    if (data.success && data.history.length > 0) {
+                        const tbody = $('#historyBody');
+                        tbody.empty();
+                        data.history.slice(0, 10).forEach((record, index) => {
+                            tbody.append(`
+                                <tr style="animation: slideIn 0.5s ease-out forwards; animation-delay: ${index * 0.05}s">
+                                    <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                                    <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                                    <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">${record.Result || '-'}</td>
+                                    <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                                    <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                                </tr>
+                            `);
+                        });
+                    }
+                });
+            }
+
+            $('#lotteryForm').on('submit', function (e) {
+                e.preventDefault();
+                const userNum = $('#userNumber').val();
+                if (userNum.length !== 5) {
+                    Swal.fire('Nhắc nhở', 'Vui lòng nhập đủ 5 chữ số', 'warning');
+                    return;
+                }
+
+                $('#submitBtn').prop('disabled', true).text('Đang quay... 🎰');
+
+                $.ajax({
+                    url: 'cs.php',
+                    type: 'POST',
+                    data: $(this).serialize(),
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    success: updateUI,
+                    error: () => {
+                        Swal.fire('Lỗi', 'Không thể kết nối máy chủ', 'error');
+                        $('#submitBtn').prop('disabled', false).text('🎰 Quay số');
+                    }
+                });
+            });
+
+            // Load initial history
+            loadCsHistory();
+
+            // Auto initialize game effects
+            if (typeof GameEffectsAuto !== 'undefined') {
+                GameEffectsAuto.init();
+            }
+        });
+    </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <!-- Premium Effects System -->
+    <canvas id="threejs-background"></canvas>
+    <script>
+        (function () {
+            window.themeConfig = {
+                particleCount: <?= $particleCount ?? 800 ?>,
+                particleSize: <?= $particleSize ?? 0.05 ?>,
+                particleColor: '<?= $particleColor ?? "#ffffff" ?>',
+                particleOpacity: <?= $particleOpacity ?? 0.6 ?>,
+                shapeCount: <?= $shapeCount ?? 10 ?>,
+                shapeColors: <?= json_encode($shapeColors ?? ["#667eea", "#764ba2", "#4facfe", "#00f2fe"]) ?>,
+                shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>,
+                bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>
+            };
+            const prefix = window.location.pathname.includes('/games/') ? '../' : '';
+            const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
+
+            scripts.forEach(src => {
+                const s = document.createElement('script');
+                s.src = prefix + src;
+                s.async = false;
+                document.head.appendChild(s);
+            });
+        })();
+    
+
+    // Improved history loading function
+    
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for cs game
+    const ctxCs = document.getElementById('gameChart');
+    if (ctxCs) {
+        const gameChart = new Chart(ctxCs.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadCsHistory);
+
+
+
+    // Improved history loading function
+    
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for cs game
+    const ctxCs = document.getElementById('gameChart');
+    if (ctxCs) {
+        const gameChart = new Chart(ctxCs.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadCsHistory);
+
+
+
+    // Improved history loading function
+    
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for cs game
+    const ctxCs = document.getElementById('gameChart');
+    if (ctxCs) {
+        const gameChart = new Chart(ctxCs.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadCsHistory);
+
+
+
+    // Improved history loading function
+    
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for cs game
+    const ctxCs = document.getElementById('gameChart');
+    if (ctxCs) {
+        const gameChart = new Chart(ctxCs.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadCsHistory);
+
+
+
+    // Improved history loading function
+    
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for cs game
+    const ctxCs = document.getElementById('gameChart');
+    if (ctxCs) {
+        const gameChart = new Chart(ctxCs.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadCsHistory);
+
+
+
+    // Improved history loading function
+    
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for cs game
+    const ctxCs = document.getElementById('gameChart');
+    if (ctxCs) {
+        const gameChart = new Chart(ctxCs.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadCsHistory);
+
+
+
+    // Improved history loading function
+    
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for cs game
+    const ctxCs = document.getElementById('gameChart');
+    if (ctxCs) {
+        const gameChart = new Chart(ctxCs.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadCsHistory);
+
+
+
+    // Improved history loading function
+    
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for cs game
+    const ctxCs = document.getElementById('gameChart');
+    if (ctxCs) {
+        const gameChart = new Chart(ctxCs.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadCsHistory);
+
+
+
+    // Improved history loading function
+    
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for cs game
+    const ctxCs = document.getElementById('gameChart');
+    if (ctxCs) {
+        const gameChart = new Chart(ctxCs.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadCsHistory);
+
+
+
+    // Improved history loading function
+    
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for cs game
+    const ctxCs = document.getElementById('gameChart');
+    if (ctxCs) {
+        const gameChart = new Chart(ctxCs.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadCsHistory);
+
+
+
+    // Improved history loading function
+    
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for cs game
+    const ctxCs = document.getElementById('gameChart');
+    if (ctxCs) {
+        const gameChart = new Chart(ctxCs.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadCsHistory);
+
+
+
+    // Improved history loading function
+    async function loadCsHistory() {
+        try {
+            const response = await fetch('cs.php?action=get_history', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                const historyTable = document.querySelector('.history-box table');
+                
+                if (historyTable) {
+                    let tbody = historyTable.querySelector('tbody');
+                    if (!tbody) {
+                        tbody = document.createElement('tbody');
+                        historyTable.appendChild(tbody);
+                    }
+                    
+                    // Clear existing rows except if they have data
+                    if (tbody.children.length === 1 && tbody.children[0].cells[0].colSpan === 5) {
+                        tbody.innerHTML = '';
+                    }
+                    
+                    // Add up to 10 most recent records
+                    data.history.slice(0, 10).forEach((record, index) => {
+                        const newRow = document.createElement('tr');
+                        newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                        newRow.style.animation = 'slideIn 0.5s ease-out forwards';
+                        newRow.style.animationDelay = (index * 0.05) + 's';
+                        newRow.innerHTML = \`
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">${record.Id}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                ${record.Result || '-'}
+                            </td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; color: ${parseInt(record.WinAmount) > 0 ? '#4ade80' : '#ff6b6b'};">${parseInt(record.WinAmount).toLocaleString('vi-VN')}</td>
+                            <td style="padding: 8px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: right; font-size: 12px;">${record.Time}</td>
+                        \`;
+                        tbody.appendChild(newRow);
+                    });
+                    
+                    // Hide empty message
+                    const emptyMsg = document.querySelector('.history-box p');
+                    if (emptyMsg && data.history.length > 0) {
+                        emptyMsg.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Load history error:', error);
+        }
+    }
+    
+    // Chart.js for cs game
+    const ctxCs = document.getElementById('gameChart');
+    if (ctxCs) {
+        const gameChart = new Chart(ctxCs.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lần Thắng', 'Lần Thua'],
+                datasets: [{
+                    label: 'Kết quả',
+                    data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.7)',
+                        'rgba(255, 107, 107, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(74, 222, 128, 1)',
+                        'rgba(255, 107, 107, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            font: { size: 13, weight: '600' },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += ' (' + percentage + '%)';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-load history on page load
+    window.addEventListener('load', loadCsHistory);
+
+</script>
 
 </body>
 
