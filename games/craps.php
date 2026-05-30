@@ -32,6 +32,14 @@ if (isset($_GET['action'])) {
                 exit;
             }
             $_SESSION['craps_bet'] = $bet;
+
+            // Deduct bet immediately
+            $stmt = $conn->prepare("UPDATE users SET Money = Money - ? WHERE Iduser = ?");
+            $stmt->bind_param("di", $bet, $userId);
+            $stmt->execute();
+            $stmt->close();
+            
+            $money -= $bet; // Update local money variable
         } else {
             $bet = $_SESSION['craps_bet'];
         }
@@ -46,11 +54,11 @@ if (isset($_GET['action'])) {
 
         if ($phase === 'comeout') {
             if ($sum == 7 || $sum == 11) {
-                $winAmount = $bet;
+                $winAmount = $bet * 2;
                 $status = "Natural! Bạn thắng!";
                 $gameOver = true;
             } elseif ($sum == 2 || $sum == 3 || $sum == 12) {
-                $winAmount = -$bet;
+                $winAmount = 0;
                 $status = "Craps! Bạn thua.";
                 $gameOver = true;
             } else {
@@ -61,11 +69,11 @@ if (isset($_GET['action'])) {
             }
         } else {
             if ($sum == $point) {
-                $winAmount = $bet;
+                $winAmount = $bet * 2;
                 $status = "Hit the Point! Bạn thắng!";
                 $gameOver = true;
             } elseif ($sum == 7) {
-                $winAmount = -$bet;
+                $winAmount = 0;
                 $status = "Seven Out! Bạn thua.";
                 $gameOver = true;
             } else {
@@ -75,21 +83,23 @@ if (isset($_GET['action'])) {
         }
 
         if ($gameOver) {
-            $newMoney = $money + $winAmount;
-            $stmt = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
-            $stmt->bind_param("di", $newMoney, $userId);
-            $stmt->execute();
-            $stmt->close();
+            if ($winAmount > 0) {
+                $stmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
+                $stmt->bind_param("di", $winAmount, $userId);
+                $stmt->execute();
+                $stmt->close();
+                $money += $winAmount;
+            }
 
             // History
             $his = $conn->prepare("INSERT INTO history_craps (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
             $resStr = "Result: $sum (Phase: $phase)";
-            $his->bind_param("idss", $userId, $bet, $resStr, $winAmount);
+            $profit = $winAmount > 0 ? ($winAmount - $bet) : -$bet;
+            $his->bind_param("idss", $userId, $bet, $resStr, $profit);
             $his->execute();
             $his->close();
 
             unset($_SESSION['craps_phase'], $_SESSION['craps_point'], $_SESSION['craps_bet']);
-            $money = $newMoney;
         }
 
         echo json_encode([
@@ -355,6 +365,11 @@ if (isset($_GET['action'])) {
             font-weight: 600;
         }
 
+        .quick-bet-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 30px; }
+        .quick-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #e2e8f0; padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+        .quick-btn:hover { background: rgba(255,255,255,0.15); transform: translateY(-2px); }
+        .quick-btn.active { background: #f59e0b; color: #fff; border-color: #f59e0b; }
+
         @media (max-width: 600px) {
             .point-marker {
                 width: 55px;
@@ -401,10 +416,20 @@ if (isset($_GET['action'])) {
                 </div>
             </div>
 
+            <div class="quick-bet-grid">
+                <button class="quick-btn" onclick="setBet(10000, event)">10K</button>
+                <button class="quick-btn" onclick="setBet(50000, event)">50K</button>
+                <button class="quick-btn" onclick="setBet(100000, event)">100K</button>
+                <button class="quick-btn" onclick="setBet(500000, event)">500K</button>
+                <button class="quick-btn" onclick="setBet(1000000, event)">1M</button>
+                <button class="quick-btn" onclick="setBet(5000000, event)">5M</button>
+                <button class="quick-btn" onclick="setBet(<?= $money ?>, event)">ALL IN</button>
+            </div>
+
             <button id="roll-btn" class="btn-roll">LẮC XÚC XẮC</button>
         </div>
 
-        <div class="history-section">
+        <div class="history-section" style="display: none;">
             <h2 style="font-size: 1.2rem; letter-spacing: 2px; margin-bottom: 1rem;">LỊCH SỬ GẦN ĐÂY</h2>
             <div style="overflow-x: auto;">
                 <table class="history-table">
@@ -419,13 +444,75 @@ if (isset($_GET['action'])) {
                     <tbody id="history-body"></tbody>
                 </table>
             </div>
-            <div style="margin-top: 2.5rem;"><a href="../index.php"
-                    style="color: var(--primary); text-decoration: none; font-weight: 700; border: 1px solid var(--primary); padding: 0.8rem 2.5rem; border-radius: 50px; transition: 0.3s;">🏠
-                    QUAY LẠI SẢNH</a></div>
         </div>
+        <div style="margin-top: 1rem; text-align: center;"><a href="../index.php"
+                style="color: var(--primary); text-decoration: none; font-weight: 700; border: 1px solid var(--primary); padding: 0.8rem 2.5rem; border-radius: 50px; transition: 0.3s; display: inline-block;">🏠
+                QUAY LẠI SẢNH</a></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/confetti.browser.min.js"></script>
+
+    <script>
+        function setBet(amount, event) {
+            $('#bet-amt').val(amount);
+            $('.quick-btn').removeClass('active');
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
+        }
+
+        $('#roll-btn').click(function() {
+            const bet = parseInt($('#bet-amt').val());
+            if (isNaN(bet) || bet <= 0) {
+                Swal.fire('Lỗi', 'Cược không hợp lệ', 'error');
+                return;
+            }
+
+            const btn = $(this);
+            btn.prop('disabled', true).text('ĐANG LẮC...');
+
+            $.post('craps.php?action=roll', { bet: bet }, function(res) {
+                if (res.success) {
+                    let d1 = $('.die').eq(0);
+                    let d2 = $('.die').eq(1);
+                    
+                    d1.css({'transform': 'rotate(720deg)', 'transition': '0.6s'});
+                    d2.css({'transform': 'rotate(-720deg)', 'transition': '0.6s'});
+
+                    setTimeout(() => {
+                        d1.text(res.dice[0]).css({'transform': 'rotate(0deg)', 'transition': '0s'});
+                        d2.text(res.dice[1]).css({'transform': 'rotate(0deg)', 'transition': '0s'});
+                        $('#status-msg').text(res.status);
+
+                        if (res.point > 0) {
+                            $('#point-tag').show();
+                            $('#point-val').text(res.point);
+                            $('#bet-area').hide();
+                        }
+
+                        if (res.gameOver) {
+                            $('#balance-val').text(res.money);
+                            $('#point-tag').hide();
+                            $('#bet-area').show();
+
+                            if (res.winAmount > 0) {
+                                Swal.fire({title: 'THẮNG!', text: res.status + ` (+${res.winAmount} gtlm)`, icon: 'success', background: '#1e293b', color: '#fff'});
+                            } else {
+                                Swal.fire({title: 'THUA!', text: res.status, icon: 'error', background: '#1e293b', color: '#fff'});
+                            }
+                        }
+                        btn.prop('disabled', false).text('LẮC XÚC XẮC');
+                    }, 600);
+                } else {
+                    Swal.fire('Lỗi', res.message, 'error');
+                    btn.prop('disabled', false).text('LẮC XÚC XẮC');
+                }
+            }, 'json').fail(function() {
+                Swal.fire('Lỗi', 'Lỗi kết nối', 'error');
+                btn.prop('disabled', false).text('LẮC XÚC XẮC');
+            });
+        });
+    </script>
 
     <?php require_once '../casino_help.php'; ?>
 

@@ -7,11 +7,12 @@ if ($isDirectCall) {
     }
     require_once 'db_connect.php';
 
-INSERT IGNORE INTO global_jackpot (id, amount) VALUES (1, 100000000);
-";
-// $conn->query($sql);
+    /*
+    $sql = "INSERT IGNORE INTO global_jackpot (id, amount) VALUES (1, 100000000);";
+    $conn->query($sql);
+    */
 
-$action = $_GET['action'] ?? $_POST['action'] ?? '';
+    $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 switch ($action) {
     case 'get_status':

@@ -3713,18 +3713,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                     <span class="game-icon">🐎</span>
                     <span class="game-name">Đua Ngựa Pari-Mutuel</span>
                 </a>
-                <a href="bot.php" class="game-card" data-category="mini">
-                    <span class="game-icon">🎴</span>
-                    <span class="game-name">Đoán Màu Bài</span>
-                </a>
-                <a href="games/ac.php" class="game-card" data-category="mini">
-                    <span class="game-icon">🎯</span>
-                    <span class="game-name">Arcade</span>
-                </a>
-                <a href="games/cs.php" class="game-card" data-category="mini">
-                    <span class="game-icon">💎</span>
-                    <span class="game-name">Triệu Phú</span>
-                </a>
                 <a href="games/duangua.php" class="game-card" data-category="mini">
                     <span class="game-badge badge-hot">Hot</span>
                     <span class="game-icon">🐎</span>

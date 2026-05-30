@@ -64,6 +64,19 @@ $soDu = $user['Money'];
 $tenNguoiChoi = $user['Name'];
 
 // AJAX handler
+// Multipliers table
+$mineMultipliers = [
+    1 => 1.1, 2 => 1.3, 3 => 1.5, 4 => 1.7, 
+    5 => 2.0, 
+    6 => 2.4, 7 => 2.9, 8 => 3.5, 9 => 4.2, 
+    10 => 5.0, 
+    11 => 5.8, 12 => 6.7, 13 => 7.7, 14 => 8.8, 
+    15 => 10.0, 
+    16 => 15.0, 17 => 25.0, 18 => 40.0, 19 => 60.0, 
+    20 => 80.0, 21 => 90.0, 
+    22 => 100.0
+];
+
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
     $action = $_GET['action'];
@@ -140,9 +153,10 @@ if (isset($_GET['action'])) {
                 // An toàn hoặc Thắng
                 $safeCount = count($_SESSION['mines_revealed']);
                 $totalSafe = 22;
+                $currentMult = $mineMultipliers[$safeCount] ?? 1.0;
 
                 if ($safeCount >= $totalSafe) {
-                    $thang = $_SESSION['mines_cuoc'] * 3;
+                    $thang = $_SESSION['mines_cuoc'] * $mineMultipliers[22];
                     $soDu += $thang;
                     $capNhat = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
                     $capNhat->bind_param("di", $soDu, $userId);
@@ -152,7 +166,7 @@ if (isset($_GET['action'])) {
                     require_once '../game_history_helper.php';
                     logGameHistoryWithAll($conn, $userId, 'Minesweeper', $_SESSION['mines_cuoc'], $thang, true);
 
-                    $historyStmt = $conn->prepare("INSERT INTO history_minesweeper (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, 'Thắng', ?, NOW())");
+                    $historyStmt = $conn->prepare("INSERT INTO history_minesweeper (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, 'Thắng x100', ?, NOW())");
                     $historyStmt->bind_param("iii", $userId, $_SESSION['mines_cuoc'], $thang);
                     $historyStmt->execute();
 
@@ -160,7 +174,7 @@ if (isset($_GET['action'])) {
                         'success' => true,
                         'isGameOver' => true,
                         'isWin' => true,
-                        'message' => '🎉 CHIẾN THẮNG! Bạn nhận được ' . number_format($thang, 0, ',', '.') . ' gtlm!',
+                        'message' => '🎉 CHIẾN THẮNG! Bạn đã mở hết và nhận ' . number_format($thang, 0, ',', '.') . ' gtlm (x100)!',
                         'cellValue' => '💎',
                         'newBalance' => number_format($soDu, 0, ',', '.') . ' gtlm'
                     ];
@@ -169,10 +183,45 @@ if (isset($_GET['action'])) {
                     $response = [
                         'success' => true,
                         'isGameOver' => false,
-                        'message' => '✅ An toàn! Tiếp tục nào!',
-                        'cellValue' => '💎'
+                        'message' => '✅ An toàn! Đang ở mức x' . $currentMult,
+                        'cellValue' => '💎',
+                        'currentMult' => $currentMult,
+                        'potentialWin' => $_SESSION['mines_cuoc'] * $currentMult
                     ];
                 }
+            }
+        }
+    } elseif ($action === 'cashout') {
+        if ($_SESSION['mines_cuoc'] <= 0) {
+            $response['message'] = '⚠️ Ván chơi chưa bắt đầu hoặc đã kết thúc!';
+        } else {
+            $safeCount = count($_SESSION['mines_revealed'] ?? []);
+            if ($safeCount == 0) {
+                $response['message'] = '⚠️ Bạn phải mở ít nhất 1 ô trước khi rút!';
+            } else {
+                $currentMult = $mineMultipliers[$safeCount] ?? 1.0;
+                $thang = $_SESSION['mines_cuoc'] * $currentMult;
+                $soDu += $thang;
+                $capNhat = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
+                $capNhat->bind_param("di", $soDu, $userId);
+                $capNhat->execute();
+
+                require_once '../game_history_helper.php';
+                logGameHistoryWithAll($conn, $userId, 'Minesweeper', $_SESSION['mines_cuoc'], $thang, true);
+
+                $historyStmt = $conn->prepare("INSERT INTO history_minesweeper (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
+                $resStr = "Cashout x$currentMult";
+                $historyStmt->bind_param("iisi", $userId, $_SESSION['mines_cuoc'], $resStr, $thang);
+                $historyStmt->execute();
+
+                $response = [
+                    'success' => true,
+                    'isGameOver' => true,
+                    'isWin' => true,
+                    'message' => '💰 Rút thành công! Bạn nhận được ' . number_format($thang, 0, ',', '.') . ' gtlm (x' . $currentMult . ')',
+                    'newBalance' => number_format($soDu, 0, ',', '.') . ' gtlm'
+                ];
+                $_SESSION['mines_cuoc'] = 0;
             }
         }
     }
@@ -448,6 +497,24 @@ if (!isset($_SESSION['mines_board'])) {
             margin-top: 20px;
         }
 
+        .btn-quick-bet {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: url('../img/tay.png'), pointer !important;
+            font-weight: 600;
+            transition: 0.3s;
+            font-size: 0.75rem;
+        }
+
+        .btn-quick-bet:hover {
+            background: #28a745;
+            color: #fff;
+            border-color: #28a745;
+        }
+
     </style>
 </head>
 
@@ -466,8 +533,18 @@ if (!isset($_SESSION['mines_board'])) {
 
         <div id="bet-section">
             <input type="number" id="bet-amount" placeholder="GTLM muốn chiến (GTLM)" min="1" max="<?= $soDu ?>">
+            <div class="quick-bets" style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 20px; justify-content: center;">
+                <button class="btn-quick-bet" onclick="setBet(10000)">10K</button>
+                <button class="btn-quick-bet" onclick="setBet(50000)">50K</button>
+                <button class="btn-quick-bet" onclick="setBet(100000)">100K</button>
+                <button class="btn-quick-bet" onclick="setBet(500000)">500K</button>
+                <button class="btn-quick-bet" onclick="setBet(1000000)">1M</button>
+                <button class="btn-quick-bet" onclick="setBet(5000000)">5M</button>
+                <button class="btn-quick-bet" onclick="setBet('ALLIN')" style="background: #dc3545; color:#fff; border:none; font-weight:800;">ALL IN</button>
+            </div>
             <div style="display: flex; justify-content: center; gap: 10px;">
                 <button id="btn-start" class="btn-game btn-start">🎯 Thả thính</button>
+                <button id="btn-cashout" class="btn-game" style="background: #f39c12; display: none;">💰 Rút (x1.0)</button>
                 <button id="btn-new" class="btn-game btn-new">🆕 Làm mới</button>
             </div>
         </div>
@@ -479,6 +556,16 @@ if (!isset($_SESSION['mines_board'])) {
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        function setBet(amount) {
+            const balanceText = document.getElementById('balance-val').textContent.replace(/[^0-9]/g, '');
+            const money = parseInt(balanceText) || 0;
+            if (amount === 'ALLIN') {
+                document.getElementById('bet-amount').value = money;
+            } else {
+                document.getElementById('bet-amount').value = amount;
+            }
+        }
+
         // Three.js Background
         (function () {
             window.themeConfig = {
@@ -500,6 +587,7 @@ if (!isset($_SESSION['mines_board'])) {
             const grid = document.getElementById('mines-grid');
             const cells = document.querySelectorAll('.mine-cell');
             const btnStart = document.getElementById('btn-start');
+            const btnCashout = document.getElementById('btn-cashout');
             const btnNew = document.getElementById('btn-new');
             const statusBox = document.getElementById('status-box');
             const balanceVal = document.getElementById('balance-val');
@@ -516,6 +604,8 @@ if (!isset($_SESSION['mines_board'])) {
                 });
                 isGameActive = false;
                 betAmount.disabled = false;
+                btnStart.style.display = 'inline-block';
+                btnCashout.style.display = 'none';
                 btnStart.disabled = false;
             }
 
@@ -533,7 +623,9 @@ if (!isset($_SESSION['mines_board'])) {
                     if (data.success) {
                         isGameActive = true;
                         betAmount.disabled = true;
-                        btnStart.disabled = true;
+                        btnStart.style.display = 'none';
+                        btnCashout.style.display = 'inline-block';
+                        btnCashout.textContent = '💰 Rút (x1.0)';
                         balanceVal.textContent = data.newBalance;
                         statusBox.textContent = data.message;
                         statusBox.className = 'thongbao';
@@ -541,6 +633,33 @@ if (!isset($_SESSION['mines_board'])) {
                         Swal.fire('Thông báo', data.message, 'warning');
                     }
                 } catch (e) {
+                    console.error(e);
+                }
+            });
+
+            // Action Cashout
+            btnCashout.addEventListener('click', async () => {
+                if (!isGameActive) return;
+                try {
+                    const res = await fetch('minesweeper.php?action=cashout', { method: 'POST' });
+                    const data = await res.json();
+                    
+                    if (data.success) {
+                        isGameActive = false;
+                        btnStart.style.display = 'inline-block';
+                        btnCashout.style.display = 'none';
+                        statusBox.textContent = data.message;
+                        statusBox.className = 'thongbao thang';
+                        balanceVal.textContent = data.newBalance;
+                        
+                        if (typeof confetti === 'function') {
+                            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                        }
+                        Swal.fire('Thắng rồi!', data.message, 'success');
+                    } else {
+                        Swal.fire('Lỗi', data.message, 'error');
+                    }
+                } catch(e) {
                     console.error(e);
                 }
             });
@@ -576,9 +695,15 @@ if (!isset($_SESSION['mines_board'])) {
                         cell.textContent = data.cellValue;
                         cell.classList.add(data.cellValue === '💣' ? 'mine' : 'revealed');
                         statusBox.textContent = data.message;
+                        
+                        if (data.currentMult) {
+                            btnCashout.textContent = `💰 Rút (x${data.currentMult})`;
+                        }
 
                         if (data.isGameOver) {
                             isGameActive = false;
+                            btnStart.style.display = 'inline-block';
+                            btnCashout.style.display = 'none';
                             statusBox.className = 'thongbao ' + (data.isWin ? 'thang' : 'thua');
                             balanceVal.textContent = data.newBalance;
 

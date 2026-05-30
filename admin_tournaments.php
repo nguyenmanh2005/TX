@@ -443,8 +443,8 @@ $tournaments = $conn->query("SELECT t.*, (SELECT COUNT(*) FROM tournament_partic
                     <input type="hidden" name="action" value="create">
                     
                     <div class="form-group">
-                        <label>Tên giải đấu *</label>
-                        <input type="text" name="name" required placeholder="Ví dụ: Siêu Cúp Tài Xỉu Hoàng Gia">
+                        <label>Tên Giải Đấu:</label>
+                        <input type="text" name="name" required placeholder="Ví dụ: Siêu Cúp Xanh Đỏ Đối Kháng Hoàng Gia">
                     </div>
 
                     <div class="form-group">
@@ -453,49 +453,15 @@ $tournaments = $conn->query("SELECT t.*, (SELECT COUNT(*) FROM tournament_partic
                     </div>
 
                     <div class="form-group">
-                        <label>Loại Game *</label>
-                        <input type="text" name="game_type" list="game_list" required placeholder="Gõ để tìm hoặc chọn game...">
-                        <datalist id="game_list">
-                            <option value="Tài Xỉu">
-                            <option value="Bầu Cua (Thế Giới Linh Thú)">
-                            <option value="Cao Thấp">
-                            <option value="Roulette Pro">
-                            <option value="Classic Slot">
-                            <option value="Slot Machine Premium">
-                            <option value="Baccarat">
-                            <option value="Blackjack">
-                            <option value="Texas Hold'em (Poker)">
-                            <option value="Dragon Tiger (Rồng Hổ)">
-                            <option value="Xanh Đỏ Đối Kháng (Sicbo)">
-                            <option value="Trận Địa Trắng Đỏ (Xóc Đĩa)">
-                            <option value="Fan Tan">
-                            <option value="Crash Rocket">
-                            <option value="Plinko">
-                            <option value="Mines (Dò Mìn)">
-                            <option value="Tower (Trèo Tháp)">
-                            <option value="Limbo">
-                            <option value="Keno">
-                            <option value="Hi-Lo">
-                            <option value="Coin Flip">
-                            <option value="Oẳn Tù Tì">
-                            <option value="Bắn Cá Arcade">
-                            <option value="JOJO Battle">
-                            <option value="Battle Royale">
-                            <option value="Đố Vui Có Thưởng (Trivia)">
-                            <option value="World Boss">
-                            <option value="Vietlott 6/45">
-                            <option value="Đá Gà SV388">
-                            <option value="Đua Ngựa Royal">
-                            <option value="Sâm Lốc">
-                            <option value="Ba Cây">
-                            <option value="Tứ Sắc">
-                            <option value="Vòng Quay May Mắn">
-                            <option value="Bingo Live">
-                            <option value="Thẻ Cào May Mắn">
-                            <option value="Yahtzee Dice">
-                            <option value="Craps Table">
-                            <option value="Dice Roll Pro">
-                        </datalist>
+                        <label>Loại Game:</label>
+                        <select name="game_type">
+                            <option value="Xanh Đỏ Đối Kháng">Xanh Đỏ Đối Kháng</option>
+                            <option value="Baccarat">Baccarat</option>
+                            <option value="Roulette">Roulette</option>
+                            <option value="Poker">Poker</option>
+                            <option value="Xóc Đĩa">Xóc Đĩa</option>
+                            <option value="Tất cả">Tất cả Game</option>
+                        </select>
                     </div>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">

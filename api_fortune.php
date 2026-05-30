@@ -38,7 +38,8 @@ $fortunes = [
     "Trí tuệ minh mẫn, hôm nay là ngày tuyệt vời để chơi các game cân não như Poker."
 ];
 
-$games = ["Tài Xỉu", "Xóc Đĩa", "Bầu Cua", "Poker", "Blackjack", "Slot Machine", "Baccarat"];
+// Array of games for the wheel
+$games = ["Xanh Đỏ Đối Kháng", "Xóc Đĩa", "Bầu Cua", "Poker", "Blackjack", "Slot Machine", "Baccarat"];
 
 $randomFortune = $fortunes[array_rand($fortunes)];
 $randomGame = $games[array_rand($games)];

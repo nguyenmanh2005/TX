@@ -93,11 +93,16 @@ $gameId = "baccarat";
                 <!-- Control Panel -->
                 <div class="controls">
                     <div class="chip-selector">
-                        <div class="chip active" data-value="1000">1K</div>
-                        <div class="chip" data-value="5000">5K</div>
-                        <div class="chip" data-value="10000">10K</div>
-                        <div class="chip" data-value="50000">50K</div>
-                        <div class="chip" data-value="100000">100K</div>
+                        <div class="chip active" data-value="1000">1K GTLM</div>
+                        <div class="chip" data-value="5000">5K GTLM</div>
+                        <div class="chip" data-value="10000">10K GTLM</div>
+                        <div class="chip" data-value="50000">50K GTLM</div>
+                        <div class="chip" data-value="100000">100K GTLM</div>
+                <div class="chip" data-value="500000">500K GTLM</div>
+                <div class="chip" data-value="1000000">1M GTLM</div>
+                <div class="chip" data-value="2000000">2M GTLM</div>
+                <div class="chip" data-value="5000000">5M GTLM</div>
+                <div class="chip" data-value="<?=$user['Money']?>">MAX</div>
                     </div>
                     <div class="action-btns">
                         <button id="clearBet" class="btn btn-danger">Hủy chọn</button>

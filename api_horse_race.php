@@ -1,6 +1,7 @@
 <?php
 session_start();
 include 'db_connect.php';
+require_once 'cron_horse_race.php';
 
 header('Content-Type: application/json; charset=utf-8');
 

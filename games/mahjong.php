@@ -10,6 +10,16 @@ if (!isset($_SESSION['Iduser'])) {
 
 $userId = $_SESSION['Iduser'];
 
+// Auto-create history table
+$conn->query("CREATE TABLE IF NOT EXISTS history_mahjong (
+    Id INT AUTO_INCREMENT PRIMARY KEY,
+    Iduser INT NOT NULL,
+    Bet DECIMAL(30,2) NOT NULL,
+    Result VARCHAR(255) NOT NULL,
+    WinAmount DECIMAL(30,2) NOT NULL,
+    Time DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
 $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
@@ -64,7 +74,7 @@ if (isset($_GET['action'])) {
     if ($action === 'play') {
         $bet = (int) ($_POST['bet'] ?? 0);
         if ($bet <= 0 || $bet > $money) {
-            echo json_encode(['success' => false, 'message' => 'CÆ°á»£c khÃ´ng há»£p lá»‡!']);
+            echo json_encode(['success' => false, 'message' => 'Cược không hợp lệ!']);
             exit;
         }
 
@@ -78,12 +88,12 @@ if (isset($_GET['action'])) {
         $status = "";
         if ($pEval['score'] > $dEval['score']) {
             $winAmount = $bet;
-            $status = "Báº¡n tháº¯ng! (" . $pEval['name'] . ")";
+            $status = "Bạn thắng! (" . $pEval['name'] . ")";
         } elseif ($pEval['score'] < $dEval['score']) {
-            $status = "Dealer tháº¯ng! (" . $dEval['name'] . ")";
+            $status = "Dealer thắng! (" . $dEval['name'] . ")";
         } else {
             $winAmount = 0;
-            $status = "HÃ²a!";
+            $status = "Hòa!";
         }
 
         $newMoney = $money + $winAmount;
@@ -126,7 +136,7 @@ if (isset($_GET['action'])) {
 
 <head>
     <meta charset="UTF-8">
-    <title>Mahjong Clash - Äáº¡i Chiáº¿n Máº¡t ChÆ°á»£c</title>
+    <title>Mahjong Clash - Đại Chiến Mạt Chược</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../assets/css/main.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -408,6 +418,11 @@ if (isset($_GET['action'])) {
             font-size: 0.9rem;
         }
 
+        .quick-bet-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 30px; }
+        .quick-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #e2e8f0; padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+        .quick-btn:hover { background: rgba(255,255,255,0.15); transform: translateY(-2px); }
+        .quick-btn.active { background: #f59e0b; color: #fff; border-color: #f59e0b; }
+
         /* Mahjong specific animations */
         @keyframes reveal {
             from {
@@ -432,7 +447,7 @@ if (isset($_GET['action'])) {
 
     <div class="main-container">
         <h1 class="game-title">MAHJONG CLASH</h1>
-        <div class="balance-pill">ðŸ’° Sá»‘ Gtlm: <span id="balance-val"><?= number_format($money, 0, ',', '.') ?></span>
+        <div class="balance-pill">💰 Số Gtlm: <span id="balance-val"><?= number_format($money, 0, ',', '.') ?></span>
             gtlm
         </div>
 
@@ -440,9 +455,9 @@ if (isset($_GET['action'])) {
             <div id="dealer-view">
                 <div class="area-label">Queen GTLM (DEALER)</div>
                 <div id="dealer-tiles" class="tile-area">
-                    <div class="tile">ðŸ€«</div>
-                    <div class="tile">ðŸ€«</div>
-                    <div class="tile">ðŸ€«</div>
+                    <div class="tile">🀫</div>
+                    <div class="tile">🀫</div>
+                    <div class="tile">🀫</div>
                 </div>
                 <div id="dealer-rank" class="rank-badge">---</div>
             </div>
@@ -451,44 +466,153 @@ if (isset($_GET['action'])) {
 
             <div id="player-view">
                 <div id="player-tiles" class="tile-area">
-                    <div class="tile">ðŸ€«</div>
-                    <div class="tile">ðŸ€«</div>
-                    <div class="tile">ðŸ€«</div>
+                    <div class="tile">🀫</div>
+                    <div class="tile">🀫</div>
+                    <div class="tile">🀫</div>
                 </div>
                 <div id="player-rank" class="rank-badge">---</div>
-                <div class="area-label" style="margin-top: 1rem;">NGÆ¯á»œI CHÆ I (YOU)</div>
+                <div class="area-label" style="margin-top: 1rem;">NGƯỜI CHƠI (YOU)</div>
             </div>
 
             <div class="bet-input-container">
-                <span>gtlm CÆ¯á»¢C</span>
+                <span>gtlm CƯỢC</span>
                 <input type="number" id="bet-amt" value="1000" min="100" step="100">
             </div>
 
-            <button id="play-btn" class="btn-play">XUáº¤T QUÃ‚N</button>
+            <div class="quick-bet-grid">
+                <button class="quick-btn" onclick="setBet(10000, event)">10K</button>
+                <button class="quick-btn" onclick="setBet(50000, event)">50K</button>
+                <button class="quick-btn" onclick="setBet(100000, event)">100K</button>
+                <button class="quick-btn" onclick="setBet(500000, event)">500K</button>
+                <button class="quick-btn" onclick="setBet(1000000, event)">1M</button>
+                <button class="quick-btn" onclick="setBet(5000000, event)">5M</button>
+                <button class="quick-btn" onclick="setBet(<?= $money ?>, event)">ALL IN</button>
+            </div>
+
+            <button id="play-btn" class="btn-play">XUẤT QUÂN</button>
         </div>
 
-        <div class="history-section">
-            <h2 style="font-size: 1.1rem; letter-spacing: 2px; margin-bottom: 1rem;">Lá»ŠCH Sá»¬ THI Äáº¤U</h2>
+        <div class="history-section" style="display: none;">
+            <h2 style="font-size: 1.1rem; letter-spacing: 2px; margin-bottom: 1rem;">LỊCH SỬ THI ĐẤU</h2>
             <div style="overflow-x: auto;">
                 <table class="history-table">
                     <thead>
                         <tr>
-                            <th>Thá»i gian</th>
-                            <th>gtlm cÆ°á»£c</th>
-                            <th>Tráº­n Ä‘áº¥u</th>
-                            <th>Káº¿t quáº£</th>
+                            <th>Thời gian</th>
+                            <th>gtlm cược</th>
+                            <th>Trận đấu</th>
+                            <th>Kết quả</th>
                         </tr>
                     </thead>
                     <tbody id="history-body"></tbody>
                 </table>
             </div>
-            <div style="margin-top: 2.5rem;"><a href="../index.php"
-                    style="color: var(--primary); text-decoration: none; font-weight: 700; border: 1px solid var(--primary); padding: 0.8rem 2.5rem; border-radius: 50px; transition: 0.3s; font-size: 0.9rem;">ðŸ 
-                    QUAY Láº I Sáº¢NH</a></div>
         </div>
+        <div style="margin-top: 1rem; text-align: center;"><a href="../index.php"
+                style="color: var(--primary); text-decoration: none; font-weight: 700; border: 1px solid var(--primary); padding: 0.8rem 2.5rem; border-radius: 50px; transition: 0.3s; font-size: 0.9rem; display: inline-block;">🏠
+                QUAY LẠI SẢNH</a></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/confetti.browser.min.js"></script>
+
+    <script>
+        function setBet(amount, event) {
+            $('#bet-amt').val(amount);
+            $('.quick-btn').removeClass('active');
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
+        }
+
+        $('#play-btn').click(function() {
+            const bet = parseInt($('#bet-amt').val());
+            if (isNaN(bet) || bet <= 0) {
+                Swal.fire('Lỗi', 'Cược không hợp lệ', 'error');
+                return;
+            }
+
+            const btn = $(this);
+            btn.prop('disabled', true).text('ĐANG XẾP BÀI...');
+
+            $.post('mahjong.php?action=play', { bet: bet }, function(res) {
+                if (res.success) {
+                    const renderTiles = (hand, containerId, rankId, rankText) => {
+                        let html = '';
+                        hand.forEach(t => {
+                            let typeClass = 'type-' + t.type;
+                            html += `
+                            <div class="tile tile-revealing ${typeClass}">
+                                <div class="tile-type">${t.type.toUpperCase()}</div>
+                                <div class="tile-val">${t.val}</div>
+                            </div>`;
+                        });
+                        $(containerId).html(html);
+                        $(rankId).text(rankText);
+                    };
+
+                    renderTiles(res.dealerHand, '#dealer-tiles', '#dealer-rank', res.dEval);
+                    renderTiles(res.playerHand, '#player-tiles', '#player-rank', res.pEval);
+
+                    setTimeout(() => {
+                        $('#balance-val').text(res.money);
+                        
+                        if (res.winAmount > 0) {
+                            Swal.fire({
+                                title: 'THẮNG!',
+                                text: res.status + ` (+${res.winAmount} gtlm)`,
+                                icon: 'success',
+                                background: '#1e293b',
+                                color: '#fff'
+                            });
+                        } else if (res.winAmount < 0) {
+                            Swal.fire({
+                                title: 'THUA!',
+                                text: res.status,
+                                icon: 'error',
+                                background: '#1e293b',
+                                color: '#fff'
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'HÒA!',
+                                text: res.status,
+                                icon: 'info',
+                                background: '#1e293b',
+                                color: '#fff'
+                            });
+                        }
+                        
+                        loadHistory();
+                        btn.prop('disabled', false).text('XUẤT QUÂN');
+                    }, 1000);
+                } else {
+                    Swal.fire('Lỗi', res.message, 'error');
+                    btn.prop('disabled', false).text('XUẤT QUÂN');
+                }
+            }, 'json').fail(function() {
+                Swal.fire('Lỗi', 'Lỗi kết nối', 'error');
+                btn.prop('disabled', false).text('XUẤT QUÂN');
+            });
+        });
+
+        function loadHistory() {
+            $.getJSON('mahjong.php?action=get_history', function(res) {
+                if(res.success && res.history) {
+                    let html = '';
+                    res.history.forEach(h => {
+                        html += `<tr>
+                            <td>${h.Time}</td>
+                            <td>${parseInt(h.Bet).toLocaleString()}</td>
+                            <td>${h.Result}</td>
+                            <td style="color: ${h.WinAmount > 0 ? '#4ade80' : (h.WinAmount < 0 ? '#ef4444' : '#fff')}">${parseInt(h.WinAmount).toLocaleString()}</td>
+                        </tr>`;
+                    });
+                    $('#history-body').html(html);
+                }
+            });
+        }
+        $(document).ready(loadHistory);
+    </script>
 
     <?php require_once '../casino_help.php'; ?>
 

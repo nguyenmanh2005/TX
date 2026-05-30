@@ -399,6 +399,24 @@ if (isset($_GET['action'])) {
             margin-top: 20px;
         }
 
+        .btn-quick-bet {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.3s;
+            font-size: 0.75rem;
+        }
+
+        .btn-quick-bet:hover {
+            background: var(--primary);
+            color: #000;
+            border-color: var(--primary);
+        }
+
     </style>
 </head>
 
@@ -420,13 +438,14 @@ if (isset($_GET['action'])) {
                 <div class="input-group">
                     <label>Gtlm cược (gtlm)</label>
                     <input type="number" id="betAmount" value="10000" min="1000">
-                    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-top:8px;">
-                        <button onclick="adjBet(0.5)"
-                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px; padding:5px; font-size:0.6rem; cursor:pointer;">1/2</button>
-                        <button onclick="adjBet(2)"
-                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px; padding:5px; font-size:0.6rem; cursor:pointer;">x2</button>
-                        <button onclick="adjBet('max')"
-                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px; padding:5px; font-size:0.6rem; cursor:pointer;">MAX</button>
+                    <div class="quick-bets" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 10px;">
+                        <button class="btn-quick-bet" onclick="setBet(10000)">10K</button>
+                        <button class="btn-quick-bet" onclick="setBet(50000)">50K</button>
+                        <button class="btn-quick-bet" onclick="setBet(100000)">100K</button>
+                        <button class="btn-quick-bet" onclick="setBet(500000)">500K</button>
+                        <button class="btn-quick-bet" onclick="setBet(1000000)">1M</button>
+                        <button class="btn-quick-bet" onclick="setBet(5000000)">5M</button>
+                        <button class="btn-quick-bet" onclick="setBet('ALLIN')" style="grid-column: span 3; background: var(--primary); color:#000; border:none; font-weight:800;">ALL IN</button>
                     </div>
                 </div>
                 <div class="stat-grid">
@@ -493,9 +512,9 @@ if (isset($_GET['action'])) {
     </div>
 
     <div class="history-box" style="max-width: 1100px; margin: 20px auto; padding: 0 20px;">
-        <div class="glass-card" style="display: block; padding: 20px;">
-            <h3 style="font-family: 'Orbitron'; color: var(--primary); margin-top: 0;">NHẬT KÝ CHIẾN ĐẤU</h3>
-            <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+        <div class="history-panel" style="display: none;">
+            <h2 style="font-family:'Orbitron'; font-size: 1.2rem; margin-top: 0;">LỊCH SỬ GẦN ĐÂY</h2>
+            <table class="history-table" style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
                 <thead>
                     <tr style="border-bottom: 2px solid var(--primary);">
                         <th style="padding: 10px; text-align: center;">ID</th>
@@ -520,10 +539,13 @@ if (isset($_GET['action'])) {
             if (m === 'over') $('.mode-btn').first().addClass('active'); else $('.mode-btn').last().addClass('active');
             updateSlider();
         }
-        function adjBet(ratio) {
+        function setBet(amount) {
             const money = parseFloat($('#userMoney').text().replace(/\./g, ''));
-            if (ratio === 'max') $('#betAmount').val(money);
-            else $('#betAmount').val(Math.floor(($('#betAmount').val() || 0) * ratio));
+            if (amount === 'ALLIN') {
+                $('#betAmount').val(money);
+            } else {
+                $('#betAmount').val(amount);
+            }
         }
         const track = document.getElementById('sliderTrack'), handle = document.getElementById('sliderHandle'), fill = document.getElementById('sliderFill');
         function updateSlider() {
@@ -561,7 +583,14 @@ if (isset($_GET['action'])) {
                         onComplete: () => {
                             diceVal.innerText = res.result.toFixed(2);
                             marker.classList.add(res.win ? 'win' : 'lose');
-                            if (window.GameEffects) res.win ? window.GameEffects.showWin(parseInt(res.winAmount.replace(/\./g, ''))) : window.GameEffects.showLoss(0);
+                            const betAmt = parseInt($('#betAmount').val());
+                            if (window.GameEffects) {
+                                if (res.win) {
+                                    window.GameEffects.showWin(parseInt(res.winAmount.replace(/\./g, '')));
+                                } else {
+                                    window.GameEffects.showLoss(betAmt);
+                                }
+                            }
                             setTimeout(() => { 
                                 $('#rollBtn').prop('disabled', false).text('🎲 LẮC XÚC XẮC'); 
                                 isRolling = false; 

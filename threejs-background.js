@@ -225,33 +225,5 @@
             }
         };
     }
-
-    // Tự động chèn nút Trang chủ nếu không phải trang index.php
-    function injectHomeButton() {
-        const isIndex = window.location.pathname.endsWith('index.php') || 
-                      window.location.pathname.endsWith('/') || 
-                      window.location.pathname === '';
-        
-        if (isIndex) return;
-
-        // Tránh chèn trùng
-        if (document.querySelector('.home-fab')) return;
-
-        const isInGames = window.location.pathname.includes('/games/');
-        const homeButton = document.createElement('a');
-        homeButton.href = isInGames ? '../index.php' : 'index.php';
-        homeButton.className = 'home-fab fade-in';
-        homeButton.innerHTML = '<span class="home-fab-icon">🏠</span> <span class="home-fab-text">Trang chủ</span>';
-        
-        // Đảm bảo CSS cho nút đã sẵn sàng
-        document.body.appendChild(homeButton);
-    }
-
-    // Chạy inject sau khi DOM đã sẵn sàng
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', injectHomeButton);
-    } else {
-        injectHomeButton();
-    }
 })();
 

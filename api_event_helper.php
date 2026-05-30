@@ -59,7 +59,7 @@ class EventHelper {
 
         // Tỷ lệ/Danh sách fallback game cứng cũ
         $fallbackGames = [
-            'Baccarat', 'Blackjack', 'Roulette', 'Sicbo', 'Tài Xỉu', 
+            'Baccarat', 'Blackjack', 'Roulette', 'Sicbo', 'Xanh Đỏ Đối Kháng', 
             'RPS', 'Vietlott', 'Xóc Đĩa', 'Poker', 'Bầu Cua',
             'Slot Cyber', 'Mega Spin', 'Horse Race'
         ];

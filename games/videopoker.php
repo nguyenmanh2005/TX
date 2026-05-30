@@ -10,6 +10,16 @@ if (!isset($_SESSION['Iduser'])) {
 
 $userId = $_SESSION['Iduser'];
 
+// Auto-create history table
+$conn->query("CREATE TABLE IF NOT EXISTS history_videopoker (
+    Id INT AUTO_INCREMENT PRIMARY KEY,
+    Iduser INT NOT NULL,
+    Bet DECIMAL(30,2) NOT NULL,
+    Result VARCHAR(255) NOT NULL,
+    WinAmount DECIMAL(30,2) NOT NULL,
+    Time DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
 $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
@@ -19,7 +29,7 @@ $stmt->close();
 
 function getCard($exclude = [])
 {
-    $suits = ['â™ ', 'â™¥', 'â™¦', 'â™£'];
+    $suits = ['♠', '♥', '♦', '♣'];
     $vals = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
     do {
         $vIdx = rand(0, 12);
@@ -85,7 +95,7 @@ if (isset($_GET['action'])) {
     if ($action === 'deal') {
         $bet = (int) ($_POST['bet'] ?? 0);
         if ($bet <= 0 || $bet > $money) {
-            echo json_encode(['success' => false, 'message' => 'CÆ°á»£c khÃ´ng há»£p lá»‡!']);
+            echo json_encode(['success' => false, 'message' => 'Cược không hợp lệ!']);
             exit;
         }
         $_SESSION['vp_bet'] = $bet;
@@ -465,7 +475,7 @@ if (isset($_GET['action'])) {
 
     <div class="main-container">
         <h1 class="game-title">VIDEO POKER</h1>
-        <div class="balance-pill">ðŸ’° Sá»‘ Gtlm: <span id="balance-val"><?= number_format($money, 0, ',', '.') ?></span>
+        <div class="balance-pill">💰 Số Gtlm: <span id="balance-val"><?= number_format($money, 0, ',', '.') ?></span>
             gtlm
         </div>
 
@@ -492,43 +502,43 @@ if (isset($_GET['action'])) {
 
             <div id="bet-area">
                 <div class="input-group">
-                    <span>Sá»‘ gtlm cÆ°á»£c</span>
+                    <span>Số gtlm cược</span>
                     <input type="number" id="bet-amt" value="1000" min="100" step="100">
                 </div>
-                <button id="deal-btn" class="btn btn-blue">PHÃT BÃ€I</button>
+                <button id="deal-btn" class="btn btn-blue">PHÁT BÀI</button>
             </div>
 
             <div id="action-area" style="display: none;">
-                <p style="margin-bottom: 1.5rem; font-weight: 700; opacity: 0.8;">Nháº¥p vÃ o lÃ¡ bÃ i Ä‘á»ƒ GIá»® (HOLD)</p>
-                <button id="draw-btn" class="btn btn-gold">THAY BÃ€I (DRAW)</button>
+                <p style="margin-bottom: 1.5rem; font-weight: 700; opacity: 0.8;">Nhấp vào lá bài để GIỮ (HOLD)</p>
+                <button id="draw-btn" class="btn btn-gold">THAY BÀI (DRAW)</button>
             </div>
 
             <div id="result-area" style="display: none; margin-top: 2rem;">
                 <h2 id="eval-name"
                     style="color: var(--primary); margin-bottom: 0.5rem; font-size: 2.5rem; font-weight: 900;"></h2>
                 <h3 id="win-amt" style="margin-bottom: 1.5rem; font-size: 1.5rem;"></h3>
-                <button id="reset-btn" class="btn btn-blue">CHÆ I TIáº¾P</button>
+                <button id="reset-btn" class="btn btn-blue">CHƠI TIẾP</button>
             </div>
         </div>
 
         <div class="history-section">
-            <h2 style="font-size: 1.2rem; letter-spacing: 2px; margin-bottom: 1rem;">NHáº¬T KÃ CHIáº¾N THáº®NG</h2>
+            <h2 style="font-size: 1.2rem; letter-spacing: 2px; margin-bottom: 1rem;">NHẬT KÝ CHIẾN THẮNG</h2>
             <div style="overflow-x: auto;">
                 <table class="history-table">
                     <thead>
                         <tr>
-                            <th>Thá»i gian</th>
-                            <th>gtlm cÆ°á»£c</th>
-                            <th>Káº¿t quáº£</th>
-                            <th>Tháº¯ng/Thua</th>
+                            <th>Thời gian</th>
+                            <th>gtlm cược</th>
+                            <th>Kết quả</th>
+                            <th>Thắng/Thua</th>
                         </tr>
                     </thead>
                     <tbody id="history-body"></tbody>
                 </table>
             </div>
             <div style="margin-top: 2.5rem;"><a href="../index.php"
-                    style="color: var(--primary); text-decoration: none; font-weight: 700; border: 1px solid var(--primary); padding: 0.8rem 2.5rem; border-radius: 50px; transition: 0.3s;">ðŸ 
-                    QUAY Láº I Sáº¢NH</a></div>
+                    style="color: var(--primary); text-decoration: none; font-weight: 700; border: 1px solid var(--primary); padding: 0.8rem 2.5rem; border-radius: 50px; transition: 0.3s;">🏠
+                    QUAY LẠI SẢNH</a></div>
         </div>
     </div>
 

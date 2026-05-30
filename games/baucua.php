@@ -340,34 +340,22 @@ if (isset($_GET['action'])) {
             cursor: not-allowed;
         }
 
-        .chip-selector {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .chip {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            border: 3px dashed rgba(255, 255, 255, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 900;
-            font-size: 0.7rem;
-            cursor: pointer;
+        .btn-quick-bet {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: url('../img/tay.png'), pointer !important;
+            font-weight: 600;
             transition: 0.3s;
-            font-family: 'Orbitron';
+            font-size: 0.75rem;
         }
 
-        .chip:hover,
-        .chip.active {
-            transform: scale(1.1);
+        .btn-quick-bet:hover {
+            background: var(--primary);
+            color: #000;
             border-color: var(--primary);
-            background: rgba(0, 255, 136, 0.2);
-            border-style: solid;
         }
 
         .stat-card {
@@ -482,16 +470,18 @@ if (isset($_GET['action'])) {
                 <div style="margin-top:auto;">
                     <div class="stat-card" style="margin-bottom:10px; padding:0.8rem; border-color:rgba(255,255,255,0.1)">
                         <span>CƯỢC MỖI LẦN NHẤN</span>
-                        <input type="number" id="customBet" value="1000" min="1000" step="1000" 
-                               style="background:none; border:none; color:var(--accent); font-family:'Orbitron'; font-size:1.2rem; font-weight:900; width:100%; text-align:center; outline:none;">
-                    </div>
-
-                    <div class="chip-selector">
-                        <div class="chip active" data-val="1000">1K</div>
-                        <div class="chip" data-val="5000">5K</div>
-                        <div class="chip" data-val="10000">10K</div>
-                        <div class="chip" data-val="50000">50K</div>
-                        <div class="chip" data-val="100000">100K</div>
+                        <input type="number" id="customBet" value="10000" min="1000" step="1000" 
+                               style="background:none; border:none; color:var(--accent); font-family:'Orbitron'; font-size:1.2rem; font-weight:900; width:100%; text-align:center; outline:none; margin-bottom: 10px;">
+                        
+                        <div class="quick-bets" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 10px;">
+                            <button class="btn-quick-bet" onclick="$('#customBet').val(10000)">10K</button>
+                            <button class="btn-quick-bet" onclick="$('#customBet').val(50000)">50K</button>
+                            <button class="btn-quick-bet" onclick="$('#customBet').val(100000)">100K</button>
+                            <button class="btn-quick-bet" onclick="$('#customBet').val(500000)">500K</button>
+                            <button class="btn-quick-bet" onclick="$('#customBet').val(1000000)">1M</button>
+                            <button class="btn-quick-bet" onclick="$('#customBet').val(5000000)">5M</button>
+                            <button class="btn-quick-bet" onclick="$('#customBet').val(parseFloat($('#userMoney').text().replace(/\./g, '')))" style="grid-column: span 3; background: var(--primary); color:#000; border:none; font-weight:800;">ALL IN</button>
+                        </div>
                     </div>
                     <button id="playBtn" class="btn-action" onclick="playGame()">⚡ XÓC NGAY</button>
                     <button class="btn-action" onclick="clearBets()"
@@ -574,17 +564,8 @@ if (isset($_GET['action'])) {
         let isRolling = false;
         const animalEmojis = <?= json_encode($emojis) ?>;
 
-        $('.chip').click(function () {
-            $('.chip').removeClass('active');
-            $(this).addClass('active');
-            currentChip = parseInt($(this).data('val'));
-            $('#customBet').val(currentChip);
-        });
-
         $('#customBet').on('input', function() {
             currentChip = parseInt($(this).val()) || 0;
-            $('.chip').removeClass('active');
-            $(`.chip[data-val="${currentChip}"]`).addClass('active');
         });
 
         function placeBet(animal) {
@@ -674,13 +655,19 @@ if (isset($_GET['action'])) {
                             if (res.win) {
                                 if (window.GameEffects) window.GameEffects.showWin(parseInt(res.winAmount.replace(/\./g, '')));
                                 $('.animal-tile.active.winner').each(function() {
-                                    const float = $('<div class="floating-win">+' + res.winAmount + '</div>').appendTo($(this));
+                                    const betVal = parseInt($(this).find('.bet-amount-badge').text().replace(/\./g, ''));
+                                    const winRatio = res.winAmount ? parseInt(res.winAmount.replace(/\./g, '')) / total : 0;
+                                    const tileWin = Math.round(betVal * winRatio); // Approximate if multiple
+                                    const float = $('<div class="floating-win">+' + tileWin.toLocaleString('vi-VN') + '</div>').appendTo($(this));
                                     gsap.to(float, { y: -100, opacity: 0, duration: 2, onComplete: () => float.remove() });
                                 });
-                                Swal.fire({ title: 'CHIẾN THẮNG!', html: `Tổng nhận: <b style="color:#f1c40f">${res.winAmount} gtlm</b>`, icon: 'success', background: '#1a1a1a', color: '#fff', timer: 2000, showConfirmButton: false });
                             } else {
                                 $('.game-area').addClass('lose-shake');
-                                if (window.GameEffects) window.GameEffects.showLoss(0);
+                                if (window.GameEffects) window.GameEffects.showLoss(total);
+                                $('.animal-tile.active:not(.winner)').each(function() {
+                                    const float = $('<div class="floating-win" style="color: #ff4757;">-' + $(this).find('.bet-amount-badge').text() + '</div>').appendTo($(this));
+                                    gsap.to(float, { y: -100, opacity: 0, duration: 2, onComplete: () => float.remove() });
+                                });
                                 setTimeout(() => $('.game-area').removeClass('lose-shake'), 500);
                             }
 

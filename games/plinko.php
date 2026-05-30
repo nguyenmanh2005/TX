@@ -341,6 +341,24 @@ if (isset($_GET['action'])) {
             line-height: 1;
             margin-top: 5px;
         }
+
+        .btn-quick-bet {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: url('../img/tay.png'), pointer !important;
+            font-weight: 600;
+            transition: 0.3s;
+            font-size: 0.75rem;
+        }
+
+        .btn-quick-bet:hover {
+            background: var(--primary);
+            color: #000;
+            border-color: var(--primary);
+        }
     </style>
 </head>
 
@@ -357,12 +375,15 @@ if (isset($_GET['action'])) {
 
                 <div class="input-group">
                     <label>Tổng Gtlm cược</label>
-                    <input type="number" id="totalBet" value="10000" min="1000" step="5000">
-                    <div class="quick-select">
-                        <button class="quick-btn" onclick="adjBet(0.5)">1/2</button>
-                        <button class="quick-btn" onclick="adjBet(2)">x2</button>
-                        <button class="quick-btn" onclick="adjBet('max')">MAX</button>
-                        <button class="quick-btn" onclick="$('#totalBet').val(10000)">10K</button>
+                    <input type="number" id="totalBet" value="10000" min="1000">
+                    <div class="quick-bets" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 10px;">
+                        <button class="btn-quick-bet" onclick="setBet(10000)">10K</button>
+                        <button class="btn-quick-bet" onclick="setBet(50000)">50K</button>
+                        <button class="btn-quick-bet" onclick="setBet(100000)">100K</button>
+                        <button class="btn-quick-bet" onclick="setBet(500000)">500K</button>
+                        <button class="btn-quick-bet" onclick="setBet(1000000)">1M</button>
+                        <button class="btn-quick-bet" onclick="setBet(5000000)">5M</button>
+                        <button class="btn-quick-bet" onclick="setBet('ALLIN')" style="grid-column: span 3; background: var(--primary); color:#000; border:none; font-weight:800;">ALL IN</button>
                     </div>
                 </div>
 
@@ -370,10 +391,10 @@ if (isset($_GET['action'])) {
                     <label>Số lượng bóng</label>
                     <input type="number" id="ballCount" value="5" min="1" max="50">
                     <div class="quick-select">
-                        <button class="quick-btn" onclick="$('#ballCount').val(1)">1</button>
-                        <button class="quick-btn" onclick="$('#ballCount').val(10)">10</button>
-                        <button class="quick-btn" onclick="$('#ballCount').val(20)">20</button>
-                        <button class="quick-btn" onclick="$('#ballCount').val(50)">50</button>
+                        <button class="quick-btn" onclick="$('#ballCount').val(1); updateBetInfo();">1</button>
+                        <button class="quick-btn" onclick="$('#ballCount').val(10); updateBetInfo();">10</button>
+                        <button class="quick-btn" onclick="$('#ballCount').val(20); updateBetInfo();">20</button>
+                        <button class="quick-btn" onclick="$('#ballCount').val(50); updateBetInfo();">50</button>
                     </div>
                 </div>
 
@@ -472,11 +493,13 @@ if (isset($_GET['action'])) {
         $('#totalBet, #ballCount').on('input', updateBetInfo);
         updateBetInfo();
 
-        function adjBet(ratio) {
-            const cur = parseFloat($('#totalBet').val()) || 0;
+        function setBet(amount) {
             const money = parseFloat($('#userMoney').text().replace(/\./g, ''));
-            if (ratio === 'max') $('#totalBet').val(money);
-            else $('#totalBet').val(Math.floor(cur * ratio));
+            if (amount === 'ALLIN') {
+                $('#totalBet').val(money);
+            } else {
+                $('#totalBet').val(amount);
+            }
             updateBetInfo();
         }
 

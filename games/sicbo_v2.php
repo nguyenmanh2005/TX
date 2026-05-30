@@ -10,6 +10,16 @@ if (!isset($_SESSION['Iduser'])) {
 
 $userId = $_SESSION['Iduser'];
 
+// Auto-create history table
+$conn->query("CREATE TABLE IF NOT EXISTS history_sicbo (
+    Id INT AUTO_INCREMENT PRIMARY KEY,
+    Iduser INT NOT NULL,
+    Bet DECIMAL(30,2) NOT NULL,
+    Result VARCHAR(255) NOT NULL,
+    WinAmount DECIMAL(30,2) NOT NULL,
+    Time DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
 $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
@@ -25,109 +35,132 @@ if (isset($_GET['action'])) {
         $bets = json_decode($_POST['bets'], true); // Array of {type: 'small', amount: 1000}
         $totalBet = 0;
         foreach ($bets as $b)
-            $totalBet += (float) $b['amount'];
+            $totalBet += (int) $b['amount'];
 
-        if ($totalBet <= 0) {
-            echo json_encode(['success' => false, 'message' => 'LÆ°á»£ng liá»u khÃ´ng há»£p lá»‡!']);
+        if ($totalBet <= 0 || $totalBet > $money) {
+            echo json_encode(['success' => false, 'message' => 'Lượng liều không hợp lệ!']);
             exit;
         }
 
-        $conn->begin_transaction();
-        try {
-            // SELECT FOR UPDATE Ä‘á»ƒ khÃ³a báº£n ghi user
-            $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
-            $stmt->bind_param("i", $userId);
-            $stmt->execute();
-            $u = $stmt->get_result()->fetch_assoc();
+        $dice = [rand(1, 6), rand(1, 6), rand(1, 6)];
+        $sum = array_sum($dice);
+        sort($dice);
+        $diceStr = implode(',', $dice);
 
-            if (!$u || $u['Money'] < $totalBet) {
-                throw new Exception('LÆ°á»£ng liá»u vÆ°á»£t quÃ¡ ngÃ¢n khá»‘!');
+        $counts = array_count_values($dice);
+        $isTriple = (count($counts) === 1);
+        $anyDouble = (count($counts) < 3);
+
+        $winAmount = -$totalBet;
+        $winLog = [];
+
+        $totalRevenue = 0;
+        foreach ($bets as $b) {
+            $type = $b['type'];
+            $amt = (int) $b['amount'];
+            $won = false;
+            $pay = 0;
+
+            if ($type === 'small') {
+                if ($sum >= 4 && $sum <= 10 && !$isTriple) {
+                    $won = true;
+                    $pay = 1;
+                }
+            } elseif ($type === 'big') {
+                if ($sum >= 11 && $sum <= 17 && !$isTriple) {
+                    $won = true;
+                    $pay = 1;
+                }
+            } elseif ($type === 'odd') {
+                if ($sum % 2 != 0 && !$isTriple) {
+                    $won = true;
+                    $pay = 1;
+                }
+            } elseif ($type === 'even') {
+                if ($sum % 2 == 0 && !$isTriple) {
+                    $won = true;
+                    $pay = 1;
+                }
+            } elseif ($type === 'any_triple') {
+                if ($isTriple) {
+                    $won = true;
+                    $pay = 30;
+                }
+            } elseif (strpos($type, 'triple_') === 0) {
+                $v = (int) str_replace('triple_', '', $type);
+                if ($isTriple && $dice[0] == $v) {
+                    $won = true;
+                    $pay = 180;
+                }
+            } elseif (strpos($type, 'double_') === 0) {
+                $v = (int) str_replace('double_', '', $type);
+                if ($counts[$v] >= 2) {
+                    $won = true;
+                    $pay = 10;
+                }
+            } elseif (strpos($type, 'total_') === 0) {
+                $v = (int) str_replace('total_', '', $type);
+                if ($sum == $v) {
+                    $won = true;
+                    $pArr = [4 => 60, 5 => 30, 6 => 18, 7 => 12, 8 => 8, 9 => 7, 10 => 6, 11 => 6, 12 => 7, 13 => 8, 14 => 12, 15 => 18, 16 => 30, 17 => 60];
+                    $pay = $pArr[$v] ?? 0;
+                }
+            } elseif (strpos($type, 'single_') === 0) {
+                $v = (int) str_replace('single_', '', $type);
+                if (isset($counts[$v])) {
+                    $won = true;
+                    $pay = $counts[$v];
+                } // 1x, 2x, 3x
             }
 
-            $dice = [rand(1, 6), rand(1, 6), rand(1, 6)];
-            $sum = array_sum($dice);
-            sort($dice);
-            $diceStr = implode(',', $dice);
-
-            $counts = array_count_values($dice);
-            $isTriple = (count($counts) === 1);
-
-            $winAmount = -$totalBet;
-            $winLog = [];
-
-            foreach ($bets as $b) {
-                $type = $b['type'];
-                $amt = (float) $b['amount'];
-                $won = false;
-                $pay = 0;
-
-                if ($type === 'small') {
-                    if ($sum >= 4 && $sum <= 10 && !$isTriple) { $won = true; $pay = 1; }
-                } elseif ($type === 'big') {
-                    if ($sum >= 11 && $sum <= 17 && !$isTriple) { $won = true; $pay = 1; }
-                } elseif ($type === 'odd') {
-                    if ($sum % 2 != 0 && !$isTriple) { $won = true; $pay = 1; }
-                } elseif ($type === 'even') {
-                    if ($sum % 2 == 0 && !$isTriple) { $won = true; $pay = 1; }
-                } elseif ($type === 'any_triple') {
-                    if ($isTriple) { $won = true; $pay = 30; }
-                } elseif (strpos($type, 'triple_') === 0) {
-                    $v = (int) str_replace('triple_', '', $type);
-                    if ($isTriple && $dice[0] == $v) { $won = true; $pay = 180; }
-                } elseif (strpos($type, 'double_') === 0) {
-                    $v = (int) str_replace('double_', '', $type);
-                    if (isset($counts[$v]) && $counts[$v] >= 2) { $won = true; $pay = 10; }
+            if ($won) {
+                $revenue = $amt * ($pay + 1);
+                $winAmount += $revenue;
+                $totalRevenue += $revenue;
+                
+                $typeNames = [
+                    'small' => 'Xanh',
+                    'big' => 'Đỏ',
+                    'odd' => 'Lẻ',
+                    'even' => 'Chẵn',
+                    'any_triple' => 'Bất kỳ bộ ba'
+                ];
+                $displayName = $typeNames[$type] ?? $type;
+                if (strpos($type, 'single_') === 0) {
+                    $displayName = 'Số ' . str_replace('single_', '', $type);
                 } elseif (strpos($type, 'total_') === 0) {
-                    $v = (int) str_replace('total_', '', $type);
-                    if ($sum == $v) {
-                        $won = true;
-                        $pArr = [4 => 60, 5 => 30, 6 => 18, 7 => 12, 8 => 8, 9 => 7, 10 => 6, 11 => 6, 12 => 7, 13 => 8, 14 => 12, 15 => 18, 16 => 30, 17 => 60];
-                        $pay = $pArr[$v] ?? 0;
-                    }
-                } elseif (strpos($type, 'single_') === 0) {
-                    $v = (int) str_replace('single_', '', $type);
-                    if (isset($counts[$v])) { $won = true; $pay = $counts[$v]; }
+                    $displayName = 'Tổng ' . str_replace('total_', '', $type);
+                } elseif (strpos($type, 'double_') === 0) {
+                    $displayName = 'Cặp ' . str_replace('double_', '', $type);
+                } elseif (strpos($type, 'triple_') === 0) {
+                    $displayName = 'Bộ ba ' . str_replace('triple_', '', $type);
                 }
-
-                if ($won) {
-                    $winAmount += $amt * ($pay + 1);
-                    $winLog[] = "$type (Won x$pay)";
-                }
+                $winLog[] = "$displayName (Thắng x$pay): +" . number_format($revenue, 0, ',', '.');
             }
-
-            // Cáº­p nháº­t sá»‘ dÆ° tÆ°Æ¡ng Ä‘á»‘i
-            $stmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
-            $stmt->bind_param("di", $winAmount, $userId);
-            $stmt->execute();
-
-            // History
-            $his = $conn->prepare("INSERT INTO history_sicbo (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-            $his->bind_param("idid", $userId, $totalBet, $diceStr, $winAmount);
-            $his->execute();
-            $his->close();
-
-            // Log history helper
-            if (file_exists('../game_history_helper.php')) {
-                require_once '../game_history_helper.php';
-                logGameHistoryWithAll($conn, $userId, 'Sicbo Premium', $totalBet, ($winAmount > 0 ? $winAmount + $totalBet : 0), $winAmount > 0);
-            }
-
-            $conn->commit();
-
-            $finalMoney = $u['Money'] + $winAmount;
-            echo json_encode([
-                'success' => true,
-                'dice' => $dice,
-                'sum' => $sum,
-                'winAmount' => $winAmount,
-                'winLog' => $winLog,
-                'money' => number_format($finalMoney, 0, ',', '.'),
-                'rawMoney' => $finalMoney
-            ]);
-        } catch (Exception $e) {
-            $conn->rollback();
-            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
+
+        $newMoney = $money + $winAmount;
+        $stmt = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
+        $stmt->bind_param("di", $newMoney, $userId);
+        $stmt->execute();
+        $stmt->close();
+
+        // History
+        $his = $conn->prepare("INSERT INTO history_sicbo (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
+        $his->bind_param("idss", $userId, $totalBet, $diceStr, $winAmount);
+        $his->execute();
+        $his->close();
+
+        echo json_encode([
+            'success' => true,
+            'dice' => $dice,
+            'sum' => $sum,
+            'winAmount' => $winAmount,
+            'totalRevenue' => $totalRevenue,
+            'winLog' => $winLog,
+            'money' => number_format($newMoney, 0, ',', '.'),
+            'rawMoney' => $newMoney
+        ]);
         exit;
     } elseif ($action === 'get_history') {
         $stmt = $conn->prepare("SELECT Bet, Result, WinAmount, Time FROM history_sicbo WHERE Iduser = ? ORDER BY Time DESC LIMIT 10");
@@ -145,7 +178,7 @@ if (isset($_GET['action'])) {
 
 <head>
     <meta charset="UTF-8">
-    <title>Xanh Äá» Äá»‘i KhÃ¡ng - Äá»‰nh Cao XÃºc Xáº¯c</title>
+    <title>Xanh Đỏ Đối Kháng - Đỉnh Cao Xúc Xắc</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../assets/css/main.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -251,27 +284,19 @@ if (isset($_GET['action'])) {
             position: absolute;
             width: 60px;
             height: 60px;
-            background: white;
+            background-color: #ffffff !important;
+            color: #000000 !important;
             border: 2px solid #ddd;
             border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            padding: 6px;
             box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
         }
 
-        .dice-face::before {
-            content: '';
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            width: 80%;
-            height: 80%;
-            gap: 2px;
-        }
-
         .dot {
-            background: #000;
+            background-color: currentColor !important;
             border-radius: 50%;
             width: 10px;
             height: 10px;
@@ -300,39 +325,21 @@ if (isset($_GET['action'])) {
             margin-bottom: 2.5rem;
         }
 
-        .chip-btn {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            border: 4px dashed rgba(255, 255, 255, 0.4);
-            cursor: pointer;
-            font-weight: 900;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: 0.3s;
+        .btn-quick-bet {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             color: #fff;
-            position: relative;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: url('../img/tay.png'), pointer !important;
+            font-weight: 600;
+            transition: 0.3s;
         }
 
-        .chip-btn::after {
-            content: '';
-            position: absolute;
-            inset: 4px;
-            border-radius: 50%;
-            border: 2px solid rgba(255,255,255,0.2);
-        }
-
-        .chip-btn:hover {
-            transform: scale(1.1) rotate(15deg);
-        }
-
-        .chip-btn.sel {
-            border-color: #fff;
-            border-style: solid;
-            box-shadow: 0 0 20px rgba(255,255,255,0.5);
-            transform: scale(1.15);
+        .btn-quick-bet:hover, .btn-quick-bet.sel {
+            background: var(--accent);
+            color: #000;
+            border-color: var(--accent);
         }
 
         .bet-grid {
@@ -344,10 +351,10 @@ if (isset($_GET['action'])) {
 
         .bet-item {
             background: rgba(0, 0, 0, 0.3);
-            border: 2px solid var(--glass-border);
-            border-radius: 1.5rem;
-            padding: 1.5rem 0.5rem;
-            cursor: pointer;
+            border: 1px solid var(--glass-border);
+            border-radius: 1.2rem;
+            padding: 1.2rem 0.5rem;
+            cursor: url('../img/tay.png'), pointer !important;
             transition: all 0.2s;
             position: relative;
             overflow: hidden;
@@ -393,19 +400,19 @@ if (isset($_GET['action'])) {
         }
 
         .btn-roll {
-            background: linear-gradient(135deg, var(--primary) 0%, #b91c1c 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, #7f1d1d 100%);
             border: none;
-            padding: 1.5rem 5rem;
+            padding: 1.2rem 5rem;
             border-radius: 50px;
             color: #fff;
             font-size: 1.5rem;
             font-weight: 900;
-            cursor: pointer;
+            cursor: url('../img/tay.png'), pointer !important;
             transition: all 0.3s;
             text-transform: uppercase;
             letter-spacing: 4px;
             width: 100%;
-            max-width: 450px;
+            max-width: 400px;
             box-shadow: 0 10px 30px rgba(239, 68, 68, 0.4);
         }
 
@@ -420,6 +427,7 @@ if (isset($_GET['action'])) {
         }
 
         .history-section {
+            display: none;
             background: var(--glass);
             border-radius: 2.5rem;
             padding: 2.5rem;
@@ -469,18 +477,16 @@ if (isset($_GET['action'])) {
 
 <body>
     <div class="main-container">
-        <h1 class="game-title">XANH Äá»Ž Äá»I KHÃNG</h1>
-        <div class="balance-pill">ðŸ’° Sá»‘ Gtlm: <span id="balance-val"><?= number_format($money, 0, ',', '.') ?></span> gtlm</div>
+        <h1 class="game-title">XANH ĐỎ ĐỐI KHÁNG</h1>
+        <div class="balance-pill">💰 Số Gtlm: <span id="balance-val"><?= number_format($money, 0, ',', '.') ?></span> gtlm</div>
 
         <div class="info-guide" style="max-width: 800px; margin: 0 auto 2rem; background: rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 20px; border-left: 5px solid var(--accent); text-align: left; border-right: 1px solid rgba(255,255,255,0.1); border-top: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-            ðŸ’¡ <b>HÆ¯á»šNG DáºªN NHANH:</b> Tháº£ thÃ­nh vÃ o cÃ¡c Ã´ liá»u. Báº¡n cÃ³ thá»ƒ liá»u nhiá»u Ã´ cÃ¹ng lÃºc.<br>
-            - <b>Ãc Quá»· (Ãc quá»·):</b> Tá»•ng Ä‘iá»ƒm 4-10. Tá»· lá»‡ 1 Äƒn 1.<br>
-            - <b>ThiÃªn Tháº§n (ThiÃªn tháº§n):</b> Tá»•ng Ä‘iá»ƒm 11-17. Tá»· lá»‡ 1 Äƒn 1.<br>
-            - <b>Bá»™ ba:</b> 3 xÃºc xáº¯c giá»‘ng nhau (khÃ´ng tÃ­nh ThiÃªn tháº§n/ Ãc quá»·). HÃºp x30!
-            <button onclick="showFullRules()" style="background: var(--accent); color: #000; border: none; padding: 8px 20px; border-radius: 50px; cursor: pointer; margin-top: 10px; font-weight: 800; text-transform: uppercase; font-size: 0.7rem; box-shadow: 0 5px 15px rgba(251, 191, 36, 0.4);">ðŸ“œ Xem chi tiáº¿t luáº­t</button>
+            💡 <b>HƯỚNG DẪN NHANH:</b> Thả thính vào các ô liều. Bạn có thể liều nhiều ô cùng lúc.<br>
+            - <b>Xanh:</b> Tổng điểm 4-10. Tỷ lệ 1 ăn 1.<br>
+            - <b>Đỏ:</b> Tổng điểm 11-17. Tỷ lệ 1 ăn 1.<br>
+            - <b>Bộ ba:</b> 3 xúc xắc giống nhau (không tính Thiên thần/ Ác quỷ). Húp x30!
+            <button onclick="showFullRules()" style="background: var(--accent); color: #000; border: none; padding: 8px 20px; border-radius: 50px; cursor: pointer; margin-top: 10px; font-weight: 800; text-transform: uppercase; font-size: 0.7rem; box-shadow: 0 5px 15px rgba(251, 191, 36, 0.4);">📜 Xem chi tiết luật</button>
         </div>
-
-        <?php include __DIR__ . '/daily_challenge_widget.php'; ?>
 
         <div class="glass-card">
             <div class="trend-bar" style="display: flex; gap: 12px; justify-content: center; margin-bottom: 2.5rem; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 50px; border: 1px solid rgba(255,255,255,0.1);">
@@ -518,61 +524,65 @@ if (isset($_GET['action'])) {
                 </div>
             </div>
 
-            <div class="chip-selector">
-                <div class="chip-btn sel" data-val="1000" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">1K</div>
-                <div class="chip-btn" data-val="10000" style="background: linear-gradient(135deg, #f59e0b, #d97706);">10K</div>
-                <div class="chip-btn" data-val="50000" style="background: linear-gradient(135deg, #ef4444, #b91c1c);">50K</div>
-                <div class="chip-btn" data-val="100000" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);">100K</div>
-                <button onclick="clearBets()" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid var(--glass-border); border-radius: 50px; cursor: pointer; padding: 0.6rem 2rem; margin-left: 1rem; font-weight: 800; font-size: 0.75rem; transition: 0.3s; text-transform: uppercase;">Dá»ŒN BÃ€N</button>
+            <div class="chip-selector" style="display: flex; justify-content: center; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 2.5rem;">
+                <button type="button" class="btn-quick-bet sel" data-val="10000">10K</button>
+                <button type="button" class="btn-quick-bet" data-val="50000">50K</button>
+                <button type="button" class="btn-quick-bet" data-val="100000">100K</button>
+                <button type="button" class="btn-quick-bet" data-val="500000">500K</button>
+                <button type="button" class="btn-quick-bet" data-val="1000000">1M</button>
+                <button type="button" class="btn-quick-bet" data-val="5000000">5M</button>
+                <button type="button" class="btn-quick-bet" data-val="ALL">ALL IN</button>
+                <button type="button" onclick="clearBets()" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid var(--glass-border); border-radius: 8px; cursor: pointer; padding: 8px 15px; font-weight: 800; font-size: 0.75rem; transition: 0.3s; text-transform: uppercase;">DỌN BÀN</button>
             </div>
 
             <div class="bet-grid">
                 <!-- Main Bets -->
-                <div class="bet-item" data-type="small"><div class="label">ðŸ”µ Xanh (4-10)</div><div class="odds">1 Ä‚N 1</div><div class="bet-amount-badge" style="display:none">0</div></div>
-                <div class="bet-item" data-type="odd"><div class="label">âš–ï¸ Láºº</div><div class="odds">1 Ä‚N 1</div><div class="bet-amount-badge" style="display:none">0</div></div>
-                <div class="bet-item" data-type="any_triple" style="grid-column: span 2; background: rgba(251, 191, 36, 0.2); border: 2px solid var(--accent);"><div class="label">âœ¨ Báº¤T Ká»² Bá»˜ BA âœ¨</div><div class="odds">1 Ä‚N 30</div><div class="bet-amount-badge" style="display:none">0</div></div>
-                <div class="bet-item" data-type="even"><div class="label">âš–ï¸ CHáº´N</div><div class="odds">1 Ä‚N 1</div><div class="bet-amount-badge" style="display:none">0</div></div>
-                <div class="bet-item" data-type="big"><div class="label">ðŸ”´ Äá» (11-17)</div><div class="odds">1 Ä‚N 1</div><div class="bet-amount-badge" style="display:none">0</div></div>
+                <div class="bet-item" data-type="small"><div class="label">🔵 Xanh (4-10)</div><div class="odds">1 ĂN 1</div><div class="bet-amount-badge" style="display:none">0</div></div>
+                <div class="bet-item" data-type="odd"><div class="label">⚖️ LẺ</div><div class="odds">1 ĂN 1</div><div class="bet-amount-badge" style="display:none">0</div></div>
+                <div class="bet-item" data-type="any_triple" style="grid-column: span 2; background: rgba(251, 191, 36, 0.2); border: 2px solid var(--accent);"><div class="label">✨ BẤT KỲ BỘ BA ✨</div><div class="odds">1 ĂN 30</div><div class="bet-amount-badge" style="display:none">0</div></div>
+                <div class="bet-item" data-type="even"><div class="label">⚖️ CHẴN</div><div class="odds">1 ĂN 1</div><div class="bet-amount-badge" style="display:none">0</div></div>
+                <div class="bet-item" data-type="big"><div class="label">🔴 Đỏ (11-17)</div><div class="odds">1 ĂN 1</div><div class="bet-amount-badge" style="display:none">0</div></div>
 
                 <!-- Single Numbers -->
-                <div style="grid-column: 1 / -1; margin: 1.5rem 0; font-size: 0.7rem; font-weight: 800; letter-spacing: 2px; color: rgba(255,255,255,0.4); border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem; text-transform: uppercase;">ðŸŽ² CHIáº¾N Sá» DUY NHáº¤T (x1, x2, x3)</div>
-                <div class="bet-item" data-type="single_1"><div class="label">â¶</div><div class="bet-amount-badge" style="display:none">0</div></div>
-                <div class="bet-item" data-type="single_2"><div class="label">â·</div><div class="bet-amount-badge" style="display:none">0</div></div>
-                <div class="bet-item" data-type="single_3"><div class="label">â¸</div><div class="bet-amount-badge" style="display:none">0</div></div>
-                <div class="bet-item" data-type="single_4"><div class="label">â¹</div><div class="bet-amount-badge" style="display:none">0</div></div>
-                <div class="bet-item" data-type="single_5"><div class="label">âº</div><div class="bet-amount-badge" style="display:none">0</div></div>
-                <div class="bet-item" data-type="single_6"><div class="label">â»</div><div class="bet-amount-badge" style="display:none">0</div></div>
+                <div style="grid-column: 1 / -1; margin: 1.5rem 0; font-size: 0.7rem; font-weight: 800; letter-spacing: 2px; color: rgba(255,255,255,0.4); border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem; text-transform: uppercase;">🎲 CHIẾN SỐ DUY NHẤT (x1, x2, x3)</div>
+                <div class="bet-item" data-type="single_1"><div class="label">❶</div><div class="bet-amount-badge" style="display:none">0</div></div>
+                <div class="bet-item" data-type="single_2"><div class="label">❷</div><div class="bet-amount-badge" style="display:none">0</div></div>
+                <div class="bet-item" data-type="single_3"><div class="label">❸</div><div class="bet-amount-badge" style="display:none">0</div></div>
+                <div class="bet-item" data-type="single_4"><div class="label">❹</div><div class="bet-amount-badge" style="display:none">0</div></div>
+                <div class="bet-item" data-type="single_5"><div class="label">❺</div><div class="bet-amount-badge" style="display:none">0</div></div>
+                <div class="bet-item" data-type="single_6"><div class="label">❻</div><div class="bet-amount-badge" style="display:none">0</div></div>
 
                 <!-- Totals -->
-                <div style="grid-column: 1 / -1; margin: 1.5rem 0; font-size: 0.7rem; font-weight: 800; letter-spacing: 2px; color: rgba(255,255,255,0.4); border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem; text-transform: uppercase;">ðŸŽ¯ CHIáº¾N Tá»”NG ÄIá»‚M</div>
-                <div class="bet-item" data-type="total_4"><div class="label">Tá»”NG 4</div><div class="odds">1:60</div><div class="bet-amount-badge" style="display:none">0</div></div>
-                <div class="bet-item" data-type="total_9"><div class="label">Tá»”NG 9</div><div class="odds">1:7</div><div class="bet-amount-badge" style="display:none">0</div></div>
-                <div class="bet-item" data-type="total_10"><div class="label">Tá»”NG 10</div><div class="odds">1:6</div><div class="bet-amount-badge" style="display:none">0</div></div>
-                <div class="bet-item" data-type="total_11"><div class="label">Tá»”NG 11</div><div class="odds">1:6</div><div class="bet-amount-badge" style="display:none">0</div></div>
-                <div class="bet-item" data-type="total_12"><div class="label">Tá»”NG 12</div><div class="odds">1:7</div><div class="bet-amount-badge" style="display:none">0</div></div>
-                <div class="bet-item" data-type="total_17"><div class="label">Tá»”NG 17</div><div class="odds">1:60</div><div class="bet-amount-badge" style="display:none">0</div></div>
+                <div style="grid-column: 1 / -1; margin: 1.5rem 0; font-size: 0.7rem; font-weight: 800; letter-spacing: 2px; color: rgba(255,255,255,0.4); border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem; text-transform: uppercase;">🎯 CHIẾN TỔNG ĐIỂM</div>
+                <div class="bet-item" data-type="total_4"><div class="label">TỔNG 4</div><div class="odds">1:60</div><div class="bet-amount-badge" style="display:none">0</div></div>
+                <div class="bet-item" data-type="total_9"><div class="label">TỔNG 9</div><div class="odds">1:7</div><div class="bet-amount-badge" style="display:none">0</div></div>
+                <div class="bet-item" data-type="total_10"><div class="label">TỔNG 10</div><div class="odds">1:6</div><div class="bet-amount-badge" style="display:none">0</div></div>
+                <div class="bet-item" data-type="total_11"><div class="label">TỔNG 11</div><div class="odds">1:6</div><div class="bet-amount-badge" style="display:none">0</div></div>
+                <div class="bet-item" data-type="total_12"><div class="label">TỔNG 12</div><div class="odds">1:7</div><div class="bet-amount-badge" style="display:none">0</div></div>
+                <div class="bet-item" data-type="total_17"><div class="label">TỔNG 17</div><div class="odds">1:60</div><div class="bet-amount-badge" style="display:none">0</div></div>
             </div>
 
-            <button id="roll-btn" class="btn-roll">Láº®C XÃšC Xáº®C</button>
+            <button id="roll-btn" class="btn-roll">LẮC XÚC XẮC</button>
         </div>
 
         <div class="history-section">
-            <h2 style="font-size: 1.2rem; letter-spacing: 2px; margin-bottom: 2rem; color: var(--accent);">Lá»ŠCH Sá»¬ Gáº¦N ÄÃ‚Y</h2>
+            <h2 style="font-size: 1.2rem; letter-spacing: 2px; margin-bottom: 2rem; color: var(--accent);">LỊCH SỬ GẦN ĐÂY</h2>
             <div style="overflow-x: auto;">
                 <table class="history-table">
                     <thead>
                         <tr>
-                            <th>Thá»i gian</th>
-                            <th>LÆ°á»£ng liá»u</th>
-                            <th>Káº¿t quáº£</th>
-                            <th>HÃºp/Vá» CÃµi</th>
+                            <th>Thời gian</th>
+                            <th>Lượng liều</th>
+                            <th>Kết quả</th>
+                            <th>Húp/Về Cõi</th>
                         </tr>
                     </thead>
                     <tbody id="history-body"></tbody>
                 </table>
             </div>
-            <div style="margin-top: 3rem;"><a href="../index.php" style="color: #fff; text-decoration: none; font-weight: 700; border: 1px solid rgba(255,255,255,0.2); padding: 1rem 3rem; border-radius: 50px; transition: 0.3s; background: rgba(255,255,255,0.05);">ðŸ  QUAY Láº I Sáº¢NH</a></div>
         </div>
+        
+        <div style="margin-top: 3rem; margin-bottom: 5rem;"><a href="../index.php" style="color: #fff; text-decoration: none; font-weight: 700; border: 1px solid rgba(255,255,255,0.2); padding: 1rem 3rem; border-radius: 50px; transition: 0.3s; background: rgba(255,255,255,0.05);">🏠 QUAY LẠI SẢNH</a></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/confetti.browser.min.js"></script>
@@ -585,13 +595,13 @@ if (isset($_GET['action'])) {
     <script>
         function showFullRules() {
             Swal.fire({
-                title: 'LUáº¬T CHÆ I SIC BO',
+                title: 'LUẬT CHƠI SIC BO',
                 html: `<div style="text-align: left; font-size: 0.85rem;">
-                    <b>1. TÃ i/ :</b> Tháº¯ng x1. TÃ i (11-17),   (4-10). Thua náº¿u ra Bá»™ Ba (3 xÃºc xáº¯c giá»‘ng nhau).<br>
-                    <b>2. Cháºµn/Láº»:</b> Tháº¯ng x1. Thua náº¿u ra Bá»™ Ba.<br>
-                    <b>3. CÆ°á»£c ÄÆ¡n:</b> ÄoÃ¡n sá»‘ xuáº¥t hiá»‡n trÃªn xÃºc xáº¯c. 1 con: x1, 2 con: x2, 3 con: x3.<br>
-                    <b>4. Bá»™ Ba:</b> CÆ°á»£c 3 xÃºc xáº¯c giá»‘ng há»‡t nhau. Tháº¯ng x30.<br>
-                    <b>5. Tá»•ng Äiá»ƒm:</b> CÆ°á»£c chÃ­nh xÃ¡c tá»•ng 3 xÃºc xáº¯c. Tá»· lá»‡ tá»« x6 Ä‘áº¿n x60.
+                    <b>1. Đỏ/Xanh:</b> Thắng x1. Đỏ (11-17), Xanh (4-10). Thua nếu ra Bộ Ba (3 xúc xắc giống nhau).<br>
+                    <b>2. Chẵn/Lẻ:</b> Thắng x1. Thua nếu ra Bộ Ba.<br>
+                    <b>3. Cược Đơn:</b> Đoán số xuất hiện trên xúc xắc. 1 con: x1, 2 con: x2, 3 con: x3.<br>
+                    <b>4. Bộ Ba:</b> Cược 3 xúc xắc giống hệt nhau. Thắng x30.<br>
+                    <b>5. Tổng Điểm:</b> Cược chính xác tổng 3 xúc xắc. Tỷ lệ từ x6 đến x60.
                 </div>`,
                 icon: 'info'
             });
@@ -602,25 +612,43 @@ if (isset($_GET['action'])) {
             history.slice(0, 10).reverse().forEach(h => {
                 let sum = h.Result.split(',').reduce((a, b) => parseInt(a) + parseInt(b), 0);
                 let isBig = sum >= 11;
-                html += `<div class="trend-bubble ${isBig ? 't-big' : 't-small'}" title="Tá»•ng: ${sum}">${isBig ? 'T' : 'X'}</div>`;
+                html += `<div class="trend-bubble ${isBig ? 't-big' : 't-small'}" title="Tổng: ${sum}">${isBig ? 'Đ' : 'X'}</div>`;
             });
             $('#trend-content').html(html);
         }
 
-        let currentChip = 1000;
+        let currentChip = 10000;
         let bets = {};
         let isRolling = false;
 
-        $('.chip-btn').click(function() {
-            $('.chip-btn').removeClass('sel');
+        $('.btn-quick-bet').click(function() {
+            if ($(this).data('val') === undefined) return;
+            $('.btn-quick-bet').removeClass('sel');
             $(this).addClass('sel');
-            currentChip = parseInt($(this).data('val'));
+            currentChip = $(this).data('val');
         });
 
         $('.bet-item').click(function() {
             if (isRolling) return;
             let type = $(this).data('type');
-            bets[type] = (bets[type] || 0) + currentChip;
+            
+            let moneyText = $('#balance-val').text().replace(/\./g, '');
+            let maxMoney = parseInt(moneyText);
+            let currentTotalBet = Object.values(bets).reduce((a,b) => a+b, 0);
+            
+            let addAmount = currentChip;
+            if (currentChip === 'ALL') {
+                addAmount = maxMoney - currentTotalBet;
+            } else {
+                addAmount = parseInt(currentChip);
+            }
+            
+            if (addAmount <= 0 || (currentTotalBet + addAmount > maxMoney)) {
+                Swal.fire('Lỗi', 'Không đủ GTLM!', 'error');
+                return;
+            }
+
+            bets[type] = (bets[type] || 0) + addAmount;
             $(this).addClass('active');
             let badge = $(this).find('.bet-amount-badge');
             badge.text(new Intl.NumberFormat().format(bets[type])).show();
@@ -635,7 +663,7 @@ if (isset($_GET['action'])) {
 
         $('#roll-btn').click(function() {
             if (isRolling || Object.keys(bets).length === 0) {
-                if (Object.keys(bets).length === 0) Swal.fire('Lá»—i', 'Vui lÃ²ng liá»u trÆ°á»›c khi láº¯c!', 'error');
+                if (Object.keys(bets).length === 0) Swal.fire('Lỗi', 'Vui lòng liều trước khi lắc!', 'error');
                 return;
             }
 
@@ -650,7 +678,7 @@ if (isset($_GET['action'])) {
 
             $.post('sicbo_v2.php?action=roll', { bets: JSON.stringify(betArray) }, function(data) {
                 if (!data.success) {
-                    Swal.fire('Lá»—i', data.message, 'error');
+                    Swal.fire('Lỗi', data.message, 'error');
                     isRolling = false;
                     $('#roll-btn').prop('disabled', false);
                     $('#dice-wrapper').removeClass('shaking');
@@ -672,14 +700,18 @@ if (isset($_GET['action'])) {
                         $('#balance-val').text(data.money);
 
                         if (data.winAmount > 0) {
-                            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                            try {
+                                if (typeof confetti !== 'undefined') {
+                                    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                                }
+                            } catch (e) { console.error(e); }
                             Swal.fire({
-                                title: 'HÃºp Lá»›n!',
-                                html: `Báº¡n hÃºp <b>${data.winAmount.toLocaleString()}</b> GTLM!<br><small>${data.winLog.join('<br>')}</small>`,
+                                title: 'Húp Lớn!',
+                                html: `Tổng thu về: <b style="color:#10b981">${Number(data.totalRevenue).toLocaleString()}</b> GTLM<br>Lãi ròng: <b style="color:#fbbf24">+${Number(data.winAmount).toLocaleString()}</b> GTLM<hr style="border-color:rgba(255,255,255,0.1); margin:10px 0;"><small style="text-align:left; display:block; max-height:150px; overflow-y:auto; line-height: 1.6;">${(data.winLog || []).join('<br>')}</small>`,
                                 icon: 'success'
                             });
                         } else {
-                            Swal.fire('Vá» CÃµi!', `Tiáº¿c quÃ¡, báº¡n Ä‘Ã£ bay mÃ u sá»‘ GTLM nÃ y!`, 'error');
+                            Swal.fire('Về Cõi!', `Tiếc quá, bạn đã bay màu số GTLM này!`, 'error');
                         }
                         loadHistory();
                         clearBets();

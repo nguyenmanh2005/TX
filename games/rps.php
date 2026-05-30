@@ -496,8 +496,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'play_rps') {
             <button class="choice-btn" data-choice="Kéo">✌️</button>
         </div>
 
-        <input type="number" id="cuoc" class="bet-input" value="10000" step="5000">
-        <br>
+        <input type="number" id="cuoc" class="bet-input" value="10000" step="5000" min="1" max="<?= $soDu ?>">
+        <div style="margin-top: 10px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;">
+            <button type="button" class="btn-game" style="font-size: 13px; padding: 6px 12px; background: #333;" onclick="document.getElementById('cuoc').value = 10000">10K GTLM</button>
+            <button type="button" class="btn-game" style="font-size: 13px; padding: 6px 12px; background: #444;" onclick="document.getElementById('cuoc').value = 100000">100K GTLM</button>
+            <button type="button" class="btn-game" style="font-size: 13px; padding: 6px 12px; background: #555;" onclick="document.getElementById('cuoc').value = 500000">500K GTLM</button>
+            <button type="button" class="btn-game" style="font-size: 13px; padding: 6px 12px; background: #666;" onclick="document.getElementById('cuoc').value = 1000000">1M GTLM</button>
+            <button type="button" class="btn-game" style="font-size: 13px; padding: 6px 12px; background: #777;" onclick="document.getElementById('cuoc').value = 5000000">5M GTLM</button>
+            <button type="button" class="btn-game" style="font-size: 13px; padding: 6px 12px; background: #e74c3c;" onclick="document.getElementById('cuoc').value = <?= $soDu ?>">MAX</button>
+        </div>
         <button class="btn-play" id="btn-play">CHẾT NÀY!</button>
 
         <div class="status-msg" id="status-msg">Chọn Đá, Giấy hoặc Kéo để so tài!</div>

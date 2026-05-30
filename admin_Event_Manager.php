@@ -391,7 +391,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $currentGotd = EventHelper::getGameOfTheDay($conn);
 $seasons = $conn->query("SELECT * FROM seasonal_pass_configs ORDER BY start_date DESC")->fetch_all(MYSQLI_ASSOC);
 $seasonalEvents = $conn->query("SELECT * FROM seasonal_events ORDER BY starts_at DESC")->fetch_all(MYSQLI_ASSOC);
-$availableGames = ['Baccarat', 'Blackjack', 'Roulette', 'Sicbo', 'Tài Xỉu', 'RPS', 'Vietlott', 'Xóc Đĩa', 'Poker', 'Bầu Cua', 'Slot Cyber', 'Mega Spin', 'Horse Race'];
+$availableGames = ['Baccarat', 'Blackjack', 'Roulette', 'Sicbo', 'Xanh Đỏ Đối Kháng', 'RPS', 'Vietlott', 'Xóc Đĩa', 'Poker', 'Bầu Cua', 'Slot Cyber', 'Mega Spin', 'Horse Race'];
 
 // Logic load Event phụ thuộc để quản lý chi tiết (Missions, Spin rewards, Shop)
 $manageEventId = (int)($_GET['manage_event_id'] ?? 0);
@@ -1337,7 +1337,7 @@ if ($analyticsEventId > 0) {
                                     <input type="hidden" name="event_id" value="<?php echo $manageEventId; ?>">
                                     <div class="form-group">
                                         <label>Tiêu Đề Nhiệm Vụ</label>
-                                        <input type="text" name="title" placeholder="Ví dụ: Đặt cược 50,000 GTLM ở Tài Xỉu" required>
+                                        <input type="text" name="title" placeholder="Ví dụ: Đặt cược 50,000 GTLM ở Xanh Đỏ Đối Kháng" required>
                                     </div>
                                     <div class="form-group">
                                         <label>Loại Nhiệm Vụ</label>

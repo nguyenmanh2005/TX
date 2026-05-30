@@ -1,4 +1,9 @@
 <?php
+// Tự động bypass các script hiển thị nếu là request AJAX (JSON)
+if (isset($_GET['action']) || isset($_POST['action']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+    $bypassThemeScripts = true;
+}
+
 /**
  * Load Theme Configuration
  * File này load theme config từ database và trả về các biến PHP
@@ -250,3 +255,33 @@ document.addEventListener('DOMContentLoaded', () => {
 <?php
 }
 
+
+?>
+<?php if (!isset($_GET['action']) && !isset($_POST['action']) && (!isset($_SERVER['HTTP_X_REQUESTED_WITH']) || strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) !== 'xmlhttprequest')): ?>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Hide standard history boxes
+    document.querySelectorAll('.bottom-section, .history-box, .chart-box, #historyTable, #historyBody, #gameChart, .game-history-table').forEach(el => {
+        el.style.display = 'none';
+        el.style.visibility = 'hidden';
+    });
+    
+    // Hide tailwind history sections based on text content
+    document.querySelectorAll('h2, h3, h4').forEach(el => {
+        const text = el.innerText || el.textContent;
+        if (text.includes('Lịch sử chơi') || text.includes('Thống kê')) {
+            let wrapper = el.closest('.mt-8, .bottom-section, .bg-white\\/10, .bg-black\\/50, .history-container, .card, div');
+            if (wrapper) {
+                if (wrapper.tagName === 'DIV' && wrapper.children.length > 5 && !wrapper.className.includes('bg-')) {
+                    el.style.display = 'none';
+                } else {
+                    wrapper.style.display = 'none';
+                }
+            } else {
+                el.style.display = 'none';
+            }
+        }
+    });
+});
+</script>
+<?php endif; ?>

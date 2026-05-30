@@ -376,6 +376,24 @@ if (isset($_GET['action'])) {
             font-family: 'Orbitron';
             color: var(--accent);
         }
+
+        .btn-quick-bet {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: url('../img/tay.png'), pointer !important;
+            font-weight: 600;
+            transition: 0.3s;
+            font-size: 0.75rem;
+        }
+
+        .btn-quick-bet:hover {
+            background: var(--primary);
+            color: #000;
+            border-color: var(--primary);
+        }
     </style>
 </head>
 
@@ -392,14 +410,15 @@ if (isset($_GET['action'])) {
 
                 <div class="input-group">
                     <label>Gtlm cược (gtlm)</label>
-                    <input type="number" id="betAmount" value="10000" min="1000" step="5000">
-                    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-top:8px;">
-                        <button onclick="adjBet(0.5)"
-                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px; padding:5px; font-size:0.6rem; cursor:pointer; font-weight:800;">1/2</button>
-                        <button onclick="adjBet(2)"
-                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px; padding:5px; font-size:0.6rem; cursor:pointer; font-weight:800;">x2</button>
-                        <button onclick="adjBet('max')"
-                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px; padding:5px; font-size:0.6rem; cursor:pointer; font-weight:800;">MAX</button>
+                    <input type="number" id="betAmount" value="10000" min="1000">
+                    <div class="quick-bets" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 10px;">
+                        <button class="btn-quick-bet" onclick="setBet(10000)">10K</button>
+                        <button class="btn-quick-bet" onclick="setBet(50000)">50K</button>
+                        <button class="btn-quick-bet" onclick="setBet(100000)">100K</button>
+                        <button class="btn-quick-bet" onclick="setBet(500000)">500K</button>
+                        <button class="btn-quick-bet" onclick="setBet(1000000)">1M</button>
+                        <button class="btn-quick-bet" onclick="setBet(5000000)">5M</button>
+                        <button class="btn-quick-bet" onclick="setBet('ALLIN')" style="grid-column: span 3; background: var(--primary); color:#000; border:none; font-weight:800;">ALL IN</button>
                     </div>
                 </div>
 
@@ -449,11 +468,13 @@ if (isset($_GET['action'])) {
     <script>
         let isGameRunning = false, currentFloor = 0;
 
-        function adjBet(ratio) {
-            const cur = parseFloat($('#betAmount').val()) || 0;
+        function setBet(amount) {
             const money = parseFloat($('#userMoney').text().replace(/\./g, ''));
-            if (ratio === 'max') $('#betAmount').val(money);
-            else $('#betAmount').val(Math.floor(cur * ratio));
+            if (amount === 'ALLIN') {
+                $('#betAmount').val(money);
+            } else {
+                $('#betAmount').val(amount);
+            }
         }
 
         function startGame() {
@@ -493,9 +514,9 @@ if (isset($_GET['action'])) {
                     if (res.hit) {
                         tileEl.addClass('trap').text('💥');
                         isGameRunning = false;
-                        if (window.GameEffects) window.GameEffects.showLoss(0);
+                        const betAmt = parseInt($('#betAmount').val());
+                        if (window.GameEffects) window.GameEffects.showLoss(betAmt);
                         setTimeout(() => {
-                            Swal.fire({ title: '💥 RƠI THÁP!', text: 'Bạn đã trúng bẫy!', icon: 'error', background: '#1a1a1a', color: '#fff' });
                             resetGameUI();
                         }, 800);
                     } else {
@@ -510,9 +531,10 @@ if (isset($_GET['action'])) {
                             isGameRunning = false;
                             const rawWin = parseInt((res.winAmount + '').replace(/[^0-9]/g, '')) || 0;
                             if (window.GameEffects) window.GameEffects.showBigWin(rawWin);
-                            Swal.fire({ title: '🏆 KING OF TOWER!', html: `Leo đỉnh thành công! Thắng <b style="color:#f1c40f">${res.winAmount} gtlm</b>`, icon: 'success', background: '#1a1a1a', color: '#fff' });
                             $('#userMoney').text(res.money);
-                            resetGameUI();
+                            setTimeout(() => {
+                                resetGameUI();
+                            }, 800);
                         } else {
                             activateFloor(currentFloor);
                         }
@@ -532,8 +554,9 @@ if (isset($_GET['action'])) {
                         if (currentFloor >= 5) window.GameEffects.showBigWin(rawWin);
                         else window.GameEffects.showWin(rawWin);
                     }
-                    Swal.fire({ title: '💰 RÚT Gtlm THÀNH CÔNG!', html: `Leo tầng ${currentFloor} → nhận <b style="color:#2ecc71">${res.winAmount} gtlm</b>`, icon: 'success', background: '#1a1a1a', color: '#fff' });
-                    resetGameUI();
+                    setTimeout(() => {
+                        resetGameUI();
+                    }, 500);
                 }
             });
         }

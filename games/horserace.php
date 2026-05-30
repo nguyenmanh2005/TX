@@ -329,7 +329,7 @@ if (!isset($_SESSION['Iduser'])) { header("Location: ../login.php"); exit(); }
             <div class="bet-controls">
                 <div class="my-bet-info" id="my-bet-<?= $i ?>">Chưa cược</div>
                 <div class="bet-input-group">
-                    <input type="number" class="bet-input" id="input-<?= $i ?>" placeholder="Số  Gtlm" min="1000" step="1000">
+                    <input type="number" class="bet-input" id="input-<?= $i ?>" placeholder="Số tiền" min="1000" step="1000">
                     <button class="bet-btn" onclick="placeBet(<?= $i ?>)">CƯỢC</button>
                 </div>
             </div>
@@ -384,7 +384,6 @@ if (!isset($_SESSION['Iduser'])) { header("Location: ../login.php"); exit(); }
             if (currentPhase === 'betting') {
                 $('#phase-text').text('GIAI ĐOẠN CƯỢC');
                 $('#result-overlay').hide();
-                $('#win-message').hide();
                 $('.bet-btn').prop('disabled', false);
                 resetHorses();
                 isRacing = false;
@@ -394,7 +393,7 @@ if (!isset($_SESSION['Iduser'])) { header("Location: ../login.php"); exit(); }
                 if (!isRacing) startRaceAnimation(winnerHorse);
             } else if (currentPhase === 'result') {
                 $('#phase-text').text('KẾT QUẢ');
-                showResult(winnerHorse, data.my_payout);
+                showResult(winnerHorse);
             }
         });
     }
@@ -435,19 +434,18 @@ if (!isset($_SESSION['Iduser'])) { header("Location: ../login.php"); exit(); }
         }
     }
 
-    function showResult(winner, myPayout) {
+    function showResult(winner) {
         $('#winner-text').text('HORSE #' + winner);
         $('#result-overlay').css('display', 'flex');
-        if (myPayout > 0) {
-            $('#win-amount').text(formatMoney(myPayout));
-            $('#win-message').show();
-        }
+        
+        // Optional: check if user won this race (would need another API call or data in get_status)
+        // For simplicity, I'll just show the winner.
     }
 
     function placeBet(horseNum) {
         const amount = $(`#input-${horseNum}`).val();
         if (!amount || amount < 1000) {
-            Swal.fire('Lỗi', 'Số  Gtlm cược tối thiểu là 1,000 GTLM', 'error');
+            Swal.fire('Lỗi', 'Số tiền cược tối thiểu là 1,000 GTLM', 'error');
             return;
         }
 

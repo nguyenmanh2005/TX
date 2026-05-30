@@ -127,13 +127,27 @@ if (isset($_GET['action'])) {
         .stream-bit.stable { background: #007bff; box-shadow: 0 0 8px #007bff; }
         .stream-bit.volatile { background: #ff4757; box-shadow: 0 0 8px #ff4757; }
 
-        .energy-chips { display:flex; justify-content:center; gap:8px; margin-bottom:15px; }
-        .chip { width:40px; height:40px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-weight:900; font-size:0.6rem; cursor:pointer; transition:0.3s; font-family:'Orbitron'; background:rgba(255,255,255,0.05); color:#fff; }
-        .chip:hover, .chip.active { transform:translateY(-5px); border-color:#ff4757; background:rgba(255,71,87,0.2); box-shadow:0 5px 15px rgba(255,71,87,0.3); }
-
         .btn-pulse { padding:1.2rem; border-radius:1.5rem; border:none; font-weight:900; font-size:1.3rem; cursor:pointer; transition:0.3s; text-transform:uppercase; background:linear-gradient(135deg, #007bff, #ff4757); color:#fff; box-shadow:0 10px 30px rgba(255,71,87,0.3); width:100%; font-family:'Orbitron'; }
         .btn-pulse:hover:not(:disabled) { transform:translateY(-3px); filter:brightness(1.1); }
         .btn-pulse:disabled { opacity:0.5; cursor:not-allowed; }
+
+        .btn-quick-bet {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: url('../img/tay.png'), pointer !important;
+            font-weight: 600;
+            transition: 0.3s;
+            font-size: 0.75rem;
+        }
+
+        .btn-quick-bet:hover {
+            background: var(--primary);
+            color: #000;
+            border-color: var(--primary);
+        }
     
         /* Statistics Container */
         .stats-container {
@@ -213,15 +227,18 @@ if (isset($_GET['action'])) {
                 <div style="margin-top:auto;">
                     <div class="stat-card" style="margin-bottom:10px; padding:0.8rem;">
                         <span>MỨC NẠP XUNG (CHARGE)</span>
-                        <input type="number" id="customCharge" value="1000" min="1000" step="1000" 
-                               style="background:none; border:none; color:var(--primary); font-family:'Orbitron'; font-size:1.2rem; font-weight:900; width:100%; text-align:center; outline:none;">
-                    </div>
-                    <div class="energy-chips">
-                        <div class="chip active" data-val="1000">1K</div>
-                        <div class="chip" data-val="5000">5K</div>
-                        <div class="chip" data-val="10000">10K</div>
-                        <div class="chip" data-val="50000">50K</div>
-                        <div class="chip" data-val="100000">100K</div>
+                        <input type="number" id="customCharge" value="10000" min="1000" step="1000" 
+                               style="background:none; border:none; color:var(--primary); font-family:'Orbitron'; font-size:1.2rem; font-weight:900; width:100%; text-align:center; outline:none; margin-bottom: 10px;">
+                        
+                        <div class="quick-bets" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 10px;">
+                            <button class="btn-quick-bet" onclick="setBet(10000)">10K</button>
+                            <button class="btn-quick-bet" onclick="setBet(50000)">50K</button>
+                            <button class="btn-quick-bet" onclick="setBet(100000)">100K</button>
+                            <button class="btn-quick-bet" onclick="setBet(500000)">500K</button>
+                            <button class="btn-quick-bet" onclick="setBet(1000000)">1M</button>
+                            <button class="btn-quick-bet" onclick="setBet(5000000)">5M</button>
+                            <button class="btn-quick-bet" onclick="setBet('ALLIN')" style="grid-column: span 3; background: var(--primary); color:#000; border:none; font-weight:800;">ALL IN</button>
+                        </div>
                     </div>
                     <button id="pulseBtn" class="btn-pulse" onclick="triggerPulse()">⚡ KÍCH XUNG</button>
                     <div style="text-align: center; margin-top: 1rem;">
@@ -276,11 +293,14 @@ if (isset($_GET['action'])) {
         let isSyncing = false;
         let streamData = [];
 
-        $('.chip').click(function() {
-            $('.chip').removeClass('active');
-            $(this).addClass('active');
-            $('#customCharge').val($(this).data('val'));
-        });
+        function setBet(amount) {
+            const money = parseFloat($('#userMoney').text().replace(/\./g, ''));
+            if (amount === 'ALLIN') {
+                $('#customCharge').val(money);
+            } else {
+                $('#customCharge').val(amount);
+            }
+        }
 
         function placeCharge(choice) {
             if (isSyncing) return;

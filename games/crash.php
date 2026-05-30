@@ -236,20 +236,19 @@ if (isset($_GET['action'])) {
             border-radius: 2.5rem;
             padding: 2rem;
             box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
-            width: 98%;
-            max-width: 1400px;
+            width: 95%;
+            max-width: 1100px;
             display: grid;
-            grid-template-columns: 320px 1fr;
-            gap: 2rem;
-            min-height: 85vh;
+            grid-template-columns: 300px 1fr;
+            gap: 1.5rem;
+            max-height: 92vh;
             align-self: center;
-            margin: 20px 0;
         }
 
         .crash-area {
             position: relative;
             width: 100%;
-            min-height: 600px;
+            min-height: 500px;
             background: radial-gradient(circle at center, #0a0a1a 0%, #05050a 100%);
             border-radius: 2rem;
             border: 1px solid rgba(255, 255, 255, 0.05);
@@ -299,6 +298,24 @@ if (isset($_GET['action'])) {
             color: #fff;
             text-shadow: 0 0 20px rgba(0, 242, 254, 0.6);
             line-height: 1;
+        }
+
+        .btn-quick-bet {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: url('../img/tay.png'), pointer !important;
+            font-weight: 600;
+            transition: 0.3s;
+            font-size: 0.75rem;
+        }
+
+        .btn-quick-bet:hover {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
         }
 
         .multiplier-glow {
@@ -511,25 +528,18 @@ if (isset($_GET['action'])) {
                     CRASH</h1>
                 <p style="margin:0; opacity:0.4; font-size: 0.8rem; letter-spacing: 2px;">Vegas Royale Premium 3D</p>
 
-                <div id="winFeed"
-                    style="margin-top: 1rem; height: 120px; overflow: hidden; background: rgba(0,0,0,0.4); border-radius: 1rem; padding: 0.8rem; border: 1px solid rgba(255,255,255,0.05); font-size: 0.75rem;">
-                    <div
-                        style="opacity:0.5; margin-bottom: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
-                        Hoạt động trực tuyến</div>
-                    <div id="winList" style="display:flex; flex-direction:column; gap:6px;"></div>
-                </div>
-
                 <form id="gameForm" onsubmit="return false;" style="margin-top: 1rem;">
                     <div class="input-group">
                         <label>Gtlm cược (gtlm)</label>
-                        <input type="number" id="betAmount" value="10000" min="1000" step="any">
-                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-top: 8px;">
-                            <button type="button" onclick="quickBet(0.5)"
-                                style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px; padding:4px; font-size:0.7rem; cursor:pointer;">1/2</button>
-                            <button type="button" onclick="quickBet(2)"
-                                style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px; padding:4px; font-size:0.7rem; cursor:pointer;">x2</button>
-                            <button type="button" onclick="quickBet('max')"
-                                style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px; padding:4px; font-size:0.7rem; cursor:pointer;">MAX</button>
+                        <input type="number" id="betAmount" value="10000" min="1000">
+                        <div class="quick-bets" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 10px;">
+                            <button class="btn-quick-bet" type="button" onclick="setBet(10000)">10K</button>
+                            <button class="btn-quick-bet" type="button" onclick="setBet(50000)">50K</button>
+                            <button class="btn-quick-bet" type="button" onclick="setBet(100000)">100K</button>
+                            <button class="btn-quick-bet" type="button" onclick="setBet(500000)">500K</button>
+                            <button class="btn-quick-bet" type="button" onclick="setBet(1000000)">1M</button>
+                            <button class="btn-quick-bet" type="button" onclick="setBet(5000000)">5M</button>
+                            <button class="btn-quick-bet" type="button" onclick="setBet('ALLIN')" style="grid-column: span 3; background: var(--primary); color:#fff; border:none; font-weight:800;">ALL IN</button>
                         </div>
                     </div>
 
@@ -552,15 +562,6 @@ if (isset($_GET['action'])) {
                                 style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px; padding:4px; font-size:0.7rem; cursor:pointer;">x5</button>
                             <button type="button" onclick="$('#autoCashout').val(10.00); updatePotential();"
                                 style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px; padding:4px; font-size:0.7rem; cursor:pointer;">x10</button>
-                        </div>
-                    </div>
-
-                    <div id="proTipBox"
-                        style="margin-top: 1rem; padding: 0.8rem; border-radius: 1rem; background: rgba(18, 194, 233, 0.05); border: 1px solid rgba(18, 194, 233, 0.2); min-height: 50px;">
-                        <span
-                            style="display:block; font-size:0.6rem; color:#12c2e9; font-weight:700; margin-bottom:4px; text-transform:uppercase;">GỢI
-                            Ý CHIẾN THUẬT</span>
-                        <div id="tipText" style="font-size:0.75rem; opacity:0.8; font-style:italic;">Đang tải mẹo...
                         </div>
                     </div>
 
@@ -775,12 +776,6 @@ if (isset($_GET['action'])) {
 
                     $('#cashoutBtn').hide();
                     $('#startBtn').show().text('TIẾP TỤC');
-
-                    Swal.fire({
-                        title: '🚀 THÀNH CÔNG!',
-                        html: `Rút tại <b style="color:var(--accent)">x${finalMult.toFixed(2)}</b> nhận <b style="color:#2ecc71">${res.winAmount} gtlm</b>`,
-                        icon: 'success', background: '#111', color: '#fff', timer: 3000
-                    });
                 } else {
                     if (res.crashPoint) {
                         crashPoint = res.crashPoint;
@@ -796,67 +791,25 @@ if (isset($_GET['action'])) {
             });
         }
 
-        function quickBet(ratio) {
-            const current = parseFloat($('#betAmount').val()) || 0;
-            const money = parseFloat($('#userMoney').text().replace(/\./g, '').replace(',', '.')) || 0;
-            if (ratio === 'max') $('#betAmount').val(money);
-            else $('#betAmount').val(Math.floor(current * ratio));
+        function setBet(amount) {
+            const money = parseFloat($('#userMoney').text().replace(/\./g, ''));
+            if (amount === 'ALLIN') {
+                $('#betAmount').val(money);
+            } else {
+                $('#betAmount').val(amount);
+            }
             updatePotential();
         }
 
-        function initProTips() {
-            const tips = [
-                "Nên cài đặt 'Tự động rút' ở mức x1.5 đến x2.0 để có lợi nhuận ổn định.",
-                "Đừng quá tham lam, x10 là mốc rủi ro cực kỳ cao!",
-                "Sử dụng phím cược nhanh để thao tác linh hoạt hơn trong từng ván.",
-                "Nếu thua liên tiếp, hãy nghỉ ngơi và quay lại sau để tránh tâm lý gỡ gạc.",
-                "Tốc độ phi thuyền tăng nhanh sau mốc x5, hãy cẩn thận!",
-                "Vegas Royale luôn có những phần thưởng bất ngờ cho người chơi kiên trì."
-            ];
-            let i = 0;
-            setInterval(() => {
-                $('#tipText').fadeOut(300, function () {
-                    $(this).text(tips[i]).fadeIn(300);
-                    i = (i + 1) % tips.length;
-                });
-            }, 6000);
-            $('#tipText').text(tips[0]);
-        }
-
-        function simulateWinFeed() {
-            const users = ['ManhNT', 'VegasPro', 'LuckyGuy', 'CryptoKing', 'Player99', 'AdminRoyale', 'DiamondHand'];
-            const list = $('#winList');
-
-            function addWin() {
-                const user = users[Math.floor(Math.random() * users.length)];
-                const mult = (Math.random() * 5 + 1).toFixed(2);
-                const win = (Math.random() * 500000 + 10000).toLocaleString('vi-VN');
-
-                const item = $(`<div style="display:flex; justify-content: space-between; border-left: 2px solid var(--primary); padding-left: 8px; animation: slideIn 0.3s ease;">
-                    <span style="font-weight:700;">${user}</span>
-                    <span>x${mult}</span>
-                    <span style="color:#2ecc71; font-weight:900;">+${win}</span>
-                </div>`);
-
-                list.prepend(item);
-                if (list.children().length > 5) list.children().last().remove();
-
-                setTimeout(addWin, Math.random() * 5000 + 2000);
-            }
-            addWin();
         }
 
         window.onload = () => {
-            simulateWinFeed();
-            initProTips();
             // Load 3D Engine
             if (typeof Crash3D !== 'undefined') {
                 crash3d = new Crash3D('crash-3d-container');
             }
         };
 
-        // Add slideIn animation
-        $('<style>@keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }</style>').appendTo('head');
     </script>
 
     <canvas id="threejs-background"></canvas>

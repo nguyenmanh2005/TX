@@ -13,7 +13,7 @@ $race = $conn->query("SELECT * FROM horse_races ORDER BY created_at DESC LIMIT 1
 
 if (!$race) {
     createNewRace($conn);
-    exit("Created first race.\n");
+    return;
 }
 
 switch ($race['status']) {
@@ -34,8 +34,8 @@ switch ($race['status']) {
         break;
 
     case 'result':
-        // Xem kết quả 15s -> Settle và mở phiên mới (Tổng 45s từ lúc start_at)
-        $settleTime = strtotime($race['start_at']) + 45;
+        // Xem kết quả 5s -> Settle và mở phiên mới (Tổng 35s từ lúc start_at)
+        $settleTime = strtotime($race['start_at']) + 35;
         if ($now >= $settleTime) {
             settleAndRepeat($race['id'], $conn);
         }
@@ -43,8 +43,8 @@ switch ($race['status']) {
 }
 
 function createNewRace($conn) {
-    // Tạo phiên mới, cho phép cược trong 3 phút (180s)
-    $closeAt = date('Y-m-d H:i:s', time() + 180);
+    // Tạo phiên mới, cho phép cược trong 30s
+    $closeAt = date('Y-m-d H:i:s', time() + 30);
     $conn->query("INSERT INTO horse_races (status, close_at) VALUES ('betting', '$closeAt')");
 }
 
@@ -66,13 +66,14 @@ function startRace($raceId, $conn) {
     $winner = weightedRandom($weights);
     
     // Cập nhật trạng thái racing và thời điểm bắt đầu start_at
-    $conn->query("UPDATE horse_races SET status='racing', winner_horse=$winner, start_at=NOW() WHERE id = $raceId");
-    echo "Race $raceId racing. Winner: $winner\n";
+    $startAt = date('Y-m-d H:i:s');
+    $conn->query("UPDATE horse_races SET status='racing', winner_horse=$winner, start_at='$startAt' WHERE id = $raceId");
+    
 }
 
 function finishRace($raceId, $conn) {
     $conn->query("UPDATE horse_races SET status='result' WHERE id = $raceId");
-    echo "Race $raceId finished (result phase).\n";
+    
 }
 
 function settleAndRepeat($raceId, $conn) {
@@ -110,7 +111,7 @@ function settleAndRepeat($raceId, $conn) {
 
     // Tạo phiên mới
     createNewRace($conn);
-    echo "Race $raceId settled. New race created.\n";
+    
 }
 
 function weightedRandom($weights) {

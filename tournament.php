@@ -664,9 +664,9 @@ $tournamentsTableExists = $checkTable && $checkTable->num_rows > 0;
                                         </div>
                                         <div class="tournament-info">${tournament.description || 'Chưa có mô tả'}</div>
                                         <div class="tournament-details">
-                                            <div class="detail-item">
-                                                <span class="detail-label">Game</span>
-                                                <span class="detail-value">${tournament.game_type || 'Tài Xỉu'}</span>
+                                            <div class="detail-row">
+                                                <span class="detail-label">Game:</span>
+                                                <span class="detail-value">${tournament.game_type || 'Xanh Đỏ Đối Kháng'}</span>
                                             </div>
                                             <div class="detail-item">
                                                 <span class="detail-label">Thành Viên</span>
@@ -931,9 +931,9 @@ $tournamentsTableExists = $checkTable && $checkTable->num_rows > 0;
                                 Swal.fire({
                                     title: tournament.name,
                                     html: `
-                                        <div style="text-align: left;">
-                                            <p><strong>Mô tả:</strong> ${tournament.description || 'Chưa có mô tả'}</p>
-                                            <p><strong>Game:</strong> ${tournament.game_type || 'Tài Xỉu'}</p>
+                                        <div class="col-md-6">
+                                            <p><strong>Game:</strong> ${tournament.game_type || 'Xanh Đỏ Đối Kháng'}</p>
+                                            <p><strong>Cược tối thiểu:</strong> ${new Intl.NumberFormat('vi-VN').format(tournament.min_bet)} GTLM</p>
                                             <p><strong>Thời gian:</strong> ${startTime} - ${endTime}</p>
                                             <p><strong>Thành viên:</strong> ${tournament.participant_count}/${tournament.max_participants}</p>
                                             ${statsHtml}

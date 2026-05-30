@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-if (!isset($_SESSION['Iduser'])) {
+if (false) {
     header("Location: ../login.php");
     exit();
 }
@@ -412,6 +412,14 @@ if (isset($_GET['action'])) {
             <div class="input-group">
                 <label>💰 Số gtlm cược (gtlm):</label>
                 <input type="number" id="bet-amount" placeholder="Ví dụ: 10000" min="1" max="<?= $soDu ?>">
+                <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;">
+                    <button type="button" class="btn-game" style="font-size: 13px; padding: 6px 12px; background: #333;" onclick="document.getElementById('bet-amount').value = 10000">10K GTLM</button>
+                    <button type="button" class="btn-game" style="font-size: 13px; padding: 6px 12px; background: #444;" onclick="document.getElementById('bet-amount').value = 100000">100K GTLM</button>
+                    <button type="button" class="btn-game" style="font-size: 13px; padding: 6px 12px; background: #555;" onclick="document.getElementById('bet-amount').value = 500000">500K GTLM</button>
+                    <button type="button" class="btn-game" style="font-size: 13px; padding: 6px 12px; background: #666;" onclick="document.getElementById('bet-amount').value = 1000000">1M GTLM</button>
+                    <button type="button" class="btn-game" style="font-size: 13px; padding: 6px 12px; background: #777;" onclick="document.getElementById('bet-amount').value = 5000000">5M GTLM</button>
+                    <button type="button" class="btn-game" style="font-size: 13px; padding: 6px 12px; background: #e74c3c;" onclick="document.getElementById('bet-amount').value = <?= $soDu ?>">MAX</button>
+                </div>
             </div>
             <button id="btn-guess" class="btn-game btn-guess">🎯 ĐOÁN NGAY</button>
             <div style="margin-top: 15px;">
@@ -2012,106 +2020,5 @@ if (isset($_GET['action'])) {
         <canvas id="gameChart" style="max-height: 300px;"></canvas>
     </div>
 </div>
-
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
-            <div class="stat-item losses">
-                <div class="label">Lần Thua</div>
-                <div class="value"><?= $gameThua ?></div>
-            </div>
-        </div>
-        <canvas id="gameChart" style="max-height: 300px;"></canvas>
-    </div>
-</div>
-
 </body>
-
 </html>

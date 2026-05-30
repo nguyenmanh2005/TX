@@ -201,10 +201,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
 
     <div class="controls">
         <div class="quick-bets" style="margin-bottom: 1rem; display: flex; justify-content: center; gap: 0.5rem;">
-            <button class="btn-small" onclick="$('#bet-amount').val(1000)">1K</button>
-            <button class="btn-small" onclick="$('#bet-amount').val(10000)">10K</button>
-            <button class="btn-small" onclick="$('#bet-amount').val(50000)">50K</button>
-            <button class="btn-small" onclick="$('#bet-amount').val(100000)">100K</button>
+            <button class="btn-small" onclick="$('#bet-amount').val(1000)">1K GTLM</button>
+            <button class="btn-small" onclick="$('#bet-amount').val(10000)">10K GTLM</button>
+            <button class="btn-small" onclick="$('#bet-amount').val(50000)">50K GTLM</button>
+            <button class="btn-small" onclick="$('#bet-amount').val(100000)">100K GTLM</button>
+                <button class="btn-small" onclick="$('#bet-amount').val(500000)">500K GTLM</button>
+                <button class="btn-small" onclick="$('#bet-amount').val(1000000)">1M GTLM</button>
+                <button class="btn-small" onclick="$('#bet-amount').val(2000000)">2M GTLM</button>
+                <button class="btn-small" onclick="$('#bet-amount').val(5000000)">5M GTLM</button>
+                <button class="btn-small" onclick="$('#bet-amount').val(<?=$money?>)">MAX</button>
             <button class="btn-small" onclick="$('#bet-amount').val(<?= $money ?>)">TẤT TAY</button>
         </div>
         <input type="number" id="bet-amount" placeholder="GTLM thả thính..." value="1000" style="background: #000; color: #fff; border: 1px solid #444;"><br><br>

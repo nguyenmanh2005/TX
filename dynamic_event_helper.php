@@ -40,7 +40,7 @@ class DynamicEventHelper {
             $eventTypes = [
                 ['name' => 'Gió Đổi Chiều', 'game' => 'crash', 'mult' => 1.5, 'desc' => 'Gió đã đổi chiều! Tất cả phần thưởng Crash x1.5 trong 2 tiếng tới!'],
                 ['name' => 'Đêm Blackjack', 'game' => 'blackjack', 'mult' => 1.3, 'desc' => 'Đêm nay là của Blackjack! Thưởng thắng x1.3!'],
-                ['name' => 'Bão Tài Xỉu', 'game' => 'taixiu', 'mult' => 1.2, 'desc' => 'Bão đang về! Tài Xỉu thưởng x1.2 cho mọi ván thắng!'],
+                ['name' => 'Bão GTLM', 'game' => 'taixiu', 'mult' => 1.2, 'desc' => 'Bão đang về! game thưởng x1.2 cho mọi ván thắng!'],
                 ['name' => 'Giờ Vàng GTLM', 'game' => 'all', 'mult' => 1.2, 'desc' => 'GIỜ VÀNG! Tất cả các game thưởng x1.2!']
             ];
             

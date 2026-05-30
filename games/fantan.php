@@ -195,13 +195,20 @@ if (isset($_GET['action'])) {
             border: 1px solid var(--glass-border);
         }
 
+        @keyframes dropBead {
+            0% { transform: translateY(-200px) scale(0.5); opacity: 0; }
+            60% { transform: translateY(15px) scale(1.1); opacity: 1; }
+            80% { transform: translateY(-5px) scale(0.95); }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+
         .bead {
             width: clamp(12px, 2vw, 18px);
             aspect-ratio: 1;
             background: var(--accent);
             border-radius: 50%;
             box-shadow: 0 0 10px rgba(251, 191, 36, 0.6);
-            transition: all 0.5s ease-in-out;
+            animation: dropBead 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
         }
 
         .bet-grid {
@@ -321,6 +328,11 @@ if (isset($_GET['action'])) {
             font-weight: 600;
         }
 
+        .quick-bet-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 30px; }
+        .quick-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #e2e8f0; padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+        .quick-btn:hover { background: rgba(255,255,255,0.15); transform: translateY(-2px); }
+        .quick-btn.active { background: #f59e0b; color: #fff; border-color: #f59e0b; }
+
         @media (max-width: 600px) {
             .bet-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -353,6 +365,16 @@ if (isset($_GET['action'])) {
 
             <div id="status-text" class="status-msg">Đặt cược và cùng đếm hạt!</div>
 
+            <div class="quick-bet-grid">
+                <button class="quick-btn" onclick="setBet(10000, event)">10K</button>
+                <button class="quick-btn" onclick="setBet(50000, event)">50K</button>
+                <button class="quick-btn" onclick="setBet(100000, event)">100K</button>
+                <button class="quick-btn" onclick="setBet(500000, event)">500K</button>
+                <button class="quick-btn" onclick="setBet(1000000, event)">1M</button>
+                <button class="quick-btn" onclick="setBet(5000000, event)">5M</button>
+                <button class="quick-btn" onclick="setBet(<?= $money ?>, event)">ALL IN</button>
+            </div>
+
             <div class="bet-grid">
                 <div class="bet-box" onclick="$('#bet-1').focus()">
                     <div class="bet-label">1</div>
@@ -375,7 +397,7 @@ if (isset($_GET['action'])) {
             <button id="play-btn" class="btn-play">MỞ BÁT (COUNT)</button>
         </div>
 
-        <div class="history-section">
+        <div class="history-section" style="display: none;">
             <h2 style="font-size: 1.2rem; letter-spacing: 2px; margin-bottom: 1rem;">LỊCH SỬ GẦN ĐÂY</h2>
             <div style="overflow-x: auto;">
                 <table class="history-table">
@@ -390,13 +412,96 @@ if (isset($_GET['action'])) {
                     <tbody id="history-body"></tbody>
                 </table>
             </div>
-            <div style="margin-top: 2.5rem;"><a href="../index.php"
-                    style="color: var(--primary); text-decoration: none; font-weight: 700; border: 1px solid var(--primary); padding: 0.8rem 2.5rem; border-radius: 50px; transition: 0.3s;">🏠
-                    QUAY LẠI SẢNH</a></div>
         </div>
+        <div style="margin-top: 1rem; text-align: center;"><a href="../index.php"
+                style="color: var(--primary); text-decoration: none; font-weight: 700; border: 1px solid var(--primary); padding: 0.8rem 2.5rem; border-radius: 50px; transition: 0.3s; display: inline-block;">🏠
+                QUAY LẠI SẢNH</a></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/confetti.browser.min.js"></script>
+
+    <script>
+        let lastFocused = '#bet-1';
+        $(document).ready(function() {
+            $('.bet-input').focus(function() {
+                lastFocused = '#' + $(this).attr('id');
+            });
+        });
+
+        function setBet(amount, event) {
+            $(lastFocused).val(amount);
+            $('.quick-btn').removeClass('active');
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
+        }
+
+        $('#play-btn').click(function() {
+            const bet1 = parseInt($('#bet-1').val()) || 0;
+            const bet2 = parseInt($('#bet-2').val()) || 0;
+            const bet3 = parseInt($('#bet-3').val()) || 0;
+            const bet4 = parseInt($('#bet-4').val()) || 0;
+            
+            if (bet1 + bet2 + bet3 + bet4 <= 0) {
+                Swal.fire('Lỗi', 'Vui lòng đặt cược', 'warning');
+                return;
+            }
+
+            const btn = $(this);
+            btn.prop('disabled', true).text('ĐANG ĐẾM...');
+            $('#status-text').text('Đang đếm hạt...');
+
+            $.post('fantan.php?action=play', { bet1: bet1, bet2: bet2, bet3: bet3, bet4: bet4 }, function(res) {
+                if (res.success) {
+                    let beadsHtml = '';
+                    for(let i=0; i<res.beadsCount; i++) {
+                        let delay = Math.random() * 0.5;
+                        beadsHtml += `<div class="bead" style="animation-delay: ${delay}s;"></div>`;
+                    }
+                    $('#beads-container').html(beadsHtml);
+
+                    setTimeout(() => {
+                        $('#balance-val').text(res.money);
+                        $('#status-text').text(`Kết quả: ${res.remainder} hạt!`);
+
+                        if (res.winAmount > 0) {
+                            Swal.fire({title: 'THẮNG!', text: `Kết quả là ${res.remainder}. Bạn thắng ${res.winAmount} gtlm!`, icon: 'success', background: '#1e293b', color: '#fff'});
+                        } else {
+                            Swal.fire({title: 'THUA!', text: `Kết quả là ${res.remainder}. Bạn thua!`, icon: 'error', background: '#1e293b', color: '#fff'});
+                        }
+                        
+                        loadHistory();
+                        btn.prop('disabled', false).text('MỞ BÁT (COUNT)');
+                    }, 1500);
+                } else {
+                    Swal.fire('Lỗi', res.message, 'error');
+                    btn.prop('disabled', false).text('MỞ BÁT (COUNT)');
+                    $('#status-text').text('Đặt cược và cùng đếm hạt!');
+                }
+            }, 'json').fail(function() {
+                Swal.fire('Lỗi', 'Lỗi kết nối', 'error');
+                btn.prop('disabled', false).text('MỞ BÁT (COUNT)');
+            });
+        });
+
+        function loadHistory() {
+            $.getJSON('fantan.php?action=get_history', function(res) {
+                if(res.success && res.history) {
+                    let html = '';
+                    res.history.forEach(h => {
+                        html += `<tr>
+                            <td>${h.Time}</td>
+                            <td>${parseInt(h.Bet).toLocaleString()}</td>
+                            <td>${h.Result}</td>
+                            <td style="color: ${h.WinAmount > 0 ? '#4ade80' : (h.WinAmount < 0 ? '#ef4444' : '#fff')}">${parseInt(h.WinAmount).toLocaleString()}</td>
+                        </tr>`;
+                    });
+                    $('#history-body').html(html);
+                }
+            });
+        }
+        $(document).ready(loadHistory);
+    </script>
 
     <?php require_once '../casino_help.php'; ?>
 

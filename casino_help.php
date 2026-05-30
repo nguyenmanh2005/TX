@@ -6,6 +6,7 @@
 ?>
 <!-- GSAP Library -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/TextPlugin.min.js"></script>
 
 <style>
     /* Help Button Styling */
@@ -65,8 +66,8 @@
         color: #fff;
         position: relative;
         box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
-        transform: translateY(30px);
-        opacity: 0;
+        opacity: 1;
+        transform: translateY(0);
     }
 
     .help-header {
@@ -334,6 +335,16 @@
 
 <script>
     const helpInstructions = {
+        'yahtzee': {
+            title: 'Yahtzee',
+            icon: '🎲',
+            steps: [
+                'Trò chơi tung 5 xúc xắc để tạo thành các tổ hợp điểm.',
+                'Bạn có tối đa 3 lần lắc. Sau mỗi lần lắc, bạn có thể Giữ (Hold) các xúc xắc tốt.',
+                'Sau 3 lần lắc hoặc khi đã hài lòng, chọn một Tổ Hợp (Bảng Điểm) để nhận thưởng.',
+                'Tổ hợp càng khó (như Yahtzee - 5 mặt giống nhau), tiền thưởng nhân lên càng cao (x50).'
+            ]
+        },
         'war': {
             title: 'Casino War',
             icon: '🃏',
@@ -528,45 +539,37 @@
     };
 
     function openCasinoHelp() {
-        const gameKey = getCurrentGameKey();
-        const data = helpInstructions[gameKey];
-        if (!data) {
-            // Default generic help if game not found
-            document.getElementById('modalGameTitle').innerText = 'Hướng dẫn chung';
-            document.getElementById('modalGameIcon').innerText = '❓';
-            document.getElementById('modalGameSteps').innerHTML = '<div class="help-step"><div class="help-step-num">!</div><div>Trò chơi này đang được cập nhật hướng dẫn chi tiết. Vui lòng quay lại sau!</div></div>';
-        } else {
-            document.getElementById('modalGameTitle').innerText = data.title;
-            document.getElementById('modalGameIcon').innerText = data.icon;
+        try {
+            const gameKey = getCurrentGameKey();
+            const data = helpInstructions[gameKey];
 
-            let html = '';
-            data.steps.forEach((step, i) => {
-                html += `<div class="help-step">
-                            <div class="help-step-num">${i + 1}</div>
-                            <div>${step}</div>
-                         </div>`;
-            });
-            document.getElementById('modalGameSteps').innerHTML = html;
+            if (!data) {
+                document.getElementById('modalGameTitle').innerText = 'Hướng dẫn';
+                document.getElementById('modalGameIcon').innerText = '❓';
+                document.getElementById('modalGameSteps').innerHTML = '<div class="help-step" style="opacity:1;transform:none;"><div class="help-step-num">!</div><div>Trò chơi này đang được cập nhật hướng dẫn. Vui lòng quay lại sau!</div></div>';
+            } else {
+                document.getElementById('modalGameTitle').innerText = data.title;
+                document.getElementById('modalGameIcon').innerText = data.icon;
+                let html = '';
+                data.steps.forEach((step, i) => {
+                    html += `<div class="help-step" style="opacity:1;transform:none;"><div class="help-step-num">${i + 1}</div><div>${step}</div></div>`;
+                });
+                document.getElementById('modalGameSteps').innerHTML = html;
+            }
+
+            const modal = document.getElementById('casinoHelpModal');
+            if (!modal) return;
+
+            // Force show immediately - no GSAP dependency for visibility
+            const content = document.getElementById('casinoHelpContent');
+            content.style.cssText += ';opacity:1!important;transform:translateY(0)!important;';
+
+            modal.style.display = 'flex';
+            modal.style.zIndex = '999999';
+
+        } catch (e) {
+            console.error('openCasinoHelp error:', e);
         }
-
-        // GSAP Animations
-        const modal = document.getElementById('casinoHelpModal');
-        modal.style.display = 'flex';
-
-        gsap.to('#casinoHelpContent', {
-            y: 0,
-            opacity: 1,
-            duration: 0.5,
-            ease: 'power3.out'
-        });
-
-        gsap.to('.help-step', {
-            x: 0,
-            opacity: 1,
-            stagger: 0.1,
-            duration: 0.4,
-            delay: 0.2
-        });
     }
 
     function closeCasinoHelp() {
@@ -644,7 +647,8 @@
             'craps': 'craps',
             'videopoker': 'videopoker',
             'fantan': 'fantan',
-            'mahjong': 'mahjong'
+            'mahjong': 'mahjong',
+            'yahtzee': 'yahtzee'
         };
 
         if (mapping[fileName]) return mapping[fileName];

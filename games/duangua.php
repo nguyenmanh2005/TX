@@ -34,8 +34,6 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) &&
     exit;
 }
 
-require_once '../load_theme.php';
-
 $userId = $_SESSION['Iduser'];
 
 /* ══════════════════════════════════════════════
@@ -134,6 +132,9 @@ $stmtStats->close();
     ]);
     exit;
 }
+
+require_once '../load_theme.php';
+
 
 /* ══════════════════════════════════════════════
    Trang bình thường
@@ -1069,9 +1070,13 @@ $animalEmojis = ["🐶", "🐱", "🦁", "🐵", "🦓", "🐯", "🦊", "🐰"]
                     <input type="number" name="amount" id="betInput" class="bet-input" placeholder="Nhập số muốn liều…"
                         min="1" autocomplete="off">
                     <div class="qbets">
-                        <button type="button" class="qbtn" onclick="qbet(10000)">10K</button>
-                        <button type="button" class="qbtn" onclick="qbet(50000)">50K</button>
-                        <button type="button" class="qbtn" onclick="qbet(100000)">100K</button>
+                        <button type="button" class="qbtn" onclick="qbet(10000)">10K GTLM</button>
+                        <button type="button" class="qbtn" onclick="qbet(50000)">50K GTLM</button>
+                        <button type="button" class="qbtn" onclick="qbet(100000)">100K GTLM</button>
+                <button type="button" class="qbtn" onclick="qbet(500000)">500K GTLM</button>
+                <button type="button" class="qbtn" onclick="qbet(1000000)">1M GTLM</button>
+                <button type="button" class="qbtn" onclick="qbet(2000000)">2M GTLM</button>
+                <button type="button" class="qbtn" onclick="qbet(5000000)">5M GTLM</button>
                         <button type="button" class="qbtn" id="maxBtn" onclick="qbet(<?= $currentMoney ?>)">MAX</button>
                     </div>
                 </div>
