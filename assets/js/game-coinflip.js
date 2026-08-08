@@ -21,7 +21,7 @@ class CoinFlipEnhanced {
             form.addEventListener('submit', (e) => {
                 if (!this.selectedChoice) {
                     e.preventDefault();
-                    alert('Vui lòng chọn Ngửa hoặc Sấp!');
+                    if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Vui lòng chọn Ngửa hoặc Sấp!'), 'warning'); } else { alert('Vui lòng chọn Ngửa hoặc Sấp!'); };
                     return;
                 }
                 

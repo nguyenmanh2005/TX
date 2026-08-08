@@ -1,3 +1,4 @@
+﻿
 <?php
 session_start();
 
@@ -16,7 +17,7 @@ require 'db_connect.php';
 
 // Load theme
 require_once 'load_theme.php';
-// Đảm bảo $bgGradientCSS có giá trị
+// Äáº£m báº£o $bgGradientCSS có giá trị
 if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
     $bgGradientCSS = 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%)';
 }
@@ -26,9 +27,10 @@ require_once 'admin_helper.php';
 
 $userId = $_SESSION['Iduser'];
 
-// Kiểm tra quyền admin (Role = 1)
-if (!isAdmin($conn, $userId)) {
-    die("Bạn không có quyền truy cập trang này! Chỉ admin (Role = 1) mới có thể truy cập.");
+// Kiểm tra quyá»n Super Admin (Role >= 2)
+if (!isSuperAdmin($conn, $userId)) {
+    header("Location: Shared/403/403.php");
+    exit();
 }
 
 $message = '';
@@ -37,7 +39,7 @@ $messageType = '';
 // Xử lý xóa chat frame
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_chat_frame'])) {
     if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
-        $message = '❌ Yêu cầu không hợp lệ (CSRF)!';
+        $message = 'âŒ Yêu cầu không hợp lệ (CSRF)!';
         $messageType = 'error';
     } else {
     $frameId = (int) $_POST['chat_frame_id'];
@@ -49,7 +51,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_chat_frame']))
             $message = '✅ Xóa khung chat thành công!';
             $messageType = 'success';
         } else {
-            $message = '❌ Lỗi khi xóa khung chat: ' . $deleteStmt->error;
+            $message = 'âŒ Lỗi khi xóa khung chat: ' . $deleteStmt->error;
             $messageType = 'error';
         }
         $deleteStmt->close();
@@ -60,7 +62,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_chat_frame']))
 // Xử lý xóa avatar frame
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_avatar_frame'])) {
     if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
-        $message = '❌ Yêu cầu không hợp lệ (CSRF)!';
+        $message = 'âŒ Yêu cầu không hợp lệ (CSRF)!';
         $messageType = 'error';
     } else {
     $frameId = (int) $_POST['avatar_frame_id'];
@@ -72,7 +74,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_avatar_frame']
             $message = '✅ Xóa khung avatar thành công!';
             $messageType = 'success';
         } else {
-            $message = '❌ Lỗi khi xóa khung avatar: ' . $deleteStmt->error;
+            $message = 'âŒ Lỗi khi xóa khung avatar: ' . $deleteStmt->error;
             $messageType = 'error';
         }
         $deleteStmt->close();
@@ -80,7 +82,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_avatar_frame']
     } // end CSRF check
 }
 
-// Lấy danh sách chat frames
+// Láº¥y danh sách chat frames
 $chatFrames = [];
 $chatFramesSql = "SELECT * FROM chat_frames ORDER BY id ASC";
 $chatFramesResult = $conn->query($chatFramesSql);
@@ -90,7 +92,7 @@ if ($chatFramesResult) {
     }
 }
 
-// Lấy danh sách avatar frames
+// Láº¥y danh sách avatar frames
 $avatarFrames = [];
 $avatarFramesSql = "SELECT * FROM avatar_frames ORDER BY id ASC";
 $avatarFramesResult = $conn->query($avatarFramesSql);
@@ -419,7 +421,57 @@ if ($avatarFramesResult) {
             pointer-events: none;
         }
 
-    </style>
+            /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(3px);
+        }
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 20px 30px;
+            border-radius: var(--border-radius-lg);
+            width: 90%;
+            max-width: 600px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 25px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease;
+            position: relative;
+        }
+        .close-modal {
+            color: #aaa;
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .close-modal:hover {
+            color: #333;
+        }
+        /* Style form inside modal */
+        .modal-content .form-group { margin-bottom: 15px; }
+        .modal-content label { display: block; margin-bottom: 5px; font-weight: bold; color: var(--primary-color); }
+        .modal-content input[type="text"], .modal-content input[type="number"], .modal-content textarea, .modal-content select {
+            width: 100%; padding: 10px; border: 2px solid var(--border-color); border-radius: var(--border-radius); box-sizing: border-box;
+        }
+        .modal-content input[type="file"] { width: 100%; padding: 10px; border: 2px dashed var(--border-color); border-radius: var(--border-radius); }
+        .modal-content .submit-button {
+            width: 100%; padding: 12px; background: linear-gradient(135deg, var(--secondary-color) 0%, var(--secondary-dark) 100%);
+            color: white; border: none; border-radius: var(--border-radius); font-size: 16px; font-weight: bold; cursor: pointer;
+        }
+        .modal-content .submit-button:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(52, 152, 219, 0.4); }
+</style>
 </head>
 
 <body>
@@ -427,7 +479,7 @@ if ($avatarFramesResult) {
 
     <div class="admin-container">
         <div class="header-admin">
-            <h1>⚙️ Admin - Quản Lý Khung Chat & Avatar</h1>
+            <h1>⚙️ Admin - Quản Lý Khung Chat & Avatar</h1>
             <p>Quản lý khung chat và khung avatar</p>
         </div>
 
@@ -437,16 +489,16 @@ if ($avatarFramesResult) {
 
         <div class="tabs">
             <button class="tab-button active" onclick="switchTab('chat-frames')">💬 Quản Lý Khung Chat</button>
-            <button class="tab-button" onclick="switchTab('avatar-frames')">🖼️ Quản Lý Khung Avatar</button>
+            <button class="tab-button" onclick="switchTab('avatar-frames')">🖼️ Quản Lý Khung Avatar</button>
         </div>
 
         <!-- Tab Quản Lý Khung Chat -->
         <div id="chat-frames-tab" class="tab-content active">
-            <a href="admin_add_frames.php?type=chat" class="add-new-btn">➕ Thêm Khung Chat Mới</a>
+            <button type="button" class="add-new-btn" onclick="openFrameModal('add', 'chat')" style="border:none;">➕ Thêm Khung Chat Mới</button>
             <div class="frames-grid">
                 <?php if (empty($chatFrames)): ?>
                     <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
-                        Chưa có khung chat nào. <a href="admin_add_frames.php?type=chat">Thêm khung chat mới</a>
+                        Chưa có khung chat nào. <a href="?action=add&type=chat">Thêm khung chat mới</a>
                     </div>
                 <?php else: ?>
                     <?php foreach ($chatFrames as $frame): ?>
@@ -469,7 +521,7 @@ if ($avatarFramesResult) {
                                 <?= $frame['price'] == 0 ? 'Miễn phí' : number_format($frame['price'], 0, ',', '.') . ' gtlm' ?>
                             </div>
                             <div class="action-buttons">
-                                <a href="admin_edit_frame.php?type=chat&id=<?= $frame['id'] ?>" class="btn-edit">✏️ Sửa</a>
+                                <button type="button" class="btn-edit" onclick='openFrameModal("edit", "chat", <?= json_encode($frame, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'>✏️ Sửa</button>
                                 <form method="POST" style="display: inline; flex: 1;"
                                     onsubmit="return confirm('Bạn có chắc muốn xóa khung chat này?');">
                                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
@@ -485,11 +537,11 @@ if ($avatarFramesResult) {
 
         <!-- Tab Quản Lý Khung Avatar -->
         <div id="avatar-frames-tab" class="tab-content">
-            <a href="admin_add_frames.php?type=avatar" class="add-new-btn">➕ Thêm Khung Avatar Mới</a>
+            <button type="button" class="add-new-btn" onclick="openFrameModal('add', 'avatar')" style="border:none;">➕ Thêm Khung Avatar Mới</button>
             <div class="frames-grid">
                 <?php if (empty($avatarFrames)): ?>
                     <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
-                        Chưa có khung avatar nào. <a href="admin_add_frames.php?type=avatar">Thêm khung avatar mới</a>
+                        Chưa có khung avatar nào. <a href="?action=add&type=avatar">Thêm khung avatar mới</a>
                     </div>
                 <?php else: ?>
                     <?php foreach ($avatarFrames as $frame): ?>
@@ -512,7 +564,7 @@ if ($avatarFramesResult) {
                                 <?= $frame['price'] == 0 ? 'Miễn phí' : number_format($frame['price'], 0, ',', '.') . ' gtlm' ?>
                             </div>
                             <div class="action-buttons">
-                                <a href="admin_edit_frame.php?type=avatar&id=<?= $frame['id'] ?>" class="btn-edit">✏️ Sửa</a>
+                                <button type="button" class="btn-edit" onclick='openFrameModal("edit", "avatar", <?= json_encode($frame, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'>✏️ Sửa</button>
                                 <form method="POST" style="display: inline; flex: 1;"
                                     onsubmit="return confirm('Bạn có chắc muốn xóa khung avatar này?');">
                                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
@@ -526,7 +578,7 @@ if ($avatarFramesResult) {
             </div>
         </div>
 
-        <a href="index.php" class="back-link">🏠 Về Trang Chủ</a>
+        <a href="index.php" class="back-link">ðŸ  Về Trang Chủ</a>
         <a href="admin_manage_items.php" class="back-link" style="margin-left: 10px;">📦 Quản Lý Items</a>
     </div>
 
@@ -576,7 +628,7 @@ if ($avatarFramesResult) {
             bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>
         };
         
-        // Load Three.js background script với đường dẫn chính xác
+        // Load Three.js background script vá»›i Ä‘Æ°á»ng dáº«n chính xác
         const isInGames = window.location.pathname.includes('/games/');
         const script = document.createElement('script');
         script.src = isInGames ? '../threejs-background.js' : 'threejs-background.js';
@@ -586,6 +638,107 @@ if ($avatarFramesResult) {
         document.head.appendChild(script);
     })();
 </script>
+
+    <!-- Modal Form Sửa/Thêm Khung -->
+    <div id="frameModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeFrameModal()">&times;</span>
+            <h2 id="modalTitle" style="margin-bottom: 20px; color: var(--primary-color);">Thêm Khung Mới</h2>
+            
+            <form method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+                <input type="hidden" name="frame_id" id="modal_frame_id" value="0">
+                <input type="hidden" name="frame_type" id="modal_frame_type" value="">
+                <input type="hidden" name="existing_image" id="modal_existing_image" value="">
+                
+                <div class="form-group">
+                    <label for="frame_name">Tên khung *</label>
+                    <input type="text" id="frame_name" name="frame_name" required placeholder="Ví dụ: Khung vàng">
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Mô tả</label>
+                    <textarea id="description" name="description" placeholder="Mô tả về khung này..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="rarity">Độ hiếm *</label>
+                    <select id="rarity" name="rarity" required>
+                        <option value="common">🟢 Thường</option>
+                        <option value="rare">🔵 Hiếm</option>
+                        <option value="epic">🟣 Cực hiếm</option>
+                        <option value="legendary">🟡 Huyền thoại</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="price">Giá (gtlm) *</label>
+                    <input type="number" id="price" name="price" min="0" step="1000" value="0" required>
+                    <div style="font-size:12px; color:#666; margin-top:4px;">Nhập 0 nếu miễn phí</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="image">Hình ảnh khung</label>
+                    <input type="file" id="image" name="image" accept="image/*">
+                    <div style="font-size:12px; color:#666; margin-top:4px;">(Để trống nếu giữ nguyên ảnh hiện tại khi sửa)</div>
+                    
+                    <div id="imagePreviewContainer" style="margin-top: 10px; background: #f0f0f0; padding: 10px; border-radius: 8px; display: none;">
+                        <div style="font-size: 12px; margin-bottom: 5px; color: #666; font-weight: bold;">Ảnh hiện tại:</div>
+                        <img id="imagePreview" src="" alt="Ảnh hiện tại" style="max-width: 120px; max-height: 120px; object-fit: contain;">
+                    </div>
+                </div>
+
+                <button type="submit" name="save_frame" class="submit-button">💾 Lưu Thay Đổi</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    function openFrameModal(action, type, data = null) {
+        document.getElementById('frameModal').style.display = 'block';
+        document.getElementById('modal_frame_type').value = type;
+        
+        let typeName = (type === 'chat') ? 'Chat' : 'Avatar';
+        
+        if (action === 'edit' && data) {
+            document.getElementById('modalTitle').innerText = '⚙️ Sửa Khung ' + typeName;
+            document.getElementById('modal_frame_id').value = data.id;
+            document.getElementById('frame_name').value = data.frame_name;
+            document.getElementById('description').value = data.description || '';
+            document.getElementById('rarity').value = data.rarity;
+            document.getElementById('price').value = parseInt(data.price);
+            document.getElementById('modal_existing_image').value = data.ImageURL || '';
+            
+            if (data.ImageURL) {
+                document.getElementById('imagePreviewContainer').style.display = 'block';
+                document.getElementById('imagePreview').src = data.ImageURL;
+            } else {
+                document.getElementById('imagePreviewContainer').style.display = 'none';
+            }
+        } else {
+            // Add
+            document.getElementById('modalTitle').innerText = '➕ Thêm Khung ' + typeName;
+            document.getElementById('modal_frame_id').value = '0';
+            document.getElementById('frame_name').value = '';
+            document.getElementById('description').value = '';
+            document.getElementById('rarity').value = 'common';
+            document.getElementById('price').value = '0';
+            document.getElementById('modal_existing_image').value = '';
+            document.getElementById('imagePreviewContainer').style.display = 'none';
+        }
+    }
+
+    function closeFrameModal() {
+        document.getElementById('frameModal').style.display = 'none';
+    }
+
+    // Ä á» ng modal khi click bÃªn ngoÃ i
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('frameModal')) {
+            closeFrameModal();
+        }
+    }
+    </script>
 </body>
 
 </html>

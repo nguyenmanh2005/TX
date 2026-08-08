@@ -137,7 +137,7 @@ if ($action === 'start') {
 
     if ($dealerTotal > 21 || $playerTotal > $dealerTotal) {
         $soDu += $cuoc;
-        $_SESSION['ketqua'] = "Không Thể Tin Nổi! Nhận " . number_format($cuoc) . " VNĐ";
+        $_SESSION['ketqua'] = "Không Thể Tin Nổi! Nhận " . number_format($cuoc) . " GTLM";
         $_SESSION['ketquaShort'] = "Thắng";
         $ketQuaClass = "bg-green-500 text-white animate-bounce";
     } elseif ($playerTotal == $dealerTotal) {
@@ -146,7 +146,7 @@ if ($action === 'start') {
         $ketQuaClass = "bg-yellow-400";
     } else {
         $soDu -= $cuoc;
-        $_SESSION['ketqua'] = "Nhà cái thắng, bạn mất " . number_format($cuoc) . " VNĐ";
+        $_SESSION['ketqua'] = "Nhà cái thắng, bạn mất " . number_format($cuoc) . " GTLM";
         $_SESSION['ketquaShort'] = "Thua";
         $ketQuaClass = "bg-red-500 text-white animate-pulse";
     }
@@ -189,7 +189,6 @@ $ketQua = $_SESSION['ketqua'] ?? "";
 // Clear result message after display
 if (!empty($ketQua)) {
     $ketQuaDisplay = $ketQua;
-    unset($_SESSION['ketqua'], $_SESSION['ketquaShort']);
 } else {
     $ketQuaDisplay = "";
 }
@@ -569,18 +568,7 @@ $conn->close();
                 <h2 class="text-xl mb-2 text-center">Xin chào,
                     <strong><?= htmlspecialchars($tenNguoiChoi, ENT_QUOTES, 'UTF-8') ?></strong></h2>
                 <div class="balance-display text-center">💰 Số dư: <strong><?= number_format($soDu, 0, ',', '.') ?>
-                        VNĐ</strong></div>
-
-                <?php if (!isset($_SESSION['player_cards']) || $gameOver): ?>
-                    <!-- Form bắt đầu ván mới -->
-                    <form method="POST" class="max-w-md mx-auto mb-6">
-                        <input type="number" name="cuoc" placeholder="Nhập số Gtlm cược"
-                            class="w-full px-4 py-2 border rounded mb-3" required min="1" max="<?= $soDu ?>">
-                        <input type="hidden" name="action" value="start">
-                        <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 w-full">Bắt
-                            đầu ván mới</button>
-                    </form>
-                <?php endif; ?>
+                        GTLM</strong></div>
 
                 <?php if (!empty($ketQuaDisplay)): ?>
                     <div class="mb-6 p-6 rounded-lg text-white <?= $ketQuaClass ?>"
@@ -588,26 +576,41 @@ $conn->close();
                         <p class="text-2xl font-bold mb-2 text-center">
                             <?= htmlspecialchars($ketQuaDisplay, ENT_QUOTES, 'UTF-8') ?></p>
                     </div>
+                <?php else: ?>
+                    <!-- Reserve space to prevent jumping -->
+                    <div class="mb-6 p-6" style="height: 90px;"></div>
                 <?php endif; ?>
+
+                <!-- Form bắt đầu ván mới (Luôn hiển thị để giữ bố cục) -->
+                <form method="POST" class="max-w-md mx-auto mb-6">
+                    <input type="number" name="cuoc" placeholder="Nhập số Gtlm cược"
+                        class="w-full px-4 py-2 border rounded mb-3 bg-white text-black" required min="1" max="<?= $soDu ?>" 
+                        <?= (isset($_SESSION['player_cards']) && !$gameOver) ? 'disabled value="' . $_SESSION['cuoc'] . '"' : '' ?>>
+                    <input type="hidden" name="action" value="start">
+                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 w-full disabled:bg-gray-500 disabled:opacity-50"
+                        <?= (isset($_SESSION['player_cards']) && !$gameOver) ? 'disabled' : '' ?>>
+                        <?= (isset($_SESSION['player_cards']) && !$gameOver) ? 'Đang chơi ván cược ' . number_format($_SESSION['cuoc']) : 'Bắt đầu ván mới' ?>
+                    </button>
+                </form>
 
                 <?php if (isset($_SESSION['player_cards']) && !$gameOver): ?>
                     <!-- Hiển thị bài -->
                     <div class="mb-6">
-                        <h3 class="text-lg font-semibold mb-3">🃏 Bài của bạn (<?= $playerTotal ?> điểm):</h3>
-                        <div class="flex flex-wrap justify-center gap-2">
+                        <h3 class="text-lg font-semibold mb-3 text-center">🃏 Bài của bạn (<?= $playerTotal ?> điểm):</h3>
+                        <div class="flex flex-nowrap justify-center gap-2 overflow-hidden" style="max-width: 100%;">
                             <?php foreach ($playerCards as $index => $card): ?>
-                                <div class="card <?= $index >= count($playerCards) - 1 ? 'new-card' : '' ?>">
+                                <div class="card <?= $index >= count($playerCards) - 1 ? 'new-card' : '' ?>" style="margin: 0 5px; flex-shrink: 0;">
                                     <?= $card == 1 ? 'A' : ($card == 10 ? '10' : $card) ?>
                                 </div>
                             <?php endforeach; ?>
                         </div>
                     </div>
                     <div class="mb-6">
-                        <h3 class="text-lg font-semibold mb-3">🎰 Bài Nhà Cái:</h3>
-                        <div class="flex flex-wrap justify-center gap-2">
-                            <div class="card">
+                        <h3 class="text-lg font-semibold mb-3 text-center">🎰 Bài Nhà Cái:</h3>
+                        <div class="flex flex-nowrap justify-center gap-2 overflow-hidden">
+                            <div class="card" style="margin: 0 5px; flex-shrink: 0;">
                                 <?= $dealerCards[0] == 1 ? 'A' : ($dealerCards[0] == 10 ? '10' : $dealerCards[0]) ?></div>
-                            <div class="card hidden"></div>
+                            <div class="card hidden" style="margin: 0 5px; flex-shrink: 0;"></div>
                         </div>
                     </div>
 
@@ -627,20 +630,20 @@ $conn->close();
                 <?php elseif (isset($_SESSION['player_cards']) && $gameOver): ?>
                     <!-- Hiển thị bài cuối cùng khi game kết thúc -->
                     <div class="mb-6">
-                        <h3 class="text-lg font-semibold mb-3">🃏 Bài của bạn (<?= $playerTotal ?> điểm):</h3>
-                        <div class="flex flex-wrap justify-center gap-2">
+                        <h3 class="text-lg font-semibold mb-3 text-center">🃏 Bài của bạn (<?= $playerTotal ?> điểm):</h3>
+                        <div class="flex flex-nowrap justify-center gap-2 overflow-hidden" style="max-width: 100%;">
                             <?php foreach ($playerCards as $card): ?>
-                                <div class="card">
+                                <div class="card" style="margin: 0 5px; flex-shrink: 0;">
                                     <?= $card == 1 ? 'A' : ($card == 10 ? '10' : $card) ?>
                                 </div>
                             <?php endforeach; ?>
                         </div>
                     </div>
                     <div class="mb-6">
-                        <h3 class="text-lg font-semibold mb-3">🎰 Bài Nhà Cái (<?= $dealerTotal ?> điểm):</h3>
-                        <div class="flex flex-wrap justify-center gap-2">
+                        <h3 class="text-lg font-semibold mb-3 text-center">🎰 Bài Nhà Cái (<?= $dealerTotal ?> điểm):</h3>
+                        <div class="flex flex-nowrap justify-center gap-2 overflow-hidden" style="max-width: 100%;">
                             <?php foreach ($dealerCards as $card): ?>
-                                <div class="card">
+                                <div class="card" style="margin: 0 5px; flex-shrink: 0;">
                                     <?= $card == 1 ? 'A' : ($card == 10 ? '10' : $card) ?>
                                 </div>
                             <?php endforeach; ?>

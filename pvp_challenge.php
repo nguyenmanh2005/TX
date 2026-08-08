@@ -509,7 +509,7 @@ require_once 'load_theme.php';
             e.preventDefault();
 
             if (!selectedOpponentId) {
-                alert('Vui lòng chọn đối thủ!');
+                if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Vui lòng chọn đối thủ!'), 'warning'); } else { alert('Vui lòng chọn đối thủ!'); };
                 return;
             }
 
@@ -527,12 +527,12 @@ require_once 'load_theme.php';
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        alert('Đã tạo challenge thành công!');
+                        if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Đã tạo challenge thành công!'), 'info'); } else { alert('Đã tạo challenge thành công!'); };
                         clearOpponent();
                         document.getElementById('createChallengeForm').reset();
                         switchTab('pending');
                     } else {
-                        alert(data.message || 'Lỗi!');
+                        if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String(data.message || 'Lỗi!'), 'error'); } else { alert(data.message || 'Lỗi!'); };
                     }
                 });
         });
@@ -673,11 +673,10 @@ require_once 'load_theme.php';
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        alert('Đã chấp nhận challenge!');
-                        loadPendingChallenges();
-                        switchTab('active');
+                        // Redirect sang đấu trường ngay sau khi chấp nhận
+                        window.location.href = `pvp_arena.php?id=${data.challenge_id || challengeId}`;
                     } else {
-                        alert(data.message || 'Lỗi!');
+                        if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String(data.message || 'Lỗi!'), 'error'); } else { alert(data.message || 'Lỗi!'); };
                     }
                 });
         }
@@ -697,21 +696,51 @@ require_once 'load_theme.php';
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        alert('Đã hủy challenge!');
+                        if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Đã hủy challenge!'), 'info'); } else { alert('Đã hủy challenge!'); };
                         loadPendingChallenges();
                     } else {
-                        alert(data.message || 'Lỗi!');
+                        if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String(data.message || 'Lỗi!'), 'error'); } else { alert(data.message || 'Lỗi!'); };
                     }
                 });
         }
 
         function playChallenge(challengeId, gameType) {
-            // Mở modal hoặc chuyển trang để chơi
-            window.location.href = `pvp_play.php?id=${challengeId}`;
+            // Chuyển đến đấu trường PvP
+            window.location.href = `pvp_arena.php?id=${challengeId}`;
         }
 
         // Load pending challenges on page load
         loadPendingChallenges();
+
+        // ⏳ Auto-polling: Người chơi 1 sẽ tự động được redirect khi challenge được chấp nhận
+        let pendingPollInterval = setInterval(async () => {
+            try {
+                const res = await fetch('api_pvp_challenge.php?action=get_my_challenges&status=accepted');
+                const data = await res.json();
+                if (data.success && data.challenges && data.challenges.length > 0) {
+                    // Tìm challenge mà mình là challenger và mới vào trạng thái accepted
+                    const myChallenge = data.challenges.find(c => c.challenger_id == <?= $userId ?>);
+                    if (myChallenge) {
+                        clearInterval(pendingPollInterval);
+                        // Hiện thông báo và redirect
+                        if (typeof Swal !== 'undefined') {
+                            await Swal.fire({
+                                title: '⚔️ Đối Thủ Đã Chấp Nhận!',
+                                text: 'Challenge của bạn đã được chấp nhận! Vào đấu trường!',
+                                icon: 'success',
+                                confirmButtonText: '⚡ Vào Đấu Trường!',
+                                timer: 4000,
+                                timerProgressBar: true
+                            });
+                        }
+                        window.location.href = `pvp_arena.php?id=${myChallenge.id}`;
+                    }
+                }
+            } catch(e) {}
+        }, 3000); // Kiểm tra mỗi 3 giây
+
+        // Dừng polling khi rời trang
+        window.addEventListener('beforeunload', () => clearInterval(pendingPollInterval));
     </script>
 </body>
 

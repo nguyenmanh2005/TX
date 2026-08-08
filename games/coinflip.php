@@ -70,7 +70,7 @@ $stmt->close();
 <body>
     <div class="game-container">
         <div class="game-title">TUNG ĐỒNG XU</div>
-        <div class="game-subtitle">Tỷ lệ thắng 50/50 - Tiền thưởng x2</div>
+        <div class="game-subtitle">Tỷ lệ thắng 50/50 - GTLM thưởng x2</div>
 
         <div class="balance-card">
             Số dư: <span class="balance-value" id="current-balance"><?= number_format($money, 0, ',', '.') ?></span> đ
@@ -84,7 +84,7 @@ $stmt->close();
         </div>
 
         <div class="bet-input-container">
-            <input type="number" id="bet-amount" class="bet-input" value="10000" min="1000" placeholder="Nhập số tiền cược...">
+            <input type="number" id="bet-amount" class="bet-input" value="10000" min="1000" placeholder="Nhập số GTLM cược...">
         </div>
 
         <div class="quick-bet-grid">
@@ -125,7 +125,7 @@ $stmt->close();
         function playGame(choice) {
             const betAmount = parseInt($('#bet-amount').val());
             if (isNaN(betAmount) || betAmount < 1000) {
-                Swal.fire('Lỗi', 'Số tiền cược tối thiểu là 1.000đ', 'error');
+                Swal.fire('Lỗi', 'Số GTLM cược tối thiểu là 1.000đ', 'error');
                 return;
             }
 
@@ -148,7 +148,7 @@ $stmt->close();
                     return;
                 }
 
-                // Cập nhật số dư tạm thời (trừ tiền cược)
+                // Cập nhật số dư tạm thời (trừ GTLM cược)
                 $('#current-balance').text(formatMoney(data.new_balance - (data.is_win ? data.win_amount : 0)));
 
                 // Quay đồng xu

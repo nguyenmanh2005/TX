@@ -10,7 +10,7 @@ if (empty($_SESSION['csrf_token'])) {
 }
 
 $userId = $_SESSION['Iduser'] ?? 0;
-requireAdmin($conn, $userId);
+requireSuperAdmin($conn, $userId); // Chỉ Super Admin (Role >= 2) trở lên
 
 $action = $_GET['action'] ?? '';
 $msg = $_GET['msg'] ?? '';
@@ -114,16 +114,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (json_decode($chains) === null && json_last_error() !== JSON_ERROR_NONE) {
             die("Lỗi: Cấu hình Chain JSON không hợp lệ. Vui lòng kiểm tra lại syntax!");
         }
+        $guildMilestones = trim($_POST['guild_milestone_config'] ?: '[]');
+        if (json_decode($guildMilestones) === null && json_last_error() !== JSON_ERROR_NONE) {
+            die("Lỗi: Cấu hình Guild Milestone JSON không hợp lệ. Vui lòng kiểm tra lại syntax!");
+        }
 
         if ($id > 0) {
-            $stmt = $conn->prepare("UPDATE seasonal_events SET name = ?, theme_emoji = ?, starts_at = ?, ends_at = ?, spin_cost = ?, status = ?, milestone_config = ?, theme_config = ?, chain_config = ? WHERE id = ?");
-            $stmt->bind_param("ssssissssi", $name, $emoji, $starts, $ends, $cost, $status, $milestones, $theme, $chains, $id);
+            $stmt = $conn->prepare("UPDATE seasonal_events SET name = ?, theme_emoji = ?, starts_at = ?, ends_at = ?, spin_cost = ?, status = ?, milestone_config = ?, theme_config = ?, chain_config = ?, guild_milestone_config = ? WHERE id = ?");
+            $stmt->bind_param("ssssisssssi", $name, $emoji, $starts, $ends, $cost, $status, $milestones, $theme, $chains, $guildMilestones, $id);
             $stmt->execute();
             $stmt->close();
             header("Location: admin_Event_Manager.php?tab=events&msg=Seasonal Event updated!");
         } else {
-            $stmt = $conn->prepare("INSERT INTO seasonal_events (name, theme_emoji, starts_at, ends_at, spin_cost, status, milestone_config, theme_config, chain_config) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("ssssissss", $name, $emoji, $starts, $ends, $cost, $status, $milestones, $theme, $chains);
+            $stmt = $conn->prepare("INSERT INTO seasonal_events (name, theme_emoji, starts_at, ends_at, spin_cost, status, milestone_config, theme_config, chain_config, guild_milestone_config) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("ssssisssss", $name, $emoji, $starts, $ends, $cost, $status, $milestones, $theme, $chains, $guildMilestones);
             $stmt->execute();
             $stmt->close();
             header("Location: admin_Event_Manager.php?tab=events&msg=New Seasonal Event launched!");
@@ -202,8 +206,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($orig) {
             $newName = "Bản sao - " . $orig['name'];
-            $stmt = $conn->prepare("INSERT INTO seasonal_events (name, theme_emoji, starts_at, ends_at, spin_cost, status, milestone_config, theme_config, chain_config) VALUES (?, ?, ?, ?, ?, 'inactive', ?, ?, ?)");
-            $stmt->bind_param("ssssisss", $newName, $orig['theme_emoji'], $orig['starts_at'], $orig['ends_at'], $orig['spin_cost'], $orig['milestone_config'], $orig['theme_config'], $orig['chain_config']);
+            $stmt = $conn->prepare("INSERT INTO seasonal_events (name, theme_emoji, starts_at, ends_at, spin_cost, status, milestone_config, theme_config, chain_config, guild_milestone_config) VALUES (?, ?, ?, ?, ?, 'inactive', ?, ?, ?, ?)");
+            $stmt->bind_param("ssssissss", $newName, $orig['theme_emoji'], $orig['starts_at'], $orig['ends_at'], $orig['spin_cost'], $orig['milestone_config'], $orig['theme_config'], $orig['chain_config'], $orig['guild_milestone_config']);
             $stmt->execute();
             $newId = $stmt->insert_id;
             $stmt->close();
@@ -356,11 +360,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // 16. MANAGER: ADD VOTING OPTION
     if (isset($_POST['add_vote_option'])) {
+        $optEventId = (int)$_POST['event_id'];
         $title = $_POST['title'];
         $desc = $_POST['description'];
         $icon = $_POST['icon'];
-        $stmt = $conn->prepare("INSERT INTO event_voting_options (title, description, icon) VALUES (?, ?, ?)");
-        $stmt->bind_param("sss", $title, $desc, $icon);
+        $buffType = $_POST['buff_type'] ?? 'golden_hour';
+        $stmt = $conn->prepare("INSERT INTO event_voting_options (event_id, title, description, icon, buff_type) VALUES (?, ?, ?, ?, ?)");
+        $stmt->bind_param("issss", $optEventId, $title, $desc, $icon, $buffType);
         $stmt->execute();
         $stmt->close();
         header("Location: admin_Event_Manager.php?tab=votes&msg=Thêm lựa chọn bình chọn thành công!");
@@ -391,7 +397,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $currentGotd = EventHelper::getGameOfTheDay($conn);
 $seasons = $conn->query("SELECT * FROM seasonal_pass_configs ORDER BY start_date DESC")->fetch_all(MYSQLI_ASSOC);
 $seasonalEvents = $conn->query("SELECT * FROM seasonal_events ORDER BY starts_at DESC")->fetch_all(MYSQLI_ASSOC);
-$availableGames = ['Baccarat', 'Blackjack', 'Roulette', 'Sicbo', 'Xanh Đỏ Đối Kháng', 'RPS', 'Vietlott', 'Xóc Đĩa', 'Poker', 'Bầu Cua', 'Slot Cyber', 'Mega Spin', 'Horse Race'];
+$availableGames = ['Baccarat', 'Blackjack', 'Roulette', 'Sicbo', 'Xanh Đỏ Đối Kháng', 'RPS', 'Vietlott', 'Xóc Đĩa', 'Poker', 'Chiến Trường Linh Thú', 'Slot Cyber', 'Mega Spin', 'Horse Race'];
 
 // Logic load Event phụ thuộc để quản lý chi tiết (Missions, Spin rewards, Shop)
 $manageEventId = (int)($_GET['manage_event_id'] ?? 0);
@@ -1187,6 +1193,43 @@ if ($analyticsEventId > 0) {
                             </div>
                         </div>
 
+                        <!-- 🏰 4. Guild Milestone Config Visual Builder -->
+                        <div class="builder-container" style="border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.04);">
+                            <label style="color: #fbbf24; font-weight: bold; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                                <i class="fa fa-shield-halved"></i> Mốc Vinh Danh Guild (Guild Milestone Config)
+                                <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal; margin-left: 4px;">(trao thưởng toàn bộ thành viên khi guild đạt đủ điểm)</span>
+                            </label>
+                            <div id="guild-milestone-builder-list" style="margin-bottom: 12px; max-height: 150px; overflow-y: auto;">
+                                <!-- Trực quan hóa danh sách ở đây -->
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: flex-end;">
+                                <div>
+                                    <label style="font-size: 0.75rem;">Điểm Guild</label>
+                                    <input type="number" id="gm-pts" placeholder="500" style="padding: 8px 12px;">
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.75rem;">Loại Quà</label>
+                                    <select id="gm-type" style="padding: 8px 12px;">
+                                        <option value="money">Money</option>
+                                        <option value="item">Item</option>
+                                        <option value="title">Title</option>
+                                        <option value="avatar_frame">Frame</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.75rem;">Giá Trị</label>
+                                    <input type="text" id="gm-val" placeholder="100000" style="padding: 8px 12px;">
+                                </div>
+                                <button type="button" class="btn-success" onclick="addGuildMilestone()" style="padding: 10px 15px; border-radius: 8px; height: 42px; background: linear-gradient(135deg, #f59e0b, #d97706);">
+                                    <i class="fa fa-plus"></i>
+                                </button>
+                            </div>
+                            <div style="margin-top: 6px;">
+                                <label style="font-size: 0.75rem;">Tên Mốc Guild (Tùy chọn)</label>
+                                <input type="text" id="gm-label" placeholder="Guild Đạt 500 Điểm" style="padding: 8px 12px;">
+                            </div>
+                        </div>
+
                         <div style="display: flex; gap: 10px;">
                             <button type="submit" name="save_seasonal_event" style="flex: 2;"><i class="fa fa-save"></i> Lưu Thiết Lập</button>
                             <button type="button" class="btn-outline" onclick="previewCurrentForm()" style="flex: 1;"><i class="fa fa-eye"></i> Xem Trước</button>
@@ -1251,6 +1294,11 @@ if ($analyticsEventId > 0) {
                                                         <i class="fa <?php echo $ev['status'] === 'active' ? 'fa-toggle-on' : 'fa-toggle-off'; ?>"></i>
                                                     </button>
                                                 </form>
+
+                                                <!-- Preview Button -->
+                                                <a href="event_center.php?preview_event_id=<?php echo $ev['id']; ?>" class="action-btn btn-info" target="_blank" title="Xem Trước (Preview as Player)" style="background:rgba(59,130,246,0.15); color:#60a5fa; text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">
+                                                    <i class="fa fa-eye"></i>
+                                                </a>
 
                                                 <!-- Click to quick extend 3 days -->
                                                 <form method="POST" style="display:inline;">
@@ -1469,7 +1517,7 @@ if ($analyticsEventId > 0) {
                                             </select>
                                         </div>
                                         <div class="form-group">
-                                            <label>Giá Trị Quà (ID hoặc Số Tiền)</label>
+                                            <label>Giá Trị Quà (ID hoặc Số GTLM)</label>
                                             <input type="text" name="reward_value" placeholder="100000 hoặc item_12" required>
                                         </div>
                                     </div>
@@ -1702,7 +1750,7 @@ if ($analyticsEventId > 0) {
                         <div style="font-weight:800; font-size:14px; margin-bottom:10px; opacity:0.8;">DANH SÁCH NHIỆM VỤ</div>
                         <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius:14px; padding:15px; display:flex; justify-content:space-between; align-items:center; border-left: 4px solid #fbbf24;">
                             <div>
-                                <strong style="font-size:14px;">🎲 Đại giao lưu Tài Xỉu Đối Kháng</strong>
+                                <strong style="font-size:14px;">🎲 Đại giao lưu Xanh Đỏ Đối Kháng Đối Kháng</strong>
                                 <div style="font-size:11px; color:#fbbf24; margin-top:2px;">+10 Xu 🧧 &nbsp;+5 XP</div>
                             </div>
                             <div style="width:40%; text-align:right;">
@@ -1732,8 +1780,27 @@ if ($analyticsEventId > 0) {
                     <form method="POST" style="margin-top: 20px;">
                     <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                         <div class="form-group">
+                            <label>Sự Kiện Áp Dụng</label>
+                            <select name="event_id" required>
+                                <?php foreach($seasonalEvents as $e): ?>
+                                    <option value="<?= $e['id'] ?>"><?= htmlspecialchars($e['name']) ?> (ID: <?= $e['id'] ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
                             <label>Tên Lựa Chọn (Ví dụ: Đua Tốc Độ)</label>
                             <input type="text" name="title" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Hiệu Ứng Kích Hoạt (Buff Type)</label>
+                            <select name="buff_type" required>
+                                <option value="golden_hour">Golden Hour (XP x2)</option>
+                                <option value="festival_xp">Lễ Hội (XP x2, Tỉ lệ rơi đồ cao)</option>
+                                <option value="jackpot_boost">Jackpot Boost (Nổ hũ x3)</option>
+                                <option value="pvp_boost">PvP Boost (Thưởng PvP x1.5)</option>
+                                <option value="speedrun_boost">Speedrun (Nhiệm vụ x1.5)</option>
+                                <option value="guild_war_boost">Guild War (Điểm Bang x2)</option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label>Mô Tả</label>
@@ -1762,7 +1829,9 @@ if ($analyticsEventId > 0) {
                             <thead>
                                 <tr>
                                     <th>ID</th>
-                                    <th>Tên Sự Kiện</th>
+                                    <th>Sự Kiện</th>
+                                    <th>Tên Lựa Chọn</th>
+                                    <th>Buff</th>
                                     <th style="text-align: center;">Số Vote</th>
                                     <th style="text-align: right;">Thao tác</th>
                                 </tr>
@@ -1772,10 +1841,12 @@ if ($analyticsEventId > 0) {
                                     <?php foreach ($votingOptions as $opt): ?>
                                     <tr>
                                         <td>#<?php echo $opt['id']; ?></td>
+                                        <td>Event #<?php echo $opt['event_id']; ?></td>
                                         <td>
                                             <div style="font-weight: 700;"><?php echo $opt['icon'] . ' ' . htmlspecialchars($opt['title']); ?></div>
                                             <div style="font-size: 11px; opacity: 0.7;"><?php echo htmlspecialchars($opt['description']); ?></div>
                                         </td>
+                                        <td><span style="background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;"><?php echo htmlspecialchars($opt['buff_type'] ?? 'golden_hour'); ?></span></td>
                                         <td style="text-align: center;">
                                             <span style="background: rgba(34,197,94,0.2); color: #4ade80; padding: 4px 10px; border-radius: 10px; font-weight: 800;">
                                                 <?php echo number_format($opt['votes']); ?>
@@ -1932,10 +2003,10 @@ if ($analyticsEventId > 0) {
                     if (data.success) {
                         loadVoteLiveResults();
                     } else {
-                        alert('Lỗi: ' + (data.message || 'Unknown error'));
+                        if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Lỗi: ' + (data.message || 'Unknown error')), 'error'); } else { alert('Lỗi: ' + (data.message || 'Unknown error')); };
                     }
                 } catch(e) {
-                    alert('Lỗi kết nối: ' + e.message);
+                    if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Lỗi kết nối: ' + e.message), 'error'); } else { alert('Lỗi kết nối: ' + e.message); };
                 } finally {
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fa fa-play-circle"></i> Áp Dụng Lựa Chọn Thắng';
@@ -2096,6 +2167,7 @@ if ($analyticsEventId > 0) {
         // ──────────────────────────────────────────
         let milestones = [];
         let chains = [];
+        let guildMilestones = [];
 
         function updateThemeConfig() {
             let primary = document.getElementById('th-primary').value;
@@ -2138,7 +2210,7 @@ if ($analyticsEventId > 0) {
             let val = document.getElementById('ms-val').value.trim();
             
             if (isNaN(pts) || pts <= 0 || !val) {
-                alert('Vui lòng điền đầy đủ các thông tin mốc quà tặng.');
+                if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Vui lòng điền đầy đủ các thông tin mốc quà tặng.'), 'warning'); } else { alert('Vui lòng điền đầy đủ các thông tin mốc quà tặng.'); };
                 return;
             }
             if (!label) label = `Mốc ${pts} điểm`;
@@ -2188,7 +2260,7 @@ if ($analyticsEventId > 0) {
             let val = document.getElementById('ch-val').value.trim();
             
             if (isNaN(req) || req <= 0 || !val) {
-                alert('Vui lòng nhập đầy đủ thông tin chuỗi nhiệm vụ.');
+                if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Vui lòng nhập đầy đủ thông tin chuỗi nhiệm vụ.'), 'warning'); } else { alert('Vui lòng nhập đầy đủ thông tin chuỗi nhiệm vụ.'); };
                 return;
             }
             if (!label) label = `Chuỗi ${req} nhiệm vụ`;
@@ -2207,6 +2279,56 @@ if ($analyticsEventId > 0) {
             renderChains();
         }
 
+        // --- Guild Milestone Builder ---
+        function renderGuildMilestones() {
+            let container = document.getElementById('guild-milestone-builder-list');
+            container.innerHTML = '';
+
+            if (guildMilestones.length === 0) {
+                container.innerHTML = '<div style="opacity: 0.5; font-size: 0.8rem; padding: 5px 0;">Chưa thiết lập mốc guild nào.</div>';
+            }
+
+            guildMilestones.forEach((gm, idx) => {
+                let div = document.createElement('div');
+                div.style.cssText = 'display:flex; justify-content:space-between; align-items:center; background:rgba(245,158,11,0.08); padding:6px 12px; border-radius:8px; margin-bottom:5px; font-size: 0.85rem; border: 1px solid rgba(245,158,11,0.2);';
+                div.innerHTML = `
+                    <div>
+                        🏰 Guild Đạt <strong>${new Intl.NumberFormat().format(gm.points)} điểm</strong> - ${gm.label || `Mốc ${gm.points}`}
+                        &nbsp;<span class="badge badge-success" style="font-size:0.7rem; padding: 2px 6px; background: rgba(245,158,11,0.2); color:#fbbf24; border-color: rgba(245,158,11,0.4);">${gm.reward_type}: ${gm.reward_value}</span>
+                    </div>
+                    <button type="button" class="btn-danger-small" onclick="removeGuildMilestone(${idx})" style="width:24px; height:24px;"><i class="fa fa-times" style="font-size:10px;"></i></button>
+                `;
+                container.appendChild(div);
+            });
+            document.getElementById('guild_milestone_config_input').value = JSON.stringify(guildMilestones);
+        }
+
+        function addGuildMilestone() {
+            let pts = parseInt(document.getElementById('gm-pts').value);
+            let label = document.getElementById('gm-label').value.trim();
+            let type = document.getElementById('gm-type').value;
+            let val = document.getElementById('gm-val').value.trim();
+
+            if (isNaN(pts) || pts <= 0 || !val) {
+                if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Vui lòng điền đầy đủ thông tin mốc guild.'), 'warning'); } else { alert('Vui lòng điền đầy đủ thông tin mốc guild.'); };
+                return;
+            }
+            if (!label) label = `Guild Đạt ${pts} Điểm`;
+
+            guildMilestones.push({ points: pts, label: label, reward_type: type, reward_value: val });
+            guildMilestones.sort((a, b) => a.points - b.points);
+            renderGuildMilestones();
+
+            document.getElementById('gm-pts').value = '';
+            document.getElementById('gm-label').value = '';
+            document.getElementById('gm-val').value = '';
+        }
+
+        function removeGuildMilestone(idx) {
+            guildMilestones.splice(idx, 1);
+            renderGuildMilestones();
+        }
+
         // Reset visual builders
         function resetEventForm() {
             document.getElementById('seasonal-event-form').reset();
@@ -2215,9 +2337,11 @@ if ($analyticsEventId > 0) {
             document.getElementById('cancel-edit-btn').style.display = 'none';
             milestones = [];
             chains = [];
+            guildMilestones = [];
             renderMilestones();
             renderChains();
-            
+            renderGuildMilestones();
+
             document.getElementById('th-primary').value = '#f43f5e';
             document.getElementById('th-secondary').value = '#fbbf24';
             document.getElementById('th-bg').value = '#0f172a';
@@ -2229,24 +2353,26 @@ if ($analyticsEventId > 0) {
         function editEvent(data) {
             // Cuộn lên form
             document.getElementById('event-editor-card').scrollIntoView({ behavior: 'smooth' });
-            
+
             document.getElementById('event-id-field').value = data.id;
             document.getElementById('event-form-title').innerHTML = `<i class="fa fa-edit"></i> Chỉnh Sửa Sự Kiện: ${data.name}`;
             document.getElementById('cancel-edit-btn').style.display = 'block';
-            
+
             document.getElementById('ev-name').value = data.name;
             document.getElementById('ev-emoji').value = data.theme_emoji || '🧧';
             document.getElementById('ev-cost').value = data.spin_cost || 10000;
             document.getElementById('ev-start').value = data.starts_at ? data.starts_at.replace(' ', 'T') : '';
             document.getElementById('ev-end').value = data.ends_at ? data.ends_at.replace(' ', 'T') : '';
             document.getElementById('ev-status').value = data.status || 'inactive';
-            
+
             // Load visual builders
             try { milestones = JSON.parse(data.milestone_config || '[]'); } catch(e) { milestones = []; }
             try { chains = JSON.parse(data.chain_config || '[]'); } catch(e) { chains = []; }
+            try { guildMilestones = JSON.parse(data.guild_milestone_config || '[]'); } catch(e) { guildMilestones = []; }
             renderMilestones();
             renderChains();
-            
+            renderGuildMilestones();
+
             // Load theme pickers
             let theme = { primary: '#f43f5e', secondary: '#fbbf24', bg: '#0f172a', icon: '🧧' };
             try { theme = Object.assign(theme, JSON.parse(data.theme_config || '{}')); } catch(e) {}

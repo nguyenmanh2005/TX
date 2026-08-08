@@ -286,6 +286,201 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
             display: flex;
             align-items: center;
             gap: 10px;
+    if (empty($bets)) {
+        echo json_encode(['success' => false, 'message' => '⚠️ Vui lòng đặt cược trước khi quay!']);
+        exit;
+    }
+
+    $totalBet = 0;
+    foreach ($bets as $b) {
+        $totalBet += (float) $b['amount'];
+    }
+
+    if ($totalBet <= 0) {
+        echo json_encode(['success' => false, 'message' => '⚠️ Số  Gtlm cược không hợp lệ!']);
+        exit;
+    }
+
+    $conn->begin_transaction();
+    try {
+        // SELECT FOR UPDATE để khóa bản ghi user
+        $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ? FOR UPDATE");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $user = $stmt->get_result()->fetch_assoc();
+
+        if (!$user || $user['Money'] < $totalBet) {
+            throw new Exception('⚠️ Số Gtlm không đủ cho tổng cược!');
+        }
+
+        $winningNumber = rand(0, 36);
+        $color = getNumberColor($winningNumber);
+
+        $totalWin = 0;
+        $breakdown = [];
+
+        foreach ($bets as $b) {
+            $type = $b['type'];
+            $val = $b['value'];
+            $amt = (float) $b['amount'];
+            $win = 0;
+
+            switch ($type) {
+                case 'straight':
+                    if ($winningNumber == $val) $win = $amt * 36;
+                    break;
+                case 'red':
+                    if ($color === 'red') $win = $amt * 2;
+                    break;
+                case 'black':
+                    if ($color === 'black') $win = $amt * 2;
+                    break;
+                case 'even':
+                    if ($winningNumber != 0 && $winningNumber % 2 == 0) $win = $amt * 2;
+                    break;
+                case 'odd':
+                    if ($winningNumber != 0 && $winningNumber % 2 != 0) $win = $amt * 2;
+                    break;
+                case 'low':
+                    if ($winningNumber >= 1 && $winningNumber <= 18) $win = $amt * 2;
+                    break;
+                case 'high':
+                    if ($winningNumber >= 19 && $winningNumber <= 36) $win = $amt * 2;
+                    break;
+                case 'dozen':
+                    if ($val == 1 && $winningNumber >= 1 && $winningNumber <= 12) $win = $amt * 3;
+                    if ($val == 2 && $winningNumber >= 13 && $winningNumber <= 24) $win = $amt * 3;
+                    if ($val == 3 && $winningNumber >= 25 && $winningNumber <= 36) $win = $amt * 3;
+                    break;
+                case 'column':
+                    if ($winningNumber != 0 && ($winningNumber - $val) % 3 == 0) $win = $amt * 3;
+                    break;
+            }
+
+            if ($win > 0) {
+                $totalWin += $win;
+                $breakdown[] = "Cược $type: Thắng " . number_format($win) . " gtlm";
+            }
+        }
+
+        // Cập nhật số dư tương đối
+        $stmt = $conn->prepare("UPDATE users SET Money = Money - ? + ? WHERE Iduser = ?");
+        $stmt->bind_param("ddi", $totalBet, $totalWin, $userId);
+        $stmt->execute();
+
+        // Ghi log lịch sử riêng của roulette
+        $historyStmt = $conn->prepare("INSERT INTO history_roulette (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
+        $resultStr = "Số $winningNumber ($color)";
+        $historyStmt->bind_param("idid", $userId, $totalBet, $resultStr, $totalWin);
+        $historyStmt->execute();
+        $historyStmt->close();
+
+        // Ghi log tổng quát (Quest, BattlePass, etc)
+        if (file_exists('../game_history_helper.php')) {
+            require_once '../game_history_helper.php';
+            logGameHistoryWithAll($conn, $userId, 'Roulette Pro', $totalBet, $totalWin, ($totalWin > 0));
+        }
+
+        $conn->commit();
+        
+        $newMoneyVal = $user['Money'] - $totalBet + $totalWin;
+
+        echo json_encode([
+            'success' => true,
+            'number' => $winningNumber,
+            'color' => $color,
+            'totalWin' => $totalWin,
+            'totalBet' => $totalBet,
+            'newMoney' => number_format($newMoneyVal) . ' gtlm',
+            'breakdown' => $breakdown,
+            'message' => ($totalWin > 0) ? "🎉 CHIẾN THẮNG: TRÚNG SỐ $winningNumber! (" . strtoupper($color) . ")" : "💀 KẾT QUẢ: SỐ $winningNumber ($color). CHÚC BẠN MAY MẮN LẦN SAU!"
+        ]);
+    } catch (Exception $e) {
+        $conn->rollback();
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+    exit;
+}
+
+
+?>
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Roulette Royal - Premium Casino</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.6.0/confetti.browser.min.js"></script>
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/game-ui-enhancements.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Poppins:wght@400;600;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --gold: #ffd700;
+            --gold-dark: #b8860b;
+            --bg: #072a1a;
+            --border: rgba(255, 215, 0, 0.3);
+        }
+
+        body {
+            margin: 0;
+            cursor: url('../img/chuot.png'), auto !important;
+            font-family: 'Poppins', sans-serif;
+            background:
+                <?= $bgGradientCSS ?>
+            ;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+            overflow-x: hidden;
+            padding-bottom: 50px;
+        }
+
+        #threejs-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        /* Header */
+        .casino-header {
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 30px;
+            box-sizing: border-box;
+        }
+
+        .logo-text {
+            font-family: 'Cinzel', serif;
+            font-size: 28px;
+            color: var(--gold);
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            letter-spacing: 5px;
+        }
+
+        .balance-pill {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 25px;
+            border-radius: 30px;
+            border: 1px solid var(--gold);
+            display: flex;
+            align-items: center;
+            gap: 10px;
             font-weight: 800;
             color: var(--gold);
             box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
@@ -294,7 +489,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
         /* Main Game Area */
         .game-wrapper {
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: center;
             align-items: center;
             gap: 50px;
             width: 100%;
@@ -306,16 +503,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
         /* Wheel Section */
         .wheel-container {
             position: relative;
-            width: 400px;
-            height: 400px;
+            width: 300px;
+            height: 300px;
+            margin-top: 20px;
         }
 
         .wheel-outer-frame {
             position: absolute;
-            inset: -20px;
+            inset: -15px;
             border-radius: 50%;
-            border: 15px solid #3d2b1f;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 1), inset 0 0 30px rgba(0, 0, 0, 0.8);
+            border: 12px solid #3d2b1f;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 1), inset 0 0 20px rgba(0, 0, 0, 0.8);
             background: radial-gradient(circle, #4d3b2f, #1a0f0a);
         }
 
@@ -347,14 +545,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
 
         .pointer {
             position: absolute;
-            top: -30px;
+            top: -25px;
             left: 50%;
             transform: translateX(-50%);
             width: 0;
             height: 0;
-            border-left: 20px solid transparent;
-            border-right: 20px solid transparent;
-            border-top: 40px solid var(--gold);
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 30px solid var(--gold);
             z-index: 10;
             filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.8));
         }
@@ -364,37 +562,57 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 100px;
-            height: 100px;
+            width: 70px;
+            height: 70px;
             background: radial-gradient(circle at 30% 30%, #444, #111);
             border: 2px solid var(--gold);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 42px;
+            font-size: 32px;
             font-weight: 800;
             color: var(--gold);
             z-index: 15;
-            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+        }
+        
+        .wheel-number {
+            position: absolute;
+            width: 30px;
+            height: 50%;
+            left: calc(50% - 15px);
+            top: 0;
+            transform-origin: bottom center;
+            display: flex;
+            justify-content: center;
+            padding-top: 5px;
+            font-size: 13px;
+            font-weight: 800;
+            color: white;
+            text-shadow: 1px 1px 2px black;
+            box-sizing: border-box;
+            user-select: none;
         }
 
         /* Betting Board - Clean Edition */
         .board-glass {
             background: rgba(10, 60, 40, 0.85);
             backdrop-filter: blur(20px);
-            border: 4px solid #4a3728;
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7);
-            width: 100%;
+            border: 3px solid #4a3728;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+            flex: 1;
+            min-width: 600px;
+            max-width: 800px;
             border-style: double;
         }
 
         .grid-master {
             display: grid;
-            grid-template-columns: 80px repeat(12, 1fr) 100px;
-            grid-template-rows: repeat(3, 60px) 50px 50px;
+            grid-template-columns: 60px repeat(12, 1fr) 70px;
+            grid-template-rows: repeat(3, 45px) 35px 35px;
             gap: 4px;
         }
 
@@ -404,7 +622,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
+            font-size: 16px;
             font-weight: 800;
             cursor: pointer;
             transition: 0.3s;
@@ -438,7 +656,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
             grid-row: 1 / 4;
             grid-column: 1;
             border-color: #1e8449;
-            font-size: 30px;
+            font-size: 20px;
         }
 
         .cell.active {
@@ -470,7 +688,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
         .dozen-cell {
             grid-row: 4;
             grid-column: span 4;
-            font-size: 16px;
+            font-size: 14px;
             background: rgba(0, 0, 0, 0.4);
             text-transform: uppercase;
             letter-spacing: 2px;
@@ -479,7 +697,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
         .outside-cell {
             grid-row: 5;
             grid-column: span 2;
-            font-size: 14px;
+            font-size: 12px;
             background: rgba(0, 0, 0, 0.4);
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -488,44 +706,69 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
         .col-cell {
             grid-column: 14;
             background: rgba(0, 0, 0, 0.5);
-            font-size: 14px;
+            font-size: 12px;
         }
 
         /* Control Bar */
         .casino-controls {
-            margin-top: 40px;
+            margin-top: 20px;
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 25px 50px;
-            border-radius: 60px;
-            border: 2px solid var(--border);
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            width: fit-content;
-        }
-
-        .bet-input-box {
-            display: flex;
+            flex-direction: column;
             align-items: center;
             gap: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px 40px;
+            border-radius: 30px;
+            border: 2px solid var(--border);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 1200px;
+            box-sizing: border-box;
         }
 
-        .bet-input-box label {
-            font-size: 14px;
-            font-weight: 800;
-            color: #aaa;
-            text-transform: uppercase;
+        .chip-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .chip {
+            padding: 8px 15px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: white;
+            transition: 0.3s;
+            user-select: none;
+        }
+
+        .chip:hover, .chip.active {
+            background: var(--gold);
+            color: #000;
+            border-color: var(--gold);
+            transform: scale(1.1);
+        }
+
+        .controls-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
         }
 
         .money-input {
             background: rgba(255, 255, 255, 0.05);
             border: 2px solid var(--border);
-            border-radius: 25px;
-            padding: 12px 25px;
+            border-radius: 20px;
+            padding: 10px 20px;
             color: var(--gold);
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 800;
             width: 150px;
             outline: none;
@@ -777,15 +1020,21 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
 
         <!-- Interactive: Controls -->
         <div class="casino-controls">
-            <div class="bet-input-box">
-                <label>Bet Value:</label>
-                <input type="number" id="bet-amount" class="money-input" value="10000" step="5000">
+            <div class="chip-selector">
+                <div class="chip active" data-value="10000">10K</div>
+                <div class="chip" data-value="50000">50K</div>
+                <div class="chip" data-value="100000">100K</div>
+                <div class="chip" data-value="500000">500K</div>
+                <div class="chip" data-value="1000000">1M</div>
+                <div class="chip" data-value="5000000">5M</div>
+                <div class="chip" data-value="allin">MAX</div>
             </div>
-            <button class="btn-casino btn-danger" id="btn-clear">CLEAR BETS</button>
-            <button class="btn-casino btn-gold" id="btn-spin">PLACE BETS & SPIN</button>
-            <a href="../index.php"
-                style="color: #666; font-size: 15px; margin-left: 20px; text-decoration: none; font-weight: bold;">QUIT
-                SESSION</a>
+            <div class="controls-row">
+                <input type="number" id="bet-amount" class="money-input" value="10000" step="5000">
+                <button class="btn-casino btn-danger" id="btn-clear">CLEAR BETS</button>
+                <button class="btn-casino btn-gold" id="btn-spin">PLACE BETS & SPIN</button>
+                <a href="../index.php" style="color: #666; font-size: 15px; text-decoration: none; font-weight: bold; padding: 10px;">QUIT SESSION</a>
+            </div>
         </div>
     </div>
 
@@ -797,6 +1046,36 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
             window.themeConfig = { particleCount: <?= $particleCount ?>, particleSize: <?= $particleSize ?>, particleColor: '<?= $particleColor ?>', particleOpacity: <?= $particleOpacity ?>, shapeCount: <?= $shapeCount ?>, shapeColors: <?= json_encode($shapeColors) ?>, shapeOpacity: <?= $shapeOpacity ?>, bgGradient: <?= json_encode($bgGradient) ?> };
             const script = document.createElement('script'); script.src = '../threejs-background.js'; document.head.appendChild(script);
         })();
+
+        // Chip selection logic
+        document.querySelectorAll('.chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+                const val = this.getAttribute('data-value');
+                if (val === 'allin') {
+                    document.getElementById('bet-amount').value = <?= $soDu ?>;
+                } else {
+                    document.getElementById('bet-amount').value = val;
+                }
+            });
+        });
+
+        // Generate numbers on the wheel
+        const wheelOrder = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
+        const wheelInner = document.getElementById('wheel-inner');
+        const sliceAngle = 360 / 37;
+        
+        wheelOrder.forEach((num, index) => {
+            const numDiv = document.createElement('div');
+            numDiv.className = 'wheel-number';
+            numDiv.textContent = num;
+            // The wheel background is drawn starting at 0deg. 
+            // The first slice (0) spans 0 to 9.73deg. 
+            // Its center is at index * sliceAngle + sliceAngle / 2.
+            numDiv.style.transform = `rotate(${index * sliceAngle + sliceAngle / 2}deg)`;
+            wheelInner.appendChild(numDiv);
+        });
 
         let currentBets = [];
         let totalRotation = 0;
@@ -862,10 +1141,18 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
 
                         btn.disabled = false;
                         if (data.totalWin > 0) {
-                            confetti({ particleCount: 250, spread: 100, origin: { y: 0.6 }, colors: ['#ffd700', '#ffffff', '#27ae60'] });
-                            Swal.fire({ title: '🎊 BIG WIN!', html: `<strong style="color: #27ae60; font-size: 24px;">+ ${data.totalWin.toLocaleString()} gtlm</strong><br><br><div style="text-align: left; font-size: 14px;">${data.breakdown.join('<br>')}</div>`, icon: 'success' });
+                            if (typeof GameEffects !== 'undefined') {
+                                GameEffects.showWin(data.totalWin, `<br><div style="text-align: center; font-size: 14px;">${data.breakdown.join('<br>')}</div>`);
+                            } else {
+                                confetti({ particleCount: 250, spread: 100, origin: { y: 0.6 }, colors: ['#ffd700', '#ffffff', '#27ae60'] });
+                                Swal.fire({ title: '🎊 BIG WIN!', html: `<strong style="color: #27ae60; font-size: 24px;">+ ${data.totalWin.toLocaleString()} gtlm</strong><br><br><div style="text-align: left; font-size: 14px;">${data.breakdown.join('<br>')}</div>`, icon: 'success' });
+                            }
                         } else {
-                            Swal.fire({ title: 'Không trúng', text: data.message, icon: 'error' });
+                            if (typeof GameEffects !== 'undefined') {
+                                GameEffects.showLoss('Không trúng', data.message);
+                            } else {
+                                Swal.fire({ title: 'Không trúng', text: data.message, icon: 'error' });
+                            }
                         }
 
                         // Clear board
@@ -882,15 +1169,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
             }
         });
     </script>
-
-
-
-
-
-
-
-
-
-
-
-$footer
+    <script src="../assets/js/game-effects.js"></script>
+    <script src="../assets/js/game-effects-auto.js"></script>
+</body>
+</html>

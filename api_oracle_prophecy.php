@@ -49,7 +49,7 @@ $PROPHECY_TEMPLATES = [
         'text' => "Vàng sẽ chảy như suối — tổng lộc tuần này vượt qua ngưỡng thiên thư.",
         'type' => 'total_winnings',
         'value' => 50000000,
-        'label' => 'Tổng tiền thắng toàn server ≥ 50M GTLM',
+        'label' => 'Tổng GTLM thắng toàn server ≥ 50M GTLM',
     ],
     [
         'text' => "Một đêm đặc biệt sẽ chứng kiến kẻ giành được kho báu khổng lồ — hơn 5 triệu trong một ván.",

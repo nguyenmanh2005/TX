@@ -1,6 +1,17 @@
 <?php
 session_start();
 
+// Kiểm tra nếu người dùng đã bật giao diện V2 hoặc V3
+if (isset($_COOKIE['use_new_ui'])) {
+    if ($_COOKIE['use_new_ui'] == '1' || $_COOKIE['use_new_ui'] == '2') {
+        header("Location: v2/index.html");
+        exit();
+    } elseif ($_COOKIE['use_new_ui'] == '3') {
+        header("Location: v3/index.php");
+        exit();
+    }
+}
+
 // Kiểm tra đăng nhập: nếu chưa đăng nhập thì chuyển về trang đăng nhập
 if (!isset($_SESSION['Iduser'])) {
     header("Location: login.php");
@@ -103,14 +114,12 @@ $personalStats = [
 ];
 
 // Fetch current lottery jackpot
-$todayDate = date('Y-m-d');
-$lotterySql = "SELECT jackpot_pool FROM lottery_draws WHERE draw_date = ? LIMIT 1";
+$lotterySql = "SELECT jackpot_pool FROM lottery_draws WHERE status = 'pending' ORDER BY id ASC LIMIT 1";
 $lStmt = $conn->prepare($lotterySql);
-$lStmt->bind_param("s", $todayDate);
 $lStmt->execute();
 $lRes = $lStmt->get_result();
 $lotteryData = $lRes->fetch_assoc();
-$currentJackpot = (float)($lotteryData['jackpot_pool'] ?? 1000000);
+$currentJackpot = (float)($lotteryData['jackpot_pool'] ?? 1000000000);
 $lStmt->close();
 
 // Kiểm tra bảng game_history có tồn tại không
@@ -224,7 +233,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
     <title>Trang Chủ - Giải Trí Lành Mạnh</title>
     <style>
         body {
-            cursor: url('<?= dirname($_SERVER['PHP_SELF']) ?>/img/chuot.png'), url('img/chuot.png'), auto !important;
+            cursor: url('img/chuot.png'), auto !important;
             background:
                 <?= $bgGradientCSS ?>
             ;
@@ -242,7 +251,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
         label,
         select,
         input[type="text"] {
-            cursor: url('<?= dirname($_SERVER['PHP_SELF']) ?>/img/tay.png'), url('img/tay.png'), pointer !important;
+            cursor: url('img/tay.png'), pointer !important;
         }
 
         /* Additional custom styles for index page */
@@ -3066,14 +3075,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                 <a href="seasonal_pass.php"><i class="fa-solid fa-ticket icon"></i> Thẻ Mùa Giải</a>
                 <a href="pets.php"><i class="fa-solid fa-paw icon"></i> Hệ Thống Thú Cưng</a>
                 <?php if (isset($user['Role']) && $user['Role'] == 1): ?>
+                    <a href="admin_dashboard.php"><i class="fa-solid fa-gauge icon"></i> Admin Dashboard</a>
                     <a href="admin_manage_frames.php"><i class="fa-solid fa-palette icon"></i> Admin - Quản Lý Khung</a>
-                    <a href="admin_add_items.php"><i class="fa-solid fa-plus icon"></i> Admin - Thêm Items</a>
                     <a href="admin_manage_items.php"><i class="fa-solid fa-gear icon"></i> Admin - Quản Lý Items</a>
                     <a href="admin_manage_users.php"><i class="fa-solid fa-users-gear icon"></i> Admin - Quản Lý Users</a>
                     <a href="admin_Event_Manager.php"><i class="fa-solid fa-calendar-check icon"></i> Admin - Quản Lý Sự Kiện</a>
                     <a href="admin_tournaments.php"><i class="fa-solid fa-award icon"></i> Admin - Quản Lý Giải Đấu</a>
-                    <a href="admin_fix_duplicates.php"><i class="fa-solid fa-broom icon"></i> Admin - Xử Lý Trùng Lặp</a>
                 <?php endif; ?>
+                <div style="border-top: 1px solid rgba(255,255,255,0.1); margin: 6px 0;"></div>
+                <a href="switch_ui.php?v=v1" style="color: #60a5fa; font-weight: 700;"><i class="fa-solid fa-desktop icon"></i> Giao diện V1 (Mặc định)</a>
+                <a href="switch_ui.php?v=v2" style="color: #f59e0b; font-weight: 700;"><i class="fa-solid fa-bolt icon"></i> Giao diện V2 (React/Vite)</a>
+                <a href="switch_ui.php?v=v3" style="color: #4ade80; font-weight: 700;"><i class="fa-solid fa-layer-group icon"></i> Giao diện V3 (Dashboard 3 Cột)</a>
+                <div style="border-top: 1px solid rgba(255,255,255,0.1); margin: 6px 0;"></div>
                 <a href="#" id="darkModeToggle"><i class="fa-solid fa-moon icon"></i> Bật darkmode</a>
                 <a href="login.php"><i class="fa-solid fa-right-from-bracket icon"></i> Đăng xuất</a>
             </div>
@@ -3183,6 +3196,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                     <div class="menu-category-title">Nhiệm vụ & Thưởng</div>
                     <a href="quests.php" class="menu-item tooltip" data-tooltip="Hoàn thành nhiệm vụ">
                         <span class="menu-icon">🎯</span> Nhiệm Vụ
+                    </a>
+                    <a href="tower_of_gods.php" class="menu-item tooltip" data-tooltip="Khiêu chiến 100 tầng Boss AI">
+                        <span class="menu-icon">🗼</span> Tháp Thần Bài
+                    </a>
+                    <a href="my_lounge.php" class="menu-item tooltip" data-tooltip="Trưng bày Cúp & Nội Thất Hoàng Gia">
+                        <span class="menu-icon">🏡</span> Biệt Thự Cúp
+                    </a>
+                    <a href="games/plinko.php" class="menu-item tooltip" data-tooltip="Plinko Royale V1">
+                        <span class="menu-icon">🔴</span> Plinko V1
+                    </a>
+                    <a href="games/plinko_v2.php" class="menu-item tooltip" data-tooltip="Plinko V2">
+                        <span class="menu-icon">🔮</span> Plinko V2
+                    </a>
+                    <a href="plinko_royale_v3.php" class="menu-item tooltip" data-tooltip="Plinko Royale V3 Multi-Drop">
+                        <span class="menu-icon">🎰</span> Plinko Royale V3
                     </a>
                     <a href="daily_challenges.php" class="menu-item tooltip" data-tooltip="Thử thách hàng ngày">
                         <span class="menu-icon">🎯</span> Thử Thách
@@ -3491,10 +3519,63 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                 <button class="tab-btn" data-category="card">Game Bài</button>
                 <button class="tab-btn" data-category="slots">Slots & Quay Số</button>
                 <button class="tab-btn" data-category="mini">Mini Games</button>
+                <button class="tab-btn" data-category="vip" style="color: #fbbf24; border-color: #fbbf24;">VIP & Tycoon</button>
                 <button class="tab-btn" data-category="social">Sư Đồ & Bang Hội</button>
             </div>
 
             <div class="game-grid-modern">
+                <!-- AFK & VIP Games -->
+                <a href="games/farm.php" class="game-card" data-category="vip">
+                    <span class="game-badge badge-new" style="background:#22c55e;">NEW</span>
+                    <span class="game-icon">🌾</span>
+                    <span class="game-name">Nông Trại AFK</span>
+                </a>
+                <a href="games/mining.php" class="game-card" data-category="vip">
+                    <span class="game-badge badge-hot" style="background:#fbbf24;">AFK</span>
+                    <span class="game-icon">⛏️</span>
+                    <span class="game-name">Khu Mỏ Khoáng Sản</span>
+                </a>
+                <a href="tower_of_gods.php" class="game-card" data-category="vip">
+                    <span class="game-badge badge-hot" style="background:#a855f7;">HOT</span>
+                    <span class="game-icon">🗼</span>
+                    <span class="game-name">Tháp Thần Bài</span>
+                </a>
+                <a href="my_lounge.php" class="game-card" data-category="vip">
+                    <span class="game-badge badge-new" style="background:#f59e0b;">VIP</span>
+                    <span class="game-icon">🏡</span>
+                    <span class="game-name">Biệt Thự & Cúp</span>
+                </a>
+                <a href="games/pets.php" class="game-card" data-category="vip">
+                    <span class="game-badge badge-new" style="background:#ec4899;">PETS</span>
+                    <span class="game-icon">🐾</span>
+                    <span class="game-name">Chuồng Thú Cưng</span>
+                </a>
+                <a href="games/plinko.php" class="game-card" data-category="vip slots mini">
+                    <span class="game-badge badge-hot" style="background:#ef4444;">V1</span>
+                    <span class="game-icon">🔴</span>
+                    <span class="game-name">Plinko V1</span>
+                </a>
+                <a href="games/plinko_v2.php" class="game-card" data-category="vip slots mini">
+                    <span class="game-badge badge-new" style="background:#eab308;">V2</span>
+                    <span class="game-icon">🔮</span>
+                    <span class="game-name">Plinko V2</span>
+                </a>
+                <a href="plinko_royale_v3.php" class="game-card" data-category="vip slots mini">
+                    <span class="game-badge badge-new" style="background:linear-gradient(135deg,#ef4444,#f59e0b); color:#fff; font-weight:bold;">MULTI</span>
+                    <span class="game-icon">🎰</span>
+                    <span class="game-name">Plinko Royale V3</span>
+                </a>
+                <a href="games/market.php" class="game-card" data-category="vip">
+                    <span class="game-badge badge-new" style="background:#ef4444;">VIP</span>
+                    <span class="game-icon">📈</span>
+                    <span class="game-name">Sàn Chứng Khoán</span>
+                </a>
+                <a href="games/greedy_cave.php" class="game-card" data-category="vip">
+                    <span class="game-badge badge-new" style="background:#8b5cf6;">HOT</span>
+                    <span class="game-icon">🦇</span>
+                    <span class="game-name">Hang Tham Lam</span>
+                </a>
+
                 <!-- Game Bài (Card Games) -->
                 <a href="games/tusac.php" class="game-card" data-category="card">
                     <span class="game-badge badge-new">New</span>
@@ -3584,19 +3665,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                     <span class="game-icon">🎫</span>
                     <span class="game-name">Xổ Số Cộng Đồng</span>
                 </a>
-                <a href="luckywheel_tet.php" class="game-card" data-category="slots">
-                    <span class="game-badge badge-hot">Hot</span>
-                    <span class="game-icon">🧧</span>
-                    <span class="game-name">Vòng Quay Tết</span>
-                </a>
+
                 <a href="games/roulette.php" class="game-card" data-category="slots">
                     <span class="game-icon">🎡</span>
                     <span class="game-name">Roulette</span>
                 </a>
-                <a href="games/vq.php" class="game-card" data-category="slots">
-                    <span class="game-icon">🎡</span>
-                    <span class="game-name">Vòng Quay</span>
-                </a>
+
                 <a href="games/vietlott.php" class="game-card" data-category="slots">
                     <span class="game-icon">🎫</span>
                     <span class="game-name">Vietlott</span>
@@ -3613,7 +3687,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                     <span class="game-icon">🎟️</span>
                     <span class="game-name">Rút Thăm</span>
                 </a>
-
                 <!-- Mini Games & Casual -->
                 <a href="games/daga.php" class="game-card" data-category="mini">
                     <span class="game-badge badge-new">New</span>
@@ -3639,10 +3712,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                     <span class="game-icon">🛫</span>
                     <span class="game-name">Crash Flight</span>
                 </a>
-                <a href="games/plinko.php" class="game-card" data-category="mini">
-                    <span class="game-icon">🔴</span>
-                    <span class="game-name">Plinko Royale</span>
-                </a>
+
                 <a href="games/limbo.php" class="game-card" data-category="mini">
                     <span class="game-icon">🚀</span>
                     <span class="game-name">Limbo Rocket</span>
@@ -4011,9 +4081,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
 
 
 
+    <!-- Switch UI Button -->
+    <a href="switch_ui.php?v=new" class="fab" style="bottom: 80px; background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%); color: #000; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 20px; box-shadow: 0 4px 15px rgba(241, 196, 15, 0.4);" title="Chuyển sang giao diện mới">
+        ✨
+    </a>
+
     <!-- Premium Effects System -->
     <canvas id="threejs-background"></canvas>
-    <script src="assets/js/sound-manager.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="assets/js/lobby.js"></script>
     <script>
         (function () {
@@ -4252,7 +4327,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                         document.getElementById('dailyRewardModal').style.display = 'none';
                         location.reload();
                     } else {
-                        alert(data.message);
+                        if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String(data.message), 'info'); } else { alert(data.message); };
                         btn.disabled = false;
                         btn.textContent = 'NHẬN QUÀ NGAY';
                     }
@@ -4383,7 +4458,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                         input.value = '';
                         loadGuildMessages();
                     } else {
-                        alert(data.message);
+                        if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String(data.message), 'info'); } else { alert(data.message); };
                     }
                 });
             }
@@ -4441,7 +4516,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
             setInterval(updateJackpot, 5000);
 
             // ── Lottery Notification ──
-            const lotteryDrawTime = new Date('<?= $todayDate ?> 20:00:00');
+            const lotteryDrawTime = new Date('<?= date('Y-m-d') ?> 20:00:00');
             setInterval(() => {
                 const now = new Date();
                 const diffMin = (lotteryDrawTime - now) / 60000;
@@ -4487,32 +4562,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                 }
             } catch(e) {}
         }
-        // ⚔️ PVP CHALLENGE LISTENER: Kiểm tra lệnh thách đấu
-        async function checkPvPChallenges() {
-            try {
-                const res = await fetch('api_pvp_check.php');
-                const data = await res.json();
-                if (data.has_challenge) {
-                    Swal.fire({
-                        title: '⚔️ LỆNH TRUY SOÁT!',
-                        html: `<div style="color:#ef4444; font-weight:900;">${data.challenger_name}</div> đang thách đấu bạn mức cược <br><b style="color:#fbbf24; font-size:1.5em;">${data.bet} GTLM</b>!<br>Bạn có dám nhận lời?`,
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'XUẤT CHIẾN 🔥',
-                        cancelButtonText: 'BỎ QUA',
-                        confirmButtonColor: '#ef4444',
-                        cancelButtonColor: '#334155',
-                        allowOutsideClick: false,
-                        backdrop: `rgba(239, 68, 68, 0.2)`
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            window.location.href = 'pvp_arena.php?id=' + data.challenge_id;
-                        }
-                    });
-                }
-            } catch(e) {}
-        }
-        setInterval(checkPvPChallenges, 8000);
+        // PvP Listener moved to load_theme.php for global availability
     </script>
 
     <!-- 🔮 NPC: Lão Tiên Tri GTLM UI -->

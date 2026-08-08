@@ -32,19 +32,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['bag_index'])) {
     $cost = 50000;
 
     if ($currentBalance < $cost) {
-        $message = "⚠️ Bạn không đủ số dư để rút thưởng (cần " . number_format($cost) . " VNĐ).";
+        $message = "⚠️ Bạn không đủ số dư để rút thưởng (cần " . number_format($cost) . " GTLM).";
     } else {
         $currentBalance -= $cost;
 
         // Danh sách phần thưởng có tỉ lệ cụ thể
         $bags = [
             ["label" => "Trượt!", "reward" => 0, "chance" => 50],
-            ["label" => "10.000 VNĐ", "reward" => 10000, "chance" => 20],
-            ["label" => "50.000 VNĐ", "reward" => 50000, "chance" => 12],
-            ["label" => "100.000 VNĐ", "reward" => 100000, "chance" => 12],
-            ["label" => "200.000 VNĐ", "reward" => 270000, "chance" => 3],
-            ["label" => "500.000 VNĐ", "reward" => 500000, "chance" => 2],
-            ["label" => "1.000.000 VNĐ", "reward" => 1000000, "chance" => 1],
+            ["label" => "10.000 GTLM", "reward" => 10000, "chance" => 20],
+            ["label" => "50.000 GTLM", "reward" => 50000, "chance" => 12],
+            ["label" => "100.000 GTLM", "reward" => 100000, "chance" => 12],
+            ["label" => "200.000 GTLM", "reward" => 270000, "chance" => 3],
+            ["label" => "500.000 GTLM", "reward" => 500000, "chance" => 2],
+            ["label" => "1.000.000 GTLM", "reward" => 1000000, "chance" => 1],
         ];
 
         function getRandomBag($bags) {
@@ -322,8 +322,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['bag_index'])) {
   <div class="game-container">
     <h1>🎁 Rút Thăm Trúng Thưởng</h1>
     <p style="font-size: 18px; margin: 10px 0; color: #333;">Xin chào <strong><?= htmlspecialchars($userName, ENT_QUOTES, 'UTF-8') ?></strong></p>
-    <div class="balance-display">💰 Số dư hiện tại: <strong><?= number_format($currentBalance, 0, ',', '.') ?> VNĐ</strong></div>
-    <div class="cost-info">💸 Chi phí mỗi lần rút: <strong>50.000 VNĐ</strong></div>
+    <div class="balance-display">💰 Số dư hiện tại: <strong><?= number_format($currentBalance, 0, ',', '.') ?> GTLM</strong></div>
+    <div class="cost-info">💸 Chi phí mỗi lần rút: <strong>50.000 GTLM</strong></div>
 
     <form method="post" id="bagForm">
       <div class="bags">

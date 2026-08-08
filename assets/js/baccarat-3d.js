@@ -59,58 +59,18 @@ class Baccarat3D {
         this.scene.add(tableRim);
     }
 
-    /**
-     * SIÊU PHẨM: Tự vẽ mặt quân bài bằng Canvas (Không cần ảnh, không bao giờ lỗi)
-     */
     createCardFace(suit, value) {
-        const canvas = document.createElement('canvas');
-        canvas.width = 256;
-        canvas.height = 384;
-        const ctx = canvas.getContext('2d');
-
-        // 1. Nền trắng với Gradient nhẹ cho sang trọng
-        const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        grad.addColorStop(0, '#ffffff');
-        grad.addColorStop(1, '#f0f0f0');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // 2. Viền bài
-        ctx.strokeStyle = '#d4af37'; // Màu vàng Gold
-        ctx.lineWidth = 8;
-        ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
-
-        // 3. Xác định màu sắc và biểu tượng
-        const isRed = (suit === 'hearts' || suit === 'diamonds');
-        const color = isRed ? '#d63031' : '#2d3436';
-        const icons = { 'hearts': '♥', 'diamonds': '♦', 'clubs': '♣', 'spades': '♠' };
-        const icon = icons[suit];
-        const valTxt = value === 1 ? 'A' : (value === 11 ? 'J' : (value === 12 ? 'Q' : (value === 13 ? 'K' : value)));
-
-        // 4. Vẽ số ở góc
-        ctx.fillStyle = color;
-        ctx.font = 'bold 50px Arial';
-        ctx.fillText(valTxt, 25, 60);
-        ctx.font = '40px Arial';
-        ctx.fillText(icon, 25, 100);
-
-        // Vẽ đối xứng ở góc dưới
-        ctx.save();
-        ctx.translate(canvas.width, canvas.height);
-        ctx.rotate(Math.PI);
-        ctx.font = 'bold 50px Arial';
-        ctx.fillText(valTxt, 25, 60);
-        ctx.font = '40px Arial';
-        ctx.fillText(icon, 25, 100);
-        ctx.restore();
-
-        // 5. Vẽ biểu tượng lớn ở giữa
-        ctx.font = '160px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(icon, canvas.width / 2, canvas.height / 2);
-
-        return new THREE.CanvasTexture(canvas);
+        let valStr = value;
+        if (value === 1) valStr = 'A';
+        else if (value === 11) valStr = 'J';
+        else if (value === 12) valStr = 'Q';
+        else if (value === 13) valStr = 'K';
+        else if (value < 10) valStr = '0' + value;
+        
+        const url = `../games/img/anh-bai/PNG/Cards (large)/card_${suit}_${valStr}.png`;
+        const texture = new THREE.TextureLoader().load(url);
+        texture.colorSpace = THREE.SRGBColorSpace || THREE.sRGBEncoding;
+        return texture;
     }
 
     createCardMesh(suit, value) {
@@ -118,24 +78,9 @@ class Baccarat3D {
         const faceTexture = this.createCardFace(suit, value);
         faceTexture.needsUpdate = true;
         
-        // Mặt sau màu Royale Blue với họa tiết kim cương
-        const backCanvas = document.createElement('canvas');
-        backCanvas.width = 256;
-        backCanvas.height = 384;
-        const bCtx = backCanvas.getContext('2d');
-        bCtx.fillStyle = '#0a3d62';
-        bCtx.fillRect(0, 0, 256, 384);
-        bCtx.strokeStyle = '#d4af37';
-        bCtx.lineWidth = 5;
-        bCtx.strokeRect(10, 10, 236, 364);
-        // Vẽ chữ R (Royale) ở giữa
-        bCtx.fillStyle = '#d4af37';
-        bCtx.font = 'bold 120px serif';
-        bCtx.textAlign = 'center';
-        bCtx.textBaseline = 'middle';
-        bCtx.fillText('R', 128, 192);
-        const backTexture = new THREE.CanvasTexture(backCanvas);
-        backTexture.needsUpdate = true;
+        const backUrl = '../games/img/anh-bai/PNG/Cards (large)/card_back.png';
+        const backTexture = new THREE.TextureLoader().load(backUrl);
+        backTexture.colorSpace = THREE.SRGBColorSpace || THREE.sRGBEncoding;
 
         const materials = [
             new THREE.MeshBasicMaterial({ color: 0xffffff }), // 0: Cạnh phải

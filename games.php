@@ -91,7 +91,7 @@ $stmt->close();
                 <span><?= htmlspecialchars($tenNguoiChoi) ?></span>
                 <span>|</span>
                 <span>💰</span>
-                <span><?= number_format($soDu, 0, ',', '.') ?> VNĐ</span>
+                <span><?= number_format($soDu, 0, ',', '.') ?> GTLM</span>
             </div>
         </div>
         

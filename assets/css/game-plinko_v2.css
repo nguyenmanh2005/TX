@@ -1,0 +1,295 @@
+:root {
+    --primary: #12c2e9;
+    --accent: #f1c40f;
+    --danger: #ff4e50;
+    --success: #00b09b;
+    --glass-bg: rgba(18, 19, 28, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.08);
+}
+
+.plinko-v2-container {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.plinko-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 2rem;
+    padding: 1.5rem;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+    width: 100%;
+    max-width: 1400px;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 1.5rem;
+    height: calc(100vh - 20px);
+    overflow: hidden;
+    /* Prevent grid from expanding beyond screen height */
+}
+
+/* Sidebar Controls */
+.plinko-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 1.2rem;
+    border-radius: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    overflow-y: auto;
+    /* Allow scrolling if screen is too short */
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.control-group label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.control-input {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--glass-border);
+    border-radius: 1rem;
+    padding: 0.8rem 1rem;
+    display: flex;
+    align-items: center;
+}
+
+.control-input input {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    width: 100%;
+    outline: none;
+}
+
+.segmented-control {
+    display: flex;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 1rem;
+    padding: 4px;
+    border: 1px solid var(--glass-border);
+}
+
+.segment-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    padding: 8px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    border-radius: 0.8rem;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.segment-btn.active {
+    background: var(--primary);
+    color: #000;
+    box-shadow: 0 4px 15px rgba(18, 194, 233, 0.3);
+}
+
+.segment-btn.risk-low.active {
+    background: var(--success);
+    box-shadow: 0 4px 15px rgba(0, 176, 155, 0.3);
+}
+
+.segment-btn.risk-med.active {
+    background: var(--accent);
+    box-shadow: 0 4px 15px rgba(241, 196, 15, 0.3);
+}
+
+.segment-btn.risk-high.active {
+    background: var(--danger);
+    box-shadow: 0 4px 15px rgba(255, 78, 80, 0.3);
+}
+
+.quick-amounts {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+
+.btn-quick {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-quick:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-play {
+    background: linear-gradient(135deg, #00b09b, #96c93d);
+    border: none;
+    padding: 1rem;
+    border-radius: 1.2rem;
+    font-size: 1.2rem;
+    font-weight: 800;
+    font-family: 'Orbitron', sans-serif;
+    color: #fff;
+    cursor: pointer;
+    text-transform: uppercase;
+    box-shadow: 0 10px 20px rgba(0, 176, 155, 0.3);
+    transition: 0.3s;
+    margin-top: 10px;
+    flex-shrink: 0;
+}
+
+.btn-play:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 30px rgba(0, 176, 155, 0.5);
+    filter: brightness(1.1);
+}
+
+.btn-play:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Plinko Board Area */
+.plinko-board-area {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 1.5rem;
+    border: 1px inset rgba(255, 255, 255, 0.05);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: auto;
+    /* Allow scrolling if canvas stops scaling down */
+    padding-top: 2rem;
+}
+
+.board-stats {
+    position: absolute;
+    top: 20px;
+    left: 30px;
+    z-index: 10;
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 2px;
+}
+
+.stat-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--success);
+    text-shadow: 0 0 20px rgba(0, 176, 155, 0.5);
+}
+
+.stat-value.loss {
+    color: var(--danger);
+    text-shadow: 0 0 20px rgba(255, 78, 80, 0.5);
+}
+
+/* Canvas Container */
+.canvas-container {
+    position: relative;
+    width: 100%;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 60px;
+    /* Space for pockets */
+}
+
+#plinkoCanvas {
+    /* Canvas will be sized dynamically */
+}
+
+/* HTML Pockets overlay */
+.pockets-wrapper {
+    /* Removed absolute positioning logic since it's moved to HTML inline style */
+}
+
+.pocket {
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.8rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    transition: 0.1s;
+    border-top: 2px solid rgba(255, 255, 255, 0.3);
+    color: #fff;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.pocket.hit {
+    transform: translateY(5px);
+    filter: brightness(1.3);
+}
+
+/* Colors for multiplier ranges */
+.pkt-low {
+    background: #ff4e50;
+}
+
+.pkt-mid-low {
+    background: #f9d423;
+    color: #000;
+    text-shadow: none;
+    border-top-color: rgba(0, 0, 0, 0.2);
+}
+
+.pkt-mid {
+    background: #12c2e9;
+}
+
+.pkt-high {
+    background: #c471ed;
+}
+
+.pkt-ultra {
+    background: #8e2de2;
+}
+
+@media (max-width: 1024px) {
+    .plinko-card {
+        grid-template-columns: 1fr;
+        height: auto;
+        max-height: none;
+    }
+
+    .plinko-board-area {
+        height: 500px;
+    }
+}

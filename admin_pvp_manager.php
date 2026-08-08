@@ -3,8 +3,8 @@ session_start();
 require_once 'db_connect.php';
 require_once 'admin_helper.php';
 
-// Bảo mật: Chỉ cho phép admin truy cập
-requireAdmin($conn, $_SESSION['Iduser'] ?? 0, 'index.php');
+// Bảo mật: Chỉ cho phép Admin (Role >= 1) truy cập
+requireAdmin($conn, $_SESSION['Iduser'] ?? 0);
 
 $userId = $_SESSION['Iduser'];
 
@@ -476,7 +476,7 @@ if ($res) {
             <div class="stat-card">
                 <span class="stat-icon" style="background: rgba(251, 191, 36, 0.15); color: #fbbf24;">💰</span>
                 <div class="stat-content">
-                    <div class="stat-title">Tiền Cược Hoàn Tất</div>
+                    <div class="stat-title">GTLM Cược Hoàn Tất</div>
                     <div class="stat-value" style="color: #fbbf24;"><?= number_format($totalVolume) ?> GTLM</div>
                 </div>
             </div>
@@ -504,7 +504,7 @@ if ($res) {
                             <th>Game</th>
                             <th>Đấu Thủ 1 (Challenger)</th>
                             <th>Đấu Thủ 2 (Opponent)</th>
-                            <th>Tiền Cược</th>
+                            <th>GTLM Cược</th>
                             <th>Trạng Thái</th>
                             <th>Ngày Tạo</th>
                             <th style="text-align: right;">Hành Động</th>
@@ -635,7 +635,7 @@ if ($res) {
         function adminCancel(matchId) {
             Swal.fire({
                 title: 'Hủy trận đấu PvP?',
-                text: "Trận đấu sẽ bị hủy ngay lập tức và hoàn trả 100% tiền cược lại cho cả hai người chơi!",
+                text: "Trận đấu sẽ bị hủy ngay lập tức và hoàn trả 100% GTLM cược lại cho cả hai người chơi!",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#ef4444',

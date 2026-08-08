@@ -71,8 +71,8 @@ class GameLauncher {
             { id: 'bingo', name: 'Bingo Live', icon: '🎯', url: 'games/bingo.php', category: 'casino', new: false },
             { id: 'scratch', name: 'Thẻ Cào May Mắn', icon: '🏷️', url: 'games/scratch.php', category: 'mini', new: true },
             { id: 'yahtzee', name: 'Yahtzee Dice', icon: '🎲', url: 'games/yahtzee.php', category: 'mini', new: true },
-            { id: 'craps', name: 'Craps Table', icon: '🎲', url: 'games/craps.php', category: 'casino', new: true },
             { id: 'dice_roll', name: 'Dice Roll Pro', icon: '🎲', url: 'dice_roll.php', category: 'mini', new: true },
+            { id: 'gacha_cards', name: 'Gacha Thẻ Nữ Thần', icon: '🔮', url: 'games/gacha_cards.php', category: 'mini', new: true },
         ];
     }
 

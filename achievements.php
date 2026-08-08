@@ -713,10 +713,10 @@ unset($achievement);
                 if (data.status === 'success') {
                     location.reload();
                 } else {
-                    alert(data.message);
+                    if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String(data.message), 'info'); } else { alert(data.message); };
                 }
             })
-            .catch(error => alert('Lỗi kết nối!'));
+            .catch(error => if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Lỗi kết nối!')), 'error'); } else { alert('Lỗi kết nối!')); };
         }
     </script>
 

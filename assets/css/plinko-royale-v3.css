@@ -1,0 +1,535 @@
+/**
+ * Plinko Royale V3 Multi-Drop CSS
+ * [NEW FILE] - Đấu Trường Thả Bóng 100 Bóng Đồng Thời & AI Race
+ * Tuân thủ Rule 2.1 & Design Aesthetics
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap');
+
+:root {
+    --plinko-bg: #090d16;
+    --plinko-panel: rgba(18, 25, 43, 0.85);
+    --plinko-border: rgba(251, 191, 36, 0.3);
+    --plinko-gold: #fbbf24;
+    --plinko-gold-glow: rgba(251, 191, 36, 0.6);
+    --plinko-red: #ef4444;
+    --plinko-purple: #a855f7;
+    --plinko-cyan: #06b6d4;
+    --plinko-text: #f8fafc;
+}
+
+body.plinko-royale-body {
+    background: radial-gradient(circle at 50% 20%, #1e1b4b 0%, var(--plinko-bg) 80%);
+    color: var(--plinko-text);
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* Header */
+.plinko-header {
+    background: rgba(15, 23, 42, 0.9);
+    backdrop-filter: blur(15px);
+    border-bottom: 2px solid var(--plinko-border);
+    padding: 16px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+}
+
+.plinko-header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.plinko-logo-badge {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #000;
+    font-weight: 900;
+    font-size: 13px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 0 15px var(--plinko-gold-glow);
+}
+
+.plinko-header h1 {
+    font-size: 26px;
+    font-weight: 900;
+    margin: 0;
+    background: linear-gradient(to right, #fff, #fbbf24);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.plinko-user-stats {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 8px 18px;
+    border-radius: 30px;
+}
+
+.plinko-balance {
+    color: var(--plinko-gold);
+    font-weight: 800;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-royale-action {
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    color: #fff;
+    font-weight: 700;
+    padding: 10px 20px;
+    border-radius: 14px;
+    border: 1px solid #c084fc;
+    text-decoration: none;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+}
+
+.btn-royale-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.6);
+}
+
+/* Main Layout (2 Columns) */
+.plinko-main-grid {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 24px;
+    max-width: 1300px;
+    margin: 28px auto;
+    padding: 0 24px;
+}
+
+@media (max-width: 900px) {
+    .plinko-main-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Control Panel (Col 1) */
+.plinko-panel {
+    background: var(--plinko-panel);
+    border: 1px solid var(--plinko-border);
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+    height: fit-content;
+}
+
+.plinko-panel h3 {
+    color: var(--plinko-gold);
+    font-size: 18px;
+    font-weight: 800;
+    margin: 0 0 18px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px dashed rgba(255,255,255,0.15);
+    padding-bottom: 12px;
+}
+
+.form-group-royale {
+    margin-bottom: 20px;
+}
+
+.form-group-royale label {
+    display: block;
+    font-size: 13px;
+    color: #cbd5e1;
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.bet-input-wrapper {
+    display: flex;
+    align-items: center;
+    background: #0f172a;
+    border: 2px solid #334155;
+    border-radius: 14px;
+    overflow: hidden;
+    transition: border-color 0.3s;
+}
+
+.bet-input-wrapper:focus-within {
+    border-color: var(--plinko-gold);
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.3);
+}
+
+.bet-input-wrapper input {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 800;
+    padding: 12px 16px;
+    width: 100%;
+    outline: none;
+}
+
+.bet-quick-btns {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.btn-bet-quick {
+    flex: 1;
+    background: rgba(51, 65, 85, 0.6);
+    border: 1px solid #475569;
+    color: #e2e8f0;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-bet-quick:hover {
+    background: var(--plinko-gold);
+    color: #000;
+    border-color: var(--plinko-gold);
+}
+
+/* Segment/Toggle Buttons */
+.segment-group {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.segment-btn {
+    background: #0f172a;
+    border: 1px solid #334155;
+    color: #94a3b8;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 10px 0;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.segment-btn.active {
+    background: linear-gradient(135deg, #f59e0b, #b45309);
+    color: #fff;
+    border-color: #fde047;
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+}
+
+.segment-btn[data-risk="high"].active {
+    background: linear-gradient(135deg, #ef4444, #991b1b);
+    border-color: #fca5a5;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.5);
+}
+
+.ball-count-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+}
+
+.btn-drop-main {
+    width: 100%;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    border: 2px solid #fde047;
+    color: #000;
+    font-weight: 900;
+    font-size: 20px;
+    padding: 18px 0;
+    border-radius: 16px;
+    cursor: pointer;
+    box-shadow: 0 8px 30px rgba(245, 158, 11, 0.6);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-drop-main:hover {
+    transform: scale(1.03) translateY(-3px);
+    box-shadow: 0 12px 40px rgba(245, 158, 11, 0.8);
+}
+
+.btn-drop-main:disabled {
+    background: #475569;
+    border-color: #64748b;
+    color: #94a3b8;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Plinko Stage (Col 2) */
+.plinko-stage-wrapper {
+    background: rgba(10, 15, 29, 0.9);
+    border: 2px solid rgba(251, 191, 36, 0.4);
+    border-radius: 28px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 0 50px rgba(0,0,0,0.8), 0 20px 50px rgba(0,0,0,0.6);
+}
+
+.plinko-stage-wrapper.shake {
+    animation: screenShake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes screenShake {
+    10%, 90% { transform: translate3d(-4px, 0, 0); }
+    20%, 80% { transform: translate3d(6px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-8px, 0, 0); }
+    40%, 60% { transform: translate3d(8px, 0, 0); }
+}
+
+canvas#plinkoCanvas {
+    max-width: 100%;
+    height: auto;
+    border-radius: 16px;
+    background: radial-gradient(circle at 50% 10%, #1e293b 0%, #090d16 80%);
+}
+
+.multiplier-slots-container {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+    margin-top: 14px;
+}
+
+.plinko-slot {
+    flex: 1;
+    text-align: center;
+    padding: 8px 2px;
+    border-radius: 8px;
+    font-weight: 900;
+    font-size: 13px;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.plinko-slot.hit {
+    transform: scale(1.25) translateY(-5px);
+    box-shadow: 0 0 25px #fff;
+    z-index: 10;
+}
+
+/* Fireworks / Celebration Modal */
+.royale-celebration-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.85);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s;
+}
+
+.royale-celebration-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.royale-celebration-box {
+    background: linear-gradient(135deg, #1e1b4b, #312e81);
+    border: 3px solid #fde047;
+    border-radius: 30px;
+    padding: 40px;
+    text-align: center;
+    max-width: 550px;
+    box-shadow: 0 0 60px rgba(251, 191, 36, 0.8);
+    transform: scale(0.8);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.royale-celebration-overlay.active .royale-celebration-box {
+    transform: scale(1);
+}
+
+/* ===== Session Profit Bar ===== */
+.session-profit-bar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(251, 191, 36, 0.25);
+    border-radius: 16px;
+    padding: 10px 20px;
+    margin-bottom: 14px;
+    width: 100%;
+    box-sizing: border-box;
+    backdrop-filter: blur(10px);
+}
+
+.session-stat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+}
+
+.session-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.session-value {
+    font-size: 16px;
+    font-weight: 900;
+    color: #f8fafc;
+    font-family: 'Outfit', monospace;
+    transition: all 0.3s ease;
+}
+
+.session-value.flash-win {
+    animation: flashWin 0.5s ease;
+}
+
+.session-value.flash-loss {
+    animation: flashLoss 0.5s ease;
+}
+
+@keyframes flashWin {
+    0% { transform: scale(1); color: #34d399; }
+    50% { transform: scale(1.25); color: #10b981; text-shadow: 0 0 20px #34d399; }
+    100% { transform: scale(1); }
+}
+
+@keyframes flashLoss {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); color: #ef4444; text-shadow: 0 0 20px #ef4444; }
+    100% { transform: scale(1); }
+}
+
+.session-divider {
+    width: 1px;
+    height: 32px;
+    background: rgba(255,255,255,0.1);
+    margin: 0 8px;
+}
+
+/* ===== Balance Flash on Header ===== */
+@keyframes balanceFlashUp {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.2); color: #34d399; text-shadow: 0 0 15px #34d399; }
+    100% { transform: scale(1); }
+}
+@keyframes balanceFlashDown {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.1); color: #ef4444; text-shadow: 0 0 15px #ef4444; }
+    100% { transform: scale(1); }
+}
+.balance-flash-up {
+    display: inline-block;
+    animation: balanceFlashUp 0.5s ease;
+}
+.balance-flash-down {
+    display: inline-block;
+    animation: balanceFlashDown 0.5s ease;
+}
+
+/* ===== Win Toast Notifications ===== */
+#winToastContainer {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 8888;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 10px;
+    pointer-events: none;
+    max-width: 300px;
+}
+
+.win-toast {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(15, 23, 42, 0.95);
+    border-radius: 16px;
+    padding: 12px 18px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    animation: toastIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border-left: 4px solid #334155;
+    pointer-events: none;
+}
+
+.win-toast.toast-big {
+    border-left-color: #f59e0b;
+    background: rgba(15, 23, 42, 0.98);
+    box-shadow: 0 8px 30px rgba(251, 191, 36, 0.3);
+}
+
+.win-toast.toast-jackpot {
+    border-left-color: #ef4444;
+    box-shadow: 0 8px 40px rgba(239, 68, 68, 0.5);
+    background: linear-gradient(135deg, rgba(127,29,29,0.6), rgba(15,23,42,0.98));
+}
+
+.toast-icon {
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.toast-body {
+    flex: 1;
+}
+
+.toast-mult {
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 700;
+}
+
+.toast-amount {
+    font-size: 17px;
+    font-weight: 900;
+    color: #f8fafc;
+    font-family: 'Outfit', sans-serif;
+}
+
+.toast-amount.positive { color: #34d399; }
+.toast-amount.neutral  { color: #94a3b8; }
+.toast-amount.jackpot  { color: #fde047; }
+
+@keyframes toastIn {
+    from { opacity: 0; transform: translateX(40px) scale(0.9); }
+    to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes toastOut {
+    from { opacity: 1; transform: translateX(0); }
+    to   { opacity: 0; transform: translateX(40px); }
+}

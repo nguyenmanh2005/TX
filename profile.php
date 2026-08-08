@@ -966,7 +966,7 @@ $tableExists = $checkTable && $checkTable->num_rows > 0;
                     if (!confirm(confirmText)) return;
 
                     $.post('api_friends.php', { action: action, friend_id: targetUserId }, function (res) {
-                        alert(res.message || (res.success ? 'Thành công!' : 'Thất bại!'));
+                        if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String(res.message || (res.success ? 'Thành công!' : 'Thất bại!')), 'info'); } else { alert(res.message || (res.success ? 'Thành công!' : 'Thất bại!')); };
                         if (res.success) {
                             initProfileActions(targetUserId, targetUserName);
                         }

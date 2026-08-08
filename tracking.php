@@ -142,11 +142,15 @@ function track_visit($conn)
         }
     }
 
-    $stmt = $conn->prepare("INSERT INTO site_analytics (user_id, ip_address, user_agent, browser, os, device, country, city, http_version, request_method, page_url, referrer, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    if ($stmt) {
-        $stmt->bind_param("issssssssssss", $user_id, $ip_address, $user_agent, $browser, $os, $device, $geo['country'], $geo['city'], $http_version, $request_method, $page_url, $referrer, $source);
-        $stmt->execute();
-        $stmt->close();
+    try {
+        $stmt = $conn->prepare("INSERT INTO site_analytics (user_id, ip_address, user_agent, browser, os, device, country, city, http_version, request_method, page_url, referrer, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        if ($stmt) {
+            $stmt->bind_param("issssssssssss", $user_id, $ip_address, $user_agent, $browser, $os, $device, $geo['country'], $geo['city'], $http_version, $request_method, $page_url, $referrer, $source);
+            $stmt->execute();
+            $stmt->close();
+        }
+    } catch (Exception $e) {
+        // Silently ignore tracking errors to avoid breaking the application
     }
 }
 

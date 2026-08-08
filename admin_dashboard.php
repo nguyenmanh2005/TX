@@ -23,7 +23,7 @@ require_once 'admin_helper.php';
 
 if (!isset($_SESSION['Iduser'])) { header('Location: login.php'); exit(); }
 $currentUserId = (int)$_SESSION['Iduser'];
-if (!isAdmin($conn, $currentUserId)) { header("Location: 403.php"); exit(); }
+if (!isAdmin($conn, $currentUserId)) { header("Location: Shared/403/403.php"); exit(); }
 
 $stats = [
     'users'  => ['total' => null, 'new7d' => null, 'active15m' => null, 'warnings' => []],
@@ -51,9 +51,26 @@ if (tableExists($conn, 'users')) {
         $stats['users']['warnings'][] = "Thiếu cột last_active → không tính được user online 15 phút.";
     }
     
-    // Kinh tế
-    $row = fetchOne($conn, "SELECT SUM(Money) AS total_money FROM users");
-    $stats['economy']['total'] = $row ? (float)$row['total_money'] : 0;
+    // Kinh tế chia phe
+    $rowBot = fetchOne($conn, "SELECT SUM(Money) AS bot_money FROM users WHERE Email REGEXP '^bot[0-9]+@'");
+    $rowReal = fetchOne($conn, "SELECT SUM(Money) AS real_money FROM users WHERE Email NOT REGEXP '^bot[0-9]+@'");
+    $stats['economy']['bot_total'] = $rowBot ? (float)$rowBot['bot_money'] : 0;
+    $stats['economy']['real_total'] = $rowReal ? (float)$rowReal['real_money'] : 0;
+    $stats['economy']['total'] = $stats['economy']['bot_total'] + $stats['economy']['real_total'];
+    
+    // Top 5 Đại gia
+    $resTop = $conn->query("SELECT Name, Money, IF(Email REGEXP '^bot[0-9]+@', 1, 0) as is_bot FROM users ORDER BY Money DESC LIMIT 5");
+    $topUsers = [];
+    if ($resTop) {
+        while ($r = $resTop->fetch_assoc()) {
+            $topUsers[] = [
+                'name' => mb_strimwidth($r['Name'], 0, 15, '...'),
+                'money' => (float)$r['Money'],
+                'is_bot' => (int)$r['is_bot']
+            ];
+        }
+    }
+    $stats['top_users'] = $topUsers;
     
     // Bot
     $row = fetchOne($conn, "SELECT COUNT(*) AS c FROM users WHERE Email REGEXP '^bot[0-9]+@'");
@@ -87,6 +104,7 @@ $allWarnings = array_merge($stats['users']['warnings'], $stats['games']['warning
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 :root {
     --bg:       #07090f;
@@ -315,6 +333,27 @@ body::after{
 
 /* ── Divider ── */
 .divider{border:none;border-top:1px solid var(--border);margin:8px 0 16px;}
+
+/* ── Mobile Optimization (Task G) ── */
+@media(max-width: 768px) {
+    body { padding: 16px 12px; }
+    .header { flex-direction: column; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
+    .header-right { width: 100%; justify-content: space-between; }
+    .header-left h1 { font-size: 24px; }
+    .btn { padding: 8px 12px; font-size: 12px; flex: 1; justify-content: center; }
+    .metric-value { font-size: 24px !important; }
+    .metric-card { padding: 16px; }
+    .action-card { padding: 16px; flex-direction: column; text-align: center; }
+    .action-icon { margin-bottom: 8px; }
+    .stat-row-label { font-size: 12px; }
+    .stat-row-value { font-size: 12px; }
+}
+@media(max-width: 480px) {
+    .metrics-grid { grid-template-columns: 1fr; gap: 12px; }
+    .action-grid { grid-template-columns: 1fr; gap: 12px; }
+    .header-right { flex-direction: column; }
+    .btn { width: 100%; }
+}
 </style>
 </head>
 <body>
@@ -375,10 +414,33 @@ body::after{
         </div>
     </div>
 
+    <!-- Biểu đồ -->
+    <div class="two-col" style="margin-bottom: 24px;">
+        <div class="section-card">
+            <h3><span class="icon"><i class="fa fa-pie-chart"></i></span> Phân Bổ GTLM (Thật vs Bot)</h3>
+            <div style="height: 250px;">
+                <canvas id="ecoPieChart"></canvas>
+            </div>
+        </div>
+        <div class="section-card">
+            <h3><span class="icon"><i class="fa fa-bar-chart"></i></span> Top 5 Đại Gia Server</h3>
+            <div style="height: 250px;">
+                <canvas id="topBarChart"></canvas>
+            </div>
+        </div>
+    </div>
+
     <!-- Quick Actions -->
     <div class="section-card" style="margin-bottom: 24px; padding-bottom: 10px;">
         <h3><span class="icon"><i class="fa fa-bolt"></i></span> Trung Tâm Điều Khiển Vĩ Mô</h3>
         <div class="action-grid">
+            <a href="bot/bot_manager.php" class="action-card">
+                <div class="action-icon" style="background: linear-gradient(135deg, #a855f7, #ec4899);"><i class="fa fa-robot"></i></div>
+                <div class="action-content">
+                    <h4>Bot Army Controller</h4>
+                    <p>Hệ thống sinh sản hàng loạt và quản lý tài sản của toàn bộ Bot.</p>
+                </div>
+            </a>
             <a href="bot/bot_intelligence.php" class="action-card">
                 <div class="action-icon" style="background: linear-gradient(135deg, #8b5cf6, #d946ef);"><i class="fa fa-network-wired"></i></div>
                 <div class="action-content">
@@ -398,6 +460,13 @@ body::after{
                 <div class="action-content">
                     <h4>Phân Tích Website</h4>
                     <p>Xem biểu đồ doanh thu, thống kê người dùng và lưu lượng truy cập.</p>
+                </div>
+            </a>
+            <a href="admin_economy.php" class="action-card">
+                <div class="action-icon" style="background: linear-gradient(135deg, #facc15, #eab308);"><i class="fa fa-coins"></i></div>
+                <div class="action-content">
+                    <h4>Kinh Tế Server</h4>
+                    <p>Quản lý tổng lượng GTLM lưu thông, bảng phong thần và lạm phát.</p>
                 </div>
             </a>
             <a href="bot/tester_bot.php?action=scan" target="_blank" class="action-card">
@@ -464,5 +533,86 @@ body::after{
     <?php endif; ?>
 
 </div>
+
+<script>
+// Chart configs
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.font.family = "'Space Mono', monospace";
+
+const ctxPie = document.getElementById('ecoPieChart').getContext('2d');
+new Chart(ctxPie, {
+    type: 'doughnut',
+    data: {
+        labels: ['Người Chơi Thật', 'Quân Đoàn Bot'],
+        datasets: [{
+            data: [<?= $stats['economy']['real_total'] ?>, <?= $stats['economy']['bot_total'] ?>],
+            backgroundColor: ['#4f8dff', '#a78bfa'],
+            borderWidth: 0,
+            hoverOffset: 4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom', labels: { padding: 20, font: { size: 12 } } },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.label + ': ' + new Intl.NumberFormat().format(context.raw) + ' GTLM';
+                    }
+                }
+            }
+        },
+        cutout: '70%'
+    }
+});
+
+const topNames = <?= json_encode(array_column($stats['top_users'], 'name')) ?>;
+const topMoney = <?= json_encode(array_column($stats['top_users'], 'money')) ?>;
+const topColors = <?= json_encode(array_map(function($u) { return $u['is_bot'] ? '#a78bfa' : '#34d399'; }, $stats['top_users'])) ?>;
+
+const ctxBar = document.getElementById('topBarChart').getContext('2d');
+new Chart(ctxBar, {
+    type: 'bar',
+    data: {
+        labels: topNames,
+        datasets: [{
+            label: 'Số GTLM',
+            data: topMoney,
+            backgroundColor: topColors,
+            borderRadius: 6
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(255,255,255,0.05)' },
+                ticks: {
+                    callback: function(value) {
+                        if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+                        if (value >= 1000) return (value / 1000).toFixed(1) + 'K';
+                        return value;
+                    }
+                }
+            },
+            x: { grid: { display: false } }
+        },
+        plugins: { 
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return new Intl.NumberFormat().format(context.raw) + ' GTLM';
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
 </body>
 </html>

@@ -1,0 +1,97 @@
+{
+  "greetings": {
+    "happy": ["Haha,", "Chào {author} nhé!", "Ây da,", "Ô kìa!", "Hế lô {author},", "Yo!", "Đỉnh cao,"],
+    "angry": ["Này {author},", "Bực mình,", "Thật sự,", "Ê,", "Cay quá,"],
+    "sad": ["Haizz,", "Buồn quá {author} ơi,", "Chán nản,", "Ôi trời ơi,"],
+    "neutral": ["Chào {author},", "Này đạo hữu,", "Hửm,", "Ah,", "Này bạn,"]
+  },
+  "contexts": {
+    "Win_Context": {
+      "happy": [
+        "chúc mừng vừa ăn ngập mặt nhé!",
+        "thấy húp to thế, nhớ trích lộc lì xì đi!",
+        "húp mượt đấy, tối nay làm chầu {game_name} giao lưu tiếp không?",
+        "nhân phẩm bùng nổ rồi, đỉnh rực rỡ luôn!"
+      ],
+      "angry": [
+        "ăn hên thôi, giỏi thì vào {game_name} làm ván PvP với tao xem!",
+        "húp được có tí mà khoe mãi, vác tiền vào chiến tiếp đi!",
+        "đừng tinh tướng, tao đang cay đây!"
+      ],
+      "sad": [
+        "chúc mừng nhé, tao thì vừa bay sạch rồi...",
+        "cho xin ít vía đi, dạo này tao khô hạn quá.",
+        "người ta thì húp trọn, mình thì về cõi..."
+      ],
+      "neutral": [
+        "phong độ đấy, giữ vững nhé.",
+        "chơi khá đấy, làm ván {game_name} tiếp đi."
+      ]
+    },
+    "Lose_Context": {
+      "happy": [
+        "thắng bại là chuyện bình thường, điểm danh nhận Thưởng rồi gỡ lại nhé! 💪",
+        "thôi nghỉ tay làm tách trà rồi hãng chiến {game_name} tiếp, ai cũng có lúc đen mà!",
+        "bay màu rồi à? không sao, qua xin lì xì của đại gia đi!"
+      ],
+      "sad": [
+        "đồng cảm sâu sắc... tao cũng vừa bay sạch đây này. 😞",
+        "cùng cảnh ngộ xa bờ, thấy mày thua tao cũng chán nản lây...",
+        "khổ thân, đen thôi đỏ quên đi, rủ nhau ra đê thôi."
+      ],
+      "angry": [
+        "ngu thì chịu chứ kêu ca cái gì? 🤬",
+        "suốt ngày than vãn, nạp thêm vào mà gỡ đi!",
+        "thua có tí mà la oai oái, muốn gỡ thì vào {game_name}!"
+      ],
+      "neutral": [
+        "thôi bỏ đi, thua thì nghỉ.",
+        "mai chơi tiếp, nay vận khí kém rồi."
+      ]
+    },
+    "Advice_Context": {
+      "neutral": [
+        "theo lời sấm truyền, {game_name} đang rất dễ ăn, thử ngay đi!",
+        "nhanh gọn lẹ thì cứ vã {game_name}, tỷ lệ húp cực êm!",
+        "tao thấy {game_name} đang nhả đấy, vào test nhân phẩm xem sao."
+      ],
+      "happy": [
+        "đang vui nên tao phím cho kèo {game_name} này, bao ngon bao mượt! 🤑",
+        "tin tao đi, vào {game_name} quất mạnh là húp trọn gói!"
+      ],
+      "sad": [
+        "đừng chơi gì cả, dạo này bịp lắm...",
+        "chơi gì cũng thua thôi, nhìn tao làm gương đây này."
+      ],
+      "angry": [
+        "hỏi hỏi cái gì, vào thẳng {game_name} mà quất!",
+        "đang bực, đừng hỏi tao!"
+      ]
+    },
+    "Rivalry_Trigger": {
+      "happy": [
+        "haha mày nợ tao {amount} GTLM đấy, nay có tiền trả chưa?",
+        "vào phục thù đi con trai, tao đang ngứa tay đây!"
+      ],
+      "angry": [
+        "nhớ mặt mày rồi đấy! Trận trước húp của tao {amount} GTLM, nay có ngon ra làm ván nữa xem ai bay màu! 🔪",
+        "kẻ thù không đội trời chung! Trả tao {amount} GTLM mau lên, vào phòng PvP lẹ!",
+        "để tao chống mắt lên xem mày giữ được số tiền {amount} GTLM đó bao lâu!"
+      ],
+      "sad": [
+        "nghĩ tới món nợ {amount} GTLM bị mày lột mà tao trầm cảm...",
+        "mày đã cướp mất {amount} GTLM của tao, đồ nhẫn tâm!"
+      ],
+      "neutral": [
+        "chưa quên món nợ {amount} GTLM đâu nhé.",
+        "chờ đó, tao sẽ đòi lại {amount} GTLM sòng phẳng."
+      ]
+    }
+  },
+  "games": [
+    "Sâm Lốc", "Đua Ngựa", "Crash", "Dò Mìn", "Plinko", "Xóc Đĩa", "Xổ Số", "Tài Xỉu", "Bầu Cua"
+  ],
+  "endings": [
+    "", " 🔥", " 🚀", " 😎", " 🤑", " 🔪", " 😞", " 🤬", " ^^", " 🥶", " ☠️"
+  ]
+}

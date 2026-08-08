@@ -266,7 +266,7 @@ $userId = $_SESSION['Iduser'];
                     ">
                         <div style="font-size:2.2rem; margin-bottom:10px;">🛡️</div>
                         <h4 style="margin:0 0 5px; color:#22c55e; font-size:0.95rem; font-weight:800;">Khiên Bảo Vệ (Shield)</h4>
-                        <p style="margin:0 0 15px; font-size:0.75rem; color:#adadb8; min-height:36px; line-height:1.4;">Hoàn lại 50% lượng liều nếu Idol thất bại trong 3 ván.</p>
+                        <p style="margin:0 0 15px; font-size:0.75rem; color:#adadb8; min-height:36px; line-height:1.4;">Hoàn lại 50% lượng Chiến nếu Idol thất bại trong 3 ván.</p>
                         <div style="background:rgba(34,197,94,0.12); color:#4ade80; font-weight:900; font-size:0.85rem; padding:8px; border-radius:8px; border: 1px solid rgba(34,197,94,0.2);">20,000 GTLM</div>
                     </div>
                 </div>

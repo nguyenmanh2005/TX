@@ -325,7 +325,7 @@ if (!$friend) {
                     input.value = '';
                     loadMessages();
                 } else {
-                    alert('Lỗi: ' + data.message);
+                    if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Lỗi: ' + data.message), 'error'); } else { alert('Lỗi: ' + data.message); };
                 }
                 sendButton.disabled = false;
                 sendButton.textContent = 'Gửi';

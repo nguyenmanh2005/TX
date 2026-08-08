@@ -44,7 +44,7 @@ class KenoGame {
             if (this.selectedNumbers.length < this.maxSelections) {
                 this.selectedNumbers.push(number);
             } else {
-                alert('Chỉ được chọn tối đa ' + this.maxSelections + ' số!');
+                if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Chỉ được chọn tối đa ' + this.maxSelections + ' số!'), 'info'); } else { alert('Chỉ được chọn tối đa ' + this.maxSelections + ' số!'); };
                 return;
             }
         }

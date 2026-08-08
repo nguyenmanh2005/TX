@@ -26,7 +26,7 @@ class GameStatistics {
         try {
             const response = await fetch('api_game_statistics.php?action=get_stats');
             const data = await response.json();
-            
+
             if (data.status === 'success') {
                 this.stats = data.stats;
                 this.render();
@@ -53,7 +53,7 @@ class GameStatistics {
     renderWinRate() {
         const element = document.getElementById('winRateStat');
         if (element) {
-            const rate = this.stats.totalGames > 0 
+            const rate = this.stats.totalGames > 0
                 ? ((this.stats.totalWins / this.stats.totalGames) * 100).toFixed(1)
                 : 0;
             element.textContent = rate + '%';
@@ -63,7 +63,7 @@ class GameStatistics {
     renderBiggestWin() {
         const element = document.getElementById('biggestWinStat');
         if (element) {
-            element.textContent = this.stats.biggestWin.toLocaleString('vi-VN') + ' VNĐ';
+            element.textContent = this.stats.biggestWin.toLocaleString('vi-VN') + ' GTLM';
         }
     }
 
@@ -83,7 +83,7 @@ class GameStatistics {
 }
 
 // Initialize
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     if (document.getElementById('totalGamesStat')) {
         window.gameStatistics = new GameStatistics();
     }

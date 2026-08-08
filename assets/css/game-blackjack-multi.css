@@ -20,6 +20,7 @@ body {
     align-items: center;
     justify-content: center;
     background-image: radial-gradient(circle at 50% 50%, #065f46 0%, #020617 100%);
+    padding-bottom: 120px;
 }
 
 /* Bàn Blackjack */
@@ -31,6 +32,7 @@ body {
     border-radius: 250px 250px 20px 20px;
     position: relative;
     box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 100px rgba(0,0,0,0.5);
+    margin-bottom: 100px;
 }
 
 /* Dealer Section */
@@ -38,25 +40,40 @@ body {
     position: absolute;
     top: 50px;
     left: 50%;
-    transform: translateX(-50%);
-    text-align: center;
+    transform: translateY(20px);
+    opacity: 0;
+    animation: slideUp 0.3s forwards;
+}
+
+.score-badge {
+    display: inline-block;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 800;
+    color: #10b981;
+    margin-top: 4px;
 }
 
 .dealer-cards {
     display: flex;
-    gap: 10px;
     justify-content: center;
+    gap: 0;
     margin-top: 10px;
+    position: relative;
 }
 
 /* Seats Section */
 .seats-container {
     position: absolute;
-    bottom: -60px;
+    bottom: -80px;
+    left: 0;
     width: 100%;
     display: flex;
     justify-content: space-around;
-    padding: 0 50px;
+    padding: 0 20px;
 }
 
 .seat {
@@ -89,10 +106,13 @@ body {
 
 .player-cards {
     display: flex;
-    gap: -20px;
     justify-content: center;
     margin-bottom: 10px;
     height: 80px;
+}
+
+.player-cards .card:not(:first-child) {
+    margin-left: -15px;
 }
 
 /* Card Styling */
@@ -112,7 +132,14 @@ body {
 }
 
 .card.red { color: #ef4444; }
-.card.back { background: #1e293b; border: 2px solid #fff; color: transparent; }
+.card.back { background: url('../img/anh-bai/PNG/Cards (large)/card_back.png') center/cover; border: none; color: transparent; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); }
+.card-img {
+    background: transparent !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+    object-fit: cover;
+}
 
 /* Control Panel */
 .controls {
@@ -153,3 +180,5 @@ body {
 
 .chat-messages { flex: 1; overflow-y: auto; padding: 15px; font-size: 14px; }
 .chat-input { background: rgba(255,255,255,0.05); border: none; padding: 15px; color: #fff; border-radius: 0 0 20px 20px; outline: none; }
+@keyframes dealCard { from { transform: translate(0, -200px) scale(0) rotate(-180deg); opacity: 0; } to { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; } } @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 70% { transform: scale(1.2); } 100% { transform: scale(1); opacity: 1; } }
+.chip-btn { background: radial-gradient(circle at 30% 30%, #475569, #1e293b); color: #fff; border: 2px dashed #94a3b8; border-radius: 50%; width: 50px; height: 50px; font-weight: bold; font-size: 11px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; text-shadow: 1px 1px 2px #000; } .chip-btn:hover { transform: translateY(-5px) scale(1.1); box-shadow: 0 6px 12px rgba(0,0,0,0.5); border-color: #fbbf24; color: #fbbf24; }

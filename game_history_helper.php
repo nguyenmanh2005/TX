@@ -488,7 +488,7 @@ function updateRewardPoints(mysqli $conn, int $userId, float $betAmount, float $
 }
 
 /**
- * Kiểm tra xem có event nhân hệ số tiền thưởng nào đang active không
+ * Kiểm tra xem có event nhân hệ số GTLM thưởng nào đang active không
  */
 function getActiveEventMultiplier(mysqli $conn, string $type): float {
     $sql = "SELECT config FROM random_events WHERE is_active = 1 AND ends_at > NOW() AND event_type = ? LIMIT 1";
@@ -671,7 +671,7 @@ function logGameHistoryWithAll(mysqli $conn, int $userId, string $gameName, floa
                 $_SESSION['pending_notifications'][] = [
                     'type' => 'info',
                     'title' => '🛡️ KHIÊN HỘ MỆNH KÍCH HOẠT!',
-                    'message' => 'Khiên bảo vệ từ người xem đã kích hoạt! Bảo hiểm hoàn lại 50% số lượng liều (+ ' . number_format($shieldRefund) . ' GTLM)!'
+                    'message' => 'Khiên bảo vệ từ người xem đã kích hoạt! Bảo hiểm hoàn lại 50% số lượng Chiến (+ ' . number_format($shieldRefund) . ' GTLM)!'
                 ];
             }
         }
@@ -836,7 +836,7 @@ function logGameHistoryWithAll(mysqli $conn, int $userId, string $gameName, floa
         // Bug fix: Trước đây các random_event này chỉ xuất hiện trên banner,
         // không thực sự ảnh hưởng đến game. Nay được tích hợp tại đây.
 
-        // double_win: nhân đôi số tiền thắng (có giới hạn max_bonus_per_win)
+        // double_win: nhân đôi số GTLM thắng (có giới hạn max_bonus_per_win)
         if ($isWin && $winAmount > 0) {
             $dwEvent = $conn->query("
                 SELECT config FROM random_events
@@ -862,7 +862,7 @@ function logGameHistoryWithAll(mysqli $conn, int $userId, string $gameName, floa
                 }
             }
 
-            // weekend_boost: cũng nhân tiền thắng (win_multiplier 3x)
+            // weekend_boost: cũng nhân GTLM thắng (win_multiplier 3x)
             $wbEvent = $conn->query("
                 SELECT config FROM random_events
                 WHERE is_active = 1 AND event_type = 'weekend_boost' AND ends_at > NOW()
@@ -1052,7 +1052,7 @@ function updateEventMissionProgress(mysqli $conn, int $userId, string $gameName,
         'crash' => 'Crash',
         'blackjack' => 'Blackjack',
         'taixiu' => 'Xanh Đỏ Đối Kháng',
-        'baucua' => 'Bầu Cua',
+        'baucua' => 'Chiến Trường Linh Thú',
         'xocdia' => 'Xóc Đĩa',
         'dragontiger' => 'Rồng Hổ',
         'slot' => 'Slot',
@@ -1098,15 +1098,36 @@ function updateEventMissionProgress(mysqli $conn, int $userId, string $gameName,
 
         if ($increment <= 0) continue;
 
+        $target = (float)$m['target_value'];
+        
+        // Kiểm tra xem hiện tại đã claimable chưa
+        $stmtCheck = $conn->prepare("SELECT current_value FROM user_mission_progress WHERE user_id = ? AND mission_id = ?");
+        $stmtCheck->bind_param("ii", $userId, $mId);
+        $stmtCheck->execute();
+        $resCheck = $stmtCheck->get_result();
+        $currProg = 0;
+        if ($resCheck->num_rows > 0) {
+            $currProg = (float)$resCheck->fetch_assoc()['current_value'];
+        }
+        $stmtCheck->close();
+
+        // Nếu đã hoàn thành từ trước, không cần làm gì
+        if ($currProg >= $target) continue;
+
+        // Nếu tiến trình mới hoàn thành
+        $newProg = $currProg + $increment;
+        $isNotified = ($newProg >= $target) ? 0 : 1;
+
         // Cập nhật tiến trình trong user_mission_progress (Atomic INSERT/UPDATE)
         $stmtUp = $conn->prepare("
-            INSERT INTO user_mission_progress (user_id, mission_id, current_value, updated_at)
-            VALUES (?, ?, ?, NOW())
+            INSERT INTO user_mission_progress (user_id, mission_id, current_value, updated_at, is_notified)
+            VALUES (?, ?, ?, NOW(), ?)
             ON DUPLICATE KEY UPDATE 
                 current_value = current_value + VALUES(current_value),
-                updated_at = NOW()
+                updated_at = NOW(),
+                is_notified = VALUES(is_notified)
         ");
-        $stmtUp->bind_param("iii", $userId, $mId, $increment);
+        $stmtUp->bind_param("iiii", $userId, $mId, $increment, $isNotified);
         $stmtUp->execute();
         $stmtUp->close();
     }

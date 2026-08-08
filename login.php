@@ -17,10 +17,11 @@ if ($conn->connect_error) {
 }
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    // Debug log for bots
-    if (isset($_SERVER['HTTP_USER_AGENT']) && strpos($_SERVER['HTTP_USER_AGENT'], 'OmniBot') !== false) {
-        error_log("OmniBot Login Attempt: " . $_POST['email'] . " [Method: " . $_SERVER['REQUEST_METHOD'] . "]");
-    }
+    try {
+        // Debug log for bots
+        if (isset($_SERVER['HTTP_USER_AGENT']) && strpos($_SERVER['HTTP_USER_AGENT'], 'OmniBot') !== false) {
+            error_log("OmniBot Login Attempt: " . $_POST['email'] . " [Method: " . $_SERVER['REQUEST_METHOD'] . "]");
+        }
     $email = trim($_POST['email'] ?? '');
     $password = trim($_POST['password'] ?? '');
 
@@ -81,6 +82,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         "Name" => $row['Name'],
         "Money" => $row['Money']
     ]);
+    } catch (Throwable $e) {
+        jsonResponse(["status" => "error", "message" => "🔥 LỖI HỆ THỐNG: " . $e->getMessage() . " (Dòng " . $e->getLine() . ")"]);
+    }
 } else {
     if (isset($_SERVER['HTTP_USER_AGENT']) && strpos($_SERVER['HTTP_USER_AGENT'], 'OmniBot') !== false) {
         jsonResponse(["status" => "error", "message" => "Bot request must be POST, received " . $_SERVER['REQUEST_METHOD']]);
@@ -1060,13 +1064,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     </a>
                 </div>
 
-                <div class="link-card funny" onclick="window.location.href='ngu1.php'">
+                <div class="link-card funny" onclick="window.location.href='forgot_password.php'">
                     <div class="card-title">
                         <span>🤔</span>
                         <span>Bạn quên mật khẩu?</span>
                     </div>
-                    <a href="ngu1.php" class="card-link">
-                        🔑 Vào đây để đổi mật khẩu
+                    <a href="forgot_password.php" class="card-link">
+                        🔑 Vào đây để lấy lại mật khẩu
                         <i class="fas fa-arrow-right"></i>
                     </a>
                 </div>

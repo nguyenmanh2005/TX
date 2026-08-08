@@ -300,13 +300,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_FILES["avatar"])) {
             // Validate file type
             const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
             if (!allowedTypes.includes(file.type)) {
-                alert('Chỉ cho phép file ảnh (JPG, PNG, GIF, WEBP)');
+                if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Chỉ cho phép file ảnh (JPG, PNG, GIF, WEBP)'), 'info'); } else { alert('Chỉ cho phép file ảnh (JPG, PNG, GIF, WEBP)'); };
                 return;
             }
 
             // Validate file size (5MB)
             if (file.size > 5 * 1024 * 1024) {
-                alert('Kích thước file quá lớn. Tối đa 5MB.');
+                if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Kích thước file quá lớn. Tối đa 5MB.'), 'info'); } else { alert('Kích thước file quá lớn. Tối đa 5MB.'); };
                 return;
             }
 

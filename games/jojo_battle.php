@@ -1132,7 +1132,7 @@ $roundId = time();
                     if (window.GameEffects) GameEffects.showLoss();
                 }
 
-                // Cập nhật tiền
+                // Cập nhật GTLM
                 document.getElementById('money-val').textContent = result.newBalance;
                 
                 // Đợi 4 giây cho người chơi tận hưởng kết quả mà không bị popup che mất

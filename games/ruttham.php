@@ -275,8 +275,22 @@ if (isset($_GET['action']) && $_GET['action'] === 'rut_tham') {
             letter-spacing: 1px;
         }
 
+        .bag-box.opening {
+            animation: pulse-gold 1s infinite;
+            border-color: var(--gold);
+            transform: scale(1.1);
+            z-index: 10;
+        }
+
         .bag-box.opening .bag-icon {
-            animation: shake 0.5s infinite;
+            animation: shake 0.3s infinite;
+            filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.8));
+        }
+
+        @keyframes pulse-gold {
+            0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(255, 215, 0, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
         }
 
         @keyframes shake {
@@ -459,7 +473,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'rut_tham') {
 
         <div class="bags-grid" id="bags-container">
             <?php for ($i = 1; $i <= 6; $i++): ?>
-                <div class="bag-box" onclick="drawBag(this, <?= $i ?>)">
+                <div class="bag-box" onclick="drawBag(this, <?= $i ?>, event)">
                     <div class="bag-icon">🎁</div>
                     <div class="bag-label">Túi số <?= $i ?></div>
                 </div>
@@ -480,7 +494,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'rut_tham') {
 
         let isLocked = false;
 
-        async function drawBag(box, num) {
+        async function drawBag(box, num, event) {
             if (isLocked) return;
             isLocked = true;
 
@@ -500,26 +514,44 @@ if (isset($_GET['action']) && $_GET['action'] === 'rut_tham') {
 
                         if (data.rewardAmount > 0) {
                             icon.textContent = "💰";
-                            if (typeof confetti === 'function') {
-                                confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 }, colors: ['#ffd700', '#ffffff'] });
+                            box.style.transform = "scale(1.15)";
+                            box.style.borderColor = "var(--gold)";
+                            box.style.boxShadow = "0 0 40px rgba(255, 215, 0, 0.6)";
+                            
+                            if (window.GameEffects) {
+                                GameEffects.showWin(data.rewardAmount);
+                                if (event) {
+                                    GameEffects.createCoinBlast(event.clientX, event.clientY, 30);
+                                }
+                            } else {
+                                if (typeof confetti === 'function') confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 } });
+                                Swal.fire({ title: '🎉 CHIẾN THẮNG!', text: data.message, icon: 'success', confirmButtonColor: '#27ae60' });
                             }
-                            Swal.fire({ title: '🎉 CHIẾN THẮNG!', text: data.message, icon: 'success', confirmButtonColor: '#27ae60' });
                         } else {
                             icon.textContent = "💨";
-                            Swal.fire({ title: 'Rất tiếc', text: data.message, icon: 'error', confirmButtonColor: '#e74c3c' });
+                            box.style.opacity = "0.5";
+                            box.style.transform = "scale(0.9)";
+                            
+                            if (window.GameEffects) {
+                                GameEffects.showLoss("TRƯỢT RỒI!");
+                            } else {
+                                Swal.fire({ title: 'Rất tiếc', text: data.message, icon: 'error', confirmButtonColor: '#e74c3c' });
+                            }
                         }
 
                         document.getElementById('balance-val').textContent = data.newBalance;
                         status.textContent = data.message;
+                        loadRutthamHistory(); // Reload history table
 
-                        // Reset túi sau 3 giây
+                        // Reset túi sau 1 giây
                         setTimeout(() => {
                             icon.textContent = "🎁";
                             isLocked = false;
+                            box.style = ""; // Clear inline styles
                             status.textContent = 'CHỌN MỘT TÚI QUÀ BẤT KỲ ĐỂ THỬ VẬN MAY CỦA BẠN!';
-                        }, 3000);
+                        }, 1500);
 
-                    }, 2000);
+                    }, 800);
                 } else {
                     Swal.fire('Lỗi', data.message, 'error');
                     box.classList.remove('opening');

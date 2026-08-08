@@ -1,14 +1,11 @@
 <?php
 session_start();
-
 if (!isset($_SESSION['Iduser'])) {
     header("Location: login.php");
     exit();
 }
-
 require 'db_connect.php';
 require_once 'load_theme.php';
-
 $userId = $_SESSION['Iduser'];
 $sql = "SELECT Money, Name FROM users WHERE Iduser = ?";
 $stmt = $conn->prepare($sql);
@@ -21,30 +18,17 @@ if (!$user) {
 }
 $soDu = $user['Money'];
 $tenNguoiChoi = $user['Name'];
-
 // Kiểm tra bảng daily_bonus
 $checkTable = $conn->query("SHOW TABLES LIKE 'daily_bonus'");
 if (!$checkTable || $checkTable->num_rows === 0) {
     // Tạo bảng nếu chưa có
-    $createTable = "CREATE TABLE IF NOT EXISTS daily_bonus (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        claim_date DATE NOT NULL,
-        day_streak INT DEFAULT 1,
-        bonus_amount DECIMAL(15,2) DEFAULT 0,
-        claimed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE KEY unique_user_date (user_id, claim_date),
-        FOREIGN KEY (user_id) REFERENCES users(Iduser) ON DELETE CASCADE
-    )";
     $conn->query($createTable);
 }
-
 $thongBao = "";
 $ketQuaClass = "";
 $bonusAmount = 0;
 $dayStreak = 1;
 $canClaim = false;
-
 // Lấy thông tin bonus hôm nay
 $today = date('Y-m-d');
 $bonusSql = "SELECT * FROM daily_bonus WHERE user_id = ? AND claim_date = ?";
@@ -54,7 +38,6 @@ $bonusStmt->execute();
 $bonusResult = $bonusStmt->get_result();
 $todayBonus = $bonusResult->fetch_assoc();
 $bonusStmt->close();
-
 // Lấy streak hiện tại
 $yesterday = date('Y-m-d', strtotime('-1 day'));
 $yesterdaySql = "SELECT day_streak FROM daily_bonus WHERE user_id = ? AND claim_date = ?";
@@ -64,22 +47,19 @@ $yesterdayStmt->execute();
 $yesterdayResult = $yesterdayStmt->get_result();
 $yesterdayBonus = $yesterdayResult->fetch_assoc();
 $yesterdayStmt->close();
-
 if ($yesterdayBonus) {
     $dayStreak = $yesterdayBonus['day_streak'] + 1;
 } else {
     $dayStreak = 1;
 }
-
 // Tính bonus dựa trên streak
-$baseBonus = 10000; // 10K VNĐ
+$baseBonus = 10000; // 10K GTLM
 $bonusAmount = $baseBonus * $dayStreak;
 $maxStreak = 7; // Tối đa 7 ngày
 if ($dayStreak > $maxStreak) {
     $dayStreak = $maxStreak;
     $bonusAmount = $baseBonus * $maxStreak;
 }
-
 if ($todayBonus) {
     $canClaim = false;
     $thongBao = "✅ Bạn đã nhận bonus hôm nay rồi! Quay lại vào ngày mai.";
@@ -87,7 +67,6 @@ if ($todayBonus) {
 } else {
     $canClaim = true;
 }
-
 // Xử lý claim bonus
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action']) && $_POST['action'] === 'claim') {
     if (!$canClaim) {
@@ -96,7 +75,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action']) && $_POST['
     } else {
         // Thêm bonus vào tài khoản
         $soDu += $bonusAmount;
-        
         // Lưu vào database
         $insertSql = "INSERT INTO daily_bonus (user_id, claim_date, day_streak, bonus_amount) VALUES (?, ?, ?, ?)
                       ON DUPLICATE KEY UPDATE day_streak = VALUES(day_streak), bonus_amount = VALUES(bonus_amount)";
@@ -104,28 +82,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action']) && $_POST['
         $insertStmt->bind_param("isid", $userId, $today, $dayStreak, $bonusAmount);
         $insertStmt->execute();
         $insertStmt->close();
-        
         // Cập nhật số dư
         $capNhat = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
         $capNhat->bind_param("di", $soDu, $userId);
         $capNhat->execute();
         $capNhat->close();
-        
-        $_SESSION['daily_bonus_message'] = "🎉 Chúc mừng! Bạn nhận được " . number_format($bonusAmount, 0, ',', '.') . " VNĐ! (Streak: " . $dayStreak . " ngày)";
+        $_SESSION['daily_bonus_message'] = "🎉 Chúc mừng! Bạn nhận được " . number_format($bonusAmount, 0, ',', '.') . " GTLM! (Streak: " . $dayStreak . " ngày)";
         $_SESSION['daily_bonus_class'] = "success";
-        
         header("Location: daily_bonus.php");
         exit();
     }
 }
-
 if (isset($_SESSION['daily_bonus_message'])) {
     $thongBao = $_SESSION['daily_bonus_message'];
     $ketQuaClass = $_SESSION['daily_bonus_class'];
     unset($_SESSION['daily_bonus_message']);
     unset($_SESSION['daily_bonus_class']);
 }
-
 // Reload balance
 $reloadSql = "SELECT Money FROM users WHERE Iduser = ?";
 $reloadStmt = $conn->prepare($reloadSql);
@@ -166,10 +139,9 @@ $stmt->close();
                 <h1 class="daily-bonus-title">🎁 Daily Bonus</h1>
                 <div class="balance-display-bonus">
                     <span>💰</span>
-                    <span><?= number_format($soDu, 0, ',', '.') ?> VNĐ</span>
+                    <span><?= number_format($soDu, 0, ',', '.') ?> GTLM</span>
                 </div>
             </div>
-            
             <div class="bonus-display">
                 <div class="streak-display">
                     <div class="streak-label">🔥 Streak</div>
@@ -177,28 +149,25 @@ $stmt->close();
                 </div>
                 <div class="bonus-amount-display">
                     <div class="bonus-label">Phần Thưởng</div>
-                    <div class="bonus-value"><?= number_format($bonusAmount, 0, ',', '.') ?> VNĐ</div>
+                    <div class="bonus-value"><?= number_format($bonusAmount, 0, ',', '.') ?> GTLM</div>
                 </div>
             </div>
-            
             <div class="streak-calendar">
                 <h3>📅 Lịch Nhận Bonus</h3>
                 <div class="calendar-grid">
                     <?php for ($i = 1; $i <= 7; $i++): ?>
                         <div class="calendar-day <?= $i <= $dayStreak ? 'claimed' : '' ?> <?= $i === $dayStreak && $canClaim ? 'today' : '' ?>">
                             <div class="day-number"><?= $i ?></div>
-                            <div class="day-bonus"><?= number_format($baseBonus * $i, 0, ',', '.') ?> VNĐ</div>
+                            <div class="day-bonus"><?= number_format($baseBonus * $i, 0, ',', '.') ?> GTLM</div>
                         </div>
                     <?php endfor; ?>
                 </div>
             </div>
-            
             <?php if ($thongBao): ?>
                 <div class="bonus-message <?= $ketQuaClass ?>">
                     <?= htmlspecialchars($thongBao, ENT_QUOTES, 'UTF-8') ?>
                 </div>
             <?php endif; ?>
-            
             <?php if ($canClaim): ?>
                 <form method="post" class="claim-form">
                     <input type="hidden" name="action" value="claim">
@@ -209,17 +178,15 @@ $stmt->close();
                     <p>⏰ Bạn đã nhận bonus hôm nay. Quay lại vào ngày mai để nhận tiếp!</p>
                 </div>
             <?php endif; ?>
-            
             <div class="bonus-info">
                 <h3>📖 Thông Tin</h3>
                 <ul>
                     <li>Nhận bonus mỗi ngày để tăng streak</li>
                     <li>Streak càng cao, bonus càng nhiều</li>
-                    <li>Streak tối đa: 7 ngày (70,000 VNĐ)</li>
+                    <li>Streak tối đa: 7 ngày (70,000 GTLM)</li>
                     <li>Nếu bỏ lỡ 1 ngày, streak sẽ reset về 1</li>
                 </ul>
             </div>
-            
             <p style="text-align: center; margin-top: 20px;">
                 <a href="index.php" style="color: #667eea; text-decoration: none; font-weight: 600;">🏠 Quay Lại Trang Chủ</a>
             </p>
@@ -227,4 +194,3 @@ $stmt->close();
     </div>
 </body>
 </html>
-

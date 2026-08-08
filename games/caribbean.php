@@ -27,6 +27,17 @@ if (isset($_GET['action'])) {
         if ($bet <= 0 || $bet > $money) {
             $response['message'] = "gtlm cược không hợp lệ!";
         } else {
+            $conn->begin_transaction();
+            $stmtLock = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+            $stmtLock->bind_param("i", $userId);
+            $stmtLock->execute();
+            $lockedMoney = $stmtLock->get_result()->fetch_assoc()['Money'] ?? 0;
+            $stmtLock->close();
+            if ($bet > $lockedMoney) {
+                $conn->rollback();
+                echo json_encode(['success' => false, 'message' => 'Số dư không đủ hoặc thao tác quá nhanh!']);
+                exit;
+            }
             $conn->query("UPDATE users SET Money = Money - $bet WHERE Iduser = $userId");
 
             // Simulating 5 cards each
@@ -62,7 +73,18 @@ if (isset($_GET['action'])) {
 
         // Deduct call bet (2x ante)
         $callBet = $bet * 2;
-        $conn->query("UPDATE users SET Money = Money - $callBet WHERE Iduser = $userId");
+        $conn->begin_transaction();
+            $stmtLock = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+            $stmtLock->bind_param("i", $userId);
+            $stmtLock->execute();
+            $lockedMoney = $stmtLock->get_result()->fetch_assoc()['Money'] ?? 0;
+            $stmtLock->close();
+            if ($callBet > $lockedMoney) {
+                $conn->rollback();
+                echo json_encode(['success' => false, 'message' => 'Số dư không đủ hoặc thao tác quá nhanh!']);
+                exit;
+            }
+            $conn->query("UPDATE users SET Money = Money - $callBet WHERE Iduser = $userId");
 
         // Logic: Compare hands
         // Simplified: Random winner for demo purposes, with 1/3 chance for dealer NOT qualifying
@@ -95,7 +117,8 @@ if (isset($_GET['action'])) {
         $his->bind_param("idss", $userId, $totalBet, $resMsg, $profit);
         $his->execute();
 
-        $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
+        $conn->commit();
+            $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
         $response = [
             'success' => true,
             'dealer' => $dealerHand,
@@ -205,24 +228,47 @@ if (isset($_GET['action'])) {
             background: #e74c3c;
             color: #fff;
         }
+
+        .chip-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 25px;
+            width: 100%;
+        }
+        .chip {
+            padding: 8px 18px;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            color: #fff;
+            transition: 0.3s;
+            user-select: none;
+        }
+        .chip:hover, .chip.active {
+            background: #00d2ff;
+            color: #000;
+            border-color: #00d2ff;
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(0, 210, 255, 0.4);
+        }
     </style>
 </head>
 
 <body>
-    <div id="threejs-background"></div>
-    <div class="container" style="max-width:1000px; margin:2rem auto; position:relative; z-index:1;">
-        <div class="glass"
-            style="padding: 1.5rem 3rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-            <h1 style="margin:0; font-size: 2.2rem; font-weight: 900; color: #00d2ff;">CARIBBEAN STUD</h1>
-            <div style="display:flex; align-items:center; gap:2rem;">
-                <div id="userMoney" style="font-weight:900; font-size:1.5rem; color:#f1c40f">
-                    <?php echo number_format($money, 0, ',', '.'); ?> gtlm</div>
-                <a href="../index.php"
-                    style="color:#fff; text-decoration:none; border:1px solid rgba(255,255,255,0.2); padding:0.5rem 1.5rem; border-radius:50px;">THOÁT</a>
+    <div class="game-wrapper" style="max-width:800px; margin:2rem auto; position:relative; z-index:1; padding: 0 15px; width: 100%;">
+        <div class="glass" style="padding: 2.5rem; text-align: center; border-radius: 2rem; width: 100%;">
+            <h1 style="margin: 0 0 1rem; font-size: 2.5rem; font-weight: 900; color: #00d2ff; text-transform: uppercase; letter-spacing: 2px;">CARIBBEAN STUD</h1>
+            <div style="background: rgba(0,0,0,0.3); padding: 10px 25px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.2); display: inline-block; margin-bottom: 2rem; max-width: 100%;">
+                <span style="opacity: 0.8; font-size: 0.9rem; margin-right: 5px;">SỐ GTLM:</span>
+                <span id="userMoney" style="font-weight: 900; font-size: clamp(14px, 3vw, 1.5rem); color: #f1c40f; word-break: break-all;"><?php echo number_format($money, 0, ',', '.'); ?> gtlm</span>
             </div>
-        </div>
 
-        <div class="glass" style="padding: 3rem; text-align: center;">
+            <h3 style="margin-bottom:10px; opacity:0.8; font-size:1rem;">BÀI NHÀ CÁI (DEALER)</h3>
             <div id="dealerHand" class="hand">
                 <!-- Dealer Cards -->
                 <div class="card back"></div>
@@ -231,7 +277,10 @@ if (isset($_GET['action'])) {
                 <div class="card back"></div>
                 <div class="card back"></div>
             </div>
-            <div style="margin: 2rem 0; opacity: 0.5;">VS</div>
+            
+            <div style="margin: 1.5rem 0; opacity: 0.5; font-weight: bold; font-size: 1.2rem;">VS</div>
+            
+            <h3 style="margin-bottom:10px; opacity:0.8; font-size:1rem;">BÀI CỦA BẠN</h3>
             <div id="playerHand" class="hand">
                 <!-- Player Cards -->
                 <div class="card back"></div>
@@ -241,30 +290,35 @@ if (isset($_GET['action'])) {
                 <div class="card back"></div>
             </div>
 
-            <div class="controls">
-                <input type="number" id="betAmount" value="10000" class="glass"
-                    style="color:#fff; padding:10px 20px; outline:none; font-size:1.2rem; font-weight:900; text-align:center; width:150px; border-radius:50px;">
-                <button class="btn-premium btn-deal" id="dealBtn" onclick="deal()">DEAL</button>
-                <button class="btn-premium btn-call" id="callBtn" style="display:none" onclick="call()">CALL (2x
-                    Ante)</button>
-                <button class="btn-premium btn-fold" id="foldBtn" style="display:none" onclick="fold()">FOLD</button>
+            <div class="betting-area" style="display:flex; flex-direction:column; align-items:center;">
+                <div class="chip-selector" id="chipSelector">
+                    <div class="chip active" data-value="10000">10K</div>
+                    <div class="chip" data-value="50000">50K</div>
+                    <div class="chip" data-value="100000">100K</div>
+                    <div class="chip" data-value="500000">500K</div>
+                    <div class="chip" data-value="1000000">1M</div>
+                    <div class="chip" data-value="5000000">5M</div>
+                    <div class="chip" data-value="allin">MAX</div>
+                </div>
+
+                <div class="controls" style="display:flex; gap:20px; justify-content:center; align-items:center; flex-wrap: wrap;">
+                    <div style="background: rgba(0,0,0,0.3); padding: 5px 15px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; gap: 10px;">
+                        <span style="font-weight: bold; opacity: 0.8;">CƯỢC:</span>
+                        <input type="number" id="betAmount" value="10000" style="background: transparent; color:#fff; outline:none; font-size:1.3rem; font-weight:900; text-align:center; width:120px; border: none;">
+                    </div>
+                    
+                    <button class="btn-premium btn-deal" id="dealBtn" onclick="deal()">DEAL (CHIA BÀI)</button>
+                    <button class="btn-premium btn-call" id="callBtn" style="display:none" onclick="call()">CALL (THEO CƯỢC x2)</button>
+                    <button class="btn-premium btn-fold" id="foldBtn" style="display:none" onclick="fold()">FOLD (BỎ BÀI)</button>
+                    <button class="btn-premium btn-deal" id="newBtn" style="display:none" onclick="newGame()">VÁN MỚI</button>
+                </div>
+            </div>
+            
+            <div style="margin-top: 3rem;">
+                <a href="../index.php" style="color:#fff; text-decoration:none; border:1px solid rgba(255,255,255,0.2); padding:0.8rem 2rem; border-radius:50px; font-weight: bold; background: rgba(0,0,0,0.2); transition: 0.3s; display: inline-block;">🏠 THOÁT VỀ SẢNH</a>
             </div>
         </div>
     </div>
-
-    
-    <?php require_once '../casino_help.php'; ?>
-
-
-    
-    
-
-
-    
-
-
-    
-
 
     <!-- Premium Effects System -->
     <canvas id="threejs-background"></canvas>
@@ -290,8 +344,107 @@ if (isset($_GET['action'])) {
                 document.head.appendChild(s);
             });
         })();
+
+        // Caribbean Stud Poker Logic
+        $(document).ready(function() {
+            $('.chip').click(function() {
+                if ($('#dealBtn').is(':hidden')) return; // Khóa phỉnh khi đang chơi
+                $('.chip').removeClass('active');
+                $(this).addClass('active');
+                const val = $(this).data('value');
+                if (val === 'allin') {
+                    $('#betAmount').val(<?= $money ?>);
+                } else {
+                    $('#betAmount').val(val);
+                }
+            });
+        });
+
+        function getSuitSymbol(cardStr) {
+            if (!cardStr) return '';
+            let s = cardStr.slice(-1);
+            let v = cardStr.slice(0, -1);
+            let symbol = s === 'h' ? '♥' : (s === 'd' ? '♦' : (s === 'c' ? '♣' : '♠'));
+            let color = (s === 'h' || s === 'd') ? '#dc2626' : '#1e293b';
+            return `<div style="position:relative; width:100%; height:100%;"><div style="color:${color}; font-size:1.5rem; position:absolute; top:8px; left:12px;">${v}</div><div style="color:${color}; font-size:3.5rem; margin-top:35px; line-height:1;">${symbol}</div></div>`;
+        }
+
+        function renderCard(containerId, index, cardStr) {
+            const el = $(`${containerId} .card`).eq(index);
+            el.removeClass('back').html(getSuitSymbol(cardStr));
+        }
+
+        function resetCards() {
+            $('.card').addClass('back').empty();
+        }
+
+        function deal() {
+            const bet = $('#betAmount').val();
+            if (bet < 1000) return Swal.fire('Lỗi', 'Cược tối thiểu 1,000 gtlm!', 'error');
+
+            $.post('caribbean.php?action=deal', { bet: bet }, function(res) {
+                if (!res.success) return Swal.fire('Lỗi', res.message, 'error');
+                
+                resetCards();
+                
+                res.player.forEach((c, i) => renderCard('#playerHand', i, c));
+                renderCard('#dealerHand', 0, res.dealer_up); // Dealer only shows first card
+                
+                $('#userMoney').text(res.money + ' gtlm');
+                
+                $('#dealBtn').hide();
+                $('#chipSelector').css('opacity', '0.5').css('pointer-events', 'none');
+                $('#betAmount').prop('disabled', true);
+                
+                $('#callBtn').show();
+                $('#foldBtn').show();
+            });
+        }
+
+        function call() {
+            $.get('caribbean.php?action=call', function(res) {
+                if (!res.success) return;
+                
+                res.dealer.forEach((c, i) => renderCard('#dealerHand', i, c));
+                
+                $('#userMoney').text(res.money + ' gtlm');
+                
+                setTimeout(() => {
+                    if (res.win) {
+                        if (typeof GameEffects !== 'undefined') GameEffects.showWin(res.winAmount);
+                        Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'success', title: 'Thắng', text: res.message });
+                    } else {
+                        if (typeof GameEffects !== 'undefined') GameEffects.showLoss();
+                        Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'error', title: 'Thua', text: res.message });
+                    }
+                }, 500);
+                
+                $('#callBtn').hide();
+                $('#foldBtn').hide();
+                $('#newBtn').show();
+            });
+        }
+
+        function fold() {
+            $.get('caribbean.php?action=fold', function(res) {
+                if (res.success) {
+                    if (typeof GameEffects !== 'undefined') GameEffects.showLoss('Folded', 'Bạn đã bỏ bài.');
+                    else Swal.fire('Folded', 'Bạn đã bỏ bài.', 'info');
+                    
+                    $('#callBtn').hide();
+                    $('#foldBtn').hide();
+                    $('#newBtn').show();
+                }
+            });
+        }
+
+        function newGame() {
+            resetCards();
+            $('#newBtn').hide();
+            $('#dealBtn').show();
+            $('#chipSelector').css('opacity', '1').css('pointer-events', 'auto');
+            $('#betAmount').prop('disabled', false);
+        }
     </script>
-
 </body>
-
 </html>

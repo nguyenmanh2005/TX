@@ -36,7 +36,7 @@ if ($action === 'recent_activity') {
         while ($row = $result->fetch_assoc()) {
             $icon = $row['is_win'] ? '🎉' : '🎮';
             $title = $row['is_win'] 
-                ? "Thắng " . number_format($row['win_amount'], 0, ',', '.') . " VNĐ trong " . $row['game_name']
+                ? "Thắng " . number_format($row['win_amount'], 0, ',', '.') . " GTLM trong " . $row['game_name']
                 : "Chơi " . $row['game_name'];
             
             $time = timeAgo($row['played_at']);

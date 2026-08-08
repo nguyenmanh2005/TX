@@ -593,7 +593,7 @@ $wheelExists = $checkRewardsTable && $checkRewardsTable->num_rows > 0;
                             isSpinning = false;
                         }, 4000);
                     } else {
-                        alert('❌ ' + data.message);
+                        if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('❌ ' + data.message), 'error'); } else { alert('❌ ' + data.message); };
                         isSpinning = false;
                         spinButton.disabled = false;
                         checkSpinStatus();
@@ -601,7 +601,7 @@ $wheelExists = $checkRewardsTable && $checkRewardsTable->num_rows > 0;
                 })
                 .catch(error => {
                     console.error('Error spinning wheel:', error);
-                    alert('❌ Có lỗi xảy ra khi quay wheel!');
+                    if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('❌ Có lỗi xảy ra khi quay wheel!'), 'error'); } else { alert('❌ Có lỗi xảy ra khi quay wheel!'); };
                     isSpinning = false;
                     spinButton.disabled = false;
                     checkSpinStatus();

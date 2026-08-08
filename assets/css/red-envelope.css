@@ -1,0 +1,174 @@
+/*
+ * Red Envelope Rain & Claim Modal Styles (4B)
+ * [NEW FILE] - Styling cho Mưa Lì Xì & Modal Tranh Lộc
+ */
+
+.red-rain-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 99990;
+    overflow: hidden;
+}
+
+.falling-envelope {
+    position: absolute;
+    top: -60px;
+    font-size: 42px;
+    pointer-events: auto;
+    cursor: url('../../img/tay.png'), url('../img/tay.png'), pointer !important;
+    animation: envelope-fall linear forwards;
+    filter: drop-shadow(0 4px 12px rgba(239, 68, 68, 0.8));
+    transition: transform 0.2s ease;
+    user-select: none;
+}
+
+.falling-envelope:hover {
+    transform: scale(1.35) rotate(15deg);
+    filter: drop-shadow(0 6px 18px rgba(251, 191, 36, 1));
+}
+
+@keyframes envelope-fall {
+    0% {
+        transform: translateY(0) rotate(-10deg);
+        opacity: 1;
+    }
+    85% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(110vh) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+/* Modal Giật Lì Xì */
+.red-claim-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.red-claim-modal-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.red-claim-modal {
+    background: linear-gradient(145deg, #b91c1c 0%, #dc2626 50%, #991b1b 100%);
+    border: 3px solid #fbbf24;
+    border-radius: 24px;
+    width: 90%;
+    max-width: 420px;
+    padding: 30px 25px;
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 30px rgba(251, 191, 36, 0.6);
+    position: relative;
+    color: #f8fafc;
+    animation: modal-bounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes modal-bounce {
+    0% { transform: scale(0.6) translateY(50px); }
+    100% { transform: scale(1) translateY(0); }
+}
+
+.red-claim-modal .modal-header img {
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    border: 3px solid #fbbf24;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    margin-bottom: 10px;
+}
+
+.red-claim-modal .modal-header h3 {
+    margin: 0;
+    font-size: 22px;
+    color: #fef08a;
+    font-weight: 800;
+}
+
+.red-claim-modal .modal-body p {
+    font-size: 15px;
+    color: #fee2e2;
+    font-style: italic;
+    margin: 15px 0 25px 0;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+}
+
+.btn-grab {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: #451a03;
+    font-size: 18px;
+    font-weight: 800;
+    border: 2px solid #fef08a;
+    border-radius: 50px;
+    padding: 14px 28px;
+    cursor: url('../../img/tay.png'), url('../img/tay.png'), pointer !important;
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6);
+    transition: all 0.25s ease;
+    width: 100%;
+}
+
+.btn-grab:hover {
+    transform: translateY(-3px) scale(1.03);
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    box-shadow: 0 10px 25px rgba(251, 191, 36, 0.8);
+}
+
+.btn-close-modal {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: rgba(0, 0, 0, 0.3);
+    border: none;
+    color: #fca5a5;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-close-modal:hover {
+    background: rgba(0, 0, 0, 0.6);
+    color: #ffffff;
+}
+
+.grab-success h4 {
+    color: #fef08a;
+    font-size: 20px;
+    margin: 0 0 10px 0;
+}
+
+.grab-amount {
+    font-size: 34px;
+    font-weight: 900;
+    color: #4ade80;
+    text-shadow: 0 2px 10px rgba(74, 222, 128, 0.5);
+    margin-bottom: 15px;
+}
+
+.loading-grab {
+    font-size: 16px;
+    color: #fef08a;
+    font-weight: bold;
+}

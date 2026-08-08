@@ -596,7 +596,7 @@ $questsTableExists = $checkQuestsTable && $checkQuestsTable->num_rows > 0;
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
-                        alert('🎉 ' + data.message + '\n💰 Bạn nhận được: ' + number_format(data.reward_money, 0, ',', '.') + ' gtlm');
+                        if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('🎉 ' + data.message + '\n💰 Bạn nhận được: ' + number_format(data.reward_money, 0, ',', '.') + ' gtlm'), 'info'); } else { alert('🎉 ' + data.message + '\n💰 Bạn nhận được: ' + number_format(data.reward_money, 0, ',', '.') + ' gtlm'); };
                         // Reload quests
                         loadQuests(questType);
                         // Reload page to update balance
@@ -604,12 +604,12 @@ $questsTableExists = $checkQuestsTable && $checkQuestsTable->num_rows > 0;
                             window.location.reload();
                         }, 1000);
                     } else {
-                        alert('❌ ' + data.message);
+                        if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('❌ ' + data.message), 'error'); } else { alert('❌ ' + data.message); };
                     }
                 })
                 .catch(error => {
                     console.error('Error claiming reward:', error);
-                    alert('❌ Có lỗi xảy ra khi nhận phần thưởng');
+                    if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('❌ Có lỗi xảy ra khi nhận phần thưởng'), 'error'); } else { alert('❌ Có lỗi xảy ra khi nhận phần thưởng'); };
                 });
         }
 

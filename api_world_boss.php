@@ -153,7 +153,7 @@ if ($action === 'attack') {
         // 🛡️ Hệ thống vai trò: Tank được giảm 30% chi phí tấn công
         $cost = ($role === 'tank') ? 3500 : 5000;
 
-        // Kiểm tra tiền & cấp độ
+        // Kiểm tra GTLM & cấp độ
         $user = $conn->query("
             SELECT u.Money, u.Name, COALESCE(p.level, 1) as level 
             FROM users u 
@@ -213,7 +213,7 @@ if ($action === 'attack') {
                 // Tanker miễn nhiễm phản đòn và không bị giảm sát thương
                 $mechanicMsg = "🛡️ [Phase 3: Phản Phục Trận] Tanker kiên cường chắn sóng! Bạn miễn nhiễm Phản đòn và giữ nguyên 100% sát thương!";
             } else {
-                // DPS và Healer bị giảm 50% damage và phản đòn hao tổn tiền trị liệu
+                // DPS và Healer bị giảm 50% damage và phản đòn hao tổn GTLM trị liệu
                 $damage = $baseDamage * 0.5;
                 $dmgReflected = 1000;
                 $mechanicMsg = "⚡ [Phase 3: Phản Phục Trận] Boss phản kích dữ dội! Bạn bị giảm 50% sát thương và chịu phản đòn mất thêm 1,000 GTLM trị liệu!";
@@ -222,13 +222,13 @@ if ($action === 'attack') {
 
         $actualDamage = min($boss['hp'], $damage);
 
-        // Khấu trừ tiền cơ bản
+        // Khấu trừ GTLM cơ bản
         $stmtDeduct = $conn->prepare("UPDATE users SET Money = Money - ? WHERE Iduser = ?");
         $stmtDeduct->bind_param("di", $cost, $userId);
         $stmtDeduct->execute();
         $stmtDeduct->close();
 
-        // Khấu trừ tiền phản đòn (nếu có)
+        // Khấu trừ GTLM phản đòn (nếu có)
         if ($dmgReflected > 0) {
             if ($user['Money'] - $cost < $dmgReflected) {
                 $stmtZero = $conn->prepare("UPDATE users SET Money = 0 WHERE Iduser = ?");

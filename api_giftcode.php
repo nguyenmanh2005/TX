@@ -13,7 +13,7 @@ $userId = $_SESSION['Iduser'];
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
 if ($action === 'claim_random') {
-    // Để tránh bot spam vô hạn làm lạm phát tiền tệ, cho bot nhận một khoản tiền nhỏ ngẫu nhiên từ 50,000 đến 150,000 GTLM
+    // Để tránh bot spam vô hạn làm lạm phát GTLM tệ, cho bot nhận một khoản GTLM nhỏ ngẫu nhiên từ 50,000 đến 150,000 GTLM
     $amount = rand(50000, 150000);
     
     $conn->begin_transaction();
@@ -29,7 +29,7 @@ if ($action === 'claim_random') {
             throw new Exception("Không tìm thấy người dùng!");
         }
 
-        // Cộng tiền cho user
+        // Cộng GTLM cho user
         $stmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
         $stmt->bind_param("di", $amount, $userId);
         $stmt->execute();

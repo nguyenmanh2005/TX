@@ -92,7 +92,7 @@ try {
     // 4. Tính toán phần thưởng hoàng gia
     $winAmount = 0;
     if ($result['winner'] === 'player' && $betPlayer > 0) $winAmount += $betPlayer * 2;
-    if ($result['winner'] === 'banker' && $betBanker > 0) $winAmount += $betBanker * 1.95;
+    if ($result['winner'] === 'banker' && $betBanker > 0) $winAmount += $betBanker * 2;
     if ($result['winner'] === 'tie' && $betTie > 0) $winAmount += $betTie * 9;
 
     // 5. Trao thưởng (nếu có)

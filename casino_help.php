@@ -342,7 +342,7 @@
                 'Trò chơi tung 5 xúc xắc để tạo thành các tổ hợp điểm.',
                 'Bạn có tối đa 3 lần lắc. Sau mỗi lần lắc, bạn có thể Giữ (Hold) các xúc xắc tốt.',
                 'Sau 3 lần lắc hoặc khi đã hài lòng, chọn một Tổ Hợp (Bảng Điểm) để nhận thưởng.',
-                'Tổ hợp càng khó (như Yahtzee - 5 mặt giống nhau), tiền thưởng nhân lên càng cao (x50).'
+                'Tổ hợp càng khó (như Yahtzee - 5 mặt giống nhau), GTLM thưởng nhân lên càng cao (x50).'
             ]
         },
         'war': {

@@ -3,7 +3,6 @@ session_start();
 require '../db_connect.php';
 require_once '../load_theme.php';
 require_once '../game_history_helper.php';
-
 /** @var int $particleCount */
 /** @var float $particleSize */
 /** @var string $particleColor */
@@ -13,12 +12,10 @@ require_once '../game_history_helper.php';
 /** @var float $shapeOpacity */
 /** @var array $bgGradient */
 /** @var string $bgGradientCSS */
-
 if (!isset($_SESSION['Iduser'])) {
     header("Location: ../login.php");
     exit();
 }
-
 $userId = $_SESSION['Iduser'];
 $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
@@ -27,10 +24,7 @@ $user = $stmt->get_result()->fetch_assoc();
 $money = $user['Money'];
 $userName = $user['Name'];
 $stmt->close();
-
 // Auto-create history table
-$conn->query("CREATE TABLE IF NOT EXISTS history_hilo (Id INT AUTO_INCREMENT PRIMARY KEY, Iduser INT NOT NULL, Bet DECIMAL(30,2) NOT NULL, Result VARCHAR(255) NOT NULL, WinAmount DECIMAL(30,2) NOT NULL, Time DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
 // Get statistics for chart
 $gameThang = 0;
 $gameThua = 0;
@@ -44,17 +38,26 @@ if ($rowStats = $resultStats->fetch_assoc()) {
     $gameThua = ($rowStats['total'] ?? 0) - $gameThang;
 }
 $stmtStats->close();
-
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
     $action = $_GET['action'];
     $response = ['success' => false];
-
     if ($action === 'start') {
         $bet = (float) ($_POST['bet'] ?? 0);
         if ($bet <= 0 || $bet > $money) {
             $response['message'] = "Gtlm cược không hợp lệ!";
         } else {
+            $conn->begin_transaction();
+            $stmtLock = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+            $stmtLock->bind_param("i", $userId);
+            $stmtLock->execute();
+            $lockedMoney = $stmtLock->get_result()->fetch_assoc()['Money'] ?? 0;
+            $stmtLock->close();
+            if ($bet > $lockedMoney) {
+                $conn->rollback();
+                echo json_encode(['success' => false, 'message' => 'Số dư không đủ hoặc thao tác quá nhanh!']);
+                exit;
+            }
             $conn->query("UPDATE users SET Money = Money - $bet WHERE Iduser = $userId");
             $card = rand(1, 13);
             $_SESSION['hilo_bet'] = $bet;
@@ -70,7 +73,6 @@ if (isset($_GET['action'])) {
         $win = false;
         if ($guess === 'higher' && $newCard >= $oldCard) $win = true;
         if ($guess === 'lower' && $newCard <= $oldCard) $win = true;
-
         if ($win) {
             $multAdd = ($oldCard == $newCard) ? 0.1 : 0.5;
             $_SESSION['hilo_mult'] += $multAdd;
@@ -98,7 +100,8 @@ if (isset($_GET['action'])) {
         $his->execute();
         logGameHistoryWithAll($conn, $userId, 'Hi-Lo', $bet, $winAmount, true);
         unset($_SESSION['hilo_bet']);
-        $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
+        $conn->commit();
+            $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
         $response = ['success' => true, 'winAmount' => number_format($winAmount, 0, ',', '.'), 'money' => number_format($newMoney, 0, ',', '.')];
     }
     echo json_encode($response);
@@ -154,12 +157,9 @@ if (isset($_GET['action'])) {
         }
         .game-layout { display: flex; gap: 2rem; align-items: center; justify-content: center; flex-wrap: wrap; }
         .card-display {
-            width: 200px; height: 280px; background: #fff; border-radius: 20px;
+            width: 200px; height: 280px; background: transparent; border-radius: 20px;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            color: #000; box-shadow: 0 20px 40px rgba(0,0,0,0.4);
         }
-        .card-val { font-size: 5rem; font-weight: 900; }
-        .red-suit { color: #ff4757; }
         .controls { display: flex; flex-direction: column; gap: 1rem; flex: 1; }
         .btn-guess { padding: 1rem; border: none; border-radius: 1rem; color: #fff; font-weight: 900; font-size: 1.2rem; cursor: pointer; transition: 0.3s; }
         .btn-higher { background: linear-gradient(135deg, #00b894, #55efc4); }
@@ -182,11 +182,10 @@ if (isset($_GET['action'])) {
                 <a href="../index.php" style="color: #fff; text-decoration: none; border: 1px solid rgba(255,255,255,0.2); padding: 0.5rem 1.5rem; border-radius: 50px; font-weight: 900; background: rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">THOÁT</a>
             </div>
         </div>
-
         <div class="glass-card">
             <div class="game-layout">
                 <div class="card-display" id="playingCard">
-                    <div class="card-val" id="cardVal">?</div>
+                    <img id="cardImg" src="img/anh-bai/PNG/Cards (large)/card_back.png" style="width: 100%; height: 100%; object-fit: cover; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.4);">
                 </div>
                 <div class="controls">
                     <input type="number" id="betAmount" value="10000" style="background: rgba(255,255,255,0.1); border: 1px solid var(--primary-color); color: #fff; padding: 1rem; border-radius: 1rem; font-size: 1.5rem; text-align: center; outline: none;">
@@ -211,7 +210,6 @@ if (isset($_GET['action'])) {
                 </div>
             </div>
         </div>
-
         <div class="footer-container" style="display: none;">
             <div class="glass-card" style="margin-bottom: 0;">
                 <h3 style="color: var(--primary-color); margin-top: 0;">LỊCH SỬ</h3>
@@ -231,7 +229,6 @@ if (isset($_GET['action'])) {
             </div>
         </div>
     </div>
-
     <canvas id="threejs-background" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none;"></canvas>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
@@ -242,7 +239,6 @@ if (isset($_GET['action'])) {
                 event.target.classList.add('active');
             }
         }
-
         const suits = ['♠', '♣', '♥', '♦'], values = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
         function startGame() {
             const bet = $('#betAmount').val();
@@ -268,9 +264,13 @@ if (isset($_GET['action'])) {
             });
         }
         function updateCardDisplay(val) {
-            const suit = suits[Math.floor(Math.random() * 4)];
-            $('#cardVal').text(values[val]).removeClass('red-suit');
-            if (suit === '♥' || suit === '♦') $('#cardVal').addClass('red-suit');
+            const suitMap = {'♠': 'spades', '♣': 'clubs', '♥': 'hearts', '♦': 'diamonds'};
+            const suitKey = suits[Math.floor(Math.random() * 4)];
+            const suitStr = suitMap[suitKey];
+            let valStr = values[val];
+            if (!isNaN(valStr) && parseInt(valStr) < 10) valStr = '0' + parseInt(valStr);
+            const url = `img/anh-bai/PNG/Cards (large)/card_${suitStr}_${valStr}.png`;
+            $('#cardImg').attr('src', url);
         }
         async function loadHistory() {
             const res = await $.getJSON('../api_game_history.php?game=Hi-Lo');

@@ -59,6 +59,9 @@ switch ($action) {
         }
         $_SESSION['last_spin_time'] = $now;
 
+        $spinCount = isset($_POST['spin_count']) ? (int)$_POST['spin_count'] : 1;
+        if (!in_array($spinCount, [1, 5, 10])) $spinCount = 1;
+
         $conn->begin_transaction();
         try {
             // 1. Kiểm tra event (FOR UPDATE để lock row, tránh race condition từng bước sau)
@@ -71,7 +74,9 @@ switch ($action) {
             $stmtUser->execute();
             $userMoney = $stmtUser->get_result()->fetch_assoc()['Money'];
             $stmtUser->close();
-            if ($userMoney < $event['spin_cost']) throw new Exception("Số dư không đủ!");
+            
+            $totalCost = $event['spin_cost'] * $spinCount;
+            if ($userMoney < $totalCost) throw new Exception("Số dư không đủ cho $spinCount lượt quay!");
 
             // 3. Lấy danh sách phần thưởng còn hàng (FOR UPDATE lock để tránh oversell)
             $stmtRw = $conn->prepare("SELECT * FROM event_rewards WHERE event_id = ? AND (quantity_left = -1 OR quantity_left > 0) FOR UPDATE");
@@ -83,8 +88,6 @@ switch ($action) {
             if (empty($rewards)) throw new Exception("Tất cả phần thưởng đã được nhận hết!");
 
             // 4. Logic Pity — Đọc TRONG transaction sau khi đã lock
-            // FIX: Trước đây đọc pity ngoài transaction → 2 request đồng thời cùng đạt pity 10 sẽ đều được rare
-            // FIX: Bây giờ đọc TRONG transaction sau khi lock user row, chỉ 1 request có thể chạy tại 1 thời điểm
             $stmtPity = $conn->prepare("
                 SELECT COUNT(*) as total FROM (
                     SELECT r.reward_type 
@@ -98,63 +101,107 @@ switch ($action) {
             ");
             $stmtPity->bind_param("ii", $userId, $event['id']);
             $stmtPity->execute();
-            $pityCount = $stmtPity->get_result()->fetch_assoc()['total'];
+            $pityCount = (int)$stmtPity->get_result()->fetch_assoc()['total'];
             $stmtPity->close();
             
-            $winner = null;
-            if ($pityCount >= 10) {
-                // Guaranteed rare item if exists
-                $rareRewards = array_filter($rewards, function($r) { 
-                    return in_array($r['reward_type'], ['item', 'title', 'avatar_frame']); 
-                });
-                if (!empty($rareRewards)) $rewards = $rareRewards;
-            }
+            $results = [];
+            $totalMoneyWon = 0;
+            
+            for ($i = 0; $i < $spinCount; $i++) {
+                $winner = null;
+                $currentRewards = $rewards; // Copy để lọc
+                
+                // Cập nhật lại số lượng còn lại cho currentRewards (nếu trong cùng lượt trước đó bị trừ)
+                foreach($currentRewards as $k => $cr) {
+                    if ($cr['is_limited']) {
+                        // Đếm xem đã trúng bao nhiêu lần trong lượt này
+                        $wonCount = 0;
+                        foreach($results as $res) {
+                            if ($res['id'] == $cr['id']) $wonCount++;
+                        }
+                        if ($cr['quantity_left'] !== -1 && $cr['quantity_left'] - $wonCount <= 0) {
+                            unset($currentRewards[$k]); // Loại khỏi pool
+                        }
+                    }
+                }
+                
+                if (empty($currentRewards)) break; // Hết sạch quà
+                
+                if ($pityCount >= 10) {
+                    // Guaranteed rare item if exists
+                    $rareRewards = array_filter($currentRewards, function($r) { 
+                        return in_array($r['reward_type'], ['item', 'title', 'avatar_frame']); 
+                    });
+                    if (!empty($rareRewards)) $currentRewards = $rareRewards;
+                }
 
-            // Weighted Random
-            $totalWeight = array_sum(array_column($rewards, 'weight'));
-            $rand = mt_rand(1, $totalWeight);
-            $cumulative = 0;
-            foreach ($rewards as $r) {
-                $cumulative += $r['weight'];
-                if ($rand <= $cumulative) {
-                    $winner = $r;
-                    break;
+                // Weighted Random
+                $totalWeight = array_sum(array_column($currentRewards, 'weight'));
+                $rand = mt_rand(1, $totalWeight);
+                $cumulative = 0;
+                foreach ($currentRewards as $r) {
+                    $cumulative += $r['weight'];
+                    if ($rand <= $cumulative) {
+                        $winner = $r;
+                        break;
+                    }
+                }
+                
+                if (!$winner) $winner = array_values($currentRewards)[0]; // Fallback
+                
+                // Cập nhật pity logic
+                if (in_array($winner['reward_type'], ['money', 'nothing'])) {
+                    $pityCount++;
+                } else {
+                    $pityCount = 0;
+                }
+                
+                $results[] = $winner;
+                if ($winner['reward_type'] === 'money') {
+                    $totalMoneyWon += (int)$winner['reward_value'];
                 }
             }
 
-            // 5. Cập nhật số lượng quà (sử dụng prepared statement)
-            if ($winner['is_limited'] && $winner['quantity_left'] > 0) {
-                $stmtQty = $conn->prepare("UPDATE event_rewards SET quantity_left = quantity_left - 1 WHERE id = ? AND quantity_left > 0");
-                $stmtQty->bind_param("i", $winner['id']);
+            // 5. Lưu vào Database
+            // Trừ lượng quà hữu hạn
+            $qtyUpdates = [];
+            foreach ($results as $res) {
+                if ($res['is_limited']) {
+                    if (!isset($qtyUpdates[$res['id']])) $qtyUpdates[$res['id']] = 0;
+                    $qtyUpdates[$res['id']]++;
+                }
+            }
+            
+            foreach ($qtyUpdates as $rId => $deductAmount) {
+                $stmtQty = $conn->prepare("UPDATE event_rewards SET quantity_left = quantity_left - ? WHERE id = ?");
+                $stmtQty->bind_param("ii", $deductAmount, $rId);
                 $stmtQty->execute();
-                if ($stmtQty->affected_rows === 0) throw new Exception("Phần thưởng vừa hết hàng! Hãy quay lại.");
                 $stmtQty->close();
             }
 
-            // 6. Trừ Gtlm và lưu lịch sử (prepared statements)
-            $spinCost = $event['spin_cost'];
+            // Trừ GTLM
             $stmtDeduct = $conn->prepare("UPDATE users SET Money = Money - ? WHERE Iduser = ?");
-            $stmtDeduct->bind_param("ii", $spinCost, $userId);
+            $stmtDeduct->bind_param("ii", $totalCost, $userId);
             $stmtDeduct->execute();
             $stmtDeduct->close();
 
-            $stmtSpin = $conn->prepare("INSERT INTO event_spins (event_id, user_id, reward_id) VALUES (?, ?, ?)");
-            $stmtSpin->bind_param("iii", $event['id'], $userId, $winner['id']);
-            $stmtSpin->execute();
-            $stmtSpin->close();
-
-            // 7. Trao giải
-            deliverReward($userId, $winner, $conn);
-
-            $finalMoney = $userMoney - $spinCost;
-            if ($winner['reward_type'] === 'money') {
-                $finalMoney += (int)$winner['reward_value'];
+            // Insert spins & Trao giải
+            foreach ($results as $res) {
+                $stmtSpin = $conn->prepare("INSERT INTO event_spins (event_id, user_id, reward_id) VALUES (?, ?, ?)");
+                $stmtSpin->bind_param("iii", $event['id'], $userId, $res['id']);
+                $stmtSpin->execute();
+                $stmtSpin->close();
+                
+                deliverReward($userId, $res, $conn);
             }
+
+            $finalMoney = $userMoney - $totalCost + $totalMoneyWon;
 
             $conn->commit();
             echo json_encode([
                 'success' => true, 
-                'reward' => $winner, 
+                'results' => $results,
+                'reward' => $results[0], // Giữ fallback cho frontend cũ
                 'new_money' => $finalMoney
             ]);
 

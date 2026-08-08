@@ -1,5 +1,5 @@
 const BlackjackLogic = {
-    currentBet: 5000,
+    currentBet: 10000,
     isGameRunning: false,
     playerCards: [],
     kingCards: [],
@@ -197,11 +197,25 @@ const BlackjackLogic = {
         let text = "";
         let color = "#fff";
 
-        if (data.winStatus === 'blackjack') { text = "ROYALE 21!"; color = "var(--blackjack-gold)"; }
-        else if (data.winStatus === 'win') { text = "CHALLENGER WIN!"; color = "var(--challenger-blue)"; }
-        else if (data.winStatus === 'lose') { text = "KING WIN!"; color = "var(--king-red)"; }
-        else if (data.winStatus === 'bust') { text = "BUSTED!"; color = "var(--king-red)"; }
-        else if (data.winStatus === 'push') { text = "DRAW!"; color = "#aaa"; }
+        if (data.winStatus === 'blackjack') { 
+            text = "ROYALE 21!"; color = "var(--blackjack-gold)"; 
+            if (typeof GameEffects !== 'undefined') GameEffects.showWin(data.payout);
+        }
+        else if (data.winStatus === 'win') { 
+            text = "CHALLENGER WIN!"; color = "var(--challenger-blue)"; 
+            if (typeof GameEffects !== 'undefined') GameEffects.showWin(data.payout);
+        }
+        else if (data.winStatus === 'lose') { 
+            text = "KING WIN!"; color = "var(--king-red)"; 
+            if (typeof GameEffects !== 'undefined') GameEffects.showLose();
+        }
+        else if (data.winStatus === 'bust') { 
+            text = "BUSTED!"; color = "var(--king-red)"; 
+            if (typeof GameEffects !== 'undefined') GameEffects.showLose();
+        }
+        else if (data.winStatus === 'push') { 
+            text = "DRAW!"; color = "#aaa"; 
+        }
 
         announce.innerText = text;
         announce.style.color = color;

@@ -1,6 +1,7 @@
 <?php
 session_start();
 require '../db_connect.php';
+require_once '../include_css.php';
 require_once '../load_theme.php';
 
 if (!isset($_SESSION['Iduser'])) {
@@ -37,13 +38,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
     $winAmount = -$amount;
     if ($side === $winner) {
         if ($side === 'draw') $winAmount = $amount * 8; // Draw x8
-        else $winAmount = $amount * 0.95; // Side win x0.95 (commission)
+        else $winAmount = $amount * 1; // Side win x1
         $winAmount += $amount; 
         $winAmount -= $amount; // Net win
     }
     
     // Thực tế winAmount trả về là số  Gtlm THÊM VÀO hoặc BỊ TRỪ
-    $finalWin = ($side === $winner) ? ($side === 'draw' ? $amount * 8 : $amount * 0.95) : -$amount;
+    $finalWin = ($side === $winner) ? ($side === 'draw' ? $amount * 8 : $amount * 1) : -$amount;
 
     $newMoney = $money + $finalWin;
     $stmt = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
@@ -69,10 +70,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>🐓 Đá Gà Mini-game 🐓</title>
+    <title>🐓 ĐẠI CHIẾN THẦN KÊ 🐓</title>
     <link rel="stylesheet" href="../assets/css/main.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <?php echo getCSSIncludes(['special_effects' => true]); ?>
     <style>
         :root {
             --meron: #ff4757;
@@ -81,7 +85,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
             --tet-gold: #fdcb6e;
         }
         body {
-            background: #0a0a0a;
+            background: <?= $bgGradientCSS ?>;
+            background-attachment: fixed;
             color: white;
             font-family: 'Exo 2', sans-serif;
             text-align: center;
@@ -92,8 +97,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
             max-width: 900px;
             height: 450px;
             margin: 2rem auto;
-            background: radial-gradient(circle, rgba(44, 62, 80, 0.5) 0%, rgba(26, 26, 26, 0.8) 100%), url('../assets/img/daga_bg.png') no-repeat center center;
-            background-size: cover;
+            background: radial-gradient(circle, rgba(44, 62, 80, 0.5) 0%, rgba(26, 26, 26, 0.8) 100%);
             position: relative;
             border: 2px solid rgba(255, 255, 255, 0.1);
             border-radius: 3rem;
@@ -109,8 +113,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
             transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
         }
-        #rooster-meron { left: 80px; transform: scaleX(1); }
-        #rooster-wala { right: 80px; transform: scaleX(-1); }
+        #rooster-meron { left: 80px; transform: scaleX(-1); }
+        #rooster-wala { right: 80px; transform: scaleX(1); }
 
         .rooster-label {
             position: absolute;
@@ -166,14 +170,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
         
         .status-overlay {
             position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 5rem;
+            top: 10%; left: 50%;
+            transform: translateX(-50%);
+            font-size: 3rem;
             font-weight: 900;
             text-shadow: 0 0 30px rgba(0,0,0,0.8);
             display: none;
             z-index: 100;
-            letter-spacing: 10px;
+            letter-spacing: 5px;
             font-style: italic;
         }
     </style>
@@ -183,11 +187,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
     <div class="balance" style="margin-bottom: 2rem;">💰 Số dư: <b id="money-display" style="color: var(--tet-gold); font-size: 1.5rem; text-shadow: 0 0 10px rgba(253, 203, 110, 0.3);"><?= number_format($money, 0, ',', '.') ?></b> GTLM</div>
 
     <div class="arena">
-        <div id="rooster-meron" class="rooster" style="--sx: 1">
+        <div id="rooster-meron" class="rooster" style="--sx: -1">
             <span style="font-size: 7rem; filter: drop-shadow(0 5px 15px rgba(255,0,0,0.5));">🐓</span>
             <div class="rooster-label" style="background: var(--meron);">MERON</div>
         </div>
-        <div id="rooster-wala" class="rooster" style="--sx: -1">
+        <div id="rooster-wala" class="rooster" style="--sx: 1">
             <span style="font-size: 7rem; filter: drop-shadow(0 5px 15px rgba(0,0,255,0.5));">🐓</span>
             <div class="rooster-label" style="background: var(--wala);">WALA</div>
         </div>
@@ -195,28 +199,25 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
     </div>
 
     <div class="info-guide" style="max-width: 800px; margin: 1rem auto; background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 10px; font-size: 0.9rem; border-left: 5px solid var(--tet-gold);">
-        💡 <b>THỬ VẬN:</b> Chọn số GTLM muốn liều và nhấn vào nút <b>CHIẾN MERON</b>, <b>CHIẾN WALA</b> hoặc <b>HÒA</b>. 
-        Tỷ lệ húp: Meron/Wala (1 ăn 0.95), Hòa (1 ăn 8). Trận giao lưu sẽ diễn ra trong 3 giây!
+        💡 <b>THỬ VẬN:</b> Chọn số GTLM muốn Chiến và nhấn vào nút <b>CHIẾN MERON</b>, <b>CHIẾN WALA</b> hoặc <b>HÒA</b>. 
+        Tỷ lệ húp: Meron/Wala (1 ăn 1), Hòa (1 ăn 8). Trận giao lưu sẽ diễn ra trong 3 giây!
     </div>
 
     <div class="controls">
-        <div class="quick-bets" style="margin-bottom: 1rem; display: flex; justify-content: center; gap: 0.5rem;">
-            <button class="btn-small" onclick="$('#bet-amount').val(1000)">1K GTLM</button>
-            <button class="btn-small" onclick="$('#bet-amount').val(10000)">10K GTLM</button>
-            <button class="btn-small" onclick="$('#bet-amount').val(50000)">50K GTLM</button>
-            <button class="btn-small" onclick="$('#bet-amount').val(100000)">100K GTLM</button>
-                <button class="btn-small" onclick="$('#bet-amount').val(500000)">500K GTLM</button>
-                <button class="btn-small" onclick="$('#bet-amount').val(1000000)">1M GTLM</button>
-                <button class="btn-small" onclick="$('#bet-amount').val(2000000)">2M GTLM</button>
-                <button class="btn-small" onclick="$('#bet-amount').val(5000000)">5M GTLM</button>
-                <button class="btn-small" onclick="$('#bet-amount').val(<?=$money?>)">MAX</button>
-            <button class="btn-small" onclick="$('#bet-amount').val(<?= $money ?>)">TẤT TAY</button>
+        <div class="quick-bets" style="margin-bottom: 1rem; display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="btn-small" onclick="$('#bet-amount').val(10000)">10K</button>
+            <button class="btn-small" onclick="$('#bet-amount').val(50000)">50K</button>
+            <button class="btn-small" onclick="$('#bet-amount').val(100000)">100K</button>
+            <button class="btn-small" onclick="$('#bet-amount').val(500000)">500K</button>
+            <button class="btn-small" onclick="$('#bet-amount').val(1000000)">1M</button>
+            <button class="btn-small" onclick="$('#bet-amount').val(5000000)">5M</button>
+            <button class="btn-small" onclick="$('#bet-amount').val(<?= $money ?>)">ALL IN</button>
         </div>
-        <input type="number" id="bet-amount" placeholder="GTLM thả thính..." value="1000" style="background: #000; color: #fff; border: 1px solid #444;"><br><br>
+        <input type="number" id="bet-amount" placeholder="GTLM thả thính..." value="10000" style="background: #000; color: #fff; border: 1px solid #444; padding: 0.8rem; font-size: 1.2rem; border-radius: 10px; width: 250px; text-align: center;"><br><br>
         <div class="betting-area">
-            <button class="bet-btn btn-meron" onclick="placeBet('meron')">CHIẾN MERON<br><small>1 húp 0.95</small></button>
+            <button class="bet-btn btn-meron" onclick="placeBet('meron')">CHIẾN MERON<br><small>1 húp 1</small></button>
             <button class="bet-btn btn-draw" onclick="placeBet('draw')">HÒA (BDD)<br><small>1 húp 8</small></button>
-            <button class="bet-btn btn-wala" onclick="placeBet('wala')">CHIẾN WALA<br><small>1 húp 0.95</small></button>
+            <button class="bet-btn btn-wala" onclick="placeBet('wala')">CHIẾN WALA<br><small>1 húp 1</small></button>
         </div>
     </div>
 
@@ -241,13 +242,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
     <script>
         let isPlaying = false;
 
-        function loadHistory() {
-            $.get('daga.php?action=get_history', function(data) {
-                // Not implemented in PHP yet, let's just use a dummy for now or update PHP
-            });
-            // Let's just update the JS to add a bubble after each win
-        }
-
         function addHistoryBubble(winner) {
             const char = winner === 'meron' ? 'M' : (winner === 'wala' ? 'W' : 'D');
             const cls = 'bubble-' + winner;
@@ -261,7 +255,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
             if (isPlaying) return;
             const amount = $('#bet-amount').val();
             if (amount < 1000) {
-                Swal.fire('Lỗi', 'Liều tối thiểu 1.000 GTLM', 'error');
+                Swal.fire('Lỗi', 'Chiến tối thiểu 1.000 GTLM', 'error');
                 return;
             }
 
@@ -300,9 +294,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
                     setTimeout(() => {
                         $('#money-display').text(data.newMoney);
                         if (data.winAmount > 0) {
-                            Swal.fire('Húp Lớn!', `Chúc mừng! Bạn đã húp được ${(data.winAmount).toLocaleString()} GTLM!`, 'success');
+                            if (window.GameEffects) window.GameEffects.showWin(data.winAmount);
                         } else {
-                            Swal.fire('Về Cõi!', `Tiếc quá, ${data.winner} đã húp rồi.`, 'error');
+                            if (window.GameEffects) window.GameEffects.showLoss(amount);
                         }
                         resetArena();
                     }, 1000);
@@ -317,6 +311,26 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
             $('#rooster-meron').show().css('left', '100px');
             $('#rooster-wala').show().css('right', '100px');
         }
+
+        (function () {
+            window.themeConfig = {
+                particleCount: 200,
+                particleSize: 0.05,
+                particleColor: '#00f2fe',
+                particleOpacity: 0.4,
+                shapeCount: 15,
+                shapeColors: ["#00f2fe", "#4facfe", "#ffffff"],
+                shapeOpacity: 0.15,
+                bgGradient: ["#000000", "#000510", "#001020"]
+            };
+            const prefix = '../';
+            ['threejs-background.js', 'assets/js/game-effects.js'].forEach(src => {
+                const s = document.createElement('script');
+                s.src = prefix + src; s.async = false;
+                document.head.appendChild(s);
+            });
+        })();
     </script>
+    <canvas id="threejs-background"></canvas>
 </body>
 </html>

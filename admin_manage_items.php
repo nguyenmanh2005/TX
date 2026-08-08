@@ -1,3 +1,4 @@
+﻿
 <?php
 session_start();
 
@@ -16,7 +17,7 @@ require 'db_connect.php';
 
 // Load theme
 require_once 'load_theme.php';
-// Đảm bảo $bgGradientCSS có giá trị
+// Äáº£m báº£o $bgGradientCSS có giá trị
 if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
     $bgGradientCSS = 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%)';
 }
@@ -26,9 +27,10 @@ require_once 'admin_helper.php';
 
 $userId = $_SESSION['Iduser'];
 
-// Kiểm tra quyền admin (Role = 1)
-if (!isAdmin($conn, $userId)) {
-    die("Bạn không có quyền truy cập trang này! Chỉ admin (Role = 1) mới có thể truy cập.");
+// Kiểm tra quyá»n Super Admin (Role >= 2)
+if (!isSuperAdmin($conn, $userId)) {
+    header("Location: Shared/403/403.php");
+    exit();
 }
 
 $message = '';
@@ -37,7 +39,7 @@ $messageType = '';
 // Xử lý xóa cursor
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_cursor'])) {
     if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
-        $message = '❌ Yêu cầu không hợp lệ (CSRF)!';
+        $message = 'âŒ Yêu cầu không hợp lệ (CSRF)!';
         $messageType = 'error';
     } else {
     $cursorId = (int) $_POST['cursor_id'];
@@ -49,7 +51,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_cursor'])) {
             $message = '✅ Xóa cursor thành công!';
             $messageType = 'success';
         } else {
-            $message = '❌ Lỗi khi xóa cursor: ' . $deleteStmt->error;
+            $message = 'âŒ Lỗi khi xóa cursor: ' . $deleteStmt->error;
             $messageType = 'error';
         }
         $deleteStmt->close();
@@ -60,7 +62,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_cursor'])) {
 // Xử lý xóa achievement
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_achievement'])) {
     if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
-        $message = '❌ Yêu cầu không hợp lệ (CSRF)!';
+        $message = 'âŒ Yêu cầu không hợp lệ (CSRF)!';
         $messageType = 'error';
     } else {
     $achievementId = (int) $_POST['achievement_id'];
@@ -72,7 +74,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_achievement'])
             $message = '✅ Xóa achievement thành công!';
             $messageType = 'success';
         } else {
-            $message = '❌ Lỗi khi xóa achievement: ' . $deleteStmt->error;
+            $message = 'âŒ Lỗi khi xóa achievement: ' . $deleteStmt->error;
             $messageType = 'error';
         }
         $deleteStmt->close();
@@ -83,7 +85,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_achievement'])
 // Xử lý xóa theme
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_theme'])) {
     if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
-        $message = '❌ Yêu cầu không hợp lệ (CSRF)!';
+        $message = 'âŒ Yêu cầu không hợp lệ (CSRF)!';
         $messageType = 'error';
     } else {
     $themeId = (int) $_POST['theme_id'];
@@ -95,7 +97,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_theme'])) {
             $message = '✅ Xóa theme thành công!';
             $messageType = 'success';
         } else {
-            $message = '❌ Lỗi khi xóa theme: ' . $deleteStmt->error;
+            $message = 'âŒ Lỗi khi xóa theme: ' . $deleteStmt->error;
             $messageType = 'error';
         }
         $deleteStmt->close();
@@ -103,7 +105,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_theme'])) {
     } // end CSRF check
 }
 
-// Lấy danh sách cursors
+// Láº¥y danh sách cursors
 $cursors = [];
 $cursorsSql = "SELECT * FROM cursors ORDER BY id ASC";
 $cursorsResult = $conn->query($cursorsSql);
@@ -113,7 +115,7 @@ if ($cursorsResult) {
     }
 }
 
-// Lấy danh sách achievements
+// Láº¥y danh sách achievements
 $achievements = [];
 $achievementsSql = "SELECT * FROM achievements ORDER BY 
     CASE rarity 
@@ -129,7 +131,7 @@ if ($achievementsResult) {
     }
 }
 
-// Lấy danh sách themes
+// Láº¥y danh sách themes
 $themes = [];
 $themesSql = "SELECT * FROM themes ORDER BY id ASC";
 $themesResult = $conn->query($themesSql);
@@ -447,7 +449,15 @@ if ($themesResult) {
             pointer-events: none;
         }
 
-    </style>
+            .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(3px); }
+        .modal-content { background-color: #fff; margin: 3% auto; padding: 20px 30px; border-radius: var(--border-radius-lg); width: 90%; max-width: 700px; max-height: 90vh; overflow-y: auto; box-shadow: 0 4px 25px rgba(0,0,0,0.3); animation: slideIn 0.3s ease; position: relative; }
+        .close-modal { color: #aaa; position: absolute; right: 20px; top: 20px; font-size: 28px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .close-modal:hover { color: #333; }
+        .modal-content .form-group { margin-bottom: 15px; }
+        .modal-content label { display: block; margin-bottom: 5px; font-weight: bold; color: var(--primary-color); }
+        .modal-content input[type="text"], .modal-content input[type="number"], .modal-content textarea, .modal-content select { width: 100%; padding: 10px; border: 2px solid var(--border-color); border-radius: var(--border-radius); box-sizing: border-box; }
+        .modal-content .submit-button { width: 100%; padding: 12px; background: linear-gradient(135deg, var(--secondary-color) 0%, var(--secondary-dark) 100%); color: white; border: none; border-radius: var(--border-radius); font-size: 16px; font-weight: bold; cursor: pointer; }
+</style>
 </head>
 
 <body>
@@ -455,7 +465,7 @@ if ($themesResult) {
 
     <div class="admin-container">
         <div class="header-admin">
-            <h1>⚙️ Admin - Quản Lý Items</h1>
+            <h1>⚙️ Admin - Quản Lý Items</h1>
             <p>Quản lý cursors, achievements và themes</p>
         </div>
 
@@ -464,31 +474,31 @@ if ($themesResult) {
         <?php endif; ?>
 
         <div class="tabs">
-            <button class="tab-button active" onclick="switchTab('cursors')">🖱️ Quản Lý Cursors</button>
-            <button class="tab-button" onclick="switchTab('achievements')">🏆 Quản Lý Achievements</button>
-            <button class="tab-button" onclick="switchTab('themes')">🎨 Quản Lý Themes</button>
+            <button class="tab-button active" onclick="switchTab('cursors')">ðŸ–±ï¸ Quản Lý Cursors</button>
+            <button class="tab-button" onclick="switchTab('achievements')">ðŸ† Quản Lý Achievements</button>
+            <button class="tab-button" onclick="switchTab('themes')">ðŸŽ¨ Quản Lý Themes</button>
         </div>
 
         <!-- Tab Quản Lý Cursors -->
         <div id="cursors-tab" class="tab-content active">
-            <a href="admin_add_items.php" class="add-new-btn">➕ Thêm Cursor Mới</a>
+            <button type="button" class="add-new-btn" onclick="openItemModal('add', 'cursor')" style="border:none;">➕ Thêm Cursor Mới</button>
             <table class="items-table">
                 <thead>
                     <tr>
                         <th>ID</th>
                         <th>Tên</th>
-                        <th>Mô tả</th>
-                        <th>Ảnh</th>
+                        <th>MÃ´ táº£</th>
+                        <th>áº¢nh</th>
                         <th>Giá</th>
                         <th>Premium</th>
-                        <th>Thao tác</th>
+                        <th>Thao tÃ¡c</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($cursors)): ?>
                         <tr>
                             <td colspan="7" style="text-align: center; padding: 40px;">
-                                Chưa có cursor nào. <a href="admin_add_items.php">Thêm cursor mới</a>
+                                Chưa có cursor nào. <a href="?action=add">Thêm cursor mới</a>
                             </td>
                         </tr>
                     <?php else: ?>
@@ -510,8 +520,7 @@ if ($themesResult) {
                                 </td>
                                 <td>
                                     <div class="action-buttons">
-                                        <a href="admin_edit_item.php?type=cursor&id=<?= $cursor['id'] ?>" class="btn-edit">✏️
-                                            Sửa</a>
+                                        <button type="button" class="btn-edit" onclick='openItemModal("edit", "cursor", <?= json_encode($cursor, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'>✏️ Sửa</button>
                                         <form method="POST" style="display: inline;"
                                             onsubmit="return confirm('Bạn có chắc muốn xóa cursor này?');">
                                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
@@ -529,25 +538,25 @@ if ($themesResult) {
 
         <!-- Tab Quản Lý Achievements -->
         <div id="achievements-tab" class="tab-content">
-            <a href="admin_add_items.php" class="add-new-btn">➕ Thêm Achievement Mới</a>
+            <button type="button" class="add-new-btn" onclick="openItemModal('add', 'achievement')" style="border:none;">➕ Thêm Achievement Mới</button>
             <table class="items-table">
                 <thead>
                     <tr>
                         <th>ID</th>
                         <th>Icon</th>
                         <th>Tên</th>
-                        <th>Mô tả</th>
+                        <th>MÃ´ táº£</th>
                         <th>Yêu cầu</th>
-                        <th>Phần thưởng</th>
-                        <th>Độ hiếm</th>
-                        <th>Thao tác</th>
+                        <th>Pháº§n thÆ°á»Ÿng</th>
+                        <th>Äá»™ hiáº¿m</th>
+                        <th>Thao tÃ¡c</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($achievements)): ?>
                         <tr>
                             <td colspan="8" style="text-align: center; padding: 40px;">
-                                Chưa có achievement nào. <a href="admin_add_items.php">Thêm achievement mới</a>
+                                Chưa có achievement nào. <a href="?action=add">Thêm achievement mới</a>
                             </td>
                         </tr>
                     <?php else: ?>
@@ -563,10 +572,10 @@ if ($themesResult) {
                                     $reqValue = number_format($achievement['requirement_value'], 0, ',', '.');
                                     $reqLabels = [
                                         'money' => 'gtlm',
-                                        'games_played' => 'Số game',
-                                        'big_win' => 'Thắng lớn',
-                                        'streak' => 'Chuỗi thắng',
-                                        'rank' => 'Xếp hạng'
+                                        'games_played' => 'Sá»‘ game',
+                                        'big_win' => 'Tháº¯ng lá»›n',
+                                        'streak' => 'Chuá»—i tháº¯ng',
+                                        'rank' => 'Xáº¿p háº¡ng'
                                     ];
                                     echo ($reqLabels[$reqType] ?? $reqType) . ': ' . $reqValue;
                                     ?>
@@ -579,8 +588,7 @@ if ($themesResult) {
                                 </td>
                                 <td>
                                     <div class="action-buttons">
-                                        <a href="admin_edit_item.php?type=achievement&id=<?= $achievement['id'] ?>"
-                                            class="btn-edit">✏️ Sửa</a>
+                                        <button type="button" class="btn-edit" onclick='openItemModal("edit", "achievement", <?= json_encode($achievement, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'>✏️ Sửa</button>
                                         <form method="POST" style="display: inline;"
                                             onsubmit="return confirm('Bạn có chắc muốn xóa achievement này?');">
                                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
@@ -598,25 +606,25 @@ if ($themesResult) {
 
         <!-- Tab Quản Lý Themes -->
         <div id="themes-tab" class="tab-content">
-            <a href="admin_add_items.php" class="add-new-btn">➕ Thêm Theme Mới</a>
+            <button type="button" class="add-new-btn" onclick="openItemModal('add', 'theme')" style="border:none;">➕ Thêm Theme Mới</button>
             <table class="items-table">
                 <thead>
                     <tr>
                         <th>ID</th>
                         <th>Tên</th>
-                        <th>Mô tả</th>
+                        <th>MÃ´ táº£</th>
                         <th>Preview</th>
                         <th>Giá</th>
                         <th>Premium</th>
-                        <th>Cấu hình</th>
-                        <th>Thao tác</th>
+                        <th>Cáº¥u hình</th>
+                        <th>Thao tÃ¡c</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($themes)): ?>
                         <tr>
                             <td colspan="8" style="text-align: center; padding: 40px;">
-                                Chưa có theme nào. <a href="admin_add_items.php">Thêm theme mới</a>
+                                Chưa có theme nào. <a href="?action=add">Thêm theme mới</a>
                             </td>
                         </tr>
                     <?php else: ?>
@@ -644,13 +652,12 @@ if ($themesResult) {
                                     <small>
                                         Particles: <?= $theme['particle_count'] ?? 1000 ?><br>
                                         Color: <span
-                                            style="color: <?= htmlspecialchars($theme['particle_color'] ?? '#ffffff') ?>">●</span>
+                                            style="color: <?= htmlspecialchars($theme['particle_color'] ?? '#ffffff') ?>">â—</span>
                                     </small>
                                 </td>
                                 <td>
                                     <div class="action-buttons">
-                                        <a href="admin_edit_item.php?type=theme&id=<?= $theme['id'] ?>" class="btn-edit">✏️
-                                            Sửa</a>
+                                        <button type="button" class="btn-edit" onclick='openItemModal("edit", "theme", <?= json_encode($theme, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'>✏️ Sửa</button>
                                         <form method="POST" style="display: inline;"
                                             onsubmit="return confirm('Bạn có chắc muốn xóa theme này?');">
                                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
@@ -666,8 +673,8 @@ if ($themesResult) {
             </table>
         </div>
 
-        <a href="index.php" class="back-link">🏠 Về Trang Chủ</a>
-        <a href="admin_add_items.php" class="back-link" style="margin-left: 10px;">➕ Thêm Items</a>
+        <a href="index.php" class="back-link">ðŸ  Về Trang Chủ</a>
+        <a href="?action=add" class="back-link" style="margin-left: 10px;">➕ Thêm Items</a>
     </div>
 
     <script>
@@ -716,7 +723,7 @@ if ($themesResult) {
             bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>
         };
         
-        // Load Three.js background script với đường dẫn chính xác
+        // Load Three.js background script vá»›i Ä‘Æ°á»ng dáº«n chính xác
         const isInGames = window.location.pathname.includes('/games/');
         const script = document.createElement('script');
         script.src = isInGames ? '../threejs-background.js' : 'threejs-background.js';
@@ -726,6 +733,179 @@ if ($themesResult) {
         document.head.appendChild(script);
     })();
 </script>
+    <!-- Modal cho Items -->
+    <div id="itemModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeItemModal()">&times;</span>
+            <h2 id="modalTitle" style="margin-bottom: 20px; color: var(--primary-color);">Thêm Mới</h2>
+            
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+                <input type="hidden" name="item_id" id="modal_item_id" value="0">
+                <input type="hidden" name="item_type" id="modal_item_type" value="">
+                
+                <!-- Cursor Fields -->
+                <div id="cursorFields" style="display:none;">
+                    <div class="form-group">
+                        <label>Tên cursor *</label>
+                        <input type="text" id="cursor_name" name="cursor_name">
+                    </div>
+                    <div class="form-group">
+                        <label>Mô tả</label>
+                        <textarea id="cursor_description" name="cursor_description"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Giá (gtlm) *</label>
+                        <input type="number" id="cursor_price" name="cursor_price" min="0" step="1000">
+                    </div>
+                    <div class="form-group">
+                        <label>Đường dẫn ảnh *</label>
+                        <input type="text" id="cursor_image" name="cursor_image">
+                    </div>
+                    <div class="form-group">
+                        <label><input type="checkbox" id="cursor_premium" name="cursor_premium" value="1"> Premium</label>
+                    </div>
+                </div>
+
+                <!-- Achievement Fields -->
+                <div id="achievementFields" style="display:none;">
+                    <div class="form-group">
+                        <label>Tên thành tựu *</label>
+                        <input type="text" id="achievement_name" name="achievement_name">
+                    </div>
+                    <div class="form-group">
+                        <label>Mô tả</label>
+                        <textarea id="achievement_description" name="achievement_description"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Icon (Emoji) *</label>
+                        <input type="text" id="achievement_icon" name="achievement_icon" maxlength="2">
+                    </div>
+                    <div class="form-group">
+                        <label>Loại yêu cầu *</label>
+                        <select id="achievement_type" name="achievement_type">
+                            <option value="money">Số tiền (money)</option>
+                            <option value="games_played">Số game chơi (games_played)</option>
+                            <option value="big_win">Thắng lớn (big_win)</option>
+                            <option value="streak">Chuỗi thắng (streak)</option>
+                            <option value="rank">Xếp hạng (rank)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Giá trị yêu cầu *</label>
+                        <input type="number" id="achievement_value" name="achievement_value" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Phần thưởng (gtlm)</label>
+                        <input type="number" id="achievement_reward" name="achievement_reward" step="1000">
+                    </div>
+                    <div class="form-group">
+                        <label>Độ hiếm *</label>
+                        <select id="achievement_rarity" name="achievement_rarity">
+                            <option value="common">Thường</option>
+                            <option value="rare">Hiếm</option>
+                            <option value="epic">Cực hiếm</option>
+                            <option value="legendary">Huyền thoại</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Theme Fields -->
+                <div id="themeFields" style="display:none;">
+                    <div class="form-group">
+                        <label>Tên theme *</label>
+                        <input type="text" id="theme_name" name="theme_name">
+                    </div>
+                    <div class="form-group">
+                        <label>Mô tả</label>
+                        <textarea id="theme_description" name="theme_description"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Giá (gtlm) *</label>
+                        <input type="number" id="theme_price" name="theme_price" step="1000">
+                    </div>
+                    <div class="form-group">
+                        <label>Đường dẫn preview</label>
+                        <input type="text" id="theme_preview" name="theme_preview">
+                    </div>
+                    <div class="form-group">
+                        <label><input type="checkbox" id="theme_premium" name="theme_premium" value="1"> Premium</label>
+                    </div>
+                    
+                    <h3 style="margin:20px 0 10px;color:var(--primary-color);">Cấu hình 3D Background</h3>
+                    <div class="form-group"><label>Số lượng particles</label><input type="number" id="particle_count" name="particle_count" value="1000"></div>
+                    <div class="form-group"><label>Kích thước particle</label><input type="number" id="particle_size" name="particle_size" step="0.01" value="0.05"></div>
+                    <div class="form-group"><label>Màu particle</label><input type="color" id="particle_color" name="particle_color" value="#ffffff"></div>
+                    <div class="form-group"><label>Độ trong suốt particle</label><input type="number" id="particle_opacity" name="particle_opacity" step="0.1" value="0.6"></div>
+                    <div class="form-group"><label>Số lượng hình 3D</label><input type="number" id="shape_count" name="shape_count" value="15"></div>
+                    <div class="form-group"><label>Màu hình 3D (JSON)</label><input type="text" id="shape_colors" name="shape_colors" value='["#667eea", "#764ba2", "#4facfe", "#00f2fe"]'></div>
+                    <div class="form-group"><label>Độ trong suốt hình 3D</label><input type="number" id="shape_opacity" name="shape_opacity" step="0.1" value="0.3"></div>
+                    <div class="form-group"><label>Màu Gradient (JSON)</label><input type="text" id="background_gradient" name="background_gradient" value='["#667eea", "#764ba2", "#4facfe"]'></div>
+                </div>
+
+                <button type="submit" name="save_item" class="submit-button">💾 Lưu Thay Đổi</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    function openItemModal(action, type, data = null) {
+        document.getElementById('itemModal').style.display = 'block';
+        document.getElementById('modal_item_type').value = type;
+        
+        let titleName = type.charAt(0).toUpperCase() + type.slice(1);
+        document.getElementById('modalTitle').innerText = (action === 'edit' ? '⚙️ Sửa ' : '➕ Thêm ') + titleName;
+        
+        document.getElementById('cursorFields').style.display = 'none';
+        document.getElementById('achievementFields').style.display = 'none';
+        document.getElementById('themeFields').style.display = 'none';
+        
+        document.getElementById(type + 'Fields').style.display = 'block';
+        
+        document.getElementById('modal_item_id').value = (action === 'edit' && data) ? data.id : '0';
+        
+        if (type === 'cursor') {
+            document.getElementById('cursor_name').value = data ? data.name : '';
+            document.getElementById('cursor_description').value = data ? data.description : '';
+            document.getElementById('cursor_price').value = data ? parseInt(data.price) : 0;
+            document.getElementById('cursor_image').value = data ? data.cursor_image : '';
+            document.getElementById('cursor_premium').checked = data ? (data.is_premium == 1) : false;
+        } else if (type === 'achievement') {
+            document.getElementById('achievement_name').value = data ? data.name : '';
+            document.getElementById('achievement_description').value = data ? data.description : '';
+            document.getElementById('achievement_icon').value = data ? data.icon : '';
+            document.getElementById('achievement_type').value = data ? data.requirement_type : 'money';
+            document.getElementById('achievement_value').value = data ? data.requirement_value : 0;
+            document.getElementById('achievement_reward').value = data ? parseInt(data.reward_money) : 0;
+            document.getElementById('achievement_rarity').value = data ? data.rarity : 'common';
+        } else if (type === 'theme') {
+            document.getElementById('theme_name').value = data ? data.name : '';
+            document.getElementById('theme_description').value = data ? data.description : '';
+            document.getElementById('theme_price').value = data ? parseInt(data.price) : 0;
+            document.getElementById('theme_preview').value = data ? (data.preview_image || '') : '';
+            document.getElementById('theme_premium').checked = data ? (data.is_premium == 1) : false;
+            
+            document.getElementById('particle_count').value = data ? data.particle_count : 1000;
+            document.getElementById('particle_size').value = data ? data.particle_size : 0.05;
+            document.getElementById('particle_color').value = data ? data.particle_color : '#ffffff';
+            document.getElementById('particle_opacity').value = data ? data.particle_opacity : 0.6;
+            document.getElementById('shape_count').value = data ? data.shape_count : 15;
+            document.getElementById('shape_colors').value = data ? data.shape_colors : '["#667eea", "#764ba2", "#4facfe", "#00f2fe"]';
+            document.getElementById('shape_opacity').value = data ? data.shape_opacity : 0.3;
+            document.getElementById('background_gradient').value = data ? data.background_gradient : '["#667eea", "#764ba2", "#4facfe"]';
+        }
+    }
+
+    function closeItemModal() {
+        document.getElementById('itemModal').style.display = 'none';
+    }
+
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('itemModal')) {
+            closeItemModal();
+        }
+    }
+    </script>
 </body>
 
 </html>

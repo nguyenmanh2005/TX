@@ -141,7 +141,7 @@ class DashboardEnhanced {
                     const stats = data.stats;
                     document.getElementById('totalGamesStat').textContent = stats.totalGames.toLocaleString('vi-VN');
                     document.getElementById('winRateStat').textContent = stats.winRate.toFixed(1) + '%';
-                    document.getElementById('biggestWinStat').textContent = stats.biggestWin.toLocaleString('vi-VN') + ' VNĐ';
+                    document.getElementById('biggestWinStat').textContent = stats.biggestWin.toLocaleString('vi-VN') + ' GTLM';
                     document.getElementById('favoriteGameStat').textContent = stats.favoriteGame || 'Chưa có';
                 }
             } catch (error) {
@@ -309,7 +309,7 @@ class DashboardEnhanced {
             if (data.status === 'success') {
                 const balanceEl = document.querySelector('.balance-display .balance-amount');
                 if (balanceEl) {
-                    balanceEl.textContent = parseFloat(data.balance).toLocaleString('vi-VN') + ' VNĐ';
+                    balanceEl.textContent = parseFloat(data.balance).toLocaleString('vi-VN') + ' GTLM';
                 }
             }
         } catch (error) {

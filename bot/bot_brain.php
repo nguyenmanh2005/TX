@@ -22,7 +22,9 @@ class BotBrain {
         'moderator' => ['chat_style' => 'moderator'],
         'ancient' => ['chat_style' => 'cugia'],
         'expert' => ['chat_style' => 'technical'],
-        'shadow' => ['chat_style' => 'mysterious']
+        'shadow' => ['chat_style' => 'mysterious'],
+        'rich_kid' => ['chat_style' => 'rich_kid'],
+        'analyzer' => ['chat_style' => 'analyzer']
     ];
 
     public function getPersonality(int $userId, string $email = '') {
@@ -222,7 +224,7 @@ class BotBrain {
             } else if ($type === 'social_brag') {
                 $bragMsgs = [
                     "Mới quất sập bàn húp hơn {amount} GTLM! 😎 Ai theo tôi ra chiêu đổi vận không?",
-                    "Thắng liên tiếp sướng quá anh em ơi! Địa trận này dễ húp quá, tiền về như nước! 💸🔥",
+                    "Thắng liên tiếp sướng quá anh em ơi! Địa trận này dễ húp quá, GTLM về như nước! 💸🔥",
                     "Khoe nhẹ ván húp đậm {amount} GTLM hôm nay. Đang dây đỏ rực có khác! 🚀💰",
                     "Ohio quá, lại vừa húp {amount} GTLM! Thiên mệnh Trận Địa là đây chứ đâu! 😂💎",
                     "Lại húp lộc! Vừa bỏ túi {amount} GTLM cực kỳ dễ dàng. Uy tín luôn nhé anh em! 🌟"
@@ -345,7 +347,7 @@ class BotBrain {
                     "Vừa chốt được món đồ cổ '$itemName' của bác @$seller, nhìn xịn xò hẳn! 😎",
                     "Mới tậu được '$itemName' từ bác @$seller. Ai có món nào hiếm hơn không? 🔥",
                     "Linh khí của '$itemName' (từ @$seller) đang giúp tôi đỏ hơn bao giờ hết!",
-                    "Bỏ cả đống GTLM ra để rước '$itemName' của bác @$seller về, đúng là đáng đồng tiền bát gạo!"
+                    "Bỏ cả đống GTLM ra để rước '$itemName' của bác @$seller về, đúng là đáng đồng GTLM bát gạo!"
                 ];
                 $msg = $flexMsgs[array_rand($flexMsgs)];
             } else if ($type === 'reporter_news') {

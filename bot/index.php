@@ -308,6 +308,21 @@ if (isset($_GET['ajax'])) {
         </script>
         </div>
 
+        <?php if (isset($_GET['msg'])): ?>
+            <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid var(--success); color: var(--success); padding: 15px; border-radius: 12px; margin-bottom: 20px; font-weight: 600; display: flex; align-items: center; justify-content: space-between;">
+                <span>✅ <?= htmlspecialchars($_GET['msg']) ?></span>
+                <button onclick="this.parentElement.style.display='none'" style="background:none; border:none; color:var(--success); font-size:18px; cursor:pointer;">&times;</button>
+            </div>
+            <script>
+                // Remove msg from URL without reloading
+                if (window.history.replaceState) {
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('msg');
+                    window.history.replaceState({path: url.href}, '', url.href);
+                }
+            </script>
+        <?php endif; ?>
+
         <div class="grid-stats">
             <div class="stat-card">
                 <div class="stat-label">Tổng Tài Sản Quân Đoàn</div>

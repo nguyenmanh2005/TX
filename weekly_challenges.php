@@ -1,17 +1,13 @@
 <?php
 session_start();
 require 'db_connect.php';
-
 if (!isset($_SESSION['Iduser'])) {
     header("Location: login.php");
     exit();
 }
-
 // Load theme
 require_once 'load_theme.php';
-
 $userId = $_SESSION['Iduser'];
-
 // Helpers
 function table_exists(mysqli $conn, string $name): bool
 {
@@ -19,52 +15,20 @@ function table_exists(mysqli $conn, string $name): bool
     $res = $conn->query("SHOW TABLES LIKE '{$safe}'");
     return $res && $res->num_rows > 0;
 }
-
 // Ensure tables
 if (!table_exists($conn, 'weekly_challenges')) {
-    $conn->query("CREATE TABLE IF NOT EXISTS weekly_challenges (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        week_start DATE NOT NULL,
-        week_end DATE NOT NULL,
-        challenge_type VARCHAR(50) NOT NULL,
-        challenge_name VARCHAR(255) NOT NULL,
-        description TEXT,
-        requirement_value INT NOT NULL,
-        reward_money INT DEFAULT 0,
-        reward_xp INT DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE KEY uniq_week_type (week_start, challenge_type)
-    )");
 }
-
 if (!table_exists($conn, 'weekly_challenge_progress')) {
-    $conn->query("CREATE TABLE IF NOT EXISTS weekly_challenge_progress (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        challenge_id INT NOT NULL,
-        progress INT DEFAULT 0,
-        is_completed TINYINT(1) DEFAULT 0,
-        completed_at TIMESTAMP NULL,
-        claimed TINYINT(1) DEFAULT 0,
-        claimed_at TIMESTAMP NULL,
-        FOREIGN KEY (user_id) REFERENCES users(Iduser) ON DELETE CASCADE,
-        FOREIGN KEY (challenge_id) REFERENCES weekly_challenges(id) ON DELETE CASCADE,
-        UNIQUE KEY uniq_user_challenge (user_id, challenge_id),
-        INDEX idx_user_challenge (user_id, challenge_id)
-    )");
 }
-
 // User info
 $stmt = $conn->prepare("SELECT Iduser, Name, Money FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
 $stmt->close();
-
 // Week window (Mon-Sun)
 $weekStart = date('Y-m-d', strtotime('monday this week'));
 $weekEnd = date('Y-m-d', strtotime('sunday this week'));
-
 // Load challenges for this week
 $challenges = [];
 $sql = "SELECT wc.*, 
@@ -82,7 +46,6 @@ $res = $stmt->get_result();
 while ($row = $res->fetch_assoc())
     $challenges[] = $row;
 $stmt->close();
-
 // Auto-generate if empty
 if (empty($challenges)) {
     $defaults = [
@@ -119,7 +82,6 @@ if (empty($challenges)) {
             'xp' => 250
         ],
     ];
-
     foreach ($defaults as $c) {
         $ins = $conn->prepare("INSERT INTO weekly_challenges (week_start, week_end, challenge_type, challenge_name, description, requirement_value, reward_money, reward_xp)
                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -138,13 +100,11 @@ if (empty($challenges)) {
         $challenges[] = $row;
     $stmt->close();
 }
-
 // Update progress
 if (!empty($challenges)) {
     require_once 'game_history_helper.php';
     $rangeStart = $weekStart . ' 00:00:00';
     $rangeEnd = $weekEnd . ' 23:59:59';
-
     foreach ($challenges as $c) {
         if ($c['is_completed'] == 1)
             continue;
@@ -183,7 +143,6 @@ if (!empty($challenges)) {
                 $q->close();
                 break;
         }
-
         $isDone = $progress >= (int) $c['requirement_value'] ? 1 : 0;
         $up = $conn->prepare("INSERT INTO weekly_challenge_progress (user_id, challenge_id, progress, is_completed, completed_at)
                               VALUES (?, ?, ?, ?, IF(? = 1, NOW(), NULL))
@@ -192,7 +151,6 @@ if (!empty($challenges)) {
         $up->execute();
         $up->close();
     }
-
     // reload
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("iss", $userId, $weekStart, $weekEnd);
@@ -206,7 +164,6 @@ if (!empty($challenges)) {
 ?>
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -226,7 +183,6 @@ if (!empty($challenges)) {
             color: #fff;
             font-family: 'Segoe UI', Arial, sans-serif;
         }
-
         .container {
             max-width: 960px;
             margin: 20px auto;
@@ -234,7 +190,6 @@ if (!empty($challenges)) {
             padding: 20px;
             border-radius: 16px;
         }
-
         .card {
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -242,7 +197,6 @@ if (!empty($challenges)) {
             padding: 16px;
             margin-bottom: 12px;
         }
-
         .progress {
             background: rgba(255, 255, 255, 0.1);
             border-radius: 999px;
@@ -250,14 +204,12 @@ if (!empty($challenges)) {
             height: 12px;
             margin: 10px 0;
         }
-
         .bar {
             height: 100%;
             background: linear-gradient(90deg, #60a5fa, #7c3aed);
             width: 0;
             transition: width .4s;
         }
-
         .badge {
             display: inline-block;
             padding: 6px 10px;
@@ -266,7 +218,6 @@ if (!empty($challenges)) {
             border: 1px solid rgba(255, 255, 255, 0.1);
             font-size: 12px;
         }
-
         button {
             padding: 10px 14px;
             border: none;
@@ -274,19 +225,16 @@ if (!empty($challenges)) {
             cursor: pointer;
             font-weight: 700;
         }
-
         .claim {
             background: #22c55e;
             color: #0f172a;
         }
-
         .claim:disabled {
             opacity: .6;
             cursor: not-allowed;
         }
     </style>
 </head>
-
 <body>
     <div class="container">
         <h2>🏆 Thử thách tuần (<?= date('d/m', strtotime($weekStart)) ?> - <?= date('d/m', strtotime($weekEnd)) ?>)</h2>
@@ -323,7 +271,6 @@ if (!empty($challenges)) {
             <?php endforeach; ?>
         <?php endif; ?>
     </div>
-
     <script>
         $('.claim').on('click', function () {
             const btn = $(this);
@@ -344,5 +291,4 @@ if (!empty($challenges)) {
         });
     </script>
 </body>
-
 </html>

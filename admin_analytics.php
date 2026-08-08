@@ -1,10 +1,14 @@
+﻿<?php
+$action = $_GET['action'] ?? 'manage';
+if ($action === 'revenue') { require_once __DIR__ . '/admin_modules/analytics_revenue.php'; exit(); }
+?>
 <?php
 session_start();
 require_once 'db_connect.php';
 require_once 'admin_helper.php';
 
 $currentUserId = (int)($_SESSION['Iduser'] ?? 0);
-if (!isAdmin($conn, $currentUserId)) { header("Location: 403.php"); exit(); }
+if (!isAdmin($conn, $currentUserId)) { header("Location: Shared/403/403.php"); exit(); }
 
 function gc($conn, $sql) {
     $res = $conn->query($sql);
@@ -20,15 +24,15 @@ function gRows($conn, $sql) {
 // Check table
 $tableCheck = $conn->query("SHOW TABLES LIKE 'site_analytics'");
 if (!$tableCheck || $tableCheck->num_rows == 0) {
-    die('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;background:#07090f;color:#e8eaf0;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}</style></head><body><div style="text-align:center;"><p style="font-size:24px">⚠️</p><p>Bảng <code>site_analytics</code> chưa được tạo.</p><p>Vui lòng chạy file <code>analytics_schema.sql</code> trong database.</p><a href="admin_dashboard.php" style="color:#4f8dff">← Quay lại Dashboard</a></div></body></html>');
+    die('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;background:#07090f;color:#e8eaf0;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}</style></head><body><div style="text-align:center;"><p style="font-size:24px">âš ï¸</p><p>Bảng <code>site_analytics</code> chÆ°a được tạo.</p><p>Vui lÃ²ng cháº¡y file <code>analytics_schema.sql</code> trong database.</p><a href="admin_dashboard.php" style="color:#4f8dff">â† Quay láº¡i Dashboard</a></div></body></html>');
 }
 
-// ── Date boundaries ──
+// â”€â”€ Date boundaries â”€â”€
 $today     = date('Y-m-d 00:00:00');
 $yday_s    = date('Y-m-d 00:00:00', strtotime('-1 day'));
 $yday_e    = date('Y-m-d 23:59:59', strtotime('-1 day'));
 
-// ── Core metrics ──
+// â”€â”€ Core metrics â”€â”€
 $total_req   = gc($conn,"SELECT COUNT(*) FROM site_analytics");
 $req_today   = gc($conn,"SELECT COUNT(*) FROM site_analytics WHERE visited_at >= '$today'");
 $req_yday    = gc($conn,"SELECT COUNT(*) FROM site_analytics WHERE visited_at BETWEEN '$yday_s' AND '$yday_e'");
@@ -49,7 +53,7 @@ $api_today   = gc($conn,"SELECT COUNT(*) FROM site_analytics WHERE page_url LIKE
 $api_yday    = gc($conn,"SELECT COUNT(*) FROM site_analytics WHERE page_url LIKE '%api_%' AND visited_at BETWEEN '$yday_s' AND '$yday_e'");
 $api_chg     = $api_yday > 0 ? (($api_today - $api_yday) / $api_yday * 100) : 0;
 
-// ── Time range filter for chart ──
+// â”€â”€ Time range filter for chart â”€â”€
 $range = $_GET['range'] ?? '7d';
 $trend_labels = $trend_req = $trend_vis = [];
 
@@ -83,7 +87,7 @@ if ($range === '24h') {
     }
 }
 
-// ── Summary Comparison Data ──
+// â”€â”€ Summary Comparison Data â”€â”€
 $comp_periods = [
     '24h' => date('Y-m-d H:i:s', strtotime('-24 hours')),
     '7d'  => date('Y-m-d 00:00:00', strtotime('-7 days')),
@@ -98,7 +102,7 @@ foreach ($comp_periods as $p => $start) {
     $comp_vis[] = gc($conn, "SELECT COUNT(DISTINCT ip_address) FROM site_analytics WHERE visited_at >= '$start'");
 }
 
-// ── Table data ──
+// â”€â”€ Table data â”€â”€
 $countries    = gRows($conn,"SELECT country, COUNT(*) as cnt FROM site_analytics GROUP BY country ORDER BY cnt DESC LIMIT 10");
 $top_pages    = gRows($conn,"SELECT page_url, COUNT(*) as cnt FROM site_analytics WHERE page_url NOT LIKE '%api_%' GROUP BY page_url ORDER BY cnt DESC LIMIT 10");
 $sources      = gRows($conn,"SELECT source, COUNT(*) as cnt FROM site_analytics GROUP BY source ORDER BY cnt DESC LIMIT 10");
@@ -126,7 +130,7 @@ foreach ($statuses as $s) { $st_labels[] = (string)$s['status_code']; $st_vals[]
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Website Analytics — gtlmanh.id.vn</title>
+<title>Website Analytics â€” gtlmanh.id.vn</title>
 <!-- Preload fonts and icons asynchronously to prevent render-blocking and enable instant load -->
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;600;700&display=swap"></noscript>
@@ -169,7 +173,7 @@ body::before{
 }
 .wrap{position:relative;z-index:1;max-width:1400px;margin:0 auto;}
 
-/* ── Header ── */
+/* â”€â”€ Header â”€â”€ */
 .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;padding-bottom:20px;border-bottom:1px solid var(--border);}
 .header-left .tag{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);margin-bottom:6px;}
 .header-left h1{font-size:22px;font-weight:700;letter-spacing:-.3px;}
@@ -181,7 +185,7 @@ body::before{
 .btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border2);}
 .btn-ghost:hover{background:var(--surface3);}
 
-/* ── Metric cards ── */
+/* â”€â”€ Metric cards â”€â”€ */
 .metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
 @media(max-width:960px){.metrics-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:520px){.metrics-grid{grid-template-columns:1fr}}
@@ -211,7 +215,7 @@ body::before{
 .up{color:var(--green)}.down{color:var(--red)}.stable{color:var(--muted)}
 .m-card-today{font-size:11px;color:var(--muted);margin-top:4px;}
 
-/* ── Chart section ── */
+/* â”€â”€ Chart section â”€â”€ */
 .chart-main{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:24px;margin-bottom:24px;}
 .section-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:18px;display:flex;align-items:center;gap:8px;}
 .section-title .dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
@@ -222,17 +226,17 @@ body::before{
 .dot-cyan{background:var(--cyan);}
 .dot-red{background:var(--red);}
 
-/* ── Grid layouts ── */
+/* â”€â”€ Grid layouts â”€â”€ */
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px;}
 @media(max-width:960px){.g2,.g3{grid-template-columns:1fr}}
 .g13{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px;}
 @media(max-width:960px){.g13{grid-template-columns:1fr}}
 
-/* ── Cards ── */
+/* â”€â”€ Cards â”€â”€ */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:22px;}
 
-/* ── Table ── */
+/* â”€â”€ Table â”€â”€ */
 .tbl{width:100%;border-collapse:collapse;}
 .tbl th{text-align:left;color:var(--muted);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:0 8px 10px;border-bottom:1px solid var(--border);}
 .tbl td{padding:11px 8px;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.03);}
@@ -241,7 +245,7 @@ body::before{
 .tbl .num{text-align:right;font-family:'Space Mono',monospace;font-weight:700;}
 .url-cell{max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
-/* ── Progress bar ── */
+/* â”€â”€ Progress bar â”€â”€ */
 .bar{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-top:6px;}
 .bar-fill{height:100%;border-radius:2px;transition:width .6s;}
 .bar-blue{background:linear-gradient(90deg,var(--blue),var(--cyan));}
@@ -252,7 +256,7 @@ body::before{
 .bar-red{background:var(--red);}
 .bar-orange{background:var(--orange);}
 
-/* ── Rank number ── */
+/* â”€â”€ Rank number â”€â”€ */
 .rank{
     display:inline-flex;align-items:center;justify-content:center;
     width:22px;height:22px;border-radius:6px;
@@ -263,7 +267,7 @@ body::before{
 .rank-2{background:rgba(79,141,255,.12);color:var(--blue);}
 .rank-3{background:rgba(52,211,153,.12);color:var(--green);}
 
-/* ── Status badge ── */
+/* â”€â”€ Status badge â”€â”€ */
 .status-badge{
     display:inline-block;padding:2px 8px;border-radius:5px;
     font-size:11px;font-weight:700;font-family:'Space Mono',monospace;
@@ -273,7 +277,7 @@ body::before{
 .s404{background:rgba(251,191,36,.12);color:var(--amber);}
 .s403,.s500{background:rgba(251,113,133,.12);color:var(--red);}
 
-/* ── Recent log ── */
+/* â”€â”€ Recent log â”€â”€ */
 .recent-row{
     display:flex;align-items:center;gap:10px;
     padding:9px 0;border-bottom:1px solid var(--border);
@@ -286,14 +290,14 @@ body::before{
 .rr-browser{color:var(--muted);white-space:nowrap;font-size:11px;width:80px;text-align:right;}
 .rr-time{color:var(--muted);font-size:11px;white-space:nowrap;font-family:'Space Mono',monospace;width:150px;text-align:right;margin-left:15px;}
 
-/* ── Scrollable ── */
+/* â”€â”€ Scrollable â”€â”€ */
 .scroll-box{max-height:320px;overflow-y:auto;}
 .scroll-box::-webkit-scrollbar{width:3px;}
 .scroll-box::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:2px;}
 
-/* ── Chart legend ── */
+/* â”€â”€ Chart legend â”€â”€ */
 .chart-wrap{position:relative;}
-/* ── Chart Filter ── */
+/* â”€â”€ Chart Filter â”€â”€ */
 .chart-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
 .range-selector{display:flex;background:var(--surface2);padding:3px;border-radius:10px;gap:2px;}
 .range-btn{
@@ -307,22 +311,22 @@ body::before{
 <body>
 <div class="wrap">
 
-<!-- ── HEADER ── -->
+<!-- â”€â”€ HEADER â”€â”€ -->
 <div class="header">
     <div class="header-left">
-        <div class="tag">⬡ Admin — Analytics</div>
-        <h1>Phân tích · <span class="domain">gtlmanh.id.vn</span></h1>
+        <div class="tag">â¬¡ Admin â€” Analytics</div>
+        <h1>PhÃ¢n tÃ­ch Â· <span class="domain">gtlmanh.id.vn</span></h1>
     </div>
     <div style="display:flex;align-items:center;gap:12px;">
         <span class="live-badge"><span class="live-dot"></span>Live Data</span>
-        <a href="admin_analytics1.php" class="btn btn-ghost" style="border-color: var(--amber); color: var(--amber);">
+        <a href="?action=revenue" class="btn btn-ghost" style="border-color: var(--amber); color: var(--amber);">
             <i class="fa fa-coins"></i> Revenue Breakdown
         </a>
         <a href="admin_dashboard.php" class="btn btn-ghost"><i class="fa fa-chevron-left"></i> Dashboard</a>
     </div>
 </div>
 
-<!-- ── METRIC CARDS ── -->
+<!-- â”€â”€ METRIC CARDS â”€â”€ -->
 <div class="metrics-grid">
     <?php
     $cards = [
@@ -343,15 +347,15 @@ body::before{
             <i class="fa fa-<?= $arrow ?>" style="font-size:10px"></i>
             <?= number_format(abs($chg), 1) ?>% so hôm qua
         </div>
-        <div class="m-card-today">Hôm nay: <strong><?= number_format($today_v) ?></strong> · Hôm qua: <?= number_format($yday_v) ?></div>
+        <div class="m-card-today">Hôm nay: <strong><?= number_format($today_v) ?></strong> Â· Hôm qua: <?= number_format($yday_v) ?></div>
     </div>
     <?php endforeach; ?>
 </div>
 
-<!-- ── TREND CHART ── -->
+<!-- â”€â”€ TREND CHART â”€â”€ -->
 <div class="chart-main">
     <div class="chart-header">
-        <div class="section-title" style="margin-bottom:0;"><span class="dot dot-blue"></span>Tổng quan yêu cầu</div>
+        <div class="section-title" style="margin-bottom:0;"><span class="dot dot-blue"></span>Tá»•ng quan yÃªu cáº§u</div>
         <div class="range-selector">
             <a href="?range=24h" class="range-btn <?= $range=='24h'?'active':'' ?>">24h</a>
             <a href="?range=7d" class="range-btn <?= $range=='7d'?'active':'' ?>">7 Ngày</a>
@@ -363,16 +367,16 @@ body::before{
     <canvas id="trendChart" height="70"></canvas>
 </div>
 
-<!-- ── GROWTH COMPARISON CHART ── -->
+<!-- â”€â”€ GROWTH COMPARISON CHART â”€â”€ -->
 <div class="chart-main">
-    <div class="section-title"><span class="dot dot-green"></span>So sánh tăng trưởng theo giai đoạn</div>
+    <div class="section-title"><span class="dot dot-green"></span>So sÃ¡nh tăng trưởng theo giai đoạn</div>
     <canvas id="compChart" height="70"></canvas>
 </div>
 
-<!-- ── COUNTRIES + TOP PAGES ── -->
+<!-- â”€â”€ COUNTRIES + TOP PAGES â”€â”€ -->
 <div class="g2">
     <div class="card">
-        <div class="section-title"><span class="dot dot-cyan"></span>Lượt truy cập theo quốc gia</div>
+        <div class="section-title"><span class="dot dot-cyan"></span>Lượt truy cập theo quá»‘c gia</div>
         <div class="scroll-box">
         <table class="tbl">
             <thead><tr><th style="width:32px">#</th><th>Quốc gia</th><th>Lượt</th><th style="width:30%"></th></tr></thead>
@@ -391,10 +395,10 @@ body::before{
     </div>
 
     <div class="card">
-        <div class="section-title"><span class="dot dot-amber"></span>Đường dẫn phổ biến</div>
+        <div class="section-title"><span class="dot dot-amber"></span>ÄÆ°á»ng dáº«n phổ biến</div>
         <div class="scroll-box">
         <table class="tbl">
-            <thead><tr><th style="width:32px">#</th><th>Đường dẫn</th><th>Lượt</th></tr></thead>
+            <thead><tr><th style="width:32px">#</th><th>ÄÆ°á»ng dáº«n</th><th>Lượt</th></tr></thead>
             <tbody>
             <?php foreach ($top_pages as $i => $p): ?>
             <tr>
@@ -409,7 +413,7 @@ body::before{
     </div>
 </div>
 
-<!-- ── SOURCES + STATUS ── -->
+<!-- â”€â”€ SOURCES + STATUS â”€â”€ -->
 <div class="g2">
     <div class="card">
         <div class="section-title"><span class="dot dot-green"></span>Nguồn truy cập</div>
@@ -428,7 +432,7 @@ body::before{
     </div>
 
     <div class="card">
-        <div class="section-title"><span class="dot dot-red"></span>Mã trạng thái HTTP</div>
+        <div class="section-title"><span class="dot dot-red"></span>MÃ£ tráº¡ng thÃ¡i HTTP</div>
         <?php $maxSt = $statuses[0]['cnt'] ?? 1; foreach ($statuses as $s):
             $sc = $s['status_code'];
             $bc = $sc == 200 ? 'bar-green' : (in_array($sc,[301,302]) ? 'bar-blue' : ($sc==404 ? 'bar-amber' : 'bar-red'));
@@ -444,10 +448,10 @@ body::before{
     </div>
 </div>
 
-<!-- ── OS + BROWSER + DEVICE ── -->
+<!-- â”€â”€ OS + BROWSER + DEVICE â”€â”€ -->
 <div class="g3">
     <div class="card">
-        <div class="section-title"><span class="dot dot-purple"></span>Hệ điều hành</div>
+        <div class="section-title"><span class="dot dot-purple"></span>Há»‡ Ä‘iá»u hÃ nh</div>
         <canvas id="osChart" height="200"></canvas>
         <div style="margin-top:14px;">
         <?php $maxOs = $os_dist[0]['cnt'] ?? 1; foreach ($os_dist as $o): ?>
@@ -476,7 +480,7 @@ body::before{
     </div>
 
     <div class="card">
-        <div class="section-title"><span class="dot dot-amber"></span>Thiết bị</div>
+        <div class="section-title"><span class="dot dot-amber"></span>Thiáº¿t bá»‹</div>
         <?php if (!empty($dev_labels)): ?>
         <canvas id="deviceChart" height="200"></canvas>
         <?php endif; ?>
@@ -494,13 +498,13 @@ body::before{
     </div>
 </div>
 
-<!-- ── RECENT REQUESTS ── -->
+<!-- â”€â”€ RECENT REQUESTS â”€â”€ -->
 <div class="card" style="margin-bottom:24px;">
     <div class="section-title"><span class="dot dot-cyan"></span>Yêu cầu gần đây</div>
     <div class="scroll-box">
     <?php foreach ($recent as $r): ?>
     <div class="recent-row">
-        <span class="rr-flag"><?= htmlspecialchars($r['country'] ?? '—') ?></span>
+        <span class="rr-flag"><?= htmlspecialchars($r['country'] ?? 'â€”') ?></span>
         <span class="rr-url"><?= htmlspecialchars($r['page_url'] ?? '') ?></span>
         <span class="rr-browser"><?= htmlspecialchars($r['browser'] ?? '') ?></span>
         <span class="rr-time"><?= htmlspecialchars($r['visited_at'] ?? '') ?></span>
@@ -516,7 +520,7 @@ Chart.defaults.color = '#636b80';
 Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
 Chart.defaults.font.family = "'DM Sans', sans-serif";
 
-// ── Trend line chart ──
+// â”€â”€ Trend line chart â”€â”€
 new Chart(document.getElementById('trendChart'), {
     type: 'line',
     data: {
@@ -569,7 +573,7 @@ new Chart(document.getElementById('trendChart'), {
     }
 });
 
-// ── OS donut ──
+// â”€â”€ OS donut â”€â”€
 const osColors = ['#a78bfa','#4f8dff','#22d3ee','#34d399','#fbbf24','#fb923c','#fb7185','#f472b6'];
 new Chart(document.getElementById('osChart'), {
     type: 'doughnut',
@@ -583,7 +587,7 @@ new Chart(document.getElementById('osChart'), {
     }
 });
 
-// ── Browser bar ──
+// â”€â”€ Browser bar â”€â”€
 new Chart(document.getElementById('browserChart'), {
     type: 'bar',
     data: {
@@ -606,7 +610,7 @@ new Chart(document.getElementById('browserChart'), {
     }
 });
 
-// ── Device pie ──
+// â”€â”€ Device pie â”€â”€
 <?php if (!empty($dev_labels)): ?>
 const devColors = ['#fbbf24','#4f8dff','#34d399','#a78bfa','#fb7185','#22d3ee','#fb923c','#f472b6'];
 new Chart(document.getElementById('deviceChart'), {
@@ -619,14 +623,14 @@ new Chart(document.getElementById('deviceChart'), {
 });
 <?php endif; ?>
 
-// ── Growth Comparison Bar Chart ──
+// â”€â”€ Growth Comparison Bar Chart â”€â”€
 new Chart(document.getElementById('compChart'), {
     type: 'bar',
     data: {
-        labels: ['24 Giờ', '7 Ngày', '30 Ngày', '1 Năm', 'Tất cả'],
+        labels: ['24 Giá»', '7 Ngày', '30 Ngày', '1 Năm', 'Tất cả'],
         datasets: [
             {
-                label: 'Tổng Yêu cầu',
+                label: 'Tá»•ng Yêu cầu',
                 data: <?= json_encode($comp_req) ?>,
                 backgroundColor: 'rgba(79,141,255,0.6)',
                 borderColor: '#4f8dff',
@@ -658,3 +662,5 @@ new Chart(document.getElementById('compChart'), {
 </script>
 </body>
 </html>
+
+

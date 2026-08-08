@@ -124,7 +124,7 @@ if ($action === 'start') {
         $cuoc = $_SESSION['cuoc'];
         $soDu -= $cuoc;
         $_SESSION['game_over'] = true;
-        $_SESSION['ketqua'] = "Tham Thì Chết Nhưng Hãy Nhớ Buông Bỏ Không Phải Là Hạnh Phúc";
+        $_SESSION['ketqua'] = "Bạn đã Quắc (Vượt 21 điểm)! Thua " . number_format($cuoc) . " gtlm";
         $_SESSION['ketquaShort'] = "Thua";
         $ketQuaClass = "bg-red-500 text-white animate-pulse";
 
@@ -177,7 +177,7 @@ if ($action === 'start') {
 
     if ($dealerTotal > 21 || $playerTotal > $dealerTotal) {
         $soDu += $cuoc;
-        $_SESSION['ketqua'] = "Không Thể Tin Nổi! Nhận " . number_format($cuoc) . " gtlm";
+        $_SESSION['ketqua'] = "Thắng rực rỡ! Nhận " . number_format($cuoc) . " gtlm";
         $_SESSION['ketquaShort'] = "Thắng";
         $ketQuaClass = "bg-green-500 text-white animate-bounce";
     } elseif ($playerTotal == $dealerTotal) {
@@ -316,6 +316,8 @@ $conn->close();
     <link rel="stylesheet" href="../assets/css/animations.css">
     <link rel="stylesheet" href="../assets/css/game-effects.css">
     <link rel="stylesheet" href="../assets/css/game-ui-enhancements.css">
+    <script src="../assets/js/game-effects.js"></script>
+    <script src="../assets/js/game-effects-auto.js"></script>
     <style>
         body {
             cursor: url('../chuot.png'), auto !important;
@@ -551,14 +553,17 @@ $conn->close();
         }
 
         .balance-display {
-            font-size: 22px;
+            font-size: clamp(16px, 2vw, 22px);
             font-weight: 700;
             color: var(--success-color);
             padding: 15px;
-            background: rgba(232, 245, 233, 0.5);
+            background: rgba(0, 0, 0, 0.3);
             border-radius: var(--border-radius);
             border: 2px solid var(--success-color);
             margin: 15px 0;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            line-height: 1.4;
         }
 
         @keyframes messageAppear {
@@ -625,13 +630,36 @@ $conn->close();
             color: #ffd700;
         }
         
-        .chart-box {
-            display: flex;
-            flex-direction: column;
-        }
-        
         .chart-box canvas {
             margin-top: 20px;
+        }
+
+        .chip-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+
+        .chip {
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+            color: #fff;
+            transition: 0.3s;
+            user-select: none;
+        }
+
+        .chip:hover, .chip.active {
+            background: #2563eb;
+            color: #fff;
+            border-color: #2563eb;
+            transform: scale(1.1);
         }
 
     </style>
@@ -639,53 +667,10 @@ $conn->close();
 
 <body class="py-10" style="background: <?= $bgGradientCSS ?>; background-attachment: fixed; min-height: 100vh;">
 
-    <div class="max-w-7xl mx-auto px-4">
-        <div class="flex flex-col lg:flex-row gap-6">
-            <!-- Lịch sử chơi -->
-            <div class="bg-white p-6 rounded-xl shadow-xl lg:w-1/3">
-                <h2 class="text-2xl font-bold mb-4 text-center">Lịch sử chơi</h2>
-                <div class="overflow-x-auto">
-                    <table class="table-auto w-full text-left border-collapse border border-gray-300">
-                        <thead>
-                            <tr class="bg-gray-200">
-                                <th class="border border-gray-300 px-3 py-1">Thời gian</th>
-                                <th class="border border-gray-300 px-3 py-1">Kết quả</th>
-                                <th class="border border-gray-300 px-3 py-1">Cược</th>
-                                <th class="border border-gray-300 px-3 py-1">Điểm bạn</th>
-                                <th class="border border-gray-300 px-3 py-1">Điểm dealer</th>
-                                <th class="border border-gray-300 px-3 py-1">Số Gtlm trước</th>
-                                <th class="border border-gray-300 px-3 py-1">Số Gtlm sau</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (count($lichSu) === 0): ?>
-                                <tr>
-                                    <td colspan="7" class="text-center p-4">Chưa có lịch sử chơi</td>
-                                </tr>
-                            <?php else: ?>
-                                <?php foreach ($lichSu as $lich): ?>
-                                    <tr>
-                                        <td class="border border-gray-300 px-3 py-1"><?= htmlspecialchars($lich['PlayedAt']) ?>
-                                        </td>
-                                        <td class="border border-gray-300 px-3 py-1"><?= htmlspecialchars($lich['Result']) ?>
-                                        </td>
-                                        <td class="border border-gray-300 px-3 py-1"><?= number_format($lich['Bet']) ?></td>
-                                        <td class="border border-gray-300 px-3 py-1"><?= $lich['PlayerScore'] ?></td>
-                                        <td class="border border-gray-300 px-3 py-1"><?= $lich['DealerScore'] ?></td>
-                                        <td class="border border-gray-300 px-3 py-1"><?= number_format($lich['MoneyBefore']) ?>
-                                        </td>
-                                        <td class="border border-gray-300 px-3 py-1"><?= number_format($lich['MoneyAfter']) ?>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+    <div class="max-w-3xl mx-auto px-4">
+        <!-- Blackjack Game -->
+        <div class="bg-white p-8 rounded-xl shadow-xl w-full relative">
 
-            <!-- Blackjack Game -->
-            <div class="bg-white p-8 rounded-xl shadow-xl lg:w-1/3">
                 <h1 class="text-3xl font-bold mb-6 text-center">Bờ Lách Jack</h1>
 
                 <h2 class="text-xl mb-2 text-center">Xin chào,
@@ -699,12 +684,22 @@ $conn->close();
                     <div id="start-form-container"
                         class="<?= (!isset($_SESSION['player_cards']) || $gameOver) ? '' : 'hidden' ?>">
                         <form id="start-form" method="POST" class="max-w-md mx-auto mb-6">
-                            <input type="number" name="cuoc" placeholder="Nhập số gtlm cược"
-                                class="w-full px-4 py-2 border rounded mb-3" required min="1" max="<?= $soDu ?>">
+                            
+                            <div class="chip-selector">
+                                <div class="chip active" data-value="10000">10K</div>
+                                <div class="chip" data-value="50000">50K</div>
+                                <div class="chip" data-value="100000">100K</div>
+                                <div class="chip" data-value="500000">500K</div>
+                                <div class="chip" data-value="1000000">1M</div>
+                                <div class="chip" data-value="5000000">5M</div>
+                                <div class="chip" data-value="allin">MAX</div>
+                            </div>
+                            
+                            <input type="number" name="cuoc" id="bet-amount" placeholder="Nhập số gtlm cược" value="10000"
+                                class="w-full px-4 py-2 border rounded mb-3 text-black font-bold text-lg" required min="1" max="<?= $soDu ?>">
                             <input type="hidden" name="action" value="start">
                             <button type="submit"
-                                class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 w-full">Bắt đầu ván
-                                mới</button>
+                                class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 w-full font-bold text-lg">BẮT ĐẦU VÁN MỚI</button>
                         </form>
                     </div>
 
@@ -779,12 +774,6 @@ $conn->close();
                         lại Trang Chủ</a>
                 </div>
             </div>
-
-            <!-- Biểu đồ thống kê -->
-            <div class="bg-white p-6 rounded-xl shadow-xl lg:w-1/3">
-                <h2 class="text-2xl font-bold mb-4 text-center">Thống kê kết quả</h2>
-                <canvas id="chartKetQua" width="300" height="300"></canvas>
-            </div>
         </div>
     </div>
 
@@ -805,34 +794,37 @@ $conn->close();
                     card.style.animationDelay = (index * 0.1) + 's';
                 }, 100);
             });
-        });
 
-        const ctx = document.getElementById('chartKetQua').getContext('2d');
-        window.gameChart = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Thắng', 'Thua', 'Hòa'],
-                datasets: [{
-                    label: 'Số trận',
-                    data: [<?= $thang ?>, <?= $thua ?>, <?= $hoa ?>],
-                    backgroundColor: ['#22c55e', '#ef4444', '#facc15'],
-                    borderColor: ['#16a34a', '#b91c1c', '#eab308'],
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                    },
-                    title: {
-                        display: true,
-                        text: 'Biểu đồ tỷ lệ kết quả các ván chơi'
+            // Chip logic
+            document.querySelectorAll('.chip').forEach(chip => {
+                chip.addEventListener('click', function() {
+                    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+                    this.classList.add('active');
+                    const val = this.getAttribute('data-value');
+                    if (val === 'allin') {
+                        document.getElementById('bet-amount').value = <?= $soDu ?>;
+                    } else {
+                        document.getElementById('bet-amount').value = val;
                     }
-                }
-            }
-        });
+                });
+            });
+
+            // Trigger GameEffects if result exists
+            <?php if (!empty($ketQuaDisplay) && $gameOver): ?>
+                const msg = <?= json_encode($ketQuaDisplay) ?>;
+                const msgClass = <?= json_encode($ketQuaClass) ?>;
+                
+                setTimeout(() => {
+                    if (typeof GameEffects !== 'undefined') {
+                        if (msgClass.includes('bg-green')) {
+                            GameEffects.showWin(<?= isset($_SESSION['cuoc']) ? $_SESSION['cuoc'] * 2 : 0 ?>, msg);
+                        } else if (msgClass.includes('bg-red')) {
+                            GameEffects.showLoss('Rất tiếc', msg);
+                        }
+                    }
+                }, 500);
+            <?php endif; ?>
+
 
         // Initialize Three.js Background
         (function () {
@@ -849,7 +841,7 @@ $conn->close();
             };
 
             const prefix = window.location.pathname.includes('/games/') ? '../' : '';
-            const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
+            const scripts = ['threejs-background.js'];
 
             scripts.forEach(src => {
                 const s = document.createElement('script');
@@ -860,115 +852,6 @@ $conn->close();
         })();
     </script>
 
-    <div class="bottom-section">
-        <div class="history-box">
-            <h3>📋 Lịch sử chơi (10 lần gần nhất)</h3>
-            <div class="table-responsive">
-                <table class="w-full text-left border-collapse" id="historyTable">
-                    <thead>
-                        <tr class="bg-white/10 text-yellow-400">
-                            <th class="p-3 border border-white/10">ID</th>
-                            <th class="p-3 border border-white/10 text-right">Cược</th>
-                            <th class="p-3 border border-white/10">Kết quả</th>
-                            <th class="p-3 border border-white/10 text-right">Thắng</th>
-                            <th class="p-3 border border-white/10 text-right">Thời gian</th>
-                        </tr>
-                    </thead>
-                    <tbody id="historyBody">
-                        <tr>
-                            <td colspan="5" class="text-center p-6 text-gray-400 italic">Chưa có lượt chơi nào</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
 
-        <div class="chart-box">
-            <h3>📊 Thống kê kết quả</h3>
-            <div class="stats-container grid grid-cols-2 gap-4 mb-6">
-                <div class="stat-item wins p-4 rounded-lg bg-green-500/10 border-l-4 border-green-500 text-center">
-                    <div class="label text-xs text-gray-400 uppercase tracking-wider mb-1">Lần Thắng</div>
-                    <div class="value text-2xl font-bold text-green-400"><?= $thang ?></div>
-                </div>
-                <div class="stat-item losses p-4 rounded-lg bg-red-500/10 border-l-4 border-red-500 text-center">
-                    <div class="label text-xs text-gray-400 uppercase tracking-wider mb-1">Lần Thua</div>
-                    <div class="value text-2xl font-bold text-red-400"><?= $thua ?></div>
-                </div>
-            </div>
-            <div class="relative h-[250px]">
-                <canvas id="gameChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        async function loadBjHistory() {
-            try {
-                const response = await fetch('bj.php?action=get_history', {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                });
-                if (!response.ok) return;
-                const data = await response.json();
-                if (data.success && data.history && data.history.length > 0) {
-                    const tbody = document.getElementById('historyBody');
-                    if (tbody) {
-                        tbody.innerHTML = '';
-                        data.history.slice(0, 10).forEach((record, index) => {
-                            const newRow = document.createElement('tr');
-                            newRow.className = 'border-b border-white/5 hover:bg-white/5 transition-colors';
-                            newRow.style.animation = `slideIn 0.5s ease-out forwards ${index * 0.05}s`;
-                            newRow.style.opacity = '0';
-                            
-                            const winVal = parseInt(record.WinAmount);
-                            const winColor = winVal > 0 ? 'text-green-400' : 'text-red-400';
-                            
-                            newRow.innerHTML = `
-                                <td class="p-3 border border-white/10 text-center text-gray-300 font-mono text-sm">${record.Id}</td>
-                                <td class="p-3 border border-white/10 text-right text-gray-200">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                                <td class="p-3 border border-white/10 text-gray-200 font-semibold">${record.Result || '-'}</td>
-                                <td class="p-3 border border-white/10 text-right font-bold ${winColor}">${winVal.toLocaleString('vi-VN')}</td>
-                                <td class="p-3 border border-white/10 text-right text-xs text-gray-400">${record.Time}</td>
-                            `;
-                            tbody.appendChild(newRow);
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error('Load history error:', error);
-            }
-        }
-
-        // Initialize Charts and Events
-        document.addEventListener('DOMContentLoaded', function() {
-            loadBjHistory();
-            
-            const ctxBj = document.getElementById('gameChart');
-            if (ctxBj) {
-                new Chart(ctxBj.getContext('2d'), {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Thắng', 'Thua', 'Hòa'],
-                        datasets: [{
-                            data: [<?= $thang ?>, <?= $thua ?>, <?= $hoa ?>],
-                            backgroundColor: ['rgba(74, 222, 128, 0.7)', 'rgba(255, 107, 107, 0.7)', 'rgba(250, 204, 21, 0.7)'],
-                            borderColor: ['rgba(74, 222, 128, 1)', 'rgba(255, 107, 107, 1)', 'rgba(250, 204, 21, 1)'],
-                            borderWidth: 2,
-                            borderRadius: 4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: { color: 'rgba(255, 255, 255, 0.8)', padding: 20, usePointStyle: true }
-                            }
-                        }
-                    }
-                });
-            }
-        });
-    </script>
 </body>
 </html>

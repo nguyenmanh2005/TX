@@ -1,6 +1,7 @@
 <?php
 session_start();
 require 'db_connect.php';
+require_once 'game_history_helper.php';
 
 header('Content-Type: application/json');
 
@@ -212,6 +213,9 @@ elseif ($action === 'spin') {
     );
     $insertStmt->execute();
     $insertStmt->close();
+
+    // Hook: Cập nhật nhiệm vụ sự kiện
+    updateEventMissionProgress($conn, $userId, 'Lucky Wheel', 0, $finalRewardValue, ($finalRewardValue > 0));
 
     $message = '';
     if ($selectedReward['reward_type'] === 'money' && $finalRewardValue > 0) {

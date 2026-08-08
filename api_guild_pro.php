@@ -36,7 +36,7 @@ switch ($action) {
         $stmt->close();
 
         // 2. Lãnh địa (Sử dụng Prepared Statement)
-        $stmt = $conn->prepare("SELECT * FROM guild_territories WHERE owner_guild_id = ?");
+        $stmt = $conn->prepare("SELECT * FROM guild_territories WHERE guild_id = ?");
         $stmt->bind_param("i", $guildId);
         $stmt->execute();
         $territories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);

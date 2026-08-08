@@ -15,9 +15,17 @@ if (!isset($_SESSION['Iduser'])) {
 $userId = $_SESSION['Iduser'];
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
-// Lấy sự kiện đang active (Seasonal Event) — KHÔNG bao gồm draft
-// Sử dụng getActiveSeasonalEvent() từ api_event_helper.php để tập trung logic query
-$event   = getActiveSeasonalEvent($conn);
+$previewEventId = isset($_GET['preview_event_id']) ? (int)$_GET['preview_event_id'] : (isset($_POST['preview_event_id']) ? (int)$_POST['preview_event_id'] : 0);
+
+if ($previewEventId > 0) {
+    $stmt = $conn->prepare("SELECT * FROM seasonal_events WHERE id = ?");
+    $stmt->bind_param("i", $previewEventId);
+    $stmt->execute();
+    $event = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+} else {
+    $event = getActiveSeasonalEvent($conn);
+}
 $eventId = $event['id'] ?? 0;
 
 // Note: event_exchange_history được tạo qua sql/create_event_exchange_history.sql
@@ -99,9 +107,11 @@ switch ($action) {
         }
 
         // 1. Tự động kiểm tra và reset nhiệm vụ chu kỳ hằng ngày/tuần
-        checkAndResetMissionProgress($conn, $userId, $eventId);
+        if ($previewEventId == 0) {
+            checkAndResetMissionProgress($conn, $userId, $eventId);
+        }
 
-        // 3. Tiền tệ và điểm của User trong event này (Đã được prepare an toàn)
+        // 3. GTLM tệ và điểm của User trong event này (Đã được prepare an toàn)
         $stmtUserEvent = $conn->prepare("SELECT * FROM user_event_data WHERE user_id = ? AND event_id = ?");
         $stmtUserEvent->bind_param("ii", $userId, $eventId);
         $stmtUserEvent->execute();
@@ -581,7 +591,9 @@ switch ($action) {
             $title = $stmtTitle->get_result()->fetch_assoc();
             $stmtTitle->close();
             if ($title) {
-                $html = "<div class='{$title['css_class']}' style='font-size:20px; font-weight:bold;'>[Tên User] {$title['name']}</div>";
+                $safeCssClass = htmlspecialchars($title['css_class'] ?? '', ENT_QUOTES, 'UTF-8');
+                $safeName     = htmlspecialchars($title['name'] ?? '', ENT_QUOTES, 'UTF-8');
+                $html = "<div class='{$safeCssClass}' style='font-size:20px; font-weight:bold;'>[Tên User] {$safeName}</div>";
             }
         } elseif ($itemType === 'chat_frame') {
             $stmtFrame = $conn->prepare("SELECT * FROM chat_frames WHERE id = ?");
@@ -590,7 +602,8 @@ switch ($action) {
             $frame = $stmtFrame->get_result()->fetch_assoc();
             $stmtFrame->close();
             if ($frame) {
-                $html = "<div style='{$frame['css_style']} padding:15px; border-radius:10px; display:inline-block;'>Xin chào! Khung chat của tôi nè.</div>";
+                $safeCss = htmlspecialchars($frame['css_style'] ?? '', ENT_QUOTES, 'UTF-8');
+                $html = "<div style='{$safeCss} padding:15px; border-radius:10px; display:inline-block;'>Xin chào! Khung chat của tôi nè.</div>";
             }
         } elseif ($itemType === 'theme') {
             $stmtTheme = $conn->prepare("SELECT * FROM themes WHERE id = ?");
@@ -599,7 +612,9 @@ switch ($action) {
             $theme = $stmtTheme->get_result()->fetch_assoc();
             $stmtTheme->close();
             if ($theme) {
-                $html = "<div style='background: {$theme['bg_gradient']}; padding: 30px; border-radius: 10px; color: white; font-weight: bold;'>Giao diện: {$theme['name']}</div>";
+                $safeBg   = htmlspecialchars($theme['bg_gradient'] ?? '', ENT_QUOTES, 'UTF-8');
+                $safeName = htmlspecialchars($theme['name'] ?? '', ENT_QUOTES, 'UTF-8');
+                $html = "<div style='background: {$safeBg}; padding: 30px; border-radius: 10px; color: white; font-weight: bold;'>Giao diện: {$safeName}</div>";
             }
         } elseif ($itemType === 'cursor') {
             $stmtCursor = $conn->prepare("SELECT * FROM cursors WHERE id = ?");
@@ -608,7 +623,8 @@ switch ($action) {
             $cursor = $stmtCursor->get_result()->fetch_assoc();
             $stmtCursor->close();
             if ($cursor) {
-                $html = "<div style=\"cursor: url('{$cursor['image_url']}'), auto; height: 100px; line-height: 100px; border: 2px dashed #ccc; border-radius:10px;\">Di chuột vào đây!</div>";
+                $safeUrl = htmlspecialchars($cursor['image_url'] ?? '', ENT_QUOTES, 'UTF-8');
+                $html = "<div style=\"cursor: url('{$safeUrl}'), auto; height: 100px; line-height: 100px; border: 2px dashed #ccc; border-radius:10px;\">Di chuột vào đây!</div>";
             }
         }
         
@@ -699,19 +715,34 @@ switch ($action) {
             exit;
         }
 
-        // Tải top 50 bảng xếp hạng điểm vinh danh tích lũy
-        $stmtLeaderboard = $conn->prepare("
-            SELECT u.Name as username, u.Avatar as avatar, d.points, d.event_currency
-            FROM user_event_data d
-            JOIN users u ON d.user_id = u.Iduser
-            WHERE d.event_id = ?
-            ORDER BY d.points DESC, d.id ASC
-            LIMIT 50
-        ");
-        $stmtLeaderboard->bind_param("i", $eventId);
-        $stmtLeaderboard->execute();
-        $leaderboard = $stmtLeaderboard->get_result()->fetch_all(MYSQLI_ASSOC);
-        $stmtLeaderboard->close();
+        // Cache configuration (60 seconds)
+        $cacheFile = sys_get_temp_dir() . '/event_leaderboard_' . $eventId . '.json';
+        $cacheTime = 60;
+        
+        $leaderboard = [];
+        if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < $cacheTime) {
+            $leaderboard = json_decode(file_get_contents($cacheFile), true);
+            if (!is_array($leaderboard)) $leaderboard = [];
+        }
+
+        if (empty($leaderboard)) {
+            // Tải top 50 bảng xếp hạng điểm vinh danh tích lũy
+            $stmtLeaderboard = $conn->prepare("
+                SELECT u.Name as username, u.Avatar as avatar, d.points, d.event_currency
+                FROM user_event_data d
+                JOIN users u ON d.user_id = u.Iduser
+                WHERE d.event_id = ?
+                ORDER BY d.points DESC, d.id ASC
+                LIMIT 50
+            ");
+            $stmtLeaderboard->bind_param("i", $eventId);
+            $stmtLeaderboard->execute();
+            $leaderboard = $stmtLeaderboard->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmtLeaderboard->close();
+            
+            // Lưu cache
+            file_put_contents($cacheFile, json_encode($leaderboard));
+        }
 
         // Tính thứ hạng cá nhân
         $myRank = '--';

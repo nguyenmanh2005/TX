@@ -125,7 +125,7 @@ class BaucuaEnhanced {
 
     showError(message) {
         // Có thể dùng toast notification hoặc alert
-        alert(message);
+        if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String(message), 'info'); } else { alert(message); };
     }
 
     // Highlight winning dice

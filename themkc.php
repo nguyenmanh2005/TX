@@ -343,13 +343,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 if (!frameName) {
                     e.preventDefault();
-                    alert('Vui lòng nhập tên khung!');
+                    if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Vui lòng nhập tên khung!'), 'warning'); } else { alert('Vui lòng nhập tên khung!'); };
                     return false;
                 }
                 
                 if (!imageFile) {
                     e.preventDefault();
-                    alert('Vui lòng chọn hình ảnh!');
+                    if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Vui lòng chọn hình ảnh!'), 'warning'); } else { alert('Vui lòng chọn hình ảnh!'); };
                     return false;
                 }
                 

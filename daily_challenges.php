@@ -1,54 +1,21 @@
 <?php
 session_start();
 require 'db_connect.php';
-
 if (!isset($_SESSION['Iduser'])) {
     header("Location: login.php");
     exit();
 }
-
 // Load theme
 require_once 'load_theme.php';
-
 $userId = $_SESSION['Iduser'];
-
 // Kiểm tra bảng daily_challenges có tồn tại không
 $checkTable = $conn->query("SHOW TABLES LIKE 'daily_challenges'");
 $tableExists = $checkTable && $checkTable->num_rows > 0;
-
 // Tạo bảng nếu chưa có
 if (!$tableExists) {
-    $createTable = "CREATE TABLE IF NOT EXISTS daily_challenges (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        challenge_date DATE NOT NULL,
-        challenge_type VARCHAR(50) NOT NULL,
-        challenge_name VARCHAR(255) NOT NULL,
-        description TEXT,
-        requirement_value INT NOT NULL,
-        reward_money INT DEFAULT 0,
-        reward_xp INT DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE KEY unique_date_type (challenge_date, challenge_type)
-    )";
     $conn->query($createTable);
-
-    $createProgress = "CREATE TABLE IF NOT EXISTS daily_challenge_progress (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        challenge_id INT NOT NULL,
-        progress INT DEFAULT 0,
-        is_completed TINYINT(1) DEFAULT 0,
-        completed_at TIMESTAMP NULL,
-        claimed TINYINT(1) DEFAULT 0,
-        claimed_at TIMESTAMP NULL,
-        FOREIGN KEY (user_id) REFERENCES users(Iduser) ON DELETE CASCADE,
-        FOREIGN KEY (challenge_id) REFERENCES daily_challenges(id) ON DELETE CASCADE,
-        UNIQUE KEY unique_user_challenge (user_id, challenge_id),
-        INDEX idx_user_date (user_id, challenge_id)
-    )";
     $conn->query($createProgress);
 }
-
 // Lấy thông tin người dùng
 $sql = "SELECT Iduser, Name, Money FROM users WHERE Iduser = ?";
 $stmt = $conn->prepare($sql);
@@ -57,11 +24,9 @@ $stmt->execute();
 $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 $stmt->close();
-
 // Lấy thử thách hôm nay
 $today = date('Y-m-d');
 $challenges = [];
-
 if ($tableExists) {
     $sql = "SELECT dc.*, 
             COALESCE(dcp.progress, 0) as user_progress,
@@ -79,7 +44,6 @@ if ($tableExists) {
         $challenges[] = $row;
     }
     $stmt->close();
-
     // Nếu chưa có thử thách hôm nay, tạo tự động
     if (empty($challenges)) {
         $autoChallenges = [
@@ -108,7 +72,6 @@ if ($tableExists) {
                 'reward_xp' => 150
             ]
         ];
-
         foreach ($autoChallenges as $challenge) {
             $sql = "INSERT INTO daily_challenges (challenge_date, challenge_type, challenge_name, description, requirement_value, reward_money, reward_xp)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -127,7 +90,6 @@ if ($tableExists) {
             $stmt->execute();
             $challengeId = $conn->insert_id;
             $stmt->close();
-
             // Tạo progress cho user
             $sql = "INSERT INTO daily_challenge_progress (user_id, challenge_id, progress)
                     VALUES (?, ?, 0)
@@ -137,7 +99,6 @@ if ($tableExists) {
             $stmt->execute();
             $stmt->close();
         }
-
         // Reload challenges
         $sql = "SELECT dc.*, 
                 COALESCE(dcp.progress, 0) as user_progress,
@@ -158,19 +119,15 @@ if ($tableExists) {
         $stmt->close();
     }
 }
-
 // Cập nhật progress từ game_history
 if ($tableExists && !empty($challenges)) {
     require_once 'game_history_helper.php';
-
     foreach ($challenges as $challenge) {
         if ($challenge['is_completed'] == 1)
             continue;
-
         $progress = 0;
         $todayStart = $today . ' 00:00:00';
         $todayEnd = $today . ' 23:59:59';
-
         switch ($challenge['challenge_type']) {
             case 'play_games':
                 $sql = "SELECT COUNT(*) as count FROM game_history 
@@ -182,7 +139,6 @@ if ($tableExists && !empty($challenges)) {
                 $progress = $result->fetch_assoc()['count'] ?? 0;
                 $stmt->close();
                 break;
-
             case 'win_games':
                 $sql = "SELECT COUNT(*) as count FROM game_history 
                         WHERE user_id = ? AND is_win = 1 AND played_at BETWEEN ? AND ?";
@@ -193,7 +149,6 @@ if ($tableExists && !empty($challenges)) {
                 $progress = $result->fetch_assoc()['count'] ?? 0;
                 $stmt->close();
                 break;
-
             case 'earn_money':
                 $sql = "SELECT SUM(win_amount - bet_amount) as total FROM game_history 
                         WHERE user_id = ? AND is_win = 1 AND played_at BETWEEN ? AND ?";
@@ -205,7 +160,6 @@ if ($tableExists && !empty($challenges)) {
                 $stmt->close();
                 break;
         }
-
         // Cập nhật progress
         $isCompleted = ($progress >= $challenge['requirement_value']) ? 1 : 0;
         $sql = "UPDATE daily_challenge_progress 
@@ -216,7 +170,6 @@ if ($tableExists && !empty($challenges)) {
         $stmt->bind_param("iissi", $progress, $isCompleted, $completedAt, $userId, $challenge['id']);
         $stmt->execute();
         $stmt->close();
-
         // Cập nhật lại challenge trong array
         $challenge['user_progress'] = $progress;
         $challenge['is_completed'] = $isCompleted;
@@ -225,7 +178,6 @@ if ($tableExists && !empty($challenges)) {
 ?>
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -250,11 +202,9 @@ if ($tableExists && !empty($challenges)) {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             animation: fadeIn 0.6s ease;
         }
-
         * {
             cursor: inherit;
         }
-
         button,
         a,
         input[type="button"],
@@ -263,12 +213,10 @@ if ($tableExists && !empty($challenges)) {
         select {
             cursor: url('img/tay.png'), url('../img/tay.png'), pointer !important;
         }
-
         .container {
             max-width: 1200px;
             margin: 0 auto;
         }
-
         .header-challenges {
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
@@ -283,7 +231,6 @@ if ($tableExists && !empty($challenges)) {
             position: relative;
             overflow: hidden;
         }
-
         .header-challenges::before {
             content: '';
             position: absolute;
@@ -294,7 +241,6 @@ if ($tableExists && !empty($challenges)) {
             background: radial-gradient(circle, rgba(102, 126, 234, 0.05) 0%, transparent 70%);
             animation: float 6s ease-in-out infinite;
         }
-
         .header-challenges h1 {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             -webkit-background-clip: text;
@@ -306,14 +252,12 @@ if ($tableExists && !empty($challenges)) {
             position: relative;
             z-index: 1;
         }
-
         .challenges-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 24px;
             margin-bottom: 30px;
         }
-
         .challenge-card {
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
@@ -326,7 +270,6 @@ if ($tableExists && !empty($challenges)) {
             overflow: hidden;
             animation: fadeInUp 0.6s ease backwards;
         }
-
         .challenge-card::before {
             content: '';
             position: absolute;
@@ -338,7 +281,6 @@ if ($tableExists && !empty($challenges)) {
             opacity: 0;
             transition: opacity 0.4s ease;
         }
-
         .challenge-card::after {
             content: '';
             position: absolute;
@@ -349,41 +291,33 @@ if ($tableExists && !empty($challenges)) {
             background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
             transition: left 0.5s ease;
         }
-
         .challenge-card.completed {
             border-color: #28a745;
             background: linear-gradient(135deg, rgba(40, 167, 69, 0.15) 0%, rgba(255, 255, 255, 0.98) 100%);
         }
-
         .challenge-card.completed::before {
             background: radial-gradient(circle, rgba(40, 167, 69, 0.15) 0%, transparent 70%);
         }
-
         .challenge-card:hover {
             transform: translateY(-10px) scale(1.04) rotate(1deg);
             box-shadow: 0 18px 45px rgba(0, 0, 0, 0.25),
                 0 0 0 1px rgba(102, 126, 234, 0.1);
         }
-
         .challenge-card:hover::before {
             opacity: 1;
         }
-
         .challenge-card:hover::after {
             left: 100%;
         }
-
         .challenge-card.completed:hover {
             box-shadow: 0 18px 45px rgba(40, 167, 69, 0.3),
                 0 0 30px rgba(40, 167, 69, 0.2);
         }
-
         .challenge-icon {
             font-size: 56px;
             text-align: center;
             margin-bottom: 15px;
         }
-
         .challenge-name {
             font-size: 24px;
             font-weight: 700;
@@ -391,18 +325,15 @@ if ($tableExists && !empty($challenges)) {
             margin-bottom: 10px;
             text-align: center;
         }
-
         .challenge-description {
             color: #666;
             margin-bottom: 20px;
             text-align: center;
             min-height: 50px;
         }
-
         .challenge-progress {
             margin: 20px 0;
         }
-
         .progress-bar {
             width: 100%;
             height: 12px;
@@ -411,7 +342,6 @@ if ($tableExists && !empty($challenges)) {
             overflow: hidden;
             position: relative;
         }
-
         .progress-fill {
             height: 100%;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -420,7 +350,6 @@ if ($tableExists && !empty($challenges)) {
             position: relative;
             overflow: hidden;
         }
-
         .progress-fill::after {
             content: '';
             position: absolute;
@@ -431,7 +360,6 @@ if ($tableExists && !empty($challenges)) {
             background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
             animation: shimmer 2s infinite;
         }
-
         .progress-text {
             text-align: center;
             margin-top: 8px;
@@ -439,7 +367,6 @@ if ($tableExists && !empty($challenges)) {
             font-weight: 600;
             color: #666;
         }
-
         .challenge-reward {
             display: flex;
             justify-content: center;
@@ -447,7 +374,6 @@ if ($tableExists && !empty($challenges)) {
             margin-top: 20px;
             flex-wrap: wrap;
         }
-
         .reward-item {
             display: flex;
             align-items: center;
@@ -458,7 +384,6 @@ if ($tableExists && !empty($challenges)) {
             font-weight: 600;
             color: #667eea;
         }
-
         .claim-btn {
             width: 100%;
             padding: 14px;
@@ -475,7 +400,6 @@ if ($tableExists && !empty($challenges)) {
             overflow: hidden;
             box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
         }
-
         .claim-btn::before {
             content: '';
             position: absolute;
@@ -488,23 +412,19 @@ if ($tableExists && !empty($challenges)) {
             transform: translate(-50%, -50%);
             transition: width 0.6s, height 0.6s;
         }
-
         .claim-btn:hover::before {
             width: 300px;
             height: 300px;
         }
-
         .claim-btn:hover {
             transform: translateY(-3px) scale(1.05);
             box-shadow: 0 8px 25px rgba(40, 167, 69, 0.5);
         }
-
         .claim-btn:disabled {
             background: #ccc;
             cursor: not-allowed;
             opacity: 0.6;
         }
-
         .claimed-badge {
             width: 100%;
             padding: 14px;
@@ -519,14 +439,12 @@ if ($tableExists && !empty($challenges)) {
         }
     </style>
 </head>
-
 <body>
     <div class="container">
         <div class="header-challenges">
             <h1>🎯 Thử Thách Hàng Ngày</h1>
             <p style="color: #666; margin-top: 10px; font-size: 18px;">Hoàn thành thử thách để nhận phần thưởng!</p>
         </div>
-
         <?php if (empty($challenges)): ?>
             <div style="text-align: center; padding: 40px; background: rgba(255, 255, 255, 0.98); border-radius: 20px;">
                 <p style="font-size: 18px; color: #666;">Chưa có thử thách hôm nay. Vui lòng quay lại sau!</p>
@@ -558,7 +476,6 @@ if ($tableExists && !empty($challenges)) {
                         </div>
                         <div class="challenge-name"><?= htmlspecialchars($challenge['challenge_name']) ?></div>
                         <div class="challenge-description"><?= htmlspecialchars($challenge['description']) ?></div>
-
                         <div class="challenge-progress">
                             <div class="progress-bar">
                                 <div class="progress-fill" style="width: <?= $progressPercent ?>%"></div>
@@ -568,7 +485,6 @@ if ($tableExists && !empty($challenges)) {
                                 <?= number_format($challenge['requirement_value']) ?>
                             </div>
                         </div>
-
                         <div class="challenge-reward">
                             <?php if ($challenge['reward_money'] > 0): ?>
                                 <div class="reward-item">
@@ -583,7 +499,6 @@ if ($tableExists && !empty($challenges)) {
                                 </div>
                             <?php endif; ?>
                         </div>
-
                         <?php if ($isClaimed): ?>
                             <div class="claimed-badge">✅ Đã Nhận Phần Thưởng</div>
                         <?php elseif ($isCompleted): ?>
@@ -599,7 +514,6 @@ if ($tableExists && !empty($challenges)) {
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
-
         <div style="text-align: center; margin-top: 30px;">
             <a href="index.php"
                 style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 12px; font-weight: 600;">
@@ -607,7 +521,6 @@ if ($tableExists && !empty($challenges)) {
             </a>
         </div>
     </div>
-
     <script>
         function claimReward(challengeId) {
             $.ajax({
@@ -648,5 +561,4 @@ if ($tableExists && !empty($challenges)) {
         }
     </script>
 </body>
-
 </html>

@@ -633,11 +633,110 @@ if (isset($_GET['action'])) {
             border: 1px solid rgba(255, 215, 0, 0.3);
             font-weight: 600;
         }
+        
+        .game-wrapper {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .game-header {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #d4af37;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+            backdrop-filter: blur(10px);
+        }
+
+        .game-header .back-btn {
+            color: #d4af37;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .game-header .game-info {
+            text-align: center;
+        }
+
+        .game-header .game-info h1 {
+            margin: 0;
+            color: #fff;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .game-header .help-btn {
+            background: transparent;
+            border: 2px solid #d4af37;
+            color: #d4af37;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .game-header .help-btn:hover {
+            background: #d4af37;
+            color: #000;
+        }
+
+        .chip-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 15px;
+            width: 100%;
+        }
+
+        .chip {
+            padding: 8px 18px;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            color: #fff;
+            transition: 0.3s;
+            user-select: none;
+        }
+
+        .chip:hover, .chip.active {
+            background: #d4af37;
+            color: #000;
+            border-color: #d4af37;
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
+        }
     </style>
 </head>
 
 <body>
-    <div class="status-box" id="status-box">Chào mừng đến với Poker Texas Hold'em!</div>
+    <div class="game-wrapper">
+        <div class="game-header">
+            <a href="../index.php" class="back-btn">← Trang chủ</a>
+            <div class="game-info">
+                <h1>TEXAS HOLD'EM POKER</h1>
+                <div class="balance-box">
+                    <span>Ngân khố:</span>
+                    <strong id="balance-val" style="color: #ffd700;"><?= number_format($soDu) ?></strong> GTLM
+                </div>
+            </div>
+            <button class="help-btn" onclick="Swal.fire({title: 'Luật chơi', text: 'Poker Texas Hold\\'em...', background: '#1a1a1a', color: '#fff'})">?</button>
+        </div>
+
+        <div class="status-box" id="status-box">Chào mừng đến với Poker Texas Hold'em!</div>
 
     <div class="poker-table">
         <div class="pot-container">
@@ -666,15 +765,23 @@ if (isset($_GET['action'])) {
     </div>
 
     <div class="controls">
-        <div id="start-controls" style="display: flex; gap: 10px; align-items: center;">
-            <input type="number" id="bet-amount" value="10000" step="5000" style="background: rgba(255,255,255,0.1); border: 1px solid #ffd700; color: #fff; padding: 10px 15px; border-radius: 20px; width: 120px; outline: none; text-align: center;">
-            <button id="btn-start" class="btn-poker btn-premium">🃏 Chơi Ngay</button>
+        <div id="start-controls" style="display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%;">
+            <input type="hidden" id="bet-amount" value="10000">
+            <div class="chip-selector" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <div class="chip active" data-value="10000">10K</div>
+                <div class="chip" data-value="50000">50K</div>
+                <div class="chip" data-value="100000">100K</div>
+                <div class="chip" data-value="500000">500K</div>
+                <div class="chip" data-value="1000000">1M</div>
+                <div class="chip" data-value="5000000">5M</div>
+                <div class="chip" data-value="<?= $soDu ?>">MAX</div>
+            </div>
+            <button id="btn-start" class="btn-poker btn-premium">🃏 KHAI CUỘC</button>
         </div>
         <div id="play-controls" style="display: none; gap: 10px;">
-            <button id="btn-call" class="btn-poker btn-next">✅ Theo (Call/Check)</button>
-            <button id="btn-fold" class="btn-poker btn-fold">🏳️ Bỏ bài (Fold)</button>
+            <button id="btn-call" class="btn-poker btn-next">✅ THEO (CALL/CHECK)</button>
+            <button id="btn-fold" class="btn-poker btn-fold">🏳️ BỎ BÀI (FOLD)</button>
         </div>
-        <a href="../index.php" class="btn-poker btn-secondary">🏠 Trang chủ</a>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -684,11 +791,40 @@ if (isset($_GET['action'])) {
 
             function renderCard(card, isHidden = false, delay = 0) {
                 const el = document.createElement('div');
-                el.className = 'card' + (isHidden ? ' hidden' : (card.includes('♥') || card.includes('♦') ? ' red' : ''));
+                el.className = 'card card-img' + (isHidden ? ' hidden' : '');
                 el.style.animation = `deal 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards ${delay}s`;
-                if (!isHidden) el.innerHTML = `<span>${card.slice(0, -1)}</span><span class="suit">${card.slice(-1)}</span><span style="transform: rotate(180deg)">${card.slice(0, -1)}</span>`;
+                el.style.background = 'transparent';
+                el.style.padding = '0';
+                el.style.border = 'none';
+                el.style.boxShadow = 'none';
+                
+                let url;
+                if (!isHidden) {
+                    const suitMap = {'♥': 'hearts', '♦': 'diamonds', '♣': 'clubs', '♠': 'spades'};
+                    const suitStr = suitMap[card.slice(-1)];
+                    let valStr = card.slice(0, -1);
+                    if (!isNaN(valStr) && parseInt(valStr) < 10) valStr = '0' + parseInt(valStr);
+                    url = `img/anh-bai/PNG/Cards (large)/card_${suitStr}_${valStr}.png`;
+                } else {
+                    url = `img/anh-bai/PNG/Cards (large)/card_back.png`;
+                }
+                el.innerHTML = `<img src="${url}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.4);">`;
                 return el;
             }
+
+            // Chip Selection Logic
+            document.querySelectorAll('.chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    betInput.value = chip.dataset.value;
+                    
+                    // Chip click effect
+                    if (window.GameEffects) {
+                        GameEffects.createCoinBlast(event.clientX, event.clientY);
+                    }
+                });
+            });
 
             btnStart.addEventListener('click', async () => {
                 const bet = betInput.value; const fd = new FormData(); fd.append('bet', bet);
@@ -737,12 +873,27 @@ if (isset($_GET['action'])) {
                         b2Hand.innerHTML = ''; data.allHands.bot2.forEach(c => b2Hand.appendChild(renderCard(c)));
                         b3Hand.innerHTML = ''; data.allHands.bot3.forEach(c => b3Hand.appendChild(renderCard(c)));
                         document.getElementById('start-controls').style.display = 'flex'; document.getElementById('play-controls').style.display = 'none';
-                        balanceVal.textContent = data.newBalance || balanceVal.textContent;
-                        if (data.isWin) { confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 } }); Swal.fire('🎯 CHIẾN THẮNG!', data.message, 'success'); }
-                        else if (!data.folded) Swal.fire('🃏 Kết quả', data.message, 'info');
-                        loadPokerHistory();
+                        if (data.newBalance) balanceVal.textContent = data.newBalance;
+                        
+                        if (data.isWin) { 
+                            if (window.GameEffects) GameEffects.showWin(data.message.replace('🏆 CHIẾN THẮNG: ', '')); 
+                        } else if (!data.folded) {
+                            Swal.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: 'info',
+                                title: data.message,
+                                showConfirmButton: false,
+                                timer: 3000,
+                                background: '#1a1a1a',
+                                color: '#fff'
+                            });
+                        }
                     }
-                    if (data.folded) { document.getElementById('start-controls').style.display = 'flex'; document.getElementById('play-controls').style.display = 'none'; }
+                    if (data.folded) { 
+                        document.getElementById('start-controls').style.display = 'flex'; 
+                        document.getElementById('play-controls').style.display = 'none'; 
+                    }
                 }
             }
         });
@@ -774,112 +925,5 @@ if (isset($_GET['action'])) {
         })();
     </script>
 
-    <div class="bottom-section" style="margin-top: 50px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; max-width: 1200px; margin-left: auto; margin-right: auto; padding: 20px; width: 100%;">
-        <div class="history-box" style="background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 25px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);">
-            <h3 style="margin-top: 0; margin-bottom: 20px; color: #ffd700; font-size: 20px; display: flex; align-items: center; gap: 10px;">📋 Lịch sử Poker</h3>
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; font-size: 14px;" id="historyTable">
-                    <thead>
-                        <tr style="border-bottom: 2px solid rgba(255, 215, 0, 0.3);">
-                            <th style="padding: 12px; text-align: center; color: #ffd700;">ID</th>
-                            <th style="padding: 12px; text-align: right; color: #ffd700;">Cược</th>
-                            <th style="padding: 12px; text-align: center; color: #ffd700;">Kết quả</th>
-                            <th style="padding: 12px; text-align: right; color: #ffd700;">Thắng</th>
-                            <th style="padding: 12px; text-align: right; color: #ffd700;">Thời gian</th>
-                        </tr>
-                    </thead>
-                    <tbody id="historyBody">
-                        <tr>
-                            <td colspan="5" style="text-align: center; padding: 30px; color: #888; font-style: italic;">Chưa có lượt chơi nào</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="chart-box" style="background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 25px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);">
-            <h3 style="margin-top: 0; margin-bottom: 20px; color: #ffd700; font-size: 20px;">📊 Thống kê tỉ lệ</h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
-                <div style="background: rgba(74, 222, 128, 0.1); border-left: 4px solid #4ade80; padding: 15px; border-radius: 10px; text-align: center;">
-                    <div style="font-size: 11px; text-transform: uppercase; color: #888; letter-spacing: 1px;">Thắng</div>
-                    <div style="font-size: 24px; font-weight: 700; color: #4ade80;"><?= $gameThang ?></div>
-                </div>
-                <div style="background: rgba(255, 107, 107, 0.1); border-left: 4px solid #ff6b6b; padding: 15px; border-radius: 10px; text-align: center;">
-                    <div style="font-size: 11px; text-transform: uppercase; color: #888; letter-spacing: 1px;">Thua</div>
-                    <div style="font-size: 24px; font-weight: 700; color: #ff6b6b;"><?= $gameThua ?></div>
-                </div>
-            </div>
-            <div style="position: relative; height: 220px;">
-                <canvas id="gameChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        async function loadPokerHistory() {
-            try {
-                const response = await fetch('poker.php?action=get_history', {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                });
-                if (!response.ok) return;
-                const data = await response.json();
-                if (data.success && data.history && data.history.length > 0) {
-                    const tbody = document.getElementById('historyBody');
-                    if (tbody) {
-                        tbody.innerHTML = '';
-                        data.history.slice(0, 10).forEach((record, index) => {
-                            const newRow = document.createElement('tr');
-                            newRow.style.borderBottom = '1px solid rgba(255, 255, 255, 0.05)';
-                            
-                            const winVal = parseInt(record.WinAmount);
-                            const winColor = winVal > 0 ? '#4ade80' : '#ff6b6b';
-                            
-                            newRow.innerHTML = `
-                                <td style="padding: 12px; text-align: center; color: #888;">${record.Id}</td>
-                                <td style="padding: 12px; text-align: right; color: #eee;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                                <td style="padding: 12px; text-align: center; color: #eee; font-weight: 600;">${record.Result || '-'}</td>
-                                <td style="padding: 12px; text-align: right; color: ${winColor}">${winVal > 0 ? '+' : ''}${winVal.toLocaleString('vi-VN')}</td>
-                                <td style="padding: 12px; text-align: right; color: #666; font-size: 12px;">${record.Time}</td>
-                            `;
-                            tbody.appendChild(newRow);
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error('Load history error:', error);
-            }
-        }
-
-        window.addEventListener('load', function() {
-            loadPokerHistory();
-            const ctxPoker = document.getElementById('gameChart');
-            if (ctxPoker) {
-                new Chart(ctxPoker.getContext('2d'), {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Thắng', 'Thua'],
-                        datasets: [{
-                            data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                            backgroundColor: ['rgba(74, 222, 128, 0.7)', 'rgba(255, 107, 107, 0.7)'],
-                            borderColor: ['rgba(74, 222, 128, 1)', 'rgba(255, 107, 107, 1)'],
-                            borderWidth: 2,
-                            borderRadius: 5
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: { color: 'rgba(255, 255, 255, 0.8)', font: { size: 12 } }
-                            }
-                        }
-                    }
-                });
-            }
-        });
-    </script>
 </body>
 </html>

@@ -1,0 +1,181 @@
+.cave-container {
+    background: linear-gradient(180deg, #111 0%, #000 100%);
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+    border: 2px solid #333;
+}
+
+.cave-bg-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(circle at 50% 50%, transparent 20%, #000 90%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.cave-status-panel {
+    background: rgba(25, 25, 25, 0.9);
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    position: relative;
+    z-index: 2;
+}
+
+.cave-status-panel h2 {
+    color: #eab308;
+    margin-top: 0;
+    font-size: 1.5rem;
+    text-shadow: 0 0 10px rgba(234, 179, 8, 0.3);
+}
+
+.cave-stats {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    margin-top: 1rem;
+}
+
+.stat-box {
+    text-align: center;
+}
+
+.stat-box span {
+    display: block;
+    font-size: 0.9rem;
+    color: #888;
+    margin-bottom: 5px;
+}
+
+.stat-box b {
+    font-size: 1.3rem;
+    color: #fff;
+}
+
+.highlight-money {
+    color: #4ade80 !important;
+    text-shadow: 0 0 10px rgba(74, 222, 128, 0.4);
+}
+
+.cave-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 2rem;
+    position: relative;
+    z-index: 2;
+}
+
+.btn-step, .btn-cashout, .btn-start {
+    padding: 15px 30px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+}
+
+.btn-start {
+    background: #3b82f6;
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+}
+
+.btn-start:hover { background: #2563eb; transform: translateY(-2px); }
+
+.btn-step {
+    background: #eab308;
+    color: #000;
+    box-shadow: 0 4px 15px rgba(234, 179, 8, 0.3);
+}
+
+.btn-step:hover { background: #ca8a04; transform: translateY(-2px); }
+.btn-step:disabled { background: #555; color: #888; cursor: not-allowed; box-shadow: none; transform: none; }
+
+.btn-cashout {
+    background: #22c55e;
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+}
+
+.btn-cashout:hover { background: #16a34a; transform: translateY(-2px); }
+.btn-cashout:disabled { background: #555; color: #888; cursor: not-allowed; box-shadow: none; transform: none; }
+
+.cave-character {
+    font-size: 4rem;
+    margin: 2rem 0;
+    position: relative;
+    z-index: 2;
+    transition: transform 0.3s;
+    display: inline-block;
+}
+
+.cave-character.walking {
+    animation: walk 0.5s infinite alternate ease-in-out;
+}
+
+.cave-character.crashed {
+    animation: shake 0.5s;
+    filter: grayscale(100%);
+    opacity: 0.5;
+}
+
+@keyframes walk {
+    0% { transform: translateY(0) rotate(-5deg); }
+    100% { transform: translateY(-10px) rotate(5deg); }
+}
+
+@keyframes shake {
+    0% { transform: translate(1px, 1px) rotate(0deg); }
+    10% { transform: translate(-1px, -2px) rotate(-1deg); }
+    20% { transform: translate(-3px, 0px) rotate(1deg); }
+    30% { transform: translate(3px, 2px) rotate(0deg); }
+    40% { transform: translate(1px, -1px) rotate(1deg); }
+    50% { transform: translate(-1px, 2px) rotate(-1deg); }
+    60% { transform: translate(-3px, 1px) rotate(0deg); }
+    70% { transform: translate(3px, 1px) rotate(-1deg); }
+    80% { transform: translate(-1px, -1px) rotate(1deg); }
+    90% { transform: translate(1px, 2px) rotate(0deg); }
+    100% { transform: translate(1px, -2px) rotate(-1deg); }
+}
+
+.risk-meter {
+    width: 100%;
+    height: 10px;
+    background: #333;
+    border-radius: 5px;
+    margin-top: 15px;
+    overflow: hidden;
+}
+
+.risk-bar {
+    height: 100%;
+    background: #ef4444;
+    width: 5%;
+    transition: width 0.5s;
+}
+
+.input-bet-container {
+    margin-top: 1rem;
+    position: relative;
+    z-index: 2;
+}
+
+.input-bet {
+    background: #111;
+    border: 1px solid #444;
+    color: #fff;
+    padding: 10px 15px;
+    font-size: 1.2rem;
+    border-radius: 5px;
+    width: 200px;
+    text-align: center;
+    margin-bottom: 15px;
+}

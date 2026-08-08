@@ -45,7 +45,7 @@ $resultChoice = $isHeads ? 'sấp' : 'ngửa';
 $isWin = ($choice === $resultChoice);
 
 $winAmount = 0;
-$moneyUpdate = -$betAmount; // Trừ tiền cược
+$moneyUpdate = -$betAmount; // Trừ GTLM cược
 $resultStatus = 'Thua';
 
 if ($isWin) {

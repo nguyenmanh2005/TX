@@ -788,7 +788,7 @@ $tournamentsTableExists = $checkTable && $checkTable->num_rows > 0;
         function unregisterTournament(tournamentId) {
             Swal.fire({
                 title: 'Xác nhận hủy đăng ký?',
-                text: 'Bạn có chắc chắn muốn hủy đăng ký giải đấu này? Tiền cược sẽ được hoàn lại ví của bạn.',
+                text: 'Bạn có chắc chắn muốn hủy đăng ký giải đấu này? GTLM cược sẽ được hoàn lại ví của bạn.',
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonText: 'Hủy Đăng Ký',

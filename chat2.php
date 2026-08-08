@@ -272,7 +272,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'load') {
                 })
                 .catch(err => {
                     console.error('Error sending message:', err);
-                    alert(err.message || 'Có lỗi xảy ra!');
+                    if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String(err.message || 'Có lỗi xảy ra!'), 'info'); } else { alert(err.message || 'Có lỗi xảy ra!'); };
                 })
                 .finally(() => {
                     input.disabled = false;

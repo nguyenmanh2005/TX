@@ -56,13 +56,19 @@ if ($action === 'get_users') {
 
     $conn->begin_transaction();
     try {
-        // FIX: Khóa bản ghi user để tránh Race Condition
-        $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+        // FIX: Khóa bản ghi user để tránh Race Condition (khóa cả người gửi và nhận)
+        $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ? FOR UPDATE");
         $stmt->bind_param("i", $userId);
         $stmt->execute();
         $user = $stmt->get_result()->fetch_assoc();
 
         if (!$user || $user['Money'] < $amount) throw new Exception("Số Gtlm không đủ!");
+
+        // Khóa người nhận
+        $stmtRecv = $conn->prepare("SELECT Iduser FROM users WHERE Iduser = ? FOR UPDATE");
+        $stmtRecv->bind_param("i", $toUserId);
+        $stmtRecv->execute();
+        if ($stmtRecv->get_result()->num_rows === 0) throw new Exception("Người nhận không tồn tại!");
 
         $tax = $amount * 0.02;
         $receivedAmount = $amount - $tax;

@@ -35,7 +35,7 @@ function deliverReward(int $userId, array $reward, mysqli $conn): bool {
 
     switch ($rewardType) {
 
-        // ─── TIỀN ────────────────────────────────────────────────────────────
+        // ─── GTLM ────────────────────────────────────────────────────────────
         case 'money':
             $amount = (int)$rewardValue;
             if ($amount <= 0) return false;

@@ -2,31 +2,18 @@
 session_start();
 require '../db_connect.php';
 require_once '../load_theme.php';
-
 if (!isset($_SESSION['Iduser'])) {
     header("Location: ../login.php");
     exit();
 }
-
 $userId = $_SESSION['Iduser'];
-
 // Auto-create history table
-$conn->query("CREATE TABLE IF NOT EXISTS history_videopoker (
-    Id INT AUTO_INCREMENT PRIMARY KEY,
-    Iduser INT NOT NULL,
-    Bet DECIMAL(30,2) NOT NULL,
-    Result VARCHAR(255) NOT NULL,
-    WinAmount DECIMAL(30,2) NOT NULL,
-    Time DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
 $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
 $money = $user['Money'];
 $stmt->close();
-
 function getCard($exclude = [])
 {
     $suits = ['♠', '♥', '♦', '♣'];
@@ -43,7 +30,6 @@ function getCard($exclude = [])
     } while ($found);
     return $card;
 }
-
 function evaluateHand($hand)
 {
     usort($hand, function ($a, $b) {
@@ -54,7 +40,6 @@ function evaluateHand($hand)
     $counts = array_count_values($ranks);
     arsort($counts);
     $vals = array_values($counts);
-
     $isFlush = (count(array_unique($suits)) === 1);
     $isStraight = false;
     if (count(array_unique($ranks)) === 5) {
@@ -63,7 +48,6 @@ function evaluateHand($hand)
         elseif ($ranks[4] === 14 && $ranks[3] === 5 && $ranks[0] === 2)
             $isStraight = true; // A-2-3-4-5
     }
-
     if ($isStraight && $isFlush && $ranks[4] === 14 && $ranks[0] === 10)
         return ['name' => 'Royal Flush', 'pay' => 800];
     if ($isStraight && $isFlush)
@@ -87,11 +71,9 @@ function evaluateHand($hand)
     }
     return ['name' => 'Bust', 'pay' => 0];
 }
-
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
     $action = $_GET['action'];
-
     if ($action === 'deal') {
         $bet = (int) ($_POST['bet'] ?? 0);
         if ($bet <= 0 || $bet > $money) {
@@ -103,14 +85,12 @@ if (isset($_GET['action'])) {
         for ($i = 0; $i < 5; $i++)
             $hand[] = getCard($hand);
         $_SESSION['vp_hand'] = $hand;
-
         echo json_encode(['success' => true, 'hand' => $hand]);
         exit;
     } elseif ($action === 'draw') {
         $hold = json_decode($_POST['hold']); // array of booleans [true, false, ...]
         $hand = $_SESSION['vp_hand'];
         $exclude = $hand;
-
         $newHand = [];
         foreach ($hold as $idx => $isHeld) {
             if ($isHeld) {
@@ -124,25 +104,21 @@ if (isset($_GET['action'])) {
         ksort($newHand);
         $finalHand = array_values($newHand);
         $eval = evaluateHand($finalHand);
-
         $bet = $_SESSION['vp_bet'];
         $winAmount = ($bet * $eval['pay']);
         if ($eval['pay'] == 0)
             $winAmount = -$bet;
-
         $newMoney = $money + $winAmount;
         $stmt = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
         $stmt->bind_param("di", $newMoney, $userId);
         $stmt->execute();
         $stmt->close();
-
         // History
         $his = $conn->prepare("INSERT INTO history_videopoker (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
         $resStr = $eval['name'];
         $his->bind_param("idss", $userId, $bet, $resStr, $winAmount);
         $his->execute();
         $his->close();
-
         echo json_encode([
             'success' => true,
             'hand' => $finalHand,
@@ -162,10 +138,8 @@ if (isset($_GET['action'])) {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
     <title>Video Poker - Jacks or Better</title>
@@ -183,13 +157,11 @@ if (isset($_GET['action'])) {
             --glass: rgba(255, 255, 255, 0.05);
             --glass-border: rgba(255, 255, 255, 0.1);
         }
-
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
-
         body {
             background:
                 <?= $bgGradientCSS ?>
@@ -203,7 +175,6 @@ if (isset($_GET['action'])) {
             flex-direction: column;
             align-items: center;
         }
-
         #threejs-background {
             position: fixed;
             top: 0;
@@ -213,7 +184,6 @@ if (isset($_GET['action'])) {
             z-index: 0;
             pointer-events: none;
         }
-
         .main-container {
             position: relative;
             z-index: 1;
@@ -222,7 +192,6 @@ if (isset($_GET['action'])) {
             margin: 2rem auto;
             text-align: center;
         }
-
         .game-title {
             font-size: clamp(2rem, 8vw, 3.5rem);
             font-weight: 900;
@@ -232,7 +201,6 @@ if (isset($_GET['action'])) {
             text-transform: uppercase;
             letter-spacing: 4px;
         }
-
         .glass-card {
             background: var(--glass);
             backdrop-filter: blur(20px);
@@ -243,7 +211,6 @@ if (isset($_GET['action'])) {
             box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
             margin-bottom: 2rem;
         }
-
         .balance-pill {
             background: rgba(110, 231, 183, 0.1);
             border: 1px solid var(--secondary);
@@ -254,7 +221,6 @@ if (isset($_GET['action'])) {
             color: var(--secondary);
             font-weight: 700;
         }
-
         .pay-table {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -266,7 +232,6 @@ if (isset($_GET['action'])) {
             border: 1px solid var(--glass-border);
             font-size: 0.8rem;
         }
-
         .pay-row {
             display: flex;
             justify-content: space-between;
@@ -274,21 +239,17 @@ if (isset($_GET['action'])) {
             border-radius: 8px;
             transition: background 0.3s;
         }
-
         .pay-row:hover {
             background: rgba(255, 255, 255, 0.05);
         }
-
         .pay-name {
             opacity: 0.7;
             font-weight: 600;
         }
-
         .pay-val {
             color: var(--primary);
             font-weight: 800;
         }
-
         .hand-area {
             display: flex;
             justify-content: center;
@@ -298,13 +259,11 @@ if (isset($_GET['action'])) {
             perspective: 1000px;
             flex-wrap: wrap;
         }
-
         .card-wrap {
             position: relative;
             cursor: pointer;
             transition: transform 0.3s;
         }
-
         .card {
             width: clamp(75px, 11vw, 105px);
             aspect-ratio: 2/3;
@@ -321,26 +280,21 @@ if (isset($_GET['action'])) {
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
         }
-
         .card.red {
             color: #dc2626;
         }
-
         .card.black {
             color: #1e293b;
         }
-
         .card-v {
             position: absolute;
             top: 0.5rem;
             left: 0.5rem;
             font-size: 1.1rem;
         }
-
         .card-s {
             font-size: 3.5rem;
         }
-
         .held-tag {
             position: absolute;
             top: -25px;
@@ -356,19 +310,16 @@ if (isset($_GET['action'])) {
             opacity: 0;
             transition: 0.3s;
         }
-
         .hold .held-tag {
             opacity: 1;
             transform: translateX(-50%) translateY(-5px);
         }
-
         .hold .card {
             transform: translateY(-10px);
             ring: 4px solid var(--primary);
             box-shadow: 0 0 20px rgba(251, 191, 36, 0.4);
             border: 2px solid var(--primary);
         }
-
         .input-group {
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid var(--glass-border);
@@ -377,14 +328,12 @@ if (isset($_GET['action'])) {
             margin: 0 auto 1.5rem;
             max-width: 250px;
         }
-
         .input-group span {
             display: block;
             font-size: 0.8rem;
             opacity: 0.6;
             margin-bottom: 0.5rem;
         }
-
         .input-group input {
             width: 100%;
             background: transparent;
@@ -395,7 +344,6 @@ if (isset($_GET['action'])) {
             font-weight: 700;
             outline: none;
         }
-
         .btn {
             padding: 1.2rem 3rem;
             border-radius: 50px;
@@ -410,40 +358,33 @@ if (isset($_GET['action'])) {
             max-width: 300px;
             margin: 0.5rem 0;
         }
-
         .btn-blue {
             background: linear-gradient(135deg, var(--accent) 0%, #0369a1 100%);
             color: #fff;
         }
-
         .btn-gold {
             background: linear-gradient(135deg, var(--primary) 0%, #d97706 100%);
             color: #000;
         }
-
         .btn:hover:not(:disabled) {
             transform: translateY(-3px);
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
         }
-
         .btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
-
         .history-section {
             background: var(--glass);
             border-radius: 2rem;
             padding: 2rem;
             border: 1px solid var(--glass-border);
         }
-
         .history-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 1rem;
         }
-
         .history-table th {
             color: rgba(255, 255, 255, 0.4);
             text-transform: uppercase;
@@ -451,34 +392,52 @@ if (isset($_GET['action'])) {
             padding: 1rem;
             border-bottom: 2px solid var(--glass-border);
         }
-
         .history-table td {
             padding: 1rem;
             border-bottom: 1px solid var(--glass-border);
             font-weight: 600;
         }
-
+        .chip-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+        .chip {
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+            color: #fff;
+            transition: 0.3s;
+            user-select: none;
+        }
+        .chip:hover, .chip.active {
+            background: var(--primary);
+            color: #000;
+            border-color: var(--primary);
+            transform: scale(1.1);
+        }
         @media (max-width: 600px) {
             .card {
                 width: 75px;
             }
-
             .pay-table {
                 grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
-
 <body>
-
-
     <div class="main-container">
         <h1 class="game-title">VIDEO POKER</h1>
         <div class="balance-pill">💰 Số Gtlm: <span id="balance-val"><?= number_format($money, 0, ',', '.') ?></span>
             gtlm
         </div>
-
         <div class="glass-card">
             <div class="pay-table">
                 <div class="pay-row"><span class="pay-name">ROYAL FLUSH</span><span class="pay-val">800</span></div>
@@ -491,28 +450,36 @@ if (isset($_GET['action'])) {
                 <div class="pay-row"><span class="pay-name">TWO PAIR</span><span class="pay-val">2</span></div>
                 <div class="pay-row"><span class="pay-name">JACKS OR BETTER</span><span class="pay-val">1</span></div>
             </div>
-
             <div id="hand-view" class="hand-area">
-                <div class="card" style="background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.1);">P</div>
-                <div class="card" style="background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.1);">O</div>
-                <div class="card" style="background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.1);">K</div>
-                <div class="card" style="background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.1);">E</div>
-                <div class="card" style="background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.1);">R</div>
+                <div class="card-wrap"><div class="held-tag">HOLD</div><div class="card" style="background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.1);">P</div></div>
+                <div class="card-wrap"><div class="held-tag">HOLD</div><div class="card" style="background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.1);">O</div></div>
+                <div class="card-wrap"><div class="held-tag">HOLD</div><div class="card" style="background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.1);">K</div></div>
+                <div class="card-wrap"><div class="held-tag">HOLD</div><div class="card" style="background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.1);">E</div></div>
+                <div class="card-wrap"><div class="held-tag">HOLD</div><div class="card" style="background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.1);">R</div></div>
             </div>
-
             <div id="bet-area">
+                <div class="chip-selector">
+                    <div class="chip active" data-value="10000">10K</div>
+                    <div class="chip" data-value="50000">50K</div>
+                    <div class="chip" data-value="100000">100K</div>
+                    <div class="chip" data-value="500000">500K</div>
+                    <div class="chip" data-value="1000000">1M</div>
+                    <div class="chip" data-value="5000000">5M</div>
+                    <div class="chip" data-value="allin">MAX</div>
+                </div>
                 <div class="input-group">
                     <span>Số gtlm cược</span>
-                    <input type="number" id="bet-amt" value="1000" min="100" step="100">
+                    <input type="number" id="bet-amt" value="10000" min="1000" step="1000">
                 </div>
                 <button id="deal-btn" class="btn btn-blue">PHÁT BÀI</button>
+                <div style="margin-top: 1rem;">
+                    <a href="../index.php" style="color: var(--primary); text-decoration: none; font-weight: 700; border: 1px solid var(--primary); padding: 0.8rem 2.5rem; border-radius: 50px; transition: 0.3s; display: inline-block;">🏠 QUAY LẠI SẢNH</a>
+                </div>
             </div>
-
             <div id="action-area" style="display: none;">
                 <p style="margin-bottom: 1.5rem; font-weight: 700; opacity: 0.8;">Nhấp vào lá bài để GIỮ (HOLD)</p>
                 <button id="draw-btn" class="btn btn-gold">THAY BÀI (DRAW)</button>
             </div>
-
             <div id="result-area" style="display: none; margin-top: 2rem;">
                 <h2 id="eval-name"
                     style="color: var(--primary); margin-bottom: 0.5rem; font-size: 2.5rem; font-weight: 900;"></h2>
@@ -520,43 +487,9 @@ if (isset($_GET['action'])) {
                 <button id="reset-btn" class="btn btn-blue">CHƠI TIẾP</button>
             </div>
         </div>
-
-        <div class="history-section">
-            <h2 style="font-size: 1.2rem; letter-spacing: 2px; margin-bottom: 1rem;">NHẬT KÝ CHIẾN THẮNG</h2>
-            <div style="overflow-x: auto;">
-                <table class="history-table">
-                    <thead>
-                        <tr>
-                            <th>Thời gian</th>
-                            <th>gtlm cược</th>
-                            <th>Kết quả</th>
-                            <th>Thắng/Thua</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-body"></tbody>
-                </table>
-            </div>
-            <div style="margin-top: 2.5rem;"><a href="../index.php"
-                    style="color: var(--primary); text-decoration: none; font-weight: 700; border: 1px solid var(--primary); padding: 0.8rem 2.5rem; border-radius: 50px; transition: 0.3s;">🏠
-                    QUAY LẠI SẢNH</a></div>
-        </div>
     </div>
-
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/confetti.browser.min.js"></script>
-
     <?php require_once '../casino_help.php'; ?>
-
-
-
-
-
-
-
-
-
-
-
-
     <!-- Premium Effects System -->
     <canvas id="threejs-background"></canvas>
     <script>
@@ -573,7 +506,6 @@ if (isset($_GET['action'])) {
             };
             const prefix = window.location.pathname.includes('/games/') ? '../' : '';
             const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
-
             scripts.forEach(src => {
                 const s = document.createElement('script');
                 s.src = prefix + src;
@@ -581,8 +513,90 @@ if (isset($_GET['action'])) {
                 document.head.appendChild(s);
             });
         })();
+        // Game Logic for Video Poker
+        $(document).ready(function() {
+            let isDealt = false;
+            let holdState = [false, false, false, false, false];
+            // Chip Selector Logic
+            $('.chip').on('click', function() {
+                $('.chip').removeClass('active');
+                $(this).addClass('active');
+                const val = $(this).attr('data-value');
+                if (val === 'allin') {
+                    $('#bet-amt').val(<?= $money ?>);
+                } else {
+                    $('#bet-amt').val(val);
+                }
+            });
+            function renderCard(cardData, element) {
+                const suitMap = {'♥': 'hearts', '♦': 'diamonds', '♣': 'clubs', '♠': 'spades'};
+                const suitStr = suitMap[cardData.suit];
+                let valStr = cardData.val;
+                if (!isNaN(valStr) && parseInt(valStr) < 10) valStr = '0' + parseInt(valStr);
+                const url = `img/anh-bai/PNG/Cards (large)/card_${suitStr}_${valStr}.png`;
+                element.html(`<img src="${url}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 1rem;">`);
+                element.attr('class', 'card card-img');
+                element.css({'background': 'transparent', 'color': 'transparent', 'padding': '0', 'border': 'none', 'box-shadow': 'none'});
+            }
+            $('.card-wrap').click(function() {
+                if (!isDealt) return;
+                const index = $(this).index();
+                holdState[index] = !holdState[index];
+                $(this).toggleClass('hold', holdState[index]);
+            });
+            $('#deal-btn').click(function() {
+                const bet = $('#bet-amt').val();
+                if (bet < 1000) return Swal.fire('Lỗi', 'Cược tối thiểu 1,000 gtlm!', 'error');
+                $.post('videopoker.php?action=deal', { bet: bet }, function(res) {
+                    if (!res.success) return Swal.fire('Lỗi', res.message, 'error');
+                    isDealt = true;
+                    holdState = [false, false, false, false, false];
+                    $('.card-wrap').removeClass('hold');
+                    $('.card-wrap .card').each(function(i) {
+                        renderCard(res.hand[i], $(this));
+                    });
+                    $('#bet-area').hide();
+                    $('#result-area').hide();
+                    $('#action-area').show();
+                });
+            });
+            $('#draw-btn').click(function() {
+                if (!isDealt) return;
+                isDealt = false;
+                $.post('videopoker.php?action=draw', { hold: JSON.stringify(holdState) }, function(res) {
+                    if (!res.success) return Swal.fire('Lỗi', res.message || 'Lỗi', 'error');
+                    $('.card-wrap .card').each(function(i) {
+                        renderCard(res.hand[i], $(this));
+                    });
+                    $('#eval-name').text(res.eval);
+                    if (res.winAmount > 0) {
+                        $('#win-amt').text("THẮNG " + new Intl.NumberFormat('vi-VN').format(res.winAmount) + " GTLM!").css('color', 'var(--secondary)');
+                        if (typeof GameEffects !== 'undefined') {
+                            GameEffects.showWin(res.winAmount, "<br>🎉 " + res.eval);
+                        } else {
+                            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                        }
+                    } else {
+                        $('#win-amt').text("THUA").css('color', 'var(--danger)');
+                        if (typeof GameEffects !== 'undefined') {
+                            GameEffects.showLoss("Rất tiếc", res.eval);
+                        }
+                    }
+                    $('#balance-val').text(res.money);
+                    $('#action-area').hide();
+                    $('#result-area').show();
+                });
+            });
+            $('#reset-btn').click(function() {
+                $('.card-wrap').removeClass('hold');
+                const letters = ['P', 'O', 'K', 'E', 'R'];
+                $('.card-wrap .card').each(function(i) {
+                    $(this).html(letters[i]).attr('class', 'card').css({'background': 'rgba(255,255,255,0.05)', 'color': 'rgba(255,255,255,0.1)'});
+                });
+                $('#result-area').hide();
+                $('#bet-area').show();
+            });
+        });
     </script>
-
 </body>
-
 </html>

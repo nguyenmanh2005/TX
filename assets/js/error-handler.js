@@ -71,7 +71,7 @@ function showErrorToast(message) {
     if (window.QuickActions && window.QuickActions.showToast) {
         window.QuickActions.showToast(message, 'error');
     } else {
-        alert(message);
+        if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String(message), 'info'); } else { alert(message); };
     }
 }
 

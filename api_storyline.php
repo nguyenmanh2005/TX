@@ -151,7 +151,7 @@ if ($action === 'claim') {
         // Phát thưởng
         $reward = (float)$chapter['reward_money'];
         
-        // Cộng tiền và lưu log kinh tế
+        // Cộng GTLM và lưu log kinh tế
         SystemLogger::setEconomyContext('STORYLINE_REWARD', 'chapter-' . $chapterNum, [
             'chapter' => $chapterNum,
             'reward_amount' => $reward

@@ -5,12 +5,10 @@ require_once '../include_css.php';
 include '../load_theme.php';
 require_once '../game_history_helper.php';
 require_once '../dynamic_event_helper.php';
-
 if (!isset($_SESSION['Iduser'])) {
     header('Location: ../login.php');
     exit;
 }
-
 $userId = $_SESSION['Iduser'];
 $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
@@ -19,34 +17,20 @@ $user = $stmt->get_result()->fetch_assoc();
 $money = $user['Money'];
 $userName = $user['Name'];
 $stmt->close();
-
 // Auto-create history table
-$conn->query("CREATE TABLE IF NOT EXISTS history_crash (
-    Id INT AUTO_INCREMENT PRIMARY KEY,
-    Iduser INT NOT NULL,
-    Bet DECIMAL(30,2) NOT NULL,
-    Result VARCHAR(255) NOT NULL,
-    WinAmount DECIMAL(30,2) NOT NULL,
-    Time DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
     $action = $_GET['action'];
     $response = ['success' => false];
-
     if ($action === 'start') {
         $rawBet = $_POST['bet'] ?? 0;
-        
         // FIX: Chống Array Injection & Validate dữ liệu
         if (is_array($rawBet) || !is_numeric($rawBet)) {
             $response['message'] = "Dữ liệu cược không hợp lệ!";
             echo json_encode($response); exit;
         }
-
         $bet = (float)$rawBet;
         $minBet = 1000; // FIX: Chấp nhận Bet cực nhỏ
-
         if ($bet < $minBet) {
             $response['message'] = "Mức cược tối thiểu là " . number_format($minBet) . " gtlm!";
         } else {
@@ -57,14 +41,11 @@ if (isset($_GET['action'])) {
                 $stmt->bind_param("i", $userId);
                 $stmt->execute();
                 $userData = $stmt->get_result()->fetch_assoc();
-
                 if (!$userData || $userData['Money'] < $bet) throw new Exception("Không đủ  Gtlm!");
-
                 // Trừ  Gtlm
                 $stmt = $conn->prepare("UPDATE users SET Money = Money - ? WHERE Iduser = ?");
                 $stmt->bind_param("di", $bet, $userId);
                 $stmt->execute();
-
                 $instantCrash = rand(1, 100) <= 5;
                 if ($instantCrash) {
                     $crashPoint = 1.00;
@@ -72,14 +53,12 @@ if (isset($_GET['action'])) {
                     $e = 100 / (rand(1, 1000000) / 10000);
                     $crashPoint = max(1.01, round($e * 0.96, 2));
                 }
-
                 $_SESSION['crash_game'] = [
                     'bet' => $bet,
                     'crashPoint' => $crashPoint,
                     'status' => 'active',
                     'start_time' => microtime(true)
                 ];
-
                 $conn->commit();
                 $newMoney = $userData['Money'] - $bet;
                 $response = [
@@ -99,7 +78,6 @@ if (isset($_GET['action'])) {
             $game = $_SESSION['crash_game'];
             $elapsed = microtime(true) - $game['start_time'];
             $serverMult = pow(1.005, ($elapsed * 1000) / 50);
-            
             if ($multiplier > $serverMult + 0.5) {
                 $response['message'] = "Dữ liệu không khớp!";
             } elseif ($multiplier > $game['crashPoint']) {
@@ -113,30 +91,23 @@ if (isset($_GET['action'])) {
                     $stmt->bind_param("i", $userId);
                     $stmt->execute();
                     $stmt->get_result();
-
                     $eventMult = DynamicEventHelper::getModifier($conn, 'crash');
                     $winAmount = round($game['bet'] * $multiplier * $eventMult);
-                    
                     $updateStmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
                     $updateStmt->bind_param("di", $winAmount, $userId);
                     $updateStmt->execute();
-
                     $resStr = "Cashout at x$multiplier";
                     $profit = $winAmount - $game['bet'];
                     $his = $conn->prepare("INSERT INTO history_crash (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
                     $his->bind_param("idid", $userId, $game['bet'], $resStr, $profit);
                     $his->execute();
-
                     logGameHistoryWithAll($conn, $userId, 'Crash', $game['bet'], $winAmount, true);
-                    
                     $conn->commit();
-                    
                     // Lấy số dư mới sau khi commit
                     $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
                     $stmt->bind_param("i", $userId);
                     $stmt->execute();
                     $newMoney = $stmt->get_result()->fetch_assoc()['Money'];
-
                     $response = [
                         'success' => true, 
                         'winAmount' => number_format($winAmount, 0, ',', '.'), 
@@ -180,7 +151,6 @@ if (isset($_GET['action'])) {
 ?>
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
     <title>Crash Flight Premium - Vegas Royale</title>
@@ -192,7 +162,6 @@ if (isset($_GET['action'])) {
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -209,7 +178,6 @@ if (isset($_GET['action'])) {
             --accent: #f1c40f;
             --glass: rgba(255, 255, 255, 0.08);
         }
-
         body {
             margin: 0;
             background: <?= $bgGradientCSS ?>;
@@ -219,7 +187,6 @@ if (isset($_GET['action'])) {
             overflow: hidden;
             cursor: url('../img/chuot.png'), auto !important;
         }
-
         .main-container {
             height: 100vh;
             display: flex;
@@ -228,7 +195,6 @@ if (isset($_GET['action'])) {
             padding: 20px;
             box-sizing: border-box;
         }
-
         .glass-card {
             background: var(--glass);
             backdrop-filter: blur(30px);
@@ -244,7 +210,6 @@ if (isset($_GET['action'])) {
             max-height: 92vh;
             align-self: center;
         }
-
         .crash-area {
             position: relative;
             width: 100%;
@@ -258,13 +223,11 @@ if (isset($_GET['action'])) {
             justify-content: center;
             box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.9);
         }
-
         #crash-3d-container {
             position: absolute;
             inset: 0;
             z-index: 1;
         }
-
         #crash-graph-canvas {
             position: absolute;
             inset: 0;
@@ -272,7 +235,6 @@ if (isset($_GET['action'])) {
             pointer-events: none;
             opacity: 0.6;
         }
-
         /* HUD Multiplier - Moved to Top */
         .mult-wrapper {
             position: absolute;
@@ -288,7 +250,6 @@ if (isset($_GET['action'])) {
             background: radial-gradient(circle, rgba(0,242,254,0.05) 0%, transparent 70%);
             padding: 20px;
         }
-
         .multiplier-display {
             font-size: 5rem;
             font-weight: 900;
@@ -299,7 +260,6 @@ if (isset($_GET['action'])) {
             text-shadow: 0 0 20px rgba(0, 242, 254, 0.6);
             line-height: 1;
         }
-
         .btn-quick-bet {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -311,13 +271,11 @@ if (isset($_GET['action'])) {
             transition: 0.3s;
             font-size: 0.75rem;
         }
-
         .btn-quick-bet:hover {
             background: var(--primary);
             color: #fff;
             border-color: var(--primary);
         }
-
         .multiplier-glow {
             position: absolute;
             font-size: 5.5rem;
@@ -330,7 +288,6 @@ if (isset($_GET['action'])) {
             pointer-events: none;
             white-space: nowrap;
         }
-
         .sidebar {
             display: flex;
             flex-direction: column;
@@ -338,7 +295,6 @@ if (isset($_GET['action'])) {
             position: relative;
             z-index: 100
         }
-
         .btn-action {
             padding: 1.2rem;
             border-radius: 1.5rem;
@@ -351,7 +307,6 @@ if (isset($_GET['action'])) {
             position: relative;
             overflow: hidden
         }
-
         .btn-action::after {
             content: '';
             position: absolute;
@@ -360,24 +315,20 @@ if (isset($_GET['action'])) {
             transform: translateX(-100%);
             transition: 0.5s
         }
-
         .btn-action:hover::after {
             transform: translateX(100%)
         }
-
         #startBtn {
             background: linear-gradient(135deg, var(--primary), #ff6b81);
             color: #fff;
             box-shadow: 0 10px 30px rgba(255, 71, 87, 0.4)
         }
-
         #cashoutBtn {
             background: linear-gradient(135deg, #2ecc71, #27ae60);
             color: #fff;
             display: none;
             box-shadow: 0 10px 30px rgba(46, 204, 113, 0.4)
         }
-
         .input-group {
             background: rgba(0, 0, 0, 0.3);
             padding: 0.8rem 1.2rem;
@@ -385,12 +336,10 @@ if (isset($_GET['action'])) {
             border: 1px solid rgba(255, 255, 255, 0.05);
             transition: 0.3s
         }
-
         .input-group:focus-within {
             border-color: var(--primary);
             background: rgba(255, 71, 87, 0.05)
         }
-
         /* Premium Back Home Button */
         .back-home-btn {
             position: fixed;
@@ -414,7 +363,6 @@ if (isset($_GET['action'])) {
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-
         .back-home-btn:hover {
             background: rgba(255, 71, 87, 0.1);
             border-color: #ff4757;
@@ -422,11 +370,9 @@ if (isset($_GET['action'])) {
             box-shadow: 0 0 20px rgba(255, 71, 87, 0.4);
             transform: translateX(5px);
         }
-
         .back-home-btn i {
             font-size: 1.1rem;
         }
-
         .input-group label {
             display: block;
             font-size: 0.65rem;
@@ -436,7 +382,6 @@ if (isset($_GET['action'])) {
             font-weight: 700;
             letter-spacing: 1px
         }
-
         .input-group input {
             background: none;
             border: none;
@@ -447,7 +392,6 @@ if (isset($_GET['action'])) {
             outline: none;
             font-family: 'Orbitron'
         }
-
         #userMoney {
             word-break: break-all;
             line-height: 1.2;
@@ -455,18 +399,15 @@ if (isset($_GET['action'])) {
             max-width: 100%;
             color: var(--accent)
         }
-
         input::-webkit-outer-spin-button,
         input::-webkit-inner-spin-button {
             -webkit-appearance: none;
             margin: 0
         }
-
         input[type=number] {
             -moz-appearance: textfield;
             appearance: textfield;
         }
-
         @media(max-width:1000px) {
             .glass-card {
                 grid-template-columns: 1fr;
@@ -474,21 +415,17 @@ if (isset($_GET['action'])) {
                 display: block;
                 padding: 1.5rem
             }
-
             .sidebar {
                 margin-bottom: 2rem
             }
-
             .crash-area {
                 min-height: 400px
             }
-
             .multiplier-display,
             .multiplier-glow {
                 font-size: 5rem;
             }
         }
-
         .btn-howto {
             display: flex;
             align-items: center;
@@ -507,7 +444,6 @@ if (isset($_GET['action'])) {
             width: 100%;
             margin-top: 0.75rem
         }
-
         .btn-howto:hover {
             background: rgba(255, 71, 87, 0.15);
             border-color: var(--primary);
@@ -515,7 +451,6 @@ if (isset($_GET['action'])) {
         }
     </style>
 </head>
-
 <body>
     <a href="../index.php" class="back-home-btn">
         <i class="fas fa-th-large"></i> Dashboard
@@ -527,7 +462,6 @@ if (isset($_GET['action'])) {
                     style="margin:0; font-size: 2.5rem; font-weight: 900; color: var(--primary); font-family: 'Orbitron'; text-shadow: 0 0 20px rgba(255,71,87,0.3);">
                     CRASH</h1>
                 <p style="margin:0; opacity:0.4; font-size: 0.8rem; letter-spacing: 2px;">Vegas Royale Premium 3D</p>
-
                 <form id="gameForm" onsubmit="return false;" style="margin-top: 1rem;">
                     <div class="input-group">
                         <label>Gtlm cược (gtlm)</label>
@@ -542,7 +476,6 @@ if (isset($_GET['action'])) {
                             <button class="btn-quick-bet" type="button" onclick="setBet('ALLIN')" style="grid-column: span 3; background: var(--primary); color:#fff; border:none; font-weight:800;">ALL IN</button>
                         </div>
                     </div>
-
                     <div class="input-group" style="margin-top: 1rem;">
                         <div
                             style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -564,12 +497,10 @@ if (isset($_GET['action'])) {
                                 style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px; padding:4px; font-size:0.7rem; cursor:pointer;">x10</button>
                         </div>
                     </div>
-
                     <style>
                         .switch input:checked+.slider {
                             background-color: var(--primary);
                         }
-
                         .slider:before {
                             position: absolute;
                             content: "";
@@ -581,17 +512,14 @@ if (isset($_GET['action'])) {
                             transition: .4s;
                             border-radius: 50%;
                         }
-
                         .switch input:checked+.slider:before {
                             transform: translateX(14px);
                         }
-
                         #autoCashout:disabled {
                             opacity: 0.3;
                             cursor: not-allowed;
                         }
                     </style>
-
                     <div class="stat-box"
                         style="margin-top: 1.5rem; background:rgba(0,0,0,0.2); padding: 1.2rem; border-radius:1.2rem; border: 1px dashed rgba(255,255,255,0.1);">
                         <span style="opacity:0.5; font-size:0.7rem; font-weight:700;">LỢI NHUẬN DỰ KIẾN</span>
@@ -599,13 +527,11 @@ if (isset($_GET['action'])) {
                             style="font-size:1.8rem; font-weight:900; color:var(--accent); font-family: 'Orbitron';">0
                         </div>
                     </div>
-
                     <button id="startBtn" type="submit" class="btn-action" style="width: 100%; margin-top: 1rem;"
                         onclick="startGame()">CẤT CÁNH</button>
                     <button id="cashoutBtn" type="button" class="btn-action" style="width: 100%; margin-top: 1rem;"
                         onclick="cashout()">RÚT Gtlm</button>
                 </form>
-
                 <div style="margin-top: auto; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1);">
                     <div style="display:flex; justify-content: space-between; align-items: center;">
                         <span style="opacity:0.5">Số Gtlm:</span>
@@ -628,7 +554,6 @@ if (isset($_GET['action'])) {
                     </button>
                 </div>
             </div>
-
             <div class="crash-area" id="crashArea">
                 <?php 
                 $activeEvent = DynamicEventHelper::getActiveEvent($conn);
@@ -639,7 +564,6 @@ if (isset($_GET['action'])) {
                 </div>
                 <?php endif; ?>
                 <div id="crash-3d-container"></div>
-
                 <div class="mult-wrapper">
                     <div id="multGlow" class="multiplier-glow">1.00x</div>
                     <div id="multDisp" class="multiplier-display">1.00x</div>
@@ -647,14 +571,12 @@ if (isset($_GET['action'])) {
             </div>
         </div>
     </div>
-
     <script>
         let crashPoint = 0;
         let currentMult = 1.00;
         let gameActive = false;
         let multInterval = null;
         let crash3d = null;
-
         // Graph
         let graphPoints = [];
         function updatePotential() {
@@ -663,20 +585,15 @@ if (isset($_GET['action'])) {
             const potWin = Math.round(bet * (gameActive ? currentMult : auto));
             $('#potentialWin').text(potWin.toLocaleString('vi-VN'));
         }
-
         $('#betAmount, #autoCashout, #enableAuto').on('input change', updatePotential);
-
         $('#enableAuto').on('change', function () {
             $('#autoCashout').prop('disabled', !this.checked);
         });
-
         updatePotential();
-
         function startGame() {
             if (gameActive) return;
             const bet = $('#betAmount').val();
             const auto = parseFloat($('#autoCashout').val()) || 0;
-
             $.post('crash.php?action=start', { bet: bet }, function (res) {
                 if (res.success) {
                     crashPoint = 0; // Don't know it yet
@@ -686,13 +603,10 @@ if (isset($_GET['action'])) {
                     $('#multDisp').removeClass('crashed').text('1.00x');
                     $('#multGlow').text('1.00x');
                     $('#potentialWin').css('color', 'var(--accent)');
-
                     if (crash3d) crash3d.onStart();
-
                     const startTime = Date.now();
                     gameActive = true;
                     currentMult = 1.00;
-
                     // Poll server for crash status every 500ms
                     let checkInterval = setInterval(() => {
                         if (!gameActive) { clearInterval(checkInterval); return; }
@@ -704,23 +618,18 @@ if (isset($_GET['action'])) {
                             }
                         });
                     }, 500);
-
                     multInterval = setInterval(() => {
                         currentMult *= 1.005;
                         const txt = currentMult.toFixed(2) + 'x';
                         $('#multDisp').text(txt);
                         $('#multGlow').text(txt);
-
                         const hue = Math.max(0, 120 - (currentMult - 1) * 30);
                         const col = `hsl(${hue},100%,65%)`;
                         $('#multDisp').css({ 'color': col, 'text-shadow': `0 0 40px hsl(${hue},100%,50%)` });
                         $('#multGlow').css('color', `hsl(${hue},100%,45%)`);
-
                         if (crash3d) crash3d.setSpeed(currentMult);
-
                         const potWin = Math.round(bet * currentMult);
                         $('#potentialWin').text(potWin.toLocaleString('vi-VN'));
-
                         const isAuto = $('#enableAuto').is(':checked');
                         if (isAuto && auto > 1 && currentMult >= auto) {
                             cashout();
@@ -732,48 +641,37 @@ if (isset($_GET['action'])) {
                 }
             });
         }
-
         function crashed() {
             clearInterval(multInterval);
             gameActive = false;
-
             $('#multDisp').removeClass('mult-pulsing').css({ 'color': '#ff4757', 'text-shadow': '0 0 40px #ff4757' }).text('💥 ' + crashPoint.toFixed(2) + 'x');
             $('#multGlow').css('color', '#ff4757').text('💥 ' + crashPoint.toFixed(2) + 'x');
             $('#cashoutBtn').hide();
             $('#startBtn').show().text('CHƠI LẠI');
             $('#potentialWin').text('0').css('color', '#ff4757');
-
             if (crash3d) crash3d.onCrash();
-
             if (window.GameEffects) {
                 const area = document.getElementById('crashArea').getBoundingClientRect();
                 window.GameEffects.crashExplosion(area.left + area.width / 2, area.top + area.height / 2);
             }
-
             $.post('crash.php?action=lost');
         }
-
         function cashout() {
             if (!gameActive) return;
             clearInterval(multInterval);
             const finalMult = currentMult;
             gameActive = false;
-
             $.post('crash.php?action=cashout', { multiplier: finalMult }, function (res) {
                 if (res.success) {
                     const rawWin = parseInt(res.winAmount.replace(/[^0-9]/g, ''));
                     $('#userMoney').text(res.money);
-
                     if (crash3d) crash3d.onCashout();
-
                     if (window.GameEffects) {
                         if (finalMult >= 3) window.GameEffects.showBigWin(rawWin);
                         else window.GameEffects.showWin(rawWin);
                     }
-
                     $('#multDisp').addClass('mult-pulsing').css('color', '#2ecc71');
                     setTimeout(() => $('#multDisp').removeClass('mult-pulsing'), 2000);
-
                     $('#cashoutBtn').hide();
                     $('#startBtn').show().text('TIẾP TỤC');
                 } else {
@@ -790,7 +688,6 @@ if (isset($_GET['action'])) {
                 }
             });
         }
-
         function setBet(amount) {
             const money = parseFloat($('#userMoney').text().replace(/\./g, ''));
             if (amount === 'ALLIN') {
@@ -800,18 +697,14 @@ if (isset($_GET['action'])) {
             }
             updatePotential();
         }
-
         }
-
         window.onload = () => {
             // Load 3D Engine
             if (typeof Crash3D !== 'undefined') {
                 crash3d = new Crash3D('crash-3d-container');
             }
         };
-
     </script>
-
     <canvas id="threejs-background"></canvas>
     <script>
         (function () {
@@ -836,5 +729,4 @@ if (isset($_GET['action'])) {
         })();
     </script>
 </body>
-
 </html>

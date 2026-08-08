@@ -16,11 +16,11 @@ class VocabularyHelper {
         'ván bài'    => ['ván giao lưu'],
         ' Gtlm'       => ['GTLM'],
         'túi'        => ['nick'],
-        'cược'       => ['chiến', 'liều'],
+        'cược'       => ['chiến', 'Chiến'],
         'casino'     => ['trận địa'],
-        'tài xỉu'    => ['Xanh Đỏ Đối Kháng'],
+      
         'xóc đĩa'    => ['Trận Địa Trắng Đỏ'],
-        'bầu cua'    => ['Thế Giới Linh Thú'],
+        'Chiến Trường Linh Thú'    => ['Chiến Trường Linh Thú'],
         'đá gà'      => ['Đại Chiến Thần Kê'],
         'rồng hổ'     => ['Chiến Trường Rồng Hổ']
     ];

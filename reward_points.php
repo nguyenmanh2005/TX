@@ -1,61 +1,19 @@
 <?php
 session_start();
 require 'db_connect.php';
-
 if (!isset($_SESSION['Iduser'])) {
     header("Location: login.php");
     exit();
 }
-
 // Load theme
 require_once 'load_theme.php';
-
 $userId = $_SESSION['Iduser'];
-
 // Kiểm tra và tạo bảng reward_points và reward_point_transactions nếu chưa có
 $checkPoints = $conn->query("SHOW TABLES LIKE 'reward_points'");
 if (!$checkPoints || $checkPoints->num_rows == 0) {
-    $createPoints = "CREATE TABLE IF NOT EXISTS reward_points (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL UNIQUE,
-        total_points INT DEFAULT 0,
-        available_points INT DEFAULT 0,
-        lifetime_points INT DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(Iduser) ON DELETE CASCADE,
-        INDEX idx_points (total_points DESC)
-    )";
     $conn->query($createPoints);
-
-    $createTransactions = "CREATE TABLE IF NOT EXISTS reward_point_transactions (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        points INT NOT NULL,
-        transaction_type VARCHAR(50) NOT NULL,
-        description TEXT,
-        related_id INT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(Iduser) ON DELETE CASCADE,
-        INDEX idx_user_date (user_id, created_at),
-        INDEX idx_type (transaction_type)
-    )";
     $conn->query($createTransactions);
-
-    $createRewards = "CREATE TABLE IF NOT EXISTS reward_point_rewards (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        description TEXT,
-        cost_points INT NOT NULL,
-        reward_type VARCHAR(50) NOT NULL,
-        reward_value INT NOT NULL,
-        icon VARCHAR(50) DEFAULT '🎁',
-        is_active TINYINT(1) DEFAULT 1,
-        stock_limit INT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )";
     $conn->query($createRewards);
-
     // Tạo rewards mẫu
     $sampleRewards = [
         ['GTLM 10,000 GTLM', 'Đổi 100 điểm lấy 10,000 GTLM', 100, 'money', 10000, '💰'],
@@ -66,7 +24,6 @@ if (!$checkPoints || $checkPoints->num_rows == 0) {
         ['XP 200', 'Đổi 180 điểm lấy 200 XP', 180, 'xp', 200, '⭐'],
         ['XP 500', 'Đổi 400 điểm lấy 500 XP', 400, 'xp', 500, '⭐']
     ];
-
     foreach ($sampleRewards as $reward) {
         $sql = "INSERT INTO reward_point_rewards (name, description, cost_points, reward_type, reward_value, icon)
                 VALUES (?, ?, ?, ?, ?, ?)
@@ -77,7 +34,6 @@ if (!$checkPoints || $checkPoints->num_rows == 0) {
         $stmt->close();
     }
 }
-
 // Lấy thông tin người dùng
 $sql = "SELECT Iduser, Name, Money FROM users WHERE Iduser = ?";
 $stmt = $conn->prepare($sql);
@@ -86,7 +42,6 @@ $stmt->execute();
 $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 $stmt->close();
-
 // Lấy thông tin points
 $sql = "SELECT * FROM reward_points WHERE user_id = ?";
 $stmt = $conn->prepare($sql);
@@ -95,7 +50,6 @@ $stmt->execute();
 $result = $stmt->get_result();
 $userPoints = $result->fetch_assoc();
 $stmt->close();
-
 // Nếu chưa có, tạo mới
 if (!$userPoints) {
     $sql = "INSERT INTO reward_points (user_id, total_points, available_points, lifetime_points) VALUES (?, 0, 0, 0)";
@@ -103,7 +57,6 @@ if (!$userPoints) {
     $stmt->bind_param("i", $userId);
     $stmt->execute();
     $stmt->close();
-
     // Reload
     $sql = "SELECT * FROM reward_points WHERE user_id = ?";
     $stmt = $conn->prepare($sql);
@@ -113,7 +66,6 @@ if (!$userPoints) {
     $userPoints = $result->fetch_assoc();
     $stmt->close();
 }
-
 // Lấy lịch sử giao dịch
 $sql = "SELECT * FROM reward_point_transactions 
         WHERE user_id = ? 
@@ -128,7 +80,6 @@ while ($row = $result->fetch_assoc()) {
     $transactions[] = $row;
 }
 $stmt->close();
-
 // Lấy danh sách rewards
 $sql = "SELECT * FROM reward_point_rewards WHERE is_active = 1 ORDER BY cost_points ASC";
 $result = $conn->query($sql);
@@ -139,7 +90,6 @@ while ($row = $result->fetch_assoc()) {
 ?>
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -164,11 +114,9 @@ while ($row = $result->fetch_assoc()) {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             animation: fadeIn 0.6s ease;
         }
-
         * {
             cursor: inherit;
         }
-
         button,
         a,
         input[type="button"],
@@ -177,12 +125,10 @@ while ($row = $result->fetch_assoc()) {
         select {
             cursor: url('img/tay.png'), url('../img/tay.png'), pointer !important;
         }
-
         .container {
             max-width: 1200px;
             margin: 0 auto;
         }
-
         .header-points {
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
@@ -197,7 +143,6 @@ while ($row = $result->fetch_assoc()) {
             position: relative;
             overflow: hidden;
         }
-
         .header-points::before {
             content: '';
             position: absolute;
@@ -208,7 +153,6 @@ while ($row = $result->fetch_assoc()) {
             background: radial-gradient(circle, rgba(102, 126, 234, 0.05) 0%, transparent 70%);
             animation: float 6s ease-in-out infinite;
         }
-
         .header-points h1 {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             -webkit-background-clip: text;
@@ -220,7 +164,6 @@ while ($row = $result->fetch_assoc()) {
             position: relative;
             z-index: 1;
         }
-
         .points-display {
             background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
             padding: 40px;
@@ -233,7 +176,6 @@ while ($row = $result->fetch_assoc()) {
             position: relative;
             overflow: hidden;
         }
-
         .points-display::before {
             content: '';
             position: absolute;
@@ -244,34 +186,29 @@ while ($row = $result->fetch_assoc()) {
             background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
             animation: float 8s ease-in-out infinite;
         }
-
         .points-icon {
             font-size: 80px;
             margin-bottom: 20px;
             filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
             animation: pulse 2s ease-in-out infinite;
         }
-
         .points-value {
             font-size: 72px;
             font-weight: 900;
             margin-bottom: 10px;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
-
         .points-label {
             font-size: 24px;
             font-weight: 600;
             opacity: 0.9;
         }
-
         .points-stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin-top: 30px;
         }
-
         .stat-box {
             background: rgba(255, 255, 255, 0.3);
             backdrop-filter: blur(10px);
@@ -279,25 +216,21 @@ while ($row = $result->fetch_assoc()) {
             border-radius: 16px;
             text-align: center;
         }
-
         .stat-label {
             font-size: 14px;
             opacity: 0.8;
             margin-bottom: 8px;
         }
-
         .stat-value {
             font-size: 28px;
             font-weight: 800;
         }
-
         .rewards-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 24px;
             margin-bottom: 30px;
         }
-
         .reward-card {
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
@@ -310,7 +243,6 @@ while ($row = $result->fetch_assoc()) {
             overflow: hidden;
             animation: fadeInScale 0.5s ease backwards;
         }
-
         .reward-card::before {
             content: '';
             position: absolute;
@@ -322,7 +254,6 @@ while ($row = $result->fetch_assoc()) {
             opacity: 0;
             transition: opacity 0.4s ease;
         }
-
         .reward-card::after {
             content: '';
             position: absolute;
@@ -333,26 +264,21 @@ while ($row = $result->fetch_assoc()) {
             background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
             transition: left 0.5s ease;
         }
-
         .reward-card:hover {
             transform: translateY(-10px) scale(1.04) rotate(1deg);
             box-shadow: 0 18px 45px rgba(0, 0, 0, 0.25);
         }
-
         .reward-card:hover::before {
             opacity: 1;
         }
-
         .reward-card:hover::after {
             left: 100%;
         }
-
         .reward-icon {
             font-size: 56px;
             text-align: center;
             margin-bottom: 15px;
         }
-
         .reward-name {
             font-size: 22px;
             font-weight: 700;
@@ -360,14 +286,12 @@ while ($row = $result->fetch_assoc()) {
             margin-bottom: 10px;
             text-align: center;
         }
-
         .reward-description {
             text-align: center;
             color: #666;
             margin-bottom: 15px;
             font-size: 14px;
         }
-
         .reward-cost {
             text-align: center;
             font-size: 24px;
@@ -375,7 +299,6 @@ while ($row = $result->fetch_assoc()) {
             color: #ffd700;
             margin-bottom: 15px;
         }
-
         .redeem-btn {
             width: 100%;
             padding: 14px;
@@ -392,7 +315,6 @@ while ($row = $result->fetch_assoc()) {
             overflow: hidden;
             box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
         }
-
         .redeem-btn::before {
             content: '';
             position: absolute;
@@ -405,23 +327,19 @@ while ($row = $result->fetch_assoc()) {
             transform: translate(-50%, -50%);
             transition: width 0.6s, height 0.6s;
         }
-
         .redeem-btn:hover::before {
             width: 300px;
             height: 300px;
         }
-
         .redeem-btn:hover {
             transform: translateY(-3px) scale(1.05);
             box-shadow: 0 8px 25px rgba(255, 215, 0, 0.5);
         }
-
         .redeem-btn:disabled {
             background: #ccc;
             cursor: not-allowed;
             opacity: 0.6;
         }
-
         .transactions-section {
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
@@ -430,14 +348,12 @@ while ($row = $result->fetch_assoc()) {
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
             margin-bottom: 30px;
         }
-
         .transactions-title {
             font-size: 24px;
             font-weight: 700;
             color: #333;
             margin-bottom: 20px;
         }
-
         .transaction-item {
             padding: 15px;
             border-bottom: 1px solid #e0e0e0;
@@ -446,30 +362,24 @@ while ($row = $result->fetch_assoc()) {
             align-items: center;
             transition: all 0.3s ease;
         }
-
         .transaction-item:hover {
             background: rgba(102, 126, 234, 0.05);
         }
-
         .transaction-info {
             flex: 1;
         }
-
         .transaction-points {
             font-size: 20px;
             font-weight: 700;
         }
-
         .points-positive {
             color: #28a745;
         }
-
         .points-negative {
             color: #dc3545;
         }
     </style>
 </head>
-
 <body>
     <div class="container">
         <div class="header-points">
@@ -477,12 +387,10 @@ while ($row = $result->fetch_assoc()) {
             <p style="color: #666; margin-top: 10px; font-size: 18px;">Tích điểm khi chơi game và đổi lấy phần thưởng!
             </p>
         </div>
-
         <div class="points-display">
             <div class="points-icon">⭐</div>
             <div class="points-value"><?= number_format($userPoints['available_points']) ?></div>
             <div class="points-label">Điểm Khả Dụng</div>
-
             <div class="points-stats">
                 <div class="stat-box">
                     <div class="stat-label">Tổng Điểm</div>
@@ -500,7 +408,6 @@ while ($row = $result->fetch_assoc()) {
                 </div>
             </div>
         </div>
-
         <div class="rewards-grid">
             <?php foreach ($rewards as $reward):
                 $canAfford = $userPoints['available_points'] >= $reward['cost_points'];
@@ -512,7 +419,6 @@ while ($row = $result->fetch_assoc()) {
                     <div class="reward-cost">
                         <?= number_format($reward['cost_points']) ?> điểm
                     </div>
-
                     <?php if ($canAfford): ?>
                         <button class="redeem-btn"
                             onclick="redeemReward(<?= $reward['id'] ?>, '<?= htmlspecialchars($reward['name']) ?>', <?= $reward['cost_points'] ?>)">
@@ -527,7 +433,6 @@ while ($row = $result->fetch_assoc()) {
                 </div>
             <?php endforeach; ?>
         </div>
-
         <?php if (!empty($transactions)): ?>
             <div class="transactions-section">
                 <div class="transactions-title">📋 Lịch Sử Giao Dịch</div>
@@ -537,7 +442,6 @@ while ($row = $result->fetch_assoc()) {
                     $created = new DateTime($trans['created_at']);
                     $now = new DateTime();
                     $diff = $now->diff($created);
-
                     if ($diff->days > 0) {
                         $timeAgo = $diff->days . ' ngày trước';
                     } elseif ($diff->h > 0) {
@@ -564,7 +468,6 @@ while ($row = $result->fetch_assoc()) {
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
-
         <div style="text-align: center; margin-top: 30px;">
             <a href="index.php"
                 style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 12px; font-weight: 600;">
@@ -572,7 +475,6 @@ while ($row = $result->fetch_assoc()) {
             </a>
         </div>
     </div>
-
     <script>
         function redeemReward(rewardId, rewardName, costPoints) {
             Swal.fire({
@@ -626,5 +528,4 @@ while ($row = $result->fetch_assoc()) {
         }
     </script>
 </body>
-
 </html>

@@ -39,12 +39,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
-    $chatFrame = isset($_POST['chat_frame']) ? (int)$_POST['chat_frame'] : 0;
-
     // Cập nhật thông tin người dùng
-    $updateSql = "UPDATE users SET Name = ?, Email = ?, chat_frame_id = ? WHERE Iduser = ?";
+    $updateSql = "UPDATE users SET Name = ?, Email = ? WHERE Iduser = ?";
     $stmt = $conn->prepare($updateSql);
-    $stmt->bind_param("sssi", $name, $email, $chatFrame, $userId);
+    $stmt->bind_param("ssi", $name, $email, $userId);
     $stmt->execute();
     $stmt->close();
 
@@ -386,13 +384,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 if (!name) {
                     e.preventDefault();
-                    alert('Vui lòng nhập tên!');
+                    if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Vui lòng nhập tên!'), 'warning'); } else { alert('Vui lòng nhập tên!'); };
                     return false;
                 }
                 
                 if (!email) {
                     e.preventDefault();
-                    alert('Vui lòng nhập email!');
+                    if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Vui lòng nhập email!'), 'warning'); } else { alert('Vui lòng nhập email!'); };
                     return false;
                 }
                 

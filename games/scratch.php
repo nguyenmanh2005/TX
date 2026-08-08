@@ -4,12 +4,10 @@ include '../db_connect.php';
 require_once '../include_css.php';
 include '../load_theme.php';
 require_once '../game_history_helper.php';
-
 if (!isset($_SESSION['Iduser'])) {
     header('Location: ../login.php');
     exit;
 }
-
 $userId = $_SESSION['Iduser'];
 $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
@@ -18,28 +16,27 @@ $user = $stmt->get_result()->fetch_assoc();
 $money = $user['Money'];
 $userName = $user['Name'];
 $stmt->close();
-
-$conn->query("CREATE TABLE IF NOT EXISTS history_scratch (
-    Id INT AUTO_INCREMENT PRIMARY KEY,
-    Iduser INT NOT NULL,
-    Bet DECIMAL(30,2) NOT NULL,
-    Result VARCHAR(255) NOT NULL,
-    WinAmount DECIMAL(30,2) NOT NULL,
-    Time DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
 $symbols = ['🍒' => 2, '🍋' => 5, '🔔' => 10, '⭐' => 20, '💎' => 50, '🎰' => 100];
-
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
     $action = $_GET['action'];
     $response = ['success' => false];
-
     if ($action === 'buy') {
         $bet = (float) ($_POST['bet'] ?? 0);
         if ($bet <= 0 || $bet > $money) {
             $response['message'] = "gtlm cược không hợp lệ!";
         } else {
+            $conn->begin_transaction();
+            $stmtLock = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+            $stmtLock->bind_param("i", $userId);
+            $stmtLock->execute();
+            $lockedMoney = $stmtLock->get_result()->fetch_assoc()['Money'] ?? 0;
+            $stmtLock->close();
+            if ($bet > $lockedMoney) {
+                $conn->rollback();
+                echo json_encode(['success' => false, 'message' => 'Số dư không đủ hoặc thao tác quá nhanh!']);
+                exit;
+            }
             $conn->query("UPDATE users SET Money = Money - $bet WHERE Iduser = $userId");
             $grid = [];
             $winAmount = 0;
@@ -83,6 +80,7 @@ if (isset($_GET['action'])) {
             $his->bind_param("idss", $userId, $bet, $resStr, $profit);
             $his->execute();
             logGameHistoryWithAll($conn, $userId, 'Scratch Card', $bet, $winAmount, $winAmount > 0);
+            $conn->commit();
             $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
             $response = [
                 'success' => true,
@@ -99,7 +97,6 @@ if (isset($_GET['action'])) {
 ?>
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
     <title>Scratch Card Premium - Vegas Royale</title>
@@ -117,7 +114,6 @@ if (isset($_GET['action'])) {
             --accent: #f1c40f;
             --glass: rgba(255, 255, 255, 0.1)
         }
-
         body {
             margin: 0;
             background: <?= $bgGradientCSS ?>;
@@ -127,11 +123,9 @@ if (isset($_GET['action'])) {
             overflow: hidden;
             cursor: url('../img/chuot.png'), auto !important
         }
-
         * {
             cursor: inherit
         }
-
         button,
         a,
         input,
@@ -142,7 +136,6 @@ if (isset($_GET['action'])) {
         .scrapper-cover {
             cursor: url('../img/tay.png'), pointer !important
         }
-
         #threejs-background {
             position: fixed;
             top: 0;
@@ -151,7 +144,6 @@ if (isset($_GET['action'])) {
             width: 100%;
             height: 100%
         }
-
         .main-container {
             height: 100vh;
             display: flex;
@@ -160,7 +152,6 @@ if (isset($_GET['action'])) {
             padding: 20px;
             box-sizing: border-box
         }
-
         .glass-card {
             background: var(--glass);
             backdrop-filter: blur(20px);
@@ -175,12 +166,10 @@ if (isset($_GET['action'])) {
             gap: 3rem;
             overflow: hidden
         }
-
         .sidebar,
         .game-area {
             min-width: 0
         }
-
         /* Scratch Grid */
         .scratch-area {
             display: grid;
@@ -194,7 +183,6 @@ if (isset($_GET['action'])) {
             margin: 0 auto;
             width: 100%
         }
-
         .scratch-tile {
             aspect-ratio: 1;
             background: linear-gradient(135deg, #3d3d3d, #1a1a1a);
@@ -208,61 +196,49 @@ if (isset($_GET['action'])) {
             transition: transform 0.2s, box-shadow 0.2s;
             overflow: hidden
         }
-
         .scratch-tile:hover:not(.revealed) {
             transform: scale(1.05);
             border-color: rgba(196, 113, 237, 0.5);
             box-shadow: 0 0 20px rgba(196, 113, 237, 0.3)
         }
-
         .scratch-tile span {
             display: none
         }
-
         .scratch-tile.revealed {
             background: rgba(255, 255, 255, 0.05);
             border-color: rgba(255, 255, 255, 0.08)
         }
-
         .scratch-tile.revealed span {
             display: block;
             animation: symbolPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.6) both
         }
-
         @keyframes symbolPop {
             0% {
                 transform: scale(0) rotate(-15deg);
                 opacity: 0
             }
-
             70% {
                 transform: scale(1.3) rotate(4deg);
                 opacity: 1
             }
-
             100% {
                 transform: scale(1) rotate(0deg)
             }
         }
-
         .scratch-tile.match-highlight {
             animation: matchGlow 0.45s ease infinite
         }
-
         @keyframes matchGlow {
-
             0%,
             100% {
                 transform: scale(1);
                 box-shadow: 0 0 10px #f1c40f
             }
-
             50% {
                 transform: scale(1.14);
                 box-shadow: 0 0 40px #f1c40f, 0 0 80px rgba(241, 196, 15, 0.5)
             }
         }
-
         .scrapper-cover {
             position: absolute;
             top: 0;
@@ -273,21 +249,18 @@ if (isset($_GET['action'])) {
             border-radius: 12px;
             z-index: 2
         }
-
         /* Sidebar */
         .sidebar {
             display: flex;
             flex-direction: column;
             gap: 1.5rem
         }
-
         .input-group {
             background: rgba(0, 0, 0, 0.3);
             padding: 1.2rem;
             border-radius: 1.2rem;
             border: 1px solid rgba(255, 255, 255, 0.05)
         }
-
         .input-group label {
             display: block;
             font-size: 0.7rem;
@@ -296,7 +269,6 @@ if (isset($_GET['action'])) {
             color: #888;
             margin-bottom: 0.5rem
         }
-
         .input-group input {
             background: none;
             border: none;
@@ -306,25 +278,21 @@ if (isset($_GET['action'])) {
             width: 100%;
             outline: none
         }
-
         .paytable {
             background: rgba(0, 0, 0, 0.2);
             padding: 1rem;
             border-radius: 1rem;
             font-size: 0.88rem
         }
-
         .paytable-item {
             display: flex;
             justify-content: space-between;
             padding: 5px 0;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05)
         }
-
         .paytable-item:last-child {
             border: none
         }
-
         .btn-buy {
             background: linear-gradient(135deg, var(--primary), #12c2e9);
             color: #fff;
@@ -340,7 +308,6 @@ if (isset($_GET['action'])) {
             position: relative;
             overflow: hidden
         }
-
         .btn-buy::after {
             content: '';
             position: absolute;
@@ -349,28 +316,23 @@ if (isset($_GET['action'])) {
             transform: translateX(-100%);
             transition: 0.5s
         }
-
         .btn-buy:hover:not(:disabled)::after {
             transform: translateX(100%)
         }
-
         .btn-buy:hover:not(:disabled) {
             transform: translateY(-3px);
             filter: brightness(1.1)
         }
-
         .btn-buy:disabled {
             opacity: 0.5;
             cursor: not-allowed !important
         }
-
         .game-area {
             display: flex;
             flex-direction: column;
             gap: 1rem;
             justify-content: center
         }
-
         .btn-quick-bet {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -382,7 +344,6 @@ if (isset($_GET['action'])) {
             transition: 0.3s;
             font-size: 0.75rem;
         }
-
         .btn-quick-bet:hover {
             background: var(--primary);
             color: #000;
@@ -390,7 +351,6 @@ if (isset($_GET['action'])) {
         }
     </style>
 </head>
-
 <body>
     <div class="main-container">
         <div class="glass-card">
@@ -398,7 +358,6 @@ if (isset($_GET['action'])) {
                 <h1 style="margin:0;font-size:2rem;font-weight:900;color:var(--primary);font-family:'Orbitron'">SCRATCH
                     CARD</h1>
                 <p style="margin:0;opacity:0.5">Cào Vé Số - Thắng Lớn ✨</p>
-
                 <div class="input-group">
                     <label>gtlm mua vé</label>
                     <input type="number" id="betAmount" value="10000" min="1000">
@@ -412,7 +371,6 @@ if (isset($_GET['action'])) {
                         <button class="btn-quick-bet" onclick="setBet('ALLIN')" style="grid-column: span 3; background: var(--primary); color:#000; border:none; font-weight:800;">ALL IN</button>
                     </div>
                 </div>
-
                 <div class="paytable">
                     <b style="display:block;margin-bottom:10px;color:var(--accent)">BẢNG THƯỞNG (x3 khớp)</b>
                     <div class="paytable-item"><span>🍒 Cherry</span><b>x2</b></div>
@@ -422,14 +380,11 @@ if (isset($_GET['action'])) {
                     <div class="paytable-item"><span>💎 Diamond</span><b>x50</b></div>
                     <div class="paytable-item"><span>🎰 Jackpot</span><b>x100</b></div>
                 </div>
-
                 <button id="buyBtn" class="btn-buy" onclick="handleMainButton()">🎫 Mua Vé</button>
-
                 <button id="btn-howto"
                     style="background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.2);padding:0.9rem;border-radius:1rem;font-size:0.9rem;font-weight:700;width:100%;cursor:pointer;transition:0.2s;margin-top:4px"
                     onmouseover="this.style.background='rgba(196,113,237,0.2)'"
                     onmouseout="this.style.background='rgba(255,255,255,0.08)'">📖 Hướng Dẫn Chơi</button>
-
                 <div style="margin-top:auto;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.1)">
                     <div style="display:flex;justify-content:space-between;align-items:center">
                         <span style="opacity:0.5">Số Gtlm:</span>
@@ -439,7 +394,6 @@ if (isset($_GET['action'])) {
                     </div>
                 </div>
             </div>
-
             <div class="game-area">
                 <div class="scratch-area" id="scratchGrid">
                     <?php for ($i = 0; $i < 9; $i++): ?>
@@ -458,14 +412,12 @@ if (isset($_GET['action'])) {
             </div>
         </div>
     </div>
-
     <script>
         let currentGrid = [];
         let revealedCount = 0;
         let isBuying = false;
         let lastResult = null;
         let isAutoRevealing = false;
-
         function setBet(amount) {
             const money = parseFloat($('#userMoney').text().replace(/\./g, ''));
             if (amount === 'ALLIN') {
@@ -474,7 +426,6 @@ if (isset($_GET['action'])) {
                 $('#betAmount').val(amount);
             }
         }
-
         function handleMainButton() {
             if (isBuying || isAutoRevealing) return;
             if (currentGrid.length > 0 && revealedCount < 9) {
@@ -491,7 +442,6 @@ if (isset($_GET['action'])) {
                 buyCard();
             }
         }
-
         function buyCard() {
             const bet = $('#betAmount').val();
             isBuying = true;
@@ -500,7 +450,6 @@ if (isset($_GET['action'])) {
             gsap.to('.scrapper-cover', { scale: 1, opacity: 1, rotation: 0, duration: 0.3 });
             $('.scratch-tile').removeClass('revealed match-highlight');
             revealedCount = 0;
-
             $.post('scratch.php?action=buy', { bet }, function (res) {
                 if (res.success) {
                     currentGrid = res.grid;
@@ -516,29 +465,22 @@ if (isset($_GET['action'])) {
                 }
             });
         }
-
         function revealTile(el) {
             if (isBuying || currentGrid.length === 0) return;
             const idx = $(el).index();
             if ($(el).hasClass('revealed')) return;
-
             $(el).addClass('revealed');
             $(el).find('span').text(currentGrid[idx]);
-
             // Glitter!
             if (window.GameEffects) window.GameEffects.glitterReveal(el);
-
             const cover = $(el).find('.scrapper-cover');
             gsap.to(cover, { scale: 0, opacity: 0, rotation: 40, duration: 0.45, ease: 'power2.out' });
-
             revealedCount++;
             if (revealedCount === 9) setTimeout(finishGame, 600);
         }
-
         function finishGame() {
             if (!lastResult) return;
             const win = lastResult.win;
-
             if (win) {
                 // Highlight matching tiles
                 const counts = {};
@@ -564,11 +506,8 @@ if (isset($_GET['action'])) {
             isAutoRevealing = false;
         }
     </script>
-
     <?php require_once '../casino_help.php'; ?>
-
     <script src="../assets/js/scratch-tutorial.js"></script>
-
     <!-- Premium Effects System -->
     <canvas id="threejs-background"></canvas>
     <script>
@@ -592,5 +531,4 @@ if (isset($_GET['action'])) {
         })();
     </script>
 </body>
-
 </html>

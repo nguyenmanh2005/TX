@@ -330,6 +330,12 @@ if (!$isPreview) {
     <a href="index.php" class="back-btn"><i class="fa fa-arrow-left"></i> Sảnh</a>
 
     <div class="container">
+        <?php if ($isPreview): ?>
+        <div style="background: #f59e0b; color: #000; padding: 12px; text-align: center; font-weight: 900; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); border: 2px solid #fbbf24; text-transform: uppercase; letter-spacing: 1px;">
+            <i class="fa fa-exclamation-triangle"></i> CHẾ ĐỘ XEM TRƯỚC (ADMIN PREVIEW). Tiến trình hiển thị là giả lập 0%. Bạn không thể nhận thưởng thật.
+        </div>
+        <?php endif; ?>
+
         <div class="event-hero" id="event-hero">
             <h1 class="event-title" id="event-name">SỰ KIỆN ĐANG TẢI...</h1>
             <div class="event-timer" id="event-timer">Kết thúc sau: -- ngày -- giờ</div>
@@ -671,12 +677,16 @@ if (!$isPreview) {
 
             const urlParams = new URLSearchParams(window.location.search);
             const isPreview = urlParams.get('preview') === '1';
+            const previewEventId = urlParams.get('preview_event_id');
 
             if (isPreview && window.parent && typeof window.parent.getPreviewData === 'function') {
                 const mockData = window.parent.getPreviewData();
                 renderEventData(mockData);
             } else {
-                $.get('api_event_engine.php?action=get_event_data', function(res) {
+                let apiUrl = 'api_event_engine.php?action=get_event_data';
+                if (previewEventId) apiUrl += '&preview_event_id=' + previewEventId;
+                
+                $.get(apiUrl, function(res) {
                     renderEventData(res);
                 });
             }

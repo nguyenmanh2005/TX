@@ -362,7 +362,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'load_logs') {
         }
 
         function exportResults() {
-            if (!scanResults) return alert("Chưa có kết quả để xuất!");
+            if (!scanResults) return if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String("Chưa có kết quả để xuất!"), 'info'); } else { alert("Chưa có kết quả để xuất!"); };
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(scanResults, null, 2));
             const downloadAnchorNode = document.createElement('a');
             downloadAnchorNode.setAttribute("href",     dataStr);

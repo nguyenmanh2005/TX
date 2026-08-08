@@ -15,6 +15,8 @@ if (!isset($_SESSION['Iduser'])) {
 }
 
 $userId = $_SESSION['Iduser'];
+session_write_close(); // Tránh bị treo do Session Lock trong quá trình polling
+
 $isAdmin = isAdmin($conn, $userId);
 $action = $_GET['action'] ?? '';
 $matchId = (int)($_GET['id'] ?? 0);
@@ -53,7 +55,7 @@ if ($action === 'admin_cancel') {
         $p1 = (int)$match['challenger_id'];
         $p2 = (int)$match['opponent_id'];
         
-        // Hoàn tiền cho 2 bên
+        // Hoàn GTLM cho 2 bên
         $stmtRefund1 = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
         $stmtRefund1->bind_param("di", $bet, $p1);
         $stmtRefund1->execute();
@@ -65,13 +67,13 @@ if ($action === 'admin_cancel') {
         $stmtRefund2->close();
         
         // Hủy trận
-        $stmtCancel = $conn->prepare("UPDATE pvp_challenges SET status = 'cancelled', updated_at = NOW() WHERE id = ?");
+        $stmtCancel = $conn->prepare("UPDATE pvp_challenges SET status = 'cancelled' WHERE id = ?");
         $stmtCancel->bind_param("i", $matchId);
         $stmtCancel->execute();
         $stmtCancel->close();
         
         $conn->commit();
-        echo json_encode(['success' => true, 'message' => 'Đã hủy trận đấu và hoàn trả tiền cược!']);
+        echo json_encode(['success' => true, 'message' => 'Đã hủy trận đấu và hoàn trả GTLM cược!']);
     } catch (Exception $e) {
         $conn->rollback();
         echo json_encode(['success' => false, 'message' => $e->getMessage()]);
@@ -100,14 +102,14 @@ if ($action === 'admin_force_result') {
         $bet = $match['bet_amount'];
         $reward = floor($bet * 1.95);
         
-        // Thưởng tiền cho người thắng
+        // Thưởng GTLM cho người thắng
         $stmtWin = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
         $stmtWin->bind_param("di", $reward, $winnerId);
         $stmtWin->execute();
         $stmtWin->close();
         
         // Cập nhật kết quả pvp_challenges
-        $stmt = $conn->prepare("UPDATE pvp_challenges SET status = 'finished', winner_id = ?, updated_at = NOW() WHERE id = ?");
+        $stmt = $conn->prepare("UPDATE pvp_challenges SET status = 'finished', winner_id = ? WHERE id = ?");
         $stmt->bind_param("ii", $winnerId, $matchId);
         $stmt->execute();
         $stmt->close();
@@ -139,30 +141,54 @@ if ($action === 'admin_delete') {
 // 1. SYNC STATE: Cập nhật "last seen" và kiểm tra đối thủ
 if ($action === 'sync') {
     $now = date('Y-m-d H:i:s');
-    // Cập nhật timestamp để báo hiệu đang online trong arena vào cột riêng biệt
     $isChallenger = ($userId == $match['challenger_id']);
-    $field = $isChallenger ? 'last_seen_challenger' : 'last_seen_challenged';
+    $isChallenged = ($userId == $match['opponent_id']);
     
-    $stmtUpd = $conn->prepare("UPDATE pvp_challenges SET {$field} = NOW() WHERE id = ?");
-    $stmtUpd->bind_param("i", $matchId);
-    $stmtUpd->execute();
-    $stmtUpd->close();
+    // Cập nhật timestamp chỉ nếu user là một trong 2 đấu thủ
+    if ($isChallenger || $isChallenged) {
+        $field = $isChallenger ? 'last_seen_challenger' : 'last_seen_challenged';
+        $stmtUpd = $conn->prepare("UPDATE pvp_challenges SET {$field} = NOW() WHERE id = ?");
+        $stmtUpd->bind_param("i", $matchId);
+        $stmtUpd->execute();
+        $stmtUpd->close();
+    }
     
     // Đọc trạng thái mới nhất từ DB
-    $stmtGet = $conn->prepare("SELECT status, last_seen_challenger, last_seen_challenged FROM pvp_challenges WHERE id = ?");
+    $stmtGet = $conn->prepare("SELECT status, last_seen_challenger, last_seen_challenged, opponent_id, challenger_id FROM pvp_challenges WHERE id = ?");
     $stmtGet->bind_param("i", $matchId);
     $stmtGet->execute();
     $latestMatch = $stmtGet->get_result()->fetch_assoc();
     $stmtGet->close();
 
+    $opponentId = $isChallenger ? $latestMatch['opponent_id'] : $latestMatch['challenger_id'];
+    
+    // Kiểm tra xem opponent có phải là BOT không
+    $stmtOpp = $conn->prepare("SELECT Name FROM users WHERE Iduser = ?");
+    $stmtOpp->bind_param("i", $opponentId);
+    $stmtOpp->execute();
+    $oppRow = $stmtOpp->get_result()->fetch_assoc();
+    $stmtOpp->close();
+    $isOpponentBot = ($oppRow && stripos($oppRow['Name'], 'BOT') === 0);
+
     $opponentField = $isChallenger ? 'last_seen_challenged' : 'last_seen_challenger';
     $opponentOnline = false;
-    if (!empty($latestMatch[$opponentField])) {
+    if ($isOpponentBot) {
+        $opponentOnline = true; // Bot luôn sẵn sàng
+    } elseif (!empty($latestMatch[$opponentField])) {
         $oppTime = strtotime($latestMatch[$opponentField]);
         // Nếu đối thủ hoạt động trong 10 giây gần nhất
         if (time() - $oppTime <= 10) {
             $opponentOnline = true;
         }
+    }
+    
+    // Nếu đối thủ là BOT hoặc NẾU MÌNH LÀ NGƯỜI BỊ THÁCH ĐẤU và trạng thái đang là pending, tự động đổi thành accepted
+    if (($isOpponentBot || !$isChallenger) && $latestMatch['status'] === 'pending') {
+        $stmtUpdStatus = $conn->prepare("UPDATE pvp_challenges SET status = 'accepted', accepted_at = NOW() WHERE id = ?");
+        $stmtUpdStatus->bind_param("i", $matchId);
+        $stmtUpdStatus->execute();
+        $stmtUpdStatus->close();
+        $latestMatch['status'] = 'accepted';
     }
     
     echo json_encode([
@@ -188,21 +214,22 @@ if ($action === 'get_result') {
     // Nếu chưa xong, thực hiện tính toán (Chỉ người thách đấu hoặc hệ thống mới được trigger)
     $conn->begin_transaction();
     try {
-        // Thuật toán thắng thua: 50/50 hoặc dựa trên chỉ số (XP/Level)
-        // Lấy thông tin 2 user để so sánh level
-        $stmtU1 = $conn->prepare("SELECT level FROM users WHERE Iduser = ?");
+        // Lấy thông tin 2 user để so sánh level (từ bảng user_progress)
+        $stmtU1 = $conn->prepare("SELECT level FROM user_progress WHERE user_id = ?");
         $stmtU1->bind_param("i", $match['challenger_id']);
         $stmtU1->execute();
-        $u1 = $stmtU1->get_result()->fetch_assoc();
+        $resU1 = $stmtU1->get_result()->fetch_assoc();
+        $u1Level = $resU1 ? (int)$resU1['level'] : 1;
         $stmtU1->close();
 
-        $stmtU2 = $conn->prepare("SELECT level FROM users WHERE Iduser = ?");
+        $stmtU2 = $conn->prepare("SELECT level FROM user_progress WHERE user_id = ?");
         $stmtU2->bind_param("i", $match['opponent_id']);
         $stmtU2->execute();
-        $u2 = $stmtU2->get_result()->fetch_assoc();
+        $resU2 = $stmtU2->get_result()->fetch_assoc();
+        $u2Level = $resU2 ? (int)$resU2['level'] : 1;
         $stmtU2->close();
         
-        $chance1 = 50 + ($u1['level'] - $u2['level']) * 2; // Mỗi level lệch +2% tỉ lệ thắng
+        $chance1 = 50 + ($u1Level - $u2Level) * 2; // Mỗi level lệch +2% tỉ lệ thắng
         $chance1 = max(20, min(80, $chance1)); // Giới hạn 20-80%
 
         $rand = rand(1, 100);
@@ -210,7 +237,7 @@ if ($action === 'get_result') {
         $loserId = ($winnerId == $match['challenger_id']) ? $match['opponent_id'] : $match['challenger_id'];
         
         $bet = $match['bet_amount'];
-        $reward = floor($bet * 1.95); // Thắng nhận 1.95 lần (phí sàn 5% trên tiền thắng)
+        $reward = floor($bet * 1.95); // Thắng nhận 1.95 lần (phí sàn 5% trên GTLM thắng)
 
         // Cập nhật số dư
         $stmtWin = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
@@ -219,7 +246,7 @@ if ($action === 'get_result') {
         $stmtWin->close();
 
         // Cập nhật trạng thái trận đấu
-        $stmt = $conn->prepare("UPDATE pvp_challenges SET status = 'finished', winner_id = ?, updated_at = NOW() WHERE id = ?");
+        $stmt = $conn->prepare("UPDATE pvp_challenges SET status = 'finished', winner_id = ? WHERE id = ?");
         $stmt->bind_param("ii", $winnerId, $matchId);
         $stmt->execute();
         $stmt->close();

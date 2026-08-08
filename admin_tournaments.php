@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'create') {
         $name = trim($_POST['name'] ?? '');
         $description = trim($_POST['description'] ?? '');
-        $gameType = trim($_POST['game_type'] ?? 'Tài Xỉu');
+        $gameType = trim($_POST['game_type'] ?? 'Xanh Đỏ Đối Kháng');
         $buyIn = (float)($_POST['buy_in'] ?? 0);
         $houseFee = (int)($_POST['house_fee_percent'] ?? 10);
         $maxPlayers = (int)($_POST['max_players'] ?? 50);
@@ -136,7 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tourId = (int)($_POST['tournament_id'] ?? 0);
         $name = trim($_POST['name'] ?? '');
         $description = trim($_POST['description'] ?? '');
-        $gameType = trim($_POST['game_type'] ?? 'Tài Xỉu');
+        $gameType = trim($_POST['game_type'] ?? 'Xanh Đỏ Đối Kháng');
         $buyIn = (float)($_POST['buy_in'] ?? 0);
         $houseFee = (int)($_POST['house_fee_percent'] ?? 10);
         $maxPlayers = (int)($_POST['max_players'] ?? 50);

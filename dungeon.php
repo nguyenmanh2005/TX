@@ -39,7 +39,7 @@ while ($row = $resRewards->fetch_assoc()) {
 // Type display config
 $typeConfig = [
     'hunt'       => ['icon' => '⚔️', 'label' => 'SĂNN MỒI',     'color' => '#ef4444', 'desc' => 'Săn thắng liên tiếp'],
-    'accumulate' => ['icon' => '💰', 'label' => 'TÍCH LŨY',     'color' => '#f59e0b', 'desc' => 'Cược đủ số tiền mục tiêu'],
+    'accumulate' => ['icon' => '💰', 'label' => 'TÍCH LŨY',     'color' => '#f59e0b', 'desc' => 'Cược đủ số GTLM mục tiêu'],
     'streak'     => ['icon' => '🔥', 'label' => 'CHUỖI THẮNG',  'color' => '#f97316', 'desc' => 'Thắng liên tiếp không nghỉ'],
     'specialist' => ['icon' => '🎯', 'label' => 'CHUYÊN GIA',   'color' => '#8b5cf6', 'desc' => 'Thành thạo một game cụ thể'],
     'survivor'   => ['icon' => '🛡️', 'label' => 'SINH TỒN',     'color' => '#06b6d4', 'desc' => 'Giữ số dư trước áp lực'],

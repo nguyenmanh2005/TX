@@ -25,14 +25,21 @@ $progress = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
 if (!$progress) {
-    $conn->query("INSERT INTO user_seasonal_pass_progress (user_id, season_id) VALUES ($userId, $seasonId)");
+    $stmtInsProg = $conn->prepare("INSERT INTO user_seasonal_pass_progress (user_id, season_id) VALUES (?, ?)");
+    $stmtInsProg->bind_param("ii", $userId, $seasonId);
+    $stmtInsProg->execute();
+    $stmtInsProg->close();
     $progress = ['current_level' => 1, 'current_xp' => 0, 'is_premium' => 0, 'claimed_rewards' => '[]'];
 }
 
 $claimedRewards = json_decode($progress['claimed_rewards'] ?? '[]', true);
 
 // Lấy danh sách phần thưởng
-$rewards = $conn->query("SELECT * FROM seasonal_pass_levels WHERE season_id = $seasonId ORDER BY level ASC, is_premium ASC")->fetch_all(MYSQLI_ASSOC);
+$stmtRew = $conn->prepare("SELECT * FROM seasonal_pass_levels WHERE season_id = ? ORDER BY level ASC, is_premium ASC");
+$stmtRew->bind_param("i", $seasonId);
+$stmtRew->execute();
+$rewards = $stmtRew->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmtRew->close();
 
 // Xử lý nhận thưởng
 if (isset($_POST['claim_reward'])) {
@@ -58,13 +65,19 @@ if (isset($_POST['claim_reward'])) {
             try {
                 if ($rewardData['reward_type'] === 'money') {
                     $val = (float)$rewardData['reward_value'];
-                    $conn->query("UPDATE users SET Money = Money + $val WHERE Iduser = $userId");
+                    $stmtAddM = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
+                    $stmtAddM->bind_param("di", $val, $userId);
+                    $stmtAddM->execute();
+                    $stmtAddM->close();
                 }
                 // (Logic cho các loại thưởng khác...)
 
                 $claimedRewards[] = $level . ($isPremiumReward ? 'p' : 'f');
                 $newClaimed = json_encode($claimedRewards);
-                $conn->query("UPDATE user_seasonal_pass_progress SET claimed_rewards = '$newClaimed' WHERE user_id = $userId AND season_id = $seasonId");
+                $stmtUpC = $conn->prepare("UPDATE user_seasonal_pass_progress SET claimed_rewards = ? WHERE user_id = ? AND season_id = ?");
+                $stmtUpC->bind_param("sii", $newClaimed, $userId, $seasonId);
+                $stmtUpC->execute();
+                $stmtUpC->close();
                 
                 $conn->commit();
                 $msg = "Nhận thưởng thành công!";
@@ -81,16 +94,35 @@ if (isset($_POST['claim_reward'])) {
 // Xử lý mua Premium
 if (isset($_POST['buy_premium'])) {
     $price = 250000; // 250k GTLM
-    $user = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc();
-    if ($user['Money'] >= $price) {
-        $conn->begin_transaction();
-        $conn->query("UPDATE users SET Money = Money - $price WHERE Iduser = $userId");
-        $conn->query("UPDATE user_seasonal_pass_progress SET is_premium = 1 WHERE user_id = $userId AND season_id = $seasonId");
-        $conn->commit();
-        header("Location: seasonal_pass.php?msg=Premium Activated!");
-        exit;
-    } else {
-        $msg = "Bạn không đủ GTLM!";
+    $conn->begin_transaction();
+    try {
+        $stmtU = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+        $stmtU->bind_param("i", $userId);
+        $stmtU->execute();
+        $user = $stmtU->get_result()->fetch_assoc();
+        $stmtU->close();
+
+        if ($user && (float)$user['Money'] >= $price) {
+            $stmtSubM = $conn->prepare("UPDATE users SET Money = Money - ? WHERE Iduser = ?");
+            $stmtSubM->bind_param("di", $price, $userId);
+            $stmtSubM->execute();
+            $stmtSubM->close();
+
+            $stmtUpP = $conn->prepare("UPDATE user_seasonal_pass_progress SET is_premium = 1 WHERE user_id = ? AND season_id = ?");
+            $stmtUpP->bind_param("ii", $userId, $seasonId);
+            $stmtUpP->execute();
+            $stmtUpP->close();
+
+            $conn->commit();
+            header("Location: seasonal_pass.php?msg=Premium Activated!");
+            exit;
+        } else {
+            $conn->rollback();
+            $msg = "Bạn không đủ GTLM!";
+        }
+    } catch (Exception $e) {
+        $conn->rollback();
+        $msg = "Lỗi: " . $e->getMessage();
     }
 }
 

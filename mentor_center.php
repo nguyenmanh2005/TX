@@ -400,7 +400,7 @@ $stmt->close();
                 </div>
                 <div class="stat-card">
                     <div class="stat-val"><?= number_format($me['Money'], 0, ',', '.') ?></div>
-                    <div class="stat-lbl">Số Dư VNĐ</div>
+                    <div class="stat-lbl">Số Dư GTLM</div>
                 </div>
             </div>
         </div>

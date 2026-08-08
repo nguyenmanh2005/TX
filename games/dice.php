@@ -4,19 +4,15 @@ include '../db_connect.php';
 require_once '../include_css.php';
 include '../load_theme.php';
 require_once '../game_history_helper.php';
-
 if (!isset($_SESSION['Iduser'])) {
     header('Location: ../login.php');
     exit;
 }
-
 $userId = $_SESSION['Iduser'];
 $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
-
-
 // Get statistics from database for chart
 $gameThang = 0;
 $gameThua = 0;
@@ -30,13 +26,9 @@ if ($rowStats = $resultStats->fetch_assoc()) {
     $gameThua = ($rowStats['total'] ?? 0) - $gameThang;
 }
 $stmtStats->close();
-
 $money = $user['Money'];
 $userName = $user['Name'];
 $stmt->close();
-
-$conn->query("CREATE TABLE IF NOT EXISTS history_dice (Id INT AUTO_INCREMENT PRIMARY KEY, Iduser INT NOT NULL, Bet DECIMAL(30,2) NOT NULL, Result VARCHAR(255) NOT NULL, WinAmount DECIMAL(30,2) NOT NULL, Time DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
     $action = $_GET['action'];
@@ -48,6 +40,17 @@ if (isset($_GET['action'])) {
         if ($bet <= 0 || $bet > $money || $target < 2 || $target > 98) {
             $response['message'] = "Yêu cầu không hợp lệ!";
         } else {
+            $conn->begin_transaction();
+            $stmtLock = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+            $stmtLock->bind_param("i", $userId);
+            $stmtLock->execute();
+            $lockedMoney = $stmtLock->get_result()->fetch_assoc()['Money'] ?? 0;
+            $stmtLock->close();
+            if ($bet > $lockedMoney) {
+                $conn->rollback();
+                echo json_encode(['success' => false, 'message' => 'Số dư không đủ hoặc thao tác quá nhanh!']);
+                exit;
+            }
             $conn->query("UPDATE users SET Money = Money - $bet WHERE Iduser = $userId");
             $result = rand(0, 10000) / 100;
             $win = ($mode === 'over') ? ($result > $target) : ($result < $target);
@@ -63,6 +66,7 @@ if (isset($_GET['action'])) {
             $his->bind_param("idss", $userId, $bet, $resStr, $profit);
             $his->execute();
             logGameHistoryWithAll($conn, $userId, 'Dice', $bet, $winAmount, $win);
+            $conn->commit();
             $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
             $response = [
                 'success' => true,
@@ -82,7 +86,6 @@ if (isset($_GET['action'])) {
 ?>
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
     <title>Quantum Dice Premium - Vegas Royale</title>
@@ -103,7 +106,6 @@ if (isset($_GET['action'])) {
             --lose: #ff4757;
             --glass: rgba(255, 255, 255, 0.08);
         }
-
         body {
             margin: 0;
             background:
@@ -114,12 +116,10 @@ if (isset($_GET['action'])) {
             font-family: 'Inter', sans-serif;
             overflow: hidden;
         }
-
         /* Cố định con trỏ chuột trên mọi phần tử */
         * {
             cursor: url('../img/tay.png'), auto !important;
         }
-
         .main-container {
             height: 100vh;
             display: flex;
@@ -128,7 +128,6 @@ if (isset($_GET['action'])) {
             padding: 20px;
             box-sizing: border-box;
         }
-
         .glass-card {
             background: var(--glass);
             backdrop-filter: blur(30px);
@@ -144,13 +143,11 @@ if (isset($_GET['action'])) {
             max-height: 92vh;
             align-self: center;
         }
-
         .sidebar {
             display: flex;
             flex-direction: column;
             gap: 1.2rem;
         }
-
         .game-area {
             position: relative;
             width: 100%;
@@ -165,28 +162,24 @@ if (isset($_GET['action'])) {
             justify-content: center;
             padding: 40px;
         }
-
         .dice-container {
             width: 100%;
             max-width: 700px;
             position: relative;
             padding: 60px 0;
         }
-
         .slider-track {
             height: 12px;
             background: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
             position: relative;
         }
-
         .slider-fill {
             position: absolute;
             height: 100%;
             border-radius: 10px;
             transition: 0.1s;
         }
-
         .slider-handle {
             position: absolute;
             top: 50%;
@@ -202,14 +195,12 @@ if (isset($_GET['action'])) {
             align-items: center;
             justify-content: center;
         }
-
         .slider-handle::after {
             content: '║';
             color: #000;
             font-size: 1rem;
             font-weight: 900;
         }
-
         .result-marker {
             position: absolute;
             top: -60px;
@@ -221,7 +212,6 @@ if (isset($_GET['action'])) {
             align-items: center;
             justify-content: center;
         }
-
         .dice-visual {
             width: 100%;
             height: 100%;
@@ -237,26 +227,22 @@ if (isset($_GET['action'])) {
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
             position: relative;
         }
-
         .result-marker.win .dice-visual {
             background: var(--win);
             color: #000;
             box-shadow: 0 0 30px var(--win);
         }
-
         .result-marker.lose .dice-visual {
             background: var(--lose);
             color: #fff;
             box-shadow: 0 0 30px var(--lose);
         }
-
         .input-group {
             background: rgba(0, 0, 0, 0.4);
             padding: 0.8rem 1.2rem;
             border-radius: 1.2rem;
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
-
         .input-group label {
             display: block;
             font-size: 0.6rem;
@@ -266,7 +252,6 @@ if (isset($_GET['action'])) {
             font-weight: 700;
             letter-spacing: 1px;
         }
-
         .input-group input {
             background: none;
             border: none;
@@ -277,7 +262,6 @@ if (isset($_GET['action'])) {
             outline: none;
             font-family: 'Orbitron';
         }
-
         .btn-roll {
             padding: 1.2rem;
             border-radius: 1.5rem;
@@ -292,13 +276,11 @@ if (isset($_GET['action'])) {
             box-shadow: 0 10px 30px rgba(245, 200, 66, 0.3);
             width: 100%;
         }
-
         .stat-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
         }
-
         .stat-item {
             background: rgba(0, 0, 0, 0.2);
             padding: 0.8rem;
@@ -307,14 +289,12 @@ if (isset($_GET['action'])) {
             border: 1px solid rgba(255, 255, 255, 0.03);
             overflow: hidden;
         }
-
         .stat-item b {
             font-size: 1.1rem;
             font-family: 'Orbitron';
             color: var(--accent);
             white-space: nowrap;
         }
-
         .mode-toggle {
             display: flex;
             background: rgba(255, 255, 255, 0.05);
@@ -322,7 +302,6 @@ if (isset($_GET['action'])) {
             padding: 4px;
             margin-bottom: 1rem;
         }
-
         .mode-btn {
             flex: 1;
             padding: 10px;
@@ -335,17 +314,14 @@ if (isset($_GET['action'])) {
             cursor: pointer;
             text-transform: uppercase;
         }
-
         .mode-btn.active {
             background: #fff;
             color: #000;
         }
-
         #userMoney {
             font-size: 1rem !important;
             word-break: break-all;
         }
-    
         /* Statistics Container */
         .stats-container {
             display: grid;
@@ -353,7 +329,6 @@ if (isset($_GET['action'])) {
             gap: 15px;
             margin-bottom: 20px;
         }
-        
         .stat-item {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -362,20 +337,16 @@ if (isset($_GET['action'])) {
             text-align: center;
             transition: all 0.3s ease;
         }
-        
         .stat-item:hover {
             background: rgba(255, 255, 255, 0.1);
             border-color: rgba(255, 255, 255, 0.2);
         }
-        
         .stat-item.wins {
             border-left: 4px solid #4ade80;
         }
-        
         .stat-item.losses {
             border-left: 4px solid #ff6b6b;
         }
-        
         .stat-item .label {
             font-size: 12px;
             color: rgba(255, 255, 255, 0.6);
@@ -383,22 +354,18 @@ if (isset($_GET['action'])) {
             letter-spacing: 1px;
             margin-bottom: 8px;
         }
-        
         .stat-item .value {
             font-size: 28px;
             font-weight: 700;
             color: #ffd700;
         }
-        
         .chart-box {
             display: flex;
             flex-direction: column;
         }
-        
         .chart-box canvas {
             margin-top: 20px;
         }
-
         .btn-quick-bet {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -410,16 +377,13 @@ if (isset($_GET['action'])) {
             transition: 0.3s;
             font-size: 0.75rem;
         }
-
         .btn-quick-bet:hover {
             background: var(--primary);
             color: #000;
             border-color: var(--primary);
         }
-
     </style>
 </head>
-
 <body>
     <div class="main-container">
         <div class="glass-card">
@@ -492,7 +456,6 @@ if (isset($_GET['action'])) {
             </div>
         </div>
     </div>
-
     <!-- Statistics and History Section -->
     <div class="stats-card-container" style="max-width: 1100px; margin: 20px auto; padding: 0 20px;">
         <div class="glass-card" style="display: block; padding: 20px;">
@@ -510,7 +473,6 @@ if (isset($_GET['action'])) {
             <canvas id="gameChart" style="max-height: 300px;"></canvas>
         </div>
     </div>
-
     <div class="history-box" style="max-width: 1100px; margin: 20px auto; padding: 0 20px;">
         <div class="history-panel" style="display: none;">
             <h2 style="font-family:'Orbitron'; font-size: 1.2rem; margin-top: 0;">LỊCH SỬ GẦN ĐÂY</h2>
@@ -531,7 +493,6 @@ if (isset($_GET['action'])) {
             <p id="history-loading" style="text-align: center; opacity: 0.5; margin-top: 20px;">Đang tải dữ liệu...</p>
         </div>
     </div>
-
     <script>
         let currentTarget = 50.00, currentMode = 'over', isRolling = false;
         function setMode(m) {
@@ -564,7 +525,6 @@ if (isset($_GET['action'])) {
         }
         track.addEventListener('mousedown', (e) => { handleDrag(e); window.addEventListener('mousemove', handleDrag); window.addEventListener('mouseup', () => window.removeEventListener('mousemove', handleDrag)); });
         updateSlider();
-
         function playDice() {
             if (isRolling) return;
             isRolling = true; $('#rollBtn').prop('disabled', true).text('ĐANG LẮC...');
@@ -601,7 +561,6 @@ if (isset($_GET['action'])) {
                 } else { Swal.fire('Lỗi', res.message, 'error'); $('#rollBtn').prop('disabled', false).text('🎲 LẮC XÚC XẮC'); isRolling = false; }
             });
         }
-
         async function loadDiceHistory() {
             try {
                 const response = await fetch('../game_history_universal.php?action=get_history&game=dice');
@@ -635,7 +594,6 @@ if (isset($_GET['action'])) {
                 console.error('History load error:', error);
             }
         }
-
         (function () {
             window.themeConfig = { 
                 particleCount: 600, 
@@ -652,7 +610,6 @@ if (isset($_GET['action'])) {
                 const s = document.createElement('script'); s.src = prefix + src; s.async = false; document.head.appendChild(s);
             });
         })();
-
         document.addEventListener('DOMContentLoaded', function() {
             loadDiceHistory();
             const ctx = document.getElementById('gameChart');

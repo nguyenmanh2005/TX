@@ -150,7 +150,7 @@ if ($action === 'join') {
         $stmtDel->execute();
         $stmtDel->close();
 
-        // Hoàn tiền Gtlm user
+        // Hoàn GTLM Gtlm user
         $buyIn = (float)$tour['buy_in'];
         $stmtRefund = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
         $stmtRefund->bind_param("di", $buyIn, $userId);
@@ -167,14 +167,14 @@ if ($action === 'join') {
         $stmtUpdateTour->execute();
         $stmtUpdateTour->close();
 
-        // Ghi log hoàn tiền
+        // Ghi log hoàn GTLM
         require_once 'game_history_helper.php';
         if (function_exists('logGameHistory')) {
             logGameHistory($conn, $userId, 'TOURNAMENT LEAVE', -$buyIn, 0, false);
         }
 
         $conn->commit();
-        echo json_encode(['success' => true, 'status' => 'success', 'message' => 'Đã hủy đăng ký và hoàn trả tiền cược thành công!']);
+        echo json_encode(['success' => true, 'status' => 'success', 'message' => 'Đã hủy đăng ký và hoàn trả GTLM cược thành công!']);
     } catch (Exception $e) {
         $conn->rollback();
         echo json_encode(['success' => false, 'status' => 'error', 'message' => 'Lỗi hệ thống: ' . $e->getMessage()]);

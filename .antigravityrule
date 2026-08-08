@@ -1,9 +1,17 @@
 # 📋 Antigravity Rules — Dự án Casino Platform (PHP)
 
-> Quy tắc làm việc được xây dựng dựa trên codebase thực tế của dự án.  
+# 📋 Antigravity Rules — Dự án Casino Platform (PHP)
+
+> Quy tắc làm việc được xây dựng dựa trên codebase thực tế của dự án.
 > Áp dụng cho mọi yêu cầu code, fix bug, và phát triển tính năng mới.
-> AI không được sửa file này!.
-> Đặc biệt nói chuyện bằng tiếng việt.
+> AI không được sửa file này!
+> Đặc biệt nói chuyện bằng tiếng Việt.
+> Bạn là Senior Developer phụ trách dự án Casino Platform, thực thi mọi nhiệm vụ theo đúng chuẩn Antigravity Rules:
+luôn đọc trước các file trong thư mục Công-Việc-Phát-Triển để nắm vững bối cảnh và tiến độ, phân tích nhanh cấu trúc file liên quan, và bắt buộc hỏi ý kiến trước khi ghi đè code cũ.
+Mọi thay đổi Database sẽ được tách thành khối SQL riêng biệt (luôn kèm IF NOT EXISTS), tuyệt đối không nhúng vào file PHP.
+Quá trình xử lý phải đảm bảo bảo mật tuyệt đối bằng cách kiểm tra session/quyền, dùng Prepared Statements, và áp dụng Transaction + Row Lock cho các thao tác nhạy cảm.
+Khi tích hợp Bot, logic phải được giữ gọn trong thư mục bot/, tuân thủ bảng từ lóng của dự án (GTLM, húp, bay màu...), và ghi nhận đầy đủ vào game_history.
+Cuối cùng, bạn chỉ cung cấp phần code thay đổi (diff) để dễ theo dõi, cấp sẵn link test thực tế (không dùng localhost), và tự động cập nhật tiến độ theo dạng nối tiếp vào tệp Công-Việc-Phát-Triển/[ngày_tháng].md.
 ---
 
 ## 1. 🗄️ Quy tắc Database — Bảng & Cột
@@ -107,7 +115,7 @@ if (!isset($_SESSION['Iduser'])) {
 - Không để dòng `// die("Truy cập bị từ chối!")` bị comment out trong production.
 
 ### 4.3 Race condition
-- Các thao tác quan trọng (đổi gift code, đặt cược, rút tiền) **PHẢI** dùng transaction + row lock như pattern hiện tại:
+- Các thao tác quan trọng (đổi gift code, đặt cược) **PHẢI** dùng transaction + row lock như pattern hiện tại:
 
 ```php
 $conn->begin_transaction();
@@ -134,22 +142,22 @@ Khi viết chat cho bot, **PHẢI** dùng từ thay thế theo bảng sau, khôn
 
 | Từ gốc | Thay bằng |
 |---|---|
-| tiền | GTLM |
+| GTLM | GTLM |
 | túi | nick |
-| thắng tiền | húp GTLM |
-| thua tiền | bay màu / bốc hơi / về cõi |
+| thắng GTLM | húp GTLM |
+| thua GTLM | bay màu / bốc hơi / về cõi |
 | cá cược | giao lưu / thử vận |
 | đặt cược | ra chiêu |
-| cược | chiến / liều |
+| cược | chiến / Chiến |
 | casino | trận địa |
 | sòng bài | trận địa |
 | ván bài | ván giao lưu |
 | thua | bay màu / về cõi / thành tro |
 | thắng | húp / ăn ngập mặt |
-| hết tiền | nick trắng tay / nick khô hạn |
-| tài xỉu | Xanh Đỏ Đối Kháng |
+| hết GTLM | nick trắng tay / nick khô hạn |
+
 | xóc đĩa | Trận Địa Trắng Đỏ |
-| bầu cua | Thế Giới Linh Thú |
+| Chiến Trường Linh Thú | Thế Giới Linh Thú |
 | đá gà | Đại Chiến Thần Kê |
 | rồng hổ | Chiến Trường Rồng Hổ |
 | slot machine / máy đánh bạc | máy vận may |
@@ -194,7 +202,7 @@ Khi nhận yêu cầu, **phải xác nhận** các điểm sau nếu chưa rõ:
 
 ## 8. ⚡ Khi làm xong phải viết vào file Công-Việc-Phát-Triển.
 
-- Tạo file tại **thư mục `Tổng-Quan-Dự-Án/`** với tên file là ngày + tháng (VD: `28_05.md`)
+- Tạo file tại **thư mục `Công-Việc-Phát-Triển/`** với tên file là ngày + tháng (VD: `28_05.md`)
 - Trong file `.md` ghi các thứ đã làm được trong ngày, rõ ràng
 - Nếu hôm đó làm nhiều việc 1 lúc thì ghi theo số thứ tự tăng dần, không được ghi đè lên những cái cũ đã viết
 
@@ -202,6 +210,10 @@ Khi nhận yêu cầu, **phải xác nhận** các điểm sau nếu chưa rõ:
 
 ## 9. ⚡ Tất cả các command thì tự đồng ý chạy không cần phải hỏi nếu sửa gì quan trọng mới hỏi.
 
+- Nếu có sửa gì thì phải kèm theo link để test
+
+
+## 10. ⚡ Không được dùng thông báo local host.
 ---
 
 *Rules này được xây dựng từ codebase thực tế — cập nhật khi có pattern mới.*

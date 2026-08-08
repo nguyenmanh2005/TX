@@ -1,61 +1,20 @@
 <?php
 session_start();
 require 'db_connect.php';
-
 if (!isset($_SESSION['Iduser'])) {
     header("Location: login.php");
     exit();
 }
-
 // Load theme
 require_once 'load_theme.php';
-
 $userId = $_SESSION['Iduser'];
-
 // Kiểm tra và tạo bảng social_feed nếu chưa có
 $checkTable = $conn->query("SHOW TABLES LIKE 'social_feed'");
 if (!$checkTable || $checkTable->num_rows == 0) {
-    $createTable = "CREATE TABLE IF NOT EXISTS social_feed (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        activity_type VARCHAR(50) NOT NULL,
-        activity_data TEXT,
-        message TEXT,
-        is_public TINYINT(1) DEFAULT 1,
-        likes_count INT DEFAULT 0,
-        comments_count INT DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(Iduser) ON DELETE CASCADE,
-        INDEX idx_user_date (user_id, created_at DESC),
-        INDEX idx_type_date (activity_type, created_at DESC),
-        INDEX idx_public_date (is_public, created_at DESC)
-    )";
     $conn->query($createTable);
-    
-    $createLikes = "CREATE TABLE IF NOT EXISTS social_feed_likes (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        feed_id INT NOT NULL,
-        user_id INT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (feed_id) REFERENCES social_feed(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(Iduser) ON DELETE CASCADE,
-        UNIQUE KEY unique_feed_user (feed_id, user_id)
-    )";
     $conn->query($createLikes);
-    
-    $createComments = "CREATE TABLE IF NOT EXISTS social_feed_comments (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        feed_id INT NOT NULL,
-        user_id INT NOT NULL,
-        comment_text TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (feed_id) REFERENCES social_feed(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(Iduser) ON DELETE CASCADE,
-        INDEX idx_feed_date (feed_id, created_at DESC)
-    )";
     $conn->query($createComments);
 }
-
 // Lấy thông tin người dùng
 $sql = "SELECT Iduser, Name, Money FROM users WHERE Iduser = ?";
 $stmt = $conn->prepare($sql);
@@ -64,7 +23,6 @@ $stmt->execute();
 $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 $stmt->close();
-
 // Lấy feed activities
 $sql = "SELECT sf.*, u.Name, u.ImageURL,
         (SELECT COUNT(*) FROM social_feed_likes WHERE feed_id = sf.id) as likes_count,
@@ -84,7 +42,6 @@ while ($row = $result->fetch_assoc()) {
     $feedItems[] = $row;
 }
 $stmt->close();
-
 // Lấy comments và reactions cho mỗi feed item
 foreach ($feedItems as &$item) {
     // 1. Fetch Comments
@@ -103,7 +60,6 @@ foreach ($feedItems as &$item) {
         $item['comments'][] = $comment;
     }
     $stmt->close();
-
     // 2. Fetch Reactions
     $item['reactions'] = [
         'fire' => ['count' => 0, 'active' => false],
@@ -111,7 +67,6 @@ foreach ($feedItems as &$item) {
         'money' => ['count' => 0, 'active' => false],
         'like' => ['count' => 0, 'active' => false]
     ];
-    
     $sql = "SELECT reaction_type, COUNT(*) as cnt,
                   SUM(CASE WHEN user_id = ? THEN 1 ELSE 0 END) as my_react
            FROM social_feed_reactions
@@ -155,20 +110,16 @@ unset($item);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             animation: fadeIn 0.6s ease;
         }
-        
         * {
             cursor: inherit;
         }
-
         button, a, input[type="button"], input[type="submit"], label, select, textarea {
             cursor: url('img/tay.png'), url('../img/tay.png'), pointer !important;
         }
-        
         .container {
             max-width: 800px;
             margin: 0 auto;
         }
-        
         .header-feed {
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
@@ -183,7 +134,6 @@ unset($item);
             position: relative;
             overflow: hidden;
         }
-        
         .header-feed::before {
             content: '';
             position: absolute;
@@ -194,7 +144,6 @@ unset($item);
             background: radial-gradient(circle, rgba(102, 126, 234, 0.05) 0%, transparent 70%);
             animation: float 6s ease-in-out infinite;
         }
-        
         .header-feed h1 {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             -webkit-background-clip: text;
@@ -206,7 +155,6 @@ unset($item);
             position: relative;
             z-index: 1;
         }
-        
         .feed-item {
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
@@ -218,19 +166,16 @@ unset($item);
             animation: fadeInUp 0.6s ease backwards;
             transition: all 0.3s ease;
         }
-        
         .feed-item:hover {
             transform: translateY(-5px);
             box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
         }
-        
         .feed-header {
             display: flex;
             align-items: center;
             gap: 15px;
             margin-bottom: 15px;
         }
-        
         .feed-avatar {
             width: 50px;
             height: 50px;
@@ -238,29 +183,24 @@ unset($item);
             object-fit: cover;
             border: 3px solid #667eea;
         }
-        
         .feed-user-info {
             flex: 1;
         }
-        
         .feed-user-name {
             font-weight: 700;
             color: #333;
             font-size: 18px;
         }
-        
         .feed-time {
             font-size: 12px;
             color: #999;
         }
-        
         .feed-content {
             margin: 15px 0;
             color: #333;
             line-height: 1.6;
             font-size: 16px;
         }
-        
         .feed-actions {
             display: flex;
             gap: 20px;
@@ -268,7 +208,6 @@ unset($item);
             padding-top: 15px;
             border-top: 1px solid #e0e0e0;
         }
-        
         .feed-action-btn {
             display: flex;
             align-items: center;
@@ -282,23 +221,19 @@ unset($item);
             cursor: pointer;
             transition: all 0.3s ease;
         }
-        
         .feed-action-btn:hover {
             background: rgba(102, 126, 234, 0.2);
             transform: scale(1.05);
         }
-        
         .feed-action-btn.liked {
             background: rgba(220, 53, 69, 0.1);
             color: #dc3545;
         }
-        
         .comments-section {
             margin-top: 15px;
             padding-top: 15px;
             border-top: 1px solid #e0e0e0;
         }
-        
         .comment-item {
             display: flex;
             gap: 10px;
@@ -307,36 +242,30 @@ unset($item);
             background: rgba(247, 247, 247, 0.8);
             border-radius: 12px;
         }
-        
         .comment-avatar {
             width: 35px;
             height: 35px;
             border-radius: 50%;
             object-fit: cover;
         }
-        
         .comment-content {
             flex: 1;
         }
-        
         .comment-author {
             font-weight: 700;
             color: #333;
             font-size: 14px;
             margin-bottom: 3px;
         }
-        
         .comment-text {
             color: #666;
             font-size: 14px;
         }
-        
         .comment-input {
             display: flex;
             gap: 10px;
             margin-top: 15px;
         }
-        
         .comment-input input {
             flex: 1;
             padding: 10px 15px;
@@ -344,7 +273,6 @@ unset($item);
             border-radius: 20px;
             font-size: 14px;
         }
-        
         .comment-input button {
             padding: 10px 20px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -354,7 +282,6 @@ unset($item);
             font-weight: 600;
             cursor: pointer;
         }
-
         .reaction-pill-btn {
             background: rgba(0, 0, 0, 0.03);
             border: 1px solid rgba(0, 0, 0, 0.05);
@@ -398,7 +325,6 @@ unset($item);
             border-color: rgba(102, 126, 234, 0.2);
             transform: scale(1.02);
         }
-        
         .empty-state {
             text-align: center;
             padding: 60px 20px;
@@ -406,12 +332,10 @@ unset($item);
             border-radius: 20px;
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
         }
-        
         .empty-state-icon {
             font-size: 80px;
             margin-bottom: 20px;
         }
-        
         .empty-state-text {
             font-size: 18px;
             color: #666;
@@ -424,7 +348,6 @@ unset($item);
             <h1>📱 Social Feed</h1>
             <p style="color: #666; margin-top: 10px; font-size: 18px;">Xem hoạt động của cộng đồng!</p>
         </div>
-        
         <?php if (empty($feedItems)): ?>
             <div class="empty-state">
                 <div class="empty-state-icon">📭</div>
@@ -438,7 +361,6 @@ unset($item);
                 $created = new DateTime($item['created_at']);
                 $now = new DateTime();
                 $diff = $now->diff($created);
-                
                 if ($diff->days > 0) {
                     $timeAgo = $diff->days . ' ngày trước';
                 } elseif ($diff->h > 0) {
@@ -448,7 +370,6 @@ unset($item);
                 } else {
                     $timeAgo = 'Vừa xong';
                 }
-                
                 $activityIcon = '🎮';
                 switch ($item['activity_type']) {
                     case 'big_win':
@@ -475,11 +396,9 @@ unset($item);
                         </div>
                         <div style="font-size: 32px;"><?= $activityIcon ?></div>
                     </div>
-                    
                     <div class="feed-content">
                         <?= htmlspecialchars($item['message'] ?? '') ?>
                     </div>
-                    
                     <div class="feed-actions">
                         <button class="feed-action-btn <?= $item['is_liked'] > 0 ? 'liked' : '' ?>" 
                                 onclick="toggleLike(<?= $item['id'] ?>)">
@@ -491,7 +410,6 @@ unset($item);
                             <span><?= $item['comments_count'] ?></span>
                         </button>
                     </div>
-
                     <!-- Emoji Reactions Bar -->
                     <div class="feed-reactions-row" style="display: flex; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(0,0,0,0.08);">
                         <button class="reaction-pill-btn fire-btn <?= $item['reactions']['fire']['active'] ? 'active' : '' ?>" onclick="toggleReaction(<?= $item['id'] ?>, 'fire')">
@@ -507,7 +425,6 @@ unset($item);
                             ❤️ <span class="badge"><?= $item['reactions']['like']['count'] ?></span>
                         </button>
                     </div>
-
                     <!-- Quick Comments Suggested Pills -->
                     <div class="quick-comments-row" style="display: flex; gap: 8px; margin: 15px 0 10px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; align-items: center;">
                         <span style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 5px; white-space: nowrap;">Bình luận nhanh:</span>
@@ -516,7 +433,6 @@ unset($item);
                         <button class="quick-comment-pill" onclick="postQuickComment(<?= $item['id'] ?>, 'Khóc cùng idol... 😭')">Khóc cùng idol... 😭</button>
                         <button class="quick-comment-pill" onclick="postQuickComment(<?= $item['id'] ?>, 'Đỉnh chóp! 🏆')">Đỉnh chóp! 🏆</button>
                     </div>
-                    
                     <div class="comments-section" id="comments-<?= $item['id'] ?>" style="display: none;">
                         <?php if (!empty($item['comments'])): ?>
                             <?php foreach ($item['comments'] as $comment): ?>
@@ -530,7 +446,6 @@ unset($item);
                                 </div>
                             <?php endforeach; ?>
                         <?php endif; ?>
-                        
                         <div class="comment-input">
                             <input type="text" id="comment-input-<?= $item['id'] ?>" 
                                    placeholder="Viết bình luận...">
@@ -540,14 +455,12 @@ unset($item);
                 </div>
             <?php endforeach; ?>
         <?php endif; ?>
-        
         <div style="text-align: center; margin-top: 30px;">
             <a href="index.php" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 12px; font-weight: 600;">
                 🏠 Về Trang Chủ
             </a>
         </div>
     </div>
-    
     <script>
         function toggleLike(feedId) {
             $.ajax({
@@ -571,7 +484,6 @@ unset($item);
                 }
             });
         }
-        
         function toggleComments(feedId) {
             const commentsSection = document.getElementById('comments-' + feedId);
             if (commentsSection.style.display === 'none') {
@@ -580,11 +492,9 @@ unset($item);
                 commentsSection.style.display = 'none';
             }
         }
-        
         function postComment(feedId) {
             const input = document.getElementById('comment-input-' + feedId);
             const commentText = input.value.trim();
-            
             if (!commentText) {
                 Swal.fire({
                     icon: 'warning',
@@ -593,7 +503,6 @@ unset($item);
                 });
                 return;
             }
-            
             $.ajax({
                 url: 'api_social_feed.php',
                 method: 'POST',
@@ -617,7 +526,6 @@ unset($item);
                 }
             });
         }
-
         function toggleReaction(feedId, reactionType) {
             $.ajax({
                 url: 'api_social_feed.php',
@@ -641,7 +549,6 @@ unset($item);
                 }
             });
         }
-
         function postQuickComment(feedId, commentText) {
             $.ajax({
                 url: 'api_social_feed.php',
@@ -668,4 +575,3 @@ unset($item);
     </script>
 </body>
 </html>
-

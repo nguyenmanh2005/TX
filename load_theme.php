@@ -199,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastSeenRandomId = sessionStorage.getItem('last_seen_random') || 0;
 
     function pollEvents() {
-        fetch('api_sse_events.php')
+        fetch('/api_sse_events.php')
             .then(res => res.json())
             .then(data => {
                 if (!data.success) return;
@@ -243,6 +243,43 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     }
                 }
+
+                // Xử lý thông báo Jackpot
+                if (data.jackpot_win) {
+                    let jpId = data.jackpot_win.name + data.jackpot_win.amount + data.jackpot_win.game;
+                    if (sessionStorage.getItem('last_jackpot') !== jpId) {
+                        sessionStorage.setItem('last_jackpot', jpId);
+                        Swal.fire({
+                            title: '🎰 NỔ HŨ TOÀN SERVER!',
+                            html: `Người chơi <b style="color:#fbbf24">${data.jackpot_win.name}</b> vừa nổ hũ tại game <b style="color:#38bdf8">${data.jackpot_win.game}</b>!<br><br>🏆 Số GTLM: <b style="color:#4ade80">+${new Intl.NumberFormat().format(data.jackpot_win.amount)} GTLM</b>`,
+                            icon: 'success',
+                            toast: true,
+                            position: 'top',
+                            showConfirmButton: false,
+                            timer: 5000,
+                            timerProgressBar: true,
+                            background: '#0f172a',
+                            color: '#f8fafc'
+                        });
+                    }
+                }
+
+                // Xử lý thông báo nhiệm vụ sự kiện hoàn thành
+                if (data.completed_missions && data.completed_missions.length > 0) {
+                    let missionList = data.completed_missions.map(m => `<li><b>${m.title}</b></li>`).join('');
+                    Swal.fire({
+                        title: '🎯 HOÀN THÀNH NHIỆM VỤ!',
+                        html: `Bạn vừa hoàn thành:<br><ul style="text-align:left; font-size:14px; margin: 10px 0;">${missionList}</ul><a href="event_center.php" style="color:#4ade80; font-weight:bold; display:inline-block; margin-top:5px; text-decoration:none;">👉 Bấm vào đây để nhận thưởng</a>`,
+                        icon: 'success',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 6000,
+                        timerProgressBar: true,
+                        background: '#0f172a',
+                        color: '#f8fafc'
+                    });
+                }
             })
             .catch(err => console.error('Polling error', err));
     }
@@ -250,8 +287,87 @@ document.addEventListener('DOMContentLoaded', () => {
     // Poll lần đầu và thiết lập chu kỳ
     pollEvents();
     setInterval(pollEvents, 15000);
+
+    // ⚔️ PVP CHALLENGE LISTENER: Kiểm tra lệnh thách đấu
+    let _pvpShownAccepted = new Set();
+    async function checkPvPChallenges() {
+        try {
+            const res = await fetch('api_pvp_check.php');
+            const data = await res.json();
+
+            // --- Người bị thách (Player 2): có lời thách mới ---
+            if (data.has_challenge) {
+                Swal.fire({
+                    title: '⚔️ LỆNH TRUY SOÁT!',
+                    html: `<div style="color:#ef4444; font-weight:900;">${data.challenger_name}</div> đang thách đấu bạn mức cược <br><b style="color:#fbbf24; font-size:1.5em;">${data.bet} GTLM</b>!<br>Bạn có dám nhận lời?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'XUẤT CHIẾN 🔥',
+                    cancelButtonText: 'BỎ QUA',
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#334155',
+                    allowOutsideClick: false,
+                    backdrop: `rgba(239, 68, 68, 0.2)`
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = 'pvp_arena.php?id=' + data.challenge_id;
+                    }
+                });
+            }
+
+            // --- Người thách (Player 1): challenge vừa được chấp nhận ---
+            if (data.has_accepted && !_pvpShownAccepted.has(data.accepted_id)) {
+                _pvpShownAccepted.add(data.accepted_id);
+                Swal.fire({
+                    title: '✅ Được Chấp Nhận!',
+                    html: `<b style="color:#10b981;">${data.accepted_by}</b> đã chấp nhận lời khiêu chiến của bạn!<br><br>Cược: <b style="color:#fbbf24;">${data.accepted_bet} GTLM</b><br><br>Bạn có muốn vào phòng không?`,
+                    icon: 'success',
+                    showCancelButton: true,
+                    confirmButtonText: '⚔️ Vào Đấu Trường!',
+                    cancelButtonText: 'Để Sau',
+                    confirmButtonColor: '#10b981',
+                    cancelButtonColor: '#334155',
+                    allowOutsideClick: false,
+                    timer: 20000,
+                    timerProgressBar: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = 'pvp_arena.php?id=' + data.accepted_id;
+                    }
+                });
+            }
+        } catch(e) {}
+    }
+    
+    checkPvPChallenges();
+    setInterval(checkPvPChallenges, 8000);
 });
 </script>
+<style>
+/* FOMO Event Effects (Dynamic Design & Rich Aesthetics) */
+.fomo-glitch {
+    animation: fomo-glitch 0.3s infinite alternate;
+    color: #ef4444 !important;
+    text-shadow: 0 0 10px #ef4444, 2px 2px 2px rgba(239,68,68,0.5), -2px -2px 2px rgba(255,0,0,0.5);
+    font-weight: 800;
+}
+@keyframes fomo-glitch {
+    0% { transform: translate(0) skew(0); }
+    20% { transform: translate(-2px, 1px) skew(-5deg); }
+    40% { transform: translate(1px, -1px) skew(5deg); }
+    60% { transform: translate(-1px, 2px) skew(0); }
+    80% { transform: translate(2px, -2px) skew(-2deg); }
+    100% { transform: translate(0) skew(2deg); }
+}
+.neon-pulse {
+    animation: neon-pulse 1s infinite alternate;
+    border-color: #f43f5e;
+}
+@keyframes neon-pulse {
+    from { box-shadow: 0 0 5px #f43f5e, 0 0 10px #f43f5e; }
+    to { box-shadow: 0 0 20px #e11d48, 0 0 30px #e11d48; }
+}
+</style>
 <?php
 }
 

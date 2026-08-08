@@ -533,7 +533,7 @@
                         GTLM là nền tảng <strong>giải trí game hoàn toàn miễn phí</strong>, được xây dựng với mục đích
                         mang lại trải nghiệm vui chơi lành mạnh, an toàn cho mọi người.
                         <br><br>
-                        <i style="color: #667eea;">⚠️ <b>Lưu ý quan trọng:</b> Dự án được phát triển phi lợi nhuận, không có ý định quảng bá, thương mại hóa hay kiếm tiền từ người dùng dưới bất kỳ hình thức nào.</i>
+                        <i style="color: #667eea;">⚠️ <b>Lưu ý quan trọng:</b> Dự án được phát triển phi lợi nhuận, không có ý định quảng bá, thương mại hóa hay kiếm GTLM từ người dùng dưới bất kỳ hình thức nào.</i>
                         <br><br>
                        
                     </p>

@@ -111,23 +111,20 @@ $gameTitle = "Xì Dách Royale";
             <!-- Controls Area -->
             <div class="controls-area" style="padding-bottom: 60px;">
                 <div class="chip-selector">
-                    <div class="chip" data-value="1000">1K GTLM</div>
-                    <div class="chip active" data-value="5000">5K GTLM</div>
-                    <div class="chip" data-value="10000">10K GTLM</div>
-                    <div class="chip" data-value="50000">50K GTLM</div>
-                    <div class="chip" data-value="100000">100K GTLM</div>
-                <div class="chip" data-value="500000">500K GTLM</div>
-                <div class="chip" data-value="1000000">1M GTLM</div>
-                <div class="chip" data-value="2000000">2M GTLM</div>
-                <div class="chip" data-value="5000000">5M GTLM</div>
-                <div class="chip" data-value="<?=$user['Money']?>">MAX</div>
+                    <div class="chip active" data-value="10000" style="background: radial-gradient(circle at 30% 30%, #475569, #1e293b); color: #fff; border-color: #94a3b8; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">10K</div>
+                    <div class="chip" data-value="50000" style="background: radial-gradient(circle at 30% 30%, #3b82f6, #1d4ed8); color: #fff; border-color: #60a5fa; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">50K</div>
+                    <div class="chip" data-value="100000" style="background: radial-gradient(circle at 30% 30%, #10b981, #047857); color: #fff; border-color: #34d399; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">100K</div>
+                    <div class="chip" data-value="500000" style="background: radial-gradient(circle at 30% 30%, #8b5cf6, #5b21b6); color: #fff; border-color: #a78bfa; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">500K</div>
+                    <div class="chip" data-value="1000000" style="background: radial-gradient(circle at 30% 30%, #f59e0b, #b45309); color: #fff; border-color: #fcd34d; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">1M</div>
+                    <div class="chip" data-value="5000000" style="background: radial-gradient(circle at 30% 30%, #ec4899, #be185d); color: #fff; border-color: #f472b6; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">5M</div>
+                    <div class="chip" data-value="<?=$user['Money']?>" style="background: radial-gradient(circle at 30% 30%, #ef4444, #b91c1c); color: #fff; border-color: #fca5a5; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">ALL IN</div>
                     <div class="custom-bet-box">
                         <input type="number" id="customBetInput" placeholder="Cược khác..." min="1000" step="1000">
                     </div>
                 </div>
 
                 <div class="bet-info">
-                    <span>Mức thách đấu: <strong id="currentBetDisplay">5.000</strong> GTLM</span>
+                    <span>Mức thách đấu: <strong id="currentBetDisplay">10.000</strong> GTLM</span>
                 </div>
 
                 <div class="action-buttons">

@@ -50,16 +50,17 @@ function processWinner(mysqli $conn, array $round) {
         $winnerId = $allTickets[array_rand($allTickets)];
         
         // Trao thÆ°á»Ÿng 95% pool
+        // Trao thưởng 95% pool
         $winAmount = $totalPool * 0.95;
         $conn->query("UPDATE users SET Money = Money + $winAmount WHERE Iduser = $winnerId");
         
-        // Gá»­i thÃ´ng bÃ¡o cho winner
+        // Gửi thông báo cho winner
         require_once 'notification_helper.php';
         $winnerNameRes = $conn->query("SELECT Name FROM users WHERE Iduser = $winnerId")->fetch_assoc();
-        $wName = $winnerNameRes['Name'] ?? "NgÆ°á»i chÆ¡i áº©n danh";
+        $wName = $winnerNameRes['Name'] ?? "Người chơi ẩn danh";
         
-        // Log vÃ o chat há»‡ thá»‘ng
-        $msg = "ðŸŽ‰ ChÃºc má»«ng [$wName] Ä‘Ã£ tháº¯ng hÅ© Mega Spin trá»‹ giÃ¡ " . number_format($winAmount) . " GTLM!";
+        // Log vào chat hệ thống
+        $msg = "🎉 Chúc mừng [$wName] đã húp hũ Mega Spin trị giá " . number_format($winAmount) . " GTLM!";
         $conn->query("INSERT INTO chat_messages (user_id, username, message, avatar) VALUES (0, 'MEGA SPIN', '$msg', 'https://cdn-icons-png.flaticon.com/512/2583/2583150.png')");
     }
 

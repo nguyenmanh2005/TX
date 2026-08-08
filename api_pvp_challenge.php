@@ -160,6 +160,13 @@ switch ($action) {
             exit;
         }
 
+        // Lấy tên người chấp nhận
+        $getAcceptor = $conn->prepare("SELECT Name FROM users WHERE Iduser = ?");
+        $getAcceptor->bind_param("i", $userId);
+        $getAcceptor->execute();
+        $acceptor = $getAcceptor->get_result()->fetch_assoc();
+        $getAcceptor->close();
+
         // Trừ gtlm và chấp nhận challenge
         $conn->begin_transaction();
         try {
@@ -186,14 +193,51 @@ switch ($action) {
 
             $conn->commit();
 
+            // Gửi notification cho challenger (người chơi 1) biết challenge đã được chấp nhận
+            require_once 'notification_helper.php';
+            $acceptorName = htmlspecialchars($acceptor['Name'] ?? 'Đối thủ');
+            createNotification(
+                $conn,
+                $challenge['challenger_id'],
+                'friend_request',
+                'Challenge Được Chấp Nhận!',
+                $acceptorName . ' đã chấp nhận thách đấu! Vào đấu trường ngay!',
+                '⚔️',
+                'pvp_arena.php?id=' . $challengeId,
+                $challengeId,
+                true
+            );
+
             echo json_encode([
                 'success' => true,
                 'message' => 'Đã chấp nhận challenge!',
+                'challenge_id' => $challengeId,
                 'challenge' => $challenge
             ]);
         } catch (Exception $e) {
             $conn->rollback();
             echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()]);
+        }
+        break;
+
+    case 'get_challenge':
+        $challengeId = (int) ($_GET['challenge_id'] ?? 0);
+        if ($challengeId <= 0) {
+            echo json_encode(['success' => false, 'message' => 'ID không hợp lệ!']);
+            exit;
+        }
+
+        $getSql = "SELECT * FROM pvp_challenges WHERE id = ?";
+        $stmt = $conn->prepare($getSql);
+        $stmt->bind_param("i", $challengeId);
+        $stmt->execute();
+        $challenge = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if ($challenge) {
+            echo json_encode(['success' => true, 'challenge' => $challenge]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Không tìm thấy trận đấu!']);
         }
         break;
 
@@ -276,22 +320,18 @@ switch ($action) {
                     $updateWinner->bind_param("di", $totalBet, $winnerId);
                     $updateWinner->execute();
                     $updateWinner->close();
-
-                    // Cập nhật stats
-                    updatePvpStats($conn, $winnerId, true, $totalBet);
-                    updatePvpStats($conn, ($winnerId == $challenge['challenger_id'] ? $challenge['opponent_id'] : $challenge['challenger_id']), false, $challenge['bet_amount']);
                 } else {
                     // Hòa, trả lại gtlm cho cả 2
                     $refund = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser IN (?, ?)");
                     $refund->bind_param("dii", $challenge['bet_amount'], $challenge['challenger_id'], $challenge['opponent_id']);
                     $refund->execute();
                     $refund->close();
-
-                    updatePvpStats($conn, $challenge['challenger_id'], null, 0);
-                    updatePvpStats($conn, $challenge['opponent_id'], null, 0);
                 }
 
-                // Cập nhật challenge
+                updatePvpStats($conn, $challenge['challenger_id'], ($result == 'challenger_win'), $challenge['bet_amount']);
+                updatePvpStats($conn, $challenge['opponent_id'], ($result == 'opponent_win'), $challenge['bet_amount']);
+
+                // Cập nhật kết quả
                 $updateResult = $conn->prepare("UPDATE pvp_challenges SET status = 'completed', result = ?, winner_id = ?, completed_at = NOW() WHERE id = ?");
                 $updateResult->bind_param("sii", $result, $winnerId, $challengeId);
                 $updateResult->execute();
@@ -595,8 +635,8 @@ function calculateGameResult(string $gameType, string $challengerChoice, string 
             // Coin flip: nếu cùng lựa chọn thì random, khác nhau thì ai đúng kết quả random thắng
             $randomResult = rand(0, 1) ? 'heads' : 'tails';
             if ($challengerChoice == $opponentChoice) {
-                // Cùng lựa chọn, random thắng
-                return ($challengerChoice == $randomResult) ? 'challenger_win' : 'opponent_win';
+                // Cùng lựa chọn -> Hòa
+                return 'draw';
             } else {
                 // Khác lựa chọn, ai đúng random thắng
                 if ($challengerChoice == $randomResult)
@@ -696,7 +736,7 @@ function updatePvpStats(mysqli $conn, int $userId, ?bool $isWin, float $amount)
         $winnings = $isWin === true ? $amount : 0;
         $lossesAmount = $isWin === false ? $amount : 0;
         $streak = $isWin === true ? 1 : 0;
-        $insert->bind_param("iiiiiddii", $userId, $wins, $losses, $draws, $winnings, $lossesAmount, $streak, $streak);
+        $insert->bind_param("iiiiddii", $userId, $wins, $losses, $draws, $winnings, $lossesAmount, $streak, $streak);
         $insert->execute();
         $insert->close();
     } else {
@@ -721,7 +761,7 @@ function updatePvpStats(mysqli $conn, int $userId, ?bool $isWin, float $amount)
             total_matches = ?, wins = ?, losses = ?, draws = ?, 
             total_winnings = ?, total_losses = ?, win_streak = ?, best_win_streak = ? 
             WHERE user_id = ?");
-        $update->bind_param("iiiiiddiii", $totalMatches, $wins, $losses, $draws, $totalWinnings, $totalLosses, $winStreak, $bestStreak, $userId);
+        $update->bind_param("iiiiddiii", $totalMatches, $wins, $losses, $draws, $totalWinnings, $totalLosses, $winStreak, $bestStreak, $userId);
         $update->execute();
         $update->close();
     }

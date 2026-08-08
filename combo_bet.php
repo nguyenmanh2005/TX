@@ -266,7 +266,7 @@ $stmt->close();
         </div>
 
         <div class="bet-input-box">
-            <label>Liều lượng cược (GTLM)</label>
+            <label>Chiến lượng cược (GTLM)</label>
             <input type="number" id="comboBetAmount" value="50000" min="1000" step="any">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; font-size:0.8rem;">
                 <span style="color:#94a3b8;">Số dư ví:</span>

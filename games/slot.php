@@ -298,6 +298,34 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin') {
             gap: 20px;
         }
 
+        .chip-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 5px;
+        }
+
+        .chip {
+            padding: 8px 15px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: white;
+            transition: 0.3s;
+            user-select: none;
+        }
+
+        .chip:hover, .chip.active {
+            background: var(--neon-gold);
+            color: #000;
+            border-color: var(--neon-gold);
+            transform: scale(1.1);
+        }
+
         .bet-input-wrap {
             display: flex;
             align-items: center;
@@ -530,6 +558,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin') {
             </div>
 
             <div class="controls">
+                <div class="chip-selector">
+                    <div class="chip active" data-value="10000">10K</div>
+                    <div class="chip" data-value="50000">50K</div>
+                    <div class="chip" data-value="100000">100K</div>
+                    <div class="chip" data-value="500000">500K</div>
+                    <div class="chip" data-value="1000000">1M</div>
+                    <div class="chip" data-value="5000000">5M</div>
+                    <div class="chip" data-value="allin">MAX</div>
+                </div>
                 <div class="bet-input-wrap">
                     <label>MỨC CƯỢC</label>
                     <input type="number" id="bet-amount" value="10000" min="1000" step="1000">
@@ -544,11 +581,22 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin') {
     <div class="status-marquee" id="status-bar">CHÚC BẠN MAY MẮN! HÃY CHỌN MỨC CƯỢC VÀ BẤM QUAY.</div>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="../assets/js/game-effects.js"></script>
+    <script src="../assets/js/game-effects-auto.js"></script>
     <script>
-        (function () {
-            window.themeConfig = { particleCount: <?= $particleCount ?>, particleSize: <?= $particleSize ?>, particleColor: '<?= $particleColor ?>', particleOpacity: <?= $particleOpacity ?>, shapeCount: <?= $shapeCount ?>, shapeColors: <?= json_encode($shapeColors) ?>, shapeOpacity: <?= $shapeOpacity ?>, bgGradient: <?= json_encode($bgGradient) ?> };
-            const script = document.createElement('script'); script.src = '../threejs-background.js'; document.head.appendChild(script);
-        })();
+        // Chip selection logic
+        document.querySelectorAll('.chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+                const val = this.getAttribute('data-value');
+                if (val === 'allin') {
+                    document.getElementById('bet-amount').value = <?= $soDu ?>;
+                } else {
+                    document.getElementById('bet-amount').value = val;
+                }
+            });
+        });
 
         const symbols = ["🍒", "🍋", "🍊", "🍇", "⭐", "💎", "7️⃣", "🔔"];
         let spinning = false;
@@ -646,13 +694,21 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin') {
                             }
                         }
 
-                        Swal.fire({
-                            title: isBigWin ? '💰 JACKPOT!!!' : '🎊 CHIẾN THẮNG!',
-                            text: data.message,
-                            icon: 'success',
-                            confirmButtonColor: '#ffd700',
-                            confirmButtonText: 'TUYỆT VỜI'
-                        });
+                        if (typeof GameEffects !== 'undefined') {
+                            if (isBigWin) {
+                                GameEffects.showWin(data.winAmount, "<br>💰 JACKPOT TRÚNG LỚN!");
+                            } else {
+                                GameEffects.showWin(data.winAmount, "<br>🎉 CHIẾN THẮNG!");
+                            }
+                        } else {
+                            Swal.fire({
+                                title: isBigWin ? '💰 JACKPOT!!!' : '🎊 CHIẾN THẮNG!',
+                                text: data.message,
+                                icon: 'success',
+                                confirmButtonColor: '#ffd700',
+                                confirmButtonText: 'TUYỆT VỜI'
+                            });
+                        }
 
                     } else {
                         // 😞 Thua
@@ -709,15 +765,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin') {
                 shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>,
                 bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>
             };
-            const prefix = window.location.pathname.includes('/games/') ? '../' : '';
-            const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
-
-            scripts.forEach(src => {
-                const s = document.createElement('script');
-                s.src = prefix + src;
-                s.async = false;
-                document.head.appendChild(s);
-            });
+            const script = document.createElement('script');
+            script.src = '../threejs-background.js';
+            document.head.appendChild(script);
         })();
     </script>
 

@@ -46,13 +46,13 @@ switch ($user['Role']) {
         $roleName = "Dân Thường";
         break;
     case 1:
-        $roleName = "Nghiện";
+        $roleName = "Admin / Quản Trị Viên";
         break;
     case 2:
-        $roleName = "Siêu Cấp Nghiện";
+        $roleName = "Super Admin";
         break;
     case 3:
-        $roleName = "Queen GTLM";
+        $roleName = "Nhà Phát Triển / Owner";
         break;
     default:
         $roleName = "Chưa Xác Định";

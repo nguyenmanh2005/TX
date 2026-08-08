@@ -17,16 +17,16 @@ $recipes = $conn->query("SELECT * FROM crafting_recipes")->fetch_all(MYSQLI_ASSO
 function getUserItemCounts($conn, $userId) {
     $counts = [];
     
-    // Themes
-    $res = $conn->query("SELECT COUNT(*) as total FROM user_themes WHERE user_id = $userId AND is_active = 0");
+    // Themes (Trừ cái đang dùng)
+    $res = $conn->query("SELECT COUNT(*) as total FROM user_themes WHERE user_id = $userId AND theme_id != IFNULL((SELECT current_theme_id FROM users WHERE Iduser = $userId), -1)");
     $counts['theme'] = $res->fetch_assoc()['total'];
     
-    // Cursors
-    $res = $conn->query("SELECT COUNT(*) as total FROM user_cursors WHERE user_id = $userId AND is_active = 0");
+    // Cursors (Trừ cái đang dùng)
+    $res = $conn->query("SELECT COUNT(*) as total FROM user_cursors WHERE user_id = $userId AND cursor_id != IFNULL((SELECT current_cursor_id FROM users WHERE Iduser = $userId), -1)");
     $counts['cursor'] = $res->fetch_assoc()['total'];
     
-    // Frames
-    $res = $conn->query("SELECT COUNT(*) as total FROM user_avatar_frames WHERE user_id = $userId");
+    // Frames (Trừ cái đang dùng)
+    $res = $conn->query("SELECT COUNT(*) as total FROM user_avatar_frames WHERE user_id = $userId AND avatar_frame_id != IFNULL((SELECT avatar_frame_id FROM users WHERE Iduser = $userId), -1)");
     $counts['avatar_frame'] = $res->fetch_assoc()['total'];
     
     // Materials
@@ -247,16 +247,20 @@ $userMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fet
                 <i class="fas fa-user-circle" style="color: #4ade80;"></i>
                 <span>Frames: <?= $userCounts['avatar_frame'] ?></span>
             </div>
+            <div class="stat-card" style="cursor: pointer;" onclick="showMaterialInfo()">
+                <i class="fas fa-question-circle" style="color: #fff;"></i>
+                <span>Hướng dẫn tìm vật phẩm</span>
+            </div>
         </div>
 
         <div class="recipe-grid">
             <?php foreach ($recipes as $recipe): 
-                $reqs = json_decode($recipe['input_requirements'], true);
+                $reqs = json_decode($recipe['input_requirements'] ?? '{}', true) ?? [];
                 $canCraft = ($userMoney >= $recipe['gtlm_cost']);
                 foreach ($reqs as $type => $amt) {
                     if (($userCounts[$type] ?? 0) < $amt) $canCraft = false;
                 }
-                $matReqs = json_decode($recipe['material_requirements'], true) ?? [];
+                $matReqs = json_decode($recipe['material_requirements'] ?? '{}', true) ?? [];
                 foreach ($matReqs as $code => $amt) {
                     if (($userCounts[$code] ?? 0) < $amt) $canCraft = false;
                 }
@@ -279,7 +283,7 @@ $userMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fet
                     <?php endforeach; ?>
 
                     <?php 
-                    $matReqs = json_decode($recipe['material_requirements'], true) ?? [];
+                    $matReqs = json_decode($recipe['material_requirements'] ?? '{}', true) ?? [];
                     foreach ($matReqs as $code => $amt): 
                         // Fetch material info for icon/name
                         $matInfo = $conn->query("SELECT name, icon FROM materials WHERE code = '$code'")->fetch_assoc();
@@ -348,6 +352,29 @@ $userMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fet
                         }, 2500);
                     }, 'json');
                 }
+            });
+        }
+        function showMaterialInfo() {
+            Swal.fire({
+                title: 'Hướng dẫn tìm Nguyên liệu',
+                html: `
+                <div style="text-align: left; font-size: 14px;">
+                    <p><b>🎨 Themes & Frames:</b></p>
+                    <ul>
+                        <li>Mua trong <a href="shop.php">Cửa Hàng</a> (Shop Hệ thống) bằng GTLM.</li>
+                        <li>Đổi bằng điểm Cống Hiến (CP) tại <a href="guild_pro.php">Guild Shop</a>.</li>
+                        <li>Săn trên <a href="marketplace.php">Chợ Đen</a> từ người chơi khác.</li>
+                        <li>Nhận ngẫu nhiên khi quay <a href="lucky_wheel.php">Vòng Quay May Mắn</a> hoặc chơi <a href="games/gacha_cards.php">Gacha Nữ Thần</a>.</li>
+                    </ul>
+                    <p><b>🔥 Quặng Lửa / Tinh Chất Mặt Trời / Vàng:</b></p>
+                    <ul>
+                        <li>Đánh Boss Hệ Thống (<a href="world_boss.php">World Boss</a>).</li>
+                        <li>Hoàn thành các mốc nhiệm vụ <a href="quests.php">Hàng Ngày / Hàng Tuần</a>.</li>
+                    </ul>
+                </div>
+                `,
+                icon: 'info',
+                confirmButtonText: 'Đã hiểu'
             });
         }
     </script>

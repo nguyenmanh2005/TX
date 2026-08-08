@@ -56,7 +56,7 @@ if ($totalPoints >= $targetPoints) {
             try {
                 $uids = array_map(fn($u) => (int)$u['user_id'], $chunk);
 
-                // ── Phát thưởng tiền cho từng user trong batch (deliverReward cần gọi riêng) ──
+                // ── Phát thưởng GTLM cho từng user trong batch (deliverReward cần gọi riêng) ──
                 foreach ($uids as $uid) {
                     deliverReward($uid, ['reward_type' => 'money', 'reward_value' => '50000'], $conn);
                 }

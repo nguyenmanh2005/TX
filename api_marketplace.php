@@ -58,23 +58,39 @@ switch ($action) {
 
     case 'buy':
         $listingId = (int) $_POST['id'];
-        $listing = $conn->query("SELECT m.*, u.Name as seller_name FROM marketplace_listings m JOIN users u ON m.seller_id = u.Iduser WHERE m.id = $listingId AND m.status = 'active'")->fetch_assoc();
         
-        if (!$listing) exit(json_encode(['success' => false, 'message' => 'Vật phẩm không còn tồn tại!']));
-        if ($listing['seller_id'] == $userId) exit(json_encode(['success' => false, 'message' => 'Bạn không thể mua đồ của chính mình!']));
-
-        $price = $listing['price'];
-        $buyerData = $conn->query("SELECT Money, Name FROM users WHERE Iduser = $userId")->fetch_assoc();
-        
-        if ($buyerData['Money'] < $price) exit(json_encode(['success' => false, 'message' => 'Bạn không đủ GTLM!']));
-
         $conn->begin_transaction();
         try {
+            // Lock listing to prevent double buying
+            $listing = $conn->query("SELECT m.*, u.Name as seller_name FROM marketplace_listings m JOIN users u ON m.seller_id = u.Iduser WHERE m.id = $listingId AND m.status = 'active' FOR UPDATE")->fetch_assoc();
+            
+            if (!$listing) {
+                $conn->rollback();
+                exit(json_encode(['success' => false, 'message' => 'Vật phẩm không còn tồn tại hoặc đã bị người khác mua!']));
+            }
+            if ($listing['seller_id'] == $userId) {
+                $conn->rollback();
+                exit(json_encode(['success' => false, 'message' => 'Bạn không thể mua đồ của chính mình!']));
+            }
+
+            $price = $listing['price'];
+            
+            // Lock buyer's money
+            $buyerData = $conn->query("SELECT Money, Name FROM users WHERE Iduser = $userId FOR UPDATE")->fetch_assoc();
+            if ($buyerData['Money'] < $price) {
+                $conn->rollback();
+                exit(json_encode(['success' => false, 'message' => 'Bạn không đủ GTLM!']));
+            }
+
+            // Lock seller's money
+            $conn->query("SELECT Iduser FROM users WHERE Iduser = " . $listing['seller_id'] . " FOR UPDATE");
+
+            // Execute transfers
             $conn->query("UPDATE users SET Money = Money - $price WHERE Iduser = $userId");
             $netPrice = $price * 0.95;
             $conn->query("UPDATE users SET Money = Money + $netPrice WHERE Iduser = " . $listing['seller_id']);
             
-            // Chuyển quyền sở hữu (Logic title, frame...)
+            // Chuyển quyền sở hữu
             if ($listing['item_type'] == 'title') {
                 $conn->query("UPDATE user_titles SET user_id = $userId WHERE user_id = " . $listing['seller_id'] . " AND title_id = " . $listing['item_id']);
             } elseif ($listing['item_type'] == 'frame' || $listing['item_type'] == 'avatar_frame') {

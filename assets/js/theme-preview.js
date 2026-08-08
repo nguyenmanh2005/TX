@@ -5,9 +5,9 @@
 
 function initThemePreview() {
     const previewButtons = document.querySelectorAll('[data-theme-preview]');
-    
+
     previewButtons.forEach(btn => {
-        btn.addEventListener('click', function(e) {
+        btn.addEventListener('click', function (e) {
             e.preventDefault();
             const themeId = this.getAttribute('data-theme-preview');
             showThemePreview(themeId);
@@ -44,7 +44,7 @@ function renderThemePreviewModal(theme) {
     if (existing) {
         existing.remove();
     }
-    
+
     const modal = document.createElement('div');
     modal.id = 'themePreviewModal';
     modal.className = 'modal-overlay';
@@ -61,7 +61,7 @@ function renderThemePreviewModal(theme) {
                             <h4>${theme.name || 'Theme Name'}</h4>
                             <p>${theme.description || 'Theme description'}</p>
                             <div class="theme-preview-stats">
-                                <div class="stat">💰 Giá: ${(theme.price || 0).toLocaleString('vi-VN')} VNĐ</div>
+                                <div class="stat">💰 Giá: ${(theme.price || 0).toLocaleString('vi-VN')} GTLM</div>
                                 <div class="stat">⭐ Rating: ${theme.rating || 'N/A'}</div>
                             </div>
                         </div>
@@ -74,16 +74,16 @@ function renderThemePreviewModal(theme) {
             </div>
         </div>
     `;
-    
+
     document.body.appendChild(modal);
-    
+
     // Show modal
     setTimeout(() => {
         modal.style.display = 'flex';
     }, 10);
-    
+
     // Close on overlay click
-    modal.addEventListener('click', function(e) {
+    modal.addEventListener('click', function (e) {
         if (e.target === modal) {
             closeThemePreview();
         }

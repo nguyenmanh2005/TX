@@ -23,7 +23,7 @@ function handleHorseRacePvPBot(mysqli $conn, string $baseUrl, string $cookieFile
                 'horse_id' => $horseId,
                 'amount' => $amount
             ], $cookieFile);
-            echo "🏇 <span style='color:#818cf8;'>Bot vừa đặt cược vào ngựa #$horseId trong trường đua PvP.</span><br>";
+            echo "🏇 <span style='color:#818cf8;'>Bot vừa ra chiêu vào ngựa #$horseId trong trường đua PvP.</span><br>";
         }
     }
 }

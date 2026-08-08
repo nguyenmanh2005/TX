@@ -178,7 +178,7 @@ require_once 'load_theme.php';
 </head>
 <body>
 
-    <a href="guild.php" class="back-btn"><i class="fa fa-arrow-left"></i> Bang Hội</a>
+    <a href="guilds.php" class="back-btn"><i class="fa fa-arrow-left"></i> Bang Hội</a>
 
     <div class="container">
         <header class="header">
@@ -216,24 +216,6 @@ require_once 'load_theme.php';
                     $('#guild-territory-count').text(res.territories.length);
 
                     // Render Territories
-                    let tHtml = '';
-                    // Giả định chúng ta load toàn bộ lãnh địa từ server (cần cập nhật api để trả về all_territories)
-                    // Ở đây tôi sẽ render những cái guild đang sở hữu trước
-                    res.territories.forEach(t => {
-                        tHtml += `
-                            <div class="territory-card">
-                                <div class="territory-status status-owned">ĐANG CHIẾM ĐÓNG</div>
-                                <h3 style="margin: 0; font-size: 20px;">${t.name}</h3>
-                                <div style="color: #94a3b8; font-size: 13px;">Vị trí: ${t.location_code}</div>
-                                <div class="buff-badge">
-                                    <i class="fa fa-bolt"></i> Buff: ${t.buff_type === 'win_bonus' ? '+' + t.buff_value + '% tỉ lệ thắng' : t.buff_type}
-                                </div>
-                            </div>
-                        `;
-                    });
-                    if (tHtml === '') tHtml = '<p style="grid-column: 1/-1; text-align: center; opacity: 0.5;">Bang hội chưa chiếm đóng lãnh địa nào.</p>';
-                    $('#territory-grid').html(tHtml);
-
                     // Render Shop
                     let sHtml = '';
                     res.shop_items.forEach(item => {
@@ -247,6 +229,36 @@ require_once 'load_theme.php';
                         `;
                     });
                     $('#shop-grid').html(sHtml);
+
+                    // Load Bản đồ Lãnh Địa từ api_guild_territory.php
+                    $.get('api_guild_territory.php?action=get_map', function(mapRes) {
+                        if (mapRes.success) {
+                            let tHtml = '';
+                            mapRes.territories.forEach(t => {
+                                const isMine = t.guild_id == mapRes.my_guild_id;
+                                const hasOwner = t.guild_id != null;
+                                let statusClass = isMine ? 'status-owned' : (hasOwner ? 'status-free' : 'status-free');
+                                let statusText = isMine ? 'ĐANG CHIẾM ĐÓNG' : (hasOwner ? `THUỘC VỀ [${t.guild_tag}]` : 'CHƯA CÓ CHỦ');
+                                let btnHtml = '';
+                                if (!isMine) {
+                                    let cost = hasOwner ? t.required_points * 2 : t.required_points;
+                                    btnHtml = `<button class="btn-buy" style="margin-top: 15px; background: ${hasOwner ? '#e53935' : '#10b981'}" onclick="captureTerritory(${t.id}, ${cost})">CHIẾM LĨNH (${new Intl.NumberFormat().format(cost)} EXP)</button>`;
+                                }
+
+                                tHtml += `
+                                    <div class="territory-card">
+                                        <div class="territory-status ${statusClass}">${statusText}</div>
+                                        <h3 style="margin: 0; font-size: 20px;">${t.name}</h3>
+                                        <div style="color: #94a3b8; font-size: 13px; margin-bottom: 10px;">${t.description || 'Khu vực chiến lược'}</div>
+                                        <div style="color: #facc15; font-size: 14px;"><i class="fa fa-coins"></i> Thuế thu nhập: ${new Intl.NumberFormat().format(t.daily_tax_revenue)}/ngày</div>
+                                        ${btnHtml}
+                                    </div>
+                                `;
+                            });
+                            if (tHtml === '') tHtml = '<p style="grid-column: 1/-1; text-align: center; opacity: 0.5;">Chưa có dữ liệu lãnh địa.</p>';
+                            $('#territory-grid').html(tHtml);
+                        }
+                    });
                 } else {
                     Swal.fire('Thông báo', res.message, 'info');
                 }
@@ -269,6 +281,28 @@ require_once 'load_theme.php';
                     loadGuildPro();
                 } else {
                     Swal.fire('Lỗi!', res.message, 'error');
+                }
+            });
+        }
+
+        function captureTerritory(id, cost) {
+            Swal.fire({
+                title: 'Chiếm Lãnh Địa?',
+                text: `Việc này sẽ tiêu tốn ${new Intl.NumberFormat().format(cost)} điểm EXP của Bang hội. Bạn có chắc chắn?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#10b981',
+                confirmButtonText: 'Chiếm ngay!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('api_guild_territory.php', { action: 'capture', territory_id: id }, function(res) {
+                        if (res.success) {
+                            Swal.fire('Thành công!', res.message, 'success');
+                            loadGuildPro(); // Reload UI
+                        } else {
+                            Swal.fire('Thất bại!', res.message, 'error');
+                        }
+                    }, 'json');
                 }
             });
         }

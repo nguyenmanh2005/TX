@@ -466,7 +466,7 @@ if ($avatarFrameIdExists) {
             form.addEventListener('submit', function(e) {
                 if (!hiddenInput.value) {
                     e.preventDefault();
-                    alert('Vui lòng chọn một khung avatar!');
+                    if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Vui lòng chọn một khung avatar!'), 'warning'); } else { alert('Vui lòng chọn một khung avatar!'); };
                     return false;
                 }
                 

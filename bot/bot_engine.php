@@ -13,6 +13,54 @@ require_once __DIR__ . '/bot_brain.php';
 require_once __DIR__ . '/../game_history_helper.php';
 require_once __DIR__ . '/bot_blackjack_multi.php';
 require_once __DIR__ . '/bot_horserace_pvp.php';
+require_once __DIR__ . '/bot_mining_tycoon.php';
+require_once __DIR__ . '/bot_market_trade.php';
+require_once __DIR__ . '/bot_gacha.php';
+require_once __DIR__ . '/bot_world_boss.php';
+require_once __DIR__ . '/bot_farm.php';
+require_once __DIR__ . '/bot_pets.php';
+require_once __DIR__ . '/bot_lottery.php';
+require_once __DIR__ . '/bot_red_packet.php';
+require_once __DIR__ . '/bot_chat_reaction.php';
+require_once __DIR__ . '/bot_greedy_cave.php';
+require_once __DIR__ . '/bot_secret_gift.php';
+require_once __DIR__ . '/bot_plinko.php';
+require_once __DIR__ . '/bot_trivia.php';
+require_once __DIR__ . '/bot_megaspin.php';
+require_once __DIR__ . '/bot_pvp_challenge.php';
+require_once __DIR__ . '/bot_chatter.php';
+require_once __DIR__ . '/bot_lucky_wheel.php';
+require_once __DIR__ . '/bot_storyline.php';
+require_once __DIR__ . '/bot_fortune.php';
+require_once __DIR__ . '/bot_oracle.php';
+require_once __DIR__ . '/bot_event_vote.php';
+require_once __DIR__ . '/bot_monthly_pass.php';
+require_once __DIR__ . '/bot_reward_points.php';
+require_once __DIR__ . '/bot_tournament.php';
+require_once __DIR__ . '/bot_guild.php';
+require_once __DIR__ . '/bot_mining.php';
+require_once __DIR__ . '/bot_quests.php';
+require_once __DIR__ . '/bot_vip.php';
+require_once __DIR__ . '/bot_auction.php';
+require_once __DIR__ . '/bot_battle_pass.php';
+require_once __DIR__ . '/bot_marketplace.php';
+require_once __DIR__ . '/bot_dungeon.php';
+require_once __DIR__ . '/bot_coinflip.php';
+require_once __DIR__ . '/bot_friends.php';
+require_once __DIR__ . '/bot_daily_login.php';
+require_once __DIR__ . '/bot_daily_missions.php';
+require_once __DIR__ . '/bot_achievements.php';
+require_once __DIR__ . '/bot_gift.php';
+require_once __DIR__ . '/bot_combo_bet.php';
+require_once __DIR__ . '/bot_crafting.php';
+require_once __DIR__ . '/bot_banharc.php';
+require_once __DIR__ . '/bot_social_feed.php';
+require_once __DIR__ . '/bot_profile.php';
+require_once __DIR__ . '/bot_guild_territory.php';
+require_once __DIR__ . '/bot_spectator.php';
+require_once __DIR__ . '/bot_guild_war.php';
+require_once __DIR__ . '/bot_baiting.php';
+require_once __DIR__ . '/bot_vendetta.php';
 
 // 0. Helpers & Error Handling
 $currentBotEmail = "SYSTEM";
@@ -142,6 +190,36 @@ function handleSicboBot($conn, $baseUrl, $cFile, $userMoney) {
     return executeBotAction($baseUrl . "/games/sicbo_v2.php?action=roll", ['bets' => json_encode($bets)], $cFile);
 }
 
+function handleBaucuaBot($conn, $baseUrl, $cFile, $userMoney) {
+    if ($userMoney < 10000) return null;
+    $animals = ["Chó", "Gà", "Mèo", "Cá", "Chim", "Heo"];
+    $betAmount = floor($userMoney * (rand(2, 5) / 100));
+    if ($betAmount < 1000) $betAmount = 1000;
+    if ($betAmount > 500000) $betAmount = 500000;
+    $bets = [['animal' => $animals[array_rand($animals)], 'amount' => $betAmount]];
+    return executeBotAction($baseUrl . "/games/baucua.php?action=play", ['bet' => $betAmount, 'bets' => json_encode($bets)], $cFile);
+}
+
+function handleXocdiaBot($conn, $baseUrl, $cFile, $userMoney) {
+    if ($userMoney < 10000) return null;
+    $choices = ["Chẵn", "Lẻ"];
+    $betAmount = floor($userMoney * (rand(3, 8) / 100));
+    if ($betAmount < 1000) $betAmount = 1000;
+    if ($betAmount > 1000000) $betAmount = 1000000;
+    $bets = [['choice' => $choices[array_rand($choices)], 'amount' => $betAmount]];
+    return executeBotAction($baseUrl . "/games/xocdia.php?action=play", ['bets' => json_encode($bets)], $cFile);
+}
+
+function handleDiceBot($conn, $baseUrl, $cFile, $userMoney) {
+    if ($userMoney < 10000) return null;
+    $betAmount = floor($userMoney * (rand(2, 6) / 100));
+    if ($betAmount < 1000) $betAmount = 1000;
+    if ($betAmount > 500000) $betAmount = 500000;
+    $target = rand(30, 70);
+    $mode = (rand(1, 100) > 50) ? 'over' : 'under';
+    return executeBotAction($baseUrl . "/games/dice.php?action=roll", ['bet' => $betAmount, 'target' => $target, 'mode' => $mode], $cFile);
+}
+
 $brain = new BotBrain();
 
 $baseUrl = "http://localhost/1";
@@ -167,6 +245,21 @@ if (empty($availableGames)) $availableGames = ["Thiên Thần Ác Quỷ", "Xì D
 $botNameMap = [];
 $allBotsRes = $conn->query("SELECT Email, Name, Iduser FROM users WHERE Email REGEXP '^bot[0-9]+@'");
 if ($allBotsRes) {
+    // --- GLOBAL SYSTEM TASKS ---
+    $globalDailyFile = __DIR__ . '/sessions/global_daily_' . date('Y-m-d') . '.lock';
+    if (!file_exists($globalDailyFile)) {
+        // Chạy các task hệ thống 1 lần/ngày
+        $_GET['secret'] = 'bot_rank_secret';
+        require_once __DIR__ . '/../cron_bot_rankings.php';
+        @file_put_contents($globalDailyFile, time());
+        
+        // Xóa lock cũ
+        $oldLocks = glob(__DIR__ . '/sessions/global_daily_*.lock');
+        foreach ($oldLocks as $l) {
+            if ($l !== $globalDailyFile) @unlink($l);
+        }
+    }
+
     while($row = $allBotsRes->fetch_assoc()) {
         $botNameMap[$row['Email']] = ['name' => $row['Name'], 'id' => $row['Iduser']];
     }
@@ -445,8 +538,418 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
         // 3. Clear achievement notifications
         executeBotAction($baseUrl . "/api_achievement_notifications.php", ['action' => 'mark_all_read'], $cFile);
 
+        // 4. Bot Gacha (Tự mua khung)
+        executeBotGacha($conn, $userId, $userMoney, $userName);
+
+        // 5. Bot Pets (Tự mua thú cưng)
+        $petRes = handlePetBot($baseUrl, $cFile, $userMoney);
+        if ($petRes && isset($petRes['actions'])) {
+            foreach ($petRes['actions'] as $act) {
+                uiLog('🐾', "<b>Chuồng Thú Cưng:</b> $act", "color:#f59e0b;");
+            }
+        }
+
+        // 6. Bot Lottery (Mua vé số Vietlott)
+        if (rand(1, 100) <= 15) { // 15% cơ hội rẽ vào mua vé số
+            $lotteryRes = handleLotteryBot($baseUrl, $cFile, $userMoney);
+            if ($lotteryRes && isset($lotteryRes['actions'])) {
+                foreach ($lotteryRes['actions'] as $act) {
+                    uiLog('🎟️', "<b>Xổ Số Cộng Đồng:</b> $act", "color:#10b981;");
+                }
+            }
+        }
+
+        // 7. Bot Red Packet (Đại gia phát lì xì)
+        if (rand(1, 100) <= 3) { // Chỉ 3% cơ hội mỗi lượt để tạo độ hiếm
+            $rpRes = handleRedPacketBot($baseUrl, $cFile, $userMoney, $userName);
+            if ($rpRes && isset($rpRes['actions'])) {
+                foreach ($rpRes['actions'] as $act) {
+                    uiLog('🧧', "<b>Lì Xì Đại Gia:</b> $act", "color:#ef4444; font-weight:bold;");
+                }
+            }
+        }
+
         // --- MODULE 2: Games ---
         $mood = $state['mood'] ?? 'happy';
+
+        // 8. Bot Chat Reaction (Thả cảm xúc dạo)
+        if (rand(1, 100) <= 20) { // 20% cơ hội đi thả cảm xúc vào chat
+            $reactRes = handleChatReactionBot($baseUrl, $cFile, $mood, $personality, $userName);
+            if ($reactRes && isset($reactRes['actions'])) {
+                foreach ($reactRes['actions'] as $act) {
+                    uiLog('💬', "<b>Hóng hớt Chat:</b> $act", "color:#8b5cf6;");
+                }
+            }
+        }
+
+        // 9. Bot Hang Động Tham Lam (Greedy Cave)
+        $caveRes = handleGreedyCaveBot($baseUrl, $cFile, $userMoney, $personality, $userName);
+        if ($caveRes && isset($caveRes['actions'])) {
+            foreach ($caveRes['actions'] as $act) {
+                uiLog('🦇', "<b>Hang Động:</b> $act", "color:#f97316; font-weight:bold;");
+            }
+        }
+
+        // 10. Bot Tặng Quà Ẩn Danh (Giữa các Bot với nhau)
+        if (rand(1, 100) <= 2) { // Tỷ lệ cực hiếm: 2%
+            $giftRes = handleSecretGiftBot($baseUrl, $cFile, $userMoney, $userId, $botNameMap);
+            if ($giftRes && isset($giftRes['actions'])) {
+                foreach ($giftRes['actions'] as $act) {
+                    uiLog('🎁', "<b>Tài Phiệt Ẩn Danh:</b> $act", "color:#ec4899; font-weight:bold;");
+                }
+            }
+        }
+
+        // 11. Bot Đỉnh Cao Plinko V2
+        if (rand(1, 100) <= 5) { // 5% cơ hội chơi Plinko
+            $plinkoRes = handlePlinkoBot($baseUrl, $cFile, $userMoney, $personality, $state);
+            if ($plinkoRes && isset($plinkoRes['actions'])) {
+                foreach ($plinkoRes['actions'] as $act) {
+                    uiLog('🎱', "<b>Plinko V2:</b> $act", "color:#fbbf24; font-weight:bold;");
+                }
+            }
+        }
+
+        // 12. Bot Giải Đố Trivia
+        if (rand(1, 100) <= 8) { // 8% cơ hội chơi Trivia
+            $triviaRes = handleTriviaBot($baseUrl, $cFile);
+            if ($triviaRes && isset($triviaRes['actions'])) {
+                foreach ($triviaRes['actions'] as $act) {
+                    uiLog('🧠', "<b>Khảo Thí:</b> $act", "color:#34d399; font-weight:bold;");
+                }
+            }
+        }
+
+        // 13. Bot Mega Spin
+        if (rand(1, 100) <= 15) { // 15% cơ hội chơi Mega Spin
+            $megaSpinRes = handleMegaSpinBot($baseUrl, $cFile, $userMoney, $personality);
+            if ($megaSpinRes && isset($megaSpinRes['actions'])) {
+                foreach ($megaSpinRes['actions'] as $act) {
+                    uiLog('🎡', "<b>Mega Spin:</b> $act", "color:#10b981; font-weight:bold;");
+                }
+            }
+        }
+
+        // 14. Bot Đấu Trường PvP
+        // Tỷ lệ kiểm tra cao (30%) để phản hồi người chơi nhanh chóng
+        if (rand(1, 100) <= 30) {
+            $pvpRes = handlePvpChallengeBot($baseUrl, $cFile, $userMoney, $userId);
+            if ($pvpRes && isset($pvpRes['actions'])) {
+                foreach ($pvpRes['actions'] as $act) {
+                    uiLog('⚔️', "<b>Đấu Trường PvP:</b> $act", "color:#ef4444; font-weight:bold;");
+                }
+            }
+        }
+
+        // 15. Bot Chém Gió Kênh Chat
+        if (rand(1, 100) <= 10) { // 10% cơ hội gáy trên kênh chat
+            $chatterRes = handleChatterBot($baseUrl, $cFile, $personality);
+            if ($chatterRes && isset($chatterRes['actions'])) {
+                foreach ($chatterRes['actions'] as $act) {
+                    uiLog('📣', "<b>Chat Thế Giới:</b> $act", "color:#3b82f6; font-weight:bold;");
+                }
+            }
+        }
+
+        // 16. Bot Vòng Quay May Mắn (Lucky Wheel)
+        if (rand(1, 100) <= 5) { // 5% cơ hội gọi API quay, mỗi ngày chỉ quay được 1 lần
+            $luckyRes = handleLuckyWheelBot($baseUrl, $cFile);
+            if ($luckyRes && isset($luckyRes['actions'])) {
+                foreach ($luckyRes['actions'] as $act) {
+                    uiLog('🍀', "<b>Lucky Wheel:</b> $act", "color:#22c55e; font-weight:bold;");
+                }
+            }
+        }
+
+        // 17. Bot Đại Chiến Cổ Tích (Storyline)
+        if (rand(1, 100) <= 10) { // 10% cơ hội check nhận thưởng
+            $storyRes = handleStorylineBot($baseUrl, $cFile);
+            if ($storyRes && isset($storyRes['actions'])) {
+                foreach ($storyRes['actions'] as $act) {
+                    uiLog('📖', "<b>Đại Chiến Cổ Tích:</b> $act", "color:#a855f7; font-weight:bold;");
+                }
+            }
+        }
+
+        // 18. Bot Đi Chùa Xin Xăm (Fortune)
+        if (rand(1, 100) <= 5) { // 5% cơ hội bốc quẻ, mỗi ngày chỉ bốc được 1 lần
+            $fortuneRes = handleFortuneBot($baseUrl, $cFile);
+            if ($fortuneRes && isset($fortuneRes['actions'])) {
+                foreach ($fortuneRes['actions'] as $act) {
+                    uiLog('🔮', "<b>Gieo Quẻ:</b> $act", "color:#f43f5e; font-weight:bold;");
+                }
+            }
+        }
+
+        // 19. Bot Tiên Tri (Oracle Witness)
+        if (rand(1, 100) <= 10) { // 10% cơ hội check Lời Tiên Tri
+            $oracleRes = handleOracleBot($baseUrl, $cFile);
+            if ($oracleRes && isset($oracleRes['actions'])) {
+                foreach ($oracleRes['actions'] as $act) {
+                    uiLog('👁️', "<b>Thấu Thị:</b> $act", "color:#9333ea; font-weight:bold;");
+                }
+            }
+        }
+
+        // 20. Bot Bầu Chọn Sự Kiện (Event Vote)
+        if (rand(1, 100) <= 15) { // 15% cơ hội tham gia bầu chọn
+            $voteRes = handleEventVoteBot($baseUrl, $cFile);
+            if ($voteRes && isset($voteRes['actions'])) {
+                foreach ($voteRes['actions'] as $act) {
+                    uiLog('🗳️', "<b>Bầu Chọn Sự Kiện:</b> $act", "color:#3b82f6; font-weight:bold;");
+                }
+            }
+        }
+
+        // 21. Bot Đăng Ký Thẻ Tháng (Monthly Pass)
+        if (rand(1, 100) <= 10) { // 10% cơ hội mỗi lượt bot sẽ ghé qua Quầy Thẻ Tháng
+            $monthlyPassRes = handleMonthlyPassBot($baseUrl, $cFile, $userMoney);
+            if ($monthlyPassRes && isset($monthlyPassRes['actions'])) {
+                foreach ($monthlyPassRes['actions'] as $act) {
+                    uiLog('💳', "<b>Thẻ Tháng:</b> $act", "color:#eab308; font-weight:bold;");
+                }
+            }
+        }
+
+        // 22. Bot Đổi Điểm Thưởng (Reward Points)
+        if (rand(1, 100) <= 10) { // 10% cơ hội đổi điểm thưởng
+            $pointsRes = handleRewardPointsBot($baseUrl, $cFile);
+            if ($pointsRes && isset($pointsRes['actions'])) {
+                foreach ($pointsRes['actions'] as $act) {
+                    uiLog('🛍️', "<b>Đổi Điểm Thưởng:</b> $act", "color:#f97316; font-weight:bold;");
+                }
+            }
+        }
+
+        // 23. Bot Đăng Ký Giải Đấu (Tournament)
+        if (rand(1, 100) <= 15) { // 15% cơ hội đăng ký giải đấu
+            $tourRes = handleTournamentBot($baseUrl, $cFile, $userMoney);
+            if ($tourRes && isset($tourRes['actions'])) {
+                foreach ($tourRes['actions'] as $act) {
+                    uiLog('🏆', "<b>Giải Đấu:</b> $act", "color:#ef4444; font-weight:bold;");
+                }
+            }
+        }
+
+        // 24. Bot Bang Hội (Guilds)
+        if (rand(1, 100) <= 25) { // 25% cơ hội tương tác Bang hội
+            $guildRes = handleGuildBot($baseUrl, $cFile, $userMoney);
+            if ($guildRes && isset($guildRes['actions'])) {
+                foreach ($guildRes['actions'] as $act) {
+                    uiLog('🛡️', "<b>Bang Hội:</b> $act", "color:#8e44ad; font-weight:bold;");
+                }
+            }
+        }
+
+        // 25. Bot Hầm Mỏ (Mining)
+        if (rand(1, 100) <= 15) { // 15% tương tác hầm mỏ
+            $miningRes = handleMiningBot($baseUrl, $cFile);
+            if ($miningRes && isset($miningRes['actions'])) {
+                foreach ($miningRes['actions'] as $act) {
+                    uiLog('⛏️', "<b>Hầm Mỏ:</b> $act", "color:#7f8c8d; font-weight:bold;");
+                }
+            }
+        }
+
+        // 26. Bot Nhiệm Vụ (Quests)
+        if (rand(1, 100) <= 20) { // 20% tương tác nhiệm vụ
+            $questRes = handleQuestsBot($baseUrl, $cFile);
+            if ($questRes && isset($questRes['actions'])) {
+                foreach ($questRes['actions'] as $act) {
+                    uiLog('📜', "<b>Nhiệm Vụ:</b> $act", "color:#d35400; font-weight:bold;");
+                }
+            }
+        }
+
+        // 27. Bot VIP
+        if (rand(1, 100) <= 5) { // 5% nhận quà VIP
+            $vipRes = handleVipBot($baseUrl, $cFile);
+            if ($vipRes && isset($vipRes['actions'])) {
+                foreach ($vipRes['actions'] as $act) {
+                    uiLog('💎', "<b>VIP:</b> $act", "color:#f1c40f; font-weight:bold;");
+                }
+            }
+        }
+
+        // 28. Bot Sàn Đấu Giá (Auction)
+        if (rand(1, 100) <= 15) { // 15% kiểm tra sàn
+            $aucRes = handleAuctionBot($baseUrl, $cFile, $userMoney);
+            if ($aucRes && isset($aucRes['actions'])) {
+                foreach ($aucRes['actions'] as $act) {
+                    uiLog('⚖️', "<b>Đấu Giá:</b> $act", "color:#e67e22; font-weight:bold;");
+                }
+            }
+        }
+
+        // 29. Bot Battle Pass
+        if (rand(1, 100) <= 10) { // 10% kiểm tra BP
+            $bpRes = handleBattlePassBot($baseUrl, $cFile, $userMoney);
+            if ($bpRes && isset($bpRes['actions'])) {
+                foreach ($bpRes['actions'] as $act) {
+                    uiLog('🎫', "<b>Battle Pass:</b> $act", "color:#9b59b6; font-weight:bold;");
+                }
+            }
+        }
+
+        // 30. Bot Chợ Đen (Marketplace)
+        if (rand(1, 100) <= 15) { // 15% kiểm tra Chợ Đen
+            $marketRes = handleMarketplaceBot($baseUrl, $cFile, $userMoney);
+            if ($marketRes && isset($marketRes['actions'])) {
+                foreach ($marketRes['actions'] as $act) {
+                    uiLog('🛒', "<b>Chợ Đen:</b> $act", "color:#34495e; font-weight:bold;");
+                }
+            }
+        }
+
+        // 31. Bot Hang Động (Dungeon)
+        if (rand(1, 100) <= 5) { // 5% kiểm tra Hang Động
+            $dungeonRes = handleDungeonBot($baseUrl, $cFile);
+            if ($dungeonRes && isset($dungeonRes['actions'])) {
+                foreach ($dungeonRes['actions'] as $act) {
+                    uiLog('🦇', "<b>Hang Động:</b> $act", "color:#2c3e50; font-weight:bold;");
+                }
+            }
+        }
+
+        // 32. Bot Lật Xu (Coinflip)
+        if (rand(1, 100) <= 25) { // 25% chơi lật xu
+            $cfRes = handleCoinflipBot($baseUrl, $cFile, $userMoney, $state);
+            if ($cfRes && isset($cfRes['actions'])) {
+                foreach ($cfRes['actions'] as $act) {
+                    uiLog('🪙', "<b>Lật Xu:</b> $act", "color:#f39c12; font-weight:bold;");
+                }
+            }
+        }
+
+        // 33. Bot Bạn Bè (Friends)
+        if (rand(1, 100) <= 15) { // 15% kiểm tra bạn bè
+            $friendRes = handleFriendsBot($baseUrl, $cFile);
+            if ($friendRes && isset($friendRes['actions'])) {
+                foreach ($friendRes['actions'] as $act) {
+                    uiLog('🤝', "<b>Bạn Bè:</b> $act", "color:#2ecc71; font-weight:bold;");
+                }
+            }
+        }
+
+        // 34. Bot Điểm Danh (Daily Login)
+        if (rand(1, 100) <= 10) { 
+            $dlRes = handleDailyLoginBot($baseUrl, $cFile);
+            if ($dlRes && isset($dlRes['actions'])) {
+                foreach ($dlRes['actions'] as $act) {
+                    uiLog('📅', "<b>Điểm Danh:</b> $act", "color:#1abc9c; font-weight:bold;");
+                }
+            }
+        }
+
+        // 35. Bot Nhiệm Vụ Hàng Ngày (Daily Missions)
+        if (rand(1, 100) <= 20) { 
+            $dmRes = handleDailyMissionsBot($baseUrl, $cFile);
+            if ($dmRes && isset($dmRes['actions'])) {
+                foreach ($dmRes['actions'] as $act) {
+                    uiLog('🎯', "<b>Nhiệm Vụ (Daily):</b> $act", "color:#e74c3c; font-weight:bold;");
+                }
+            }
+        }
+
+        // 36. Bot Thành Tựu (Achievements)
+        if (rand(1, 100) <= 20) { 
+            $achvRes = handleAchievementsBot($baseUrl, $cFile);
+            if ($achvRes && isset($achvRes['actions'])) {
+                foreach ($achvRes['actions'] as $act) {
+                    uiLog('🏆', "<b>Thành Tựu:</b> $act", "color:#f1c40f; font-weight:bold;");
+                }
+            }
+        }
+
+        // 37. Bot Tặng Quà (Gift)
+        if (rand(1, 100) <= 5) { 
+            $giftRes = handleGiftBot($baseUrl, $cFile, $userMoney);
+            if ($giftRes && isset($giftRes['actions'])) {
+                foreach ($giftRes['actions'] as $act) {
+                    uiLog('🎁', "<b>Tặng Quà:</b> $act", "color:#e84393; font-weight:bold;");
+                }
+            }
+        }
+
+        // 38. Bot Combo Bet
+        if (rand(1, 100) <= 15) { 
+            $comboRes = handleComboBetBot($baseUrl, $cFile, $userMoney);
+            if ($comboRes && isset($comboRes['actions'])) {
+                foreach ($comboRes['actions'] as $act) {
+                    uiLog('🎯', "<b>Combo Bet:</b> $act", "color:#e67e22; font-weight:bold;");
+                }
+            }
+        }
+
+        // 39. Bot Chế Tạo (Crafting)
+        if (rand(1, 100) <= 5) { 
+            $craftRes = handleCraftingBot($baseUrl, $cFile);
+            if ($craftRes && isset($craftRes['actions'])) {
+                foreach ($craftRes['actions'] as $act) {
+                    uiLog('🔨', "<b>Chế Tạo:</b> $act", "color:#95a5a6; font-weight:bold;");
+                }
+            }
+        }
+
+        // 40. Bot Bắn Cá (Banharc)
+        if (rand(1, 100) <= 25) { 
+            $banharcRes = handleBanharcBot($baseUrl, $cFile, $userMoney);
+            if ($banharcRes && isset($banharcRes['actions'])) {
+                foreach ($banharcRes['actions'] as $act) {
+                    uiLog('🐟', "<b>Bắn Cá:</b> $act", "color:#3498db; font-weight:bold;");
+                }
+            }
+        }
+
+        // 41. Bot Mạng Xã Hội (Social Feed)
+        if (rand(1, 100) <= 5) { 
+            $feedRes = handleSocialFeedBot($baseUrl, $cFile, $userMoney);
+            if ($feedRes && isset($feedRes['actions'])) {
+                foreach ($feedRes['actions'] as $act) {
+                    uiLog('📱', "<b>Social Feed:</b> $act", "color:#9b59b6; font-weight:bold;");
+                }
+            }
+        }
+
+        // 42. Bot Hồ Sơ (Profile)
+        if (rand(1, 100) <= 2) { 
+            $profRes = handleProfileBot($baseUrl, $cFile);
+            if ($profRes && isset($profRes['actions'])) {
+                foreach ($profRes['actions'] as $act) {
+                    uiLog('👤', "<b>Profile:</b> $act", "color:#7f8c8d; font-weight:bold;");
+                }
+            }
+        }
+
+        // 43. Bot Bang Chiến (Guild Territory)
+        if (rand(1, 100) <= 5) { 
+            $gtRes = handleGuildTerritoryBot($baseUrl, $cFile);
+            if ($gtRes && isset($gtRes['actions'])) {
+                foreach ($gtRes['actions'] as $act) {
+                    uiLog('🏰', "<b>Lãnh Địa:</b> $act", "color:#c0392b; font-weight:bold;");
+                }
+            }
+        }
+
+        // 44. Bot Khán Giả (Spectator)
+        if (rand(1, 100) <= 15) { 
+            $specRes = handleSpectatorBot($baseUrl, $cFile, $userMoney);
+            if ($specRes && isset($specRes['actions'])) {
+                foreach ($specRes['actions'] as $act) {
+                    uiLog('👀', "<b>Livestream:</b> $act", "color:#e67e22; font-weight:bold;");
+                }
+            }
+        }
+
+        // 45. Bot Bang Chiến (Guild War)
+        if (rand(1, 100) <= 5) { 
+            $gwRes = handleGuildWarBot($baseUrl, $cFile);
+            if ($gwRes && isset($gwRes['actions'])) {
+                foreach ($gwRes['actions'] as $act) {
+                    uiLog('⚔️', "<b>Bang Chiến:</b> $act", "color:#c0392b; font-weight:bold;");
+                }
+            }
+        }
         
         // Special Real-time Games Hook
         handleBlackjackMultiBot($conn, $baseUrl, $cFile, $state);
@@ -454,12 +957,32 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
 
         // --- MODULE 2.5: World Boss Raid (Real Gameplay) ---
         if (rand(1, 100) <= 20) { // 20% cơ hội tham gia Raid Ma Thần
-            $bossStatus = executeBotAction($baseUrl . "/api_world_boss.php?action=sync&id=1", null, $cFile);
-            if (isset($bossStatus['status']) && $bossStatus['status'] === 'active') {
-                $raidRes = executeBotAction($baseUrl . "/api_world_boss.php?action=attack&id=1", null, $cFile);
-                if (isset($raidRes['success']) && $raidRes['success']) {
-                    uiLog('💥', 'Bot Raid: Vừa gây ' . number_format($raidRes['damage']) . ' dame lên Ma Thần!');
+            $bossRes = handleWorldBossBot($conn, $baseUrl, $cFile, $userMoney, $userName);
+            if ($bossRes && isset($bossRes['actions'])) {
+                foreach ($bossRes['actions'] as $act) {
+                    uiLog('💥', "<b>Ma Thần Raid:</b> $act", "color:#ef4444;");
                 }
+            }
+        }
+
+        // --- MODULE 2.6: Mining Tycoon Auto-Play & Raid ---
+        handleMiningTycoonBot($conn, $baseUrl, $cFile, $userMoney);
+
+        // --- MODULE 2.6.5: Farming Automation ---
+        if (rand(1, 100) <= 30) { // 30% cơ hội mỗi lượt bot sẽ ghé thăm nông trại
+            $farmRes = handleFarmBot($baseUrl, $cFile, $userMoney);
+            if ($farmRes && isset($farmRes['actions'])) {
+                foreach ($farmRes['actions'] as $act) {
+                    uiLog('🌾', "<b>Nông Trại Bot:</b> $act", "color:#a3e635;");
+                }
+            }
+        }
+
+        // --- MODULE 2.7: Market Trading Auto-Play ---
+        $marketRes = handleMarketBot($conn, $baseUrl, $cFile, $userMoney);
+        if ($marketRes && isset($marketRes['actions'])) {
+            foreach ($marketRes['actions'] as $act) {
+                uiLog('📈', "<b>Sàn Chứng Khoán:</b> $act", "color:#34d399;");
             }
         }
 
@@ -487,13 +1010,18 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
                     return $g !== $lastGame;
                 });
                 if (empty($filteredGames)) $filteredGames = $availableGames;
-                uiLog('🔄', "Đổi game: Thua quá, chuyển từ $lastGame sang game khác...");
+                uiLog('🔄', "Đổi game: Bay màu liên tục, chuyển từ $lastGame sang game khác...");
             }
 
             // --- REAL GAMEPLAY PRIORITY ---
             $realGameResult = null;
             if (rand(1, 100) <= 60) { // 60% chance to play a REAL game
-                $realGameResult = handleSicboBot($conn, $baseUrl, $cFile, $userMoney);
+                $realGames = ['sicbo', 'baucua', 'xocdia', 'dice'];
+                $rGame = $realGames[array_rand($realGames)];
+                if ($rGame === 'sicbo') $realGameResult = handleSicboBot($conn, $baseUrl, $cFile, $userMoney);
+                else if ($rGame === 'baucua') $realGameResult = handleBaucuaBot($conn, $baseUrl, $cFile, $userMoney);
+                else if ($rGame === 'xocdia') $realGameResult = handleXocdiaBot($conn, $baseUrl, $cFile, $userMoney);
+                else if ($rGame === 'dice') $realGameResult = handleDiceBot($conn, $baseUrl, $cFile, $userMoney);
             }
 
             if ($realGameResult && isset($realGameResult['status']) && $realGameResult['status'] === 'success') {
@@ -511,7 +1039,7 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
                     $xpGain = ($personality === 'whale') ? 10 : 5;
                     $state['xp'] += $xpGain;
                     
-                    uiLog('💰', "<b>Thắng Lớn (Real):</b> Húp <span class='highlight-money'>" . number_format($winAmount) . "</span> GTLM tại <span style='color:#38bdf8'>$chosenGame</span>", 'color:#22c55e; font-weight:bold;');
+                    uiLog('💰', "<b>Ăn ngập mặt (Real):</b> Húp <span class='highlight-money'>" . number_format($winAmount) . "</span> GTLM tại <span style='color:#38bdf8'>$chosenGame</span>", 'color:#22c55e; font-weight:bold;');
                     
                     $msgType = ($state['win_streak'] >= 3) ? 'hot_streak_chat' : 'win';
                     $msg = $brain->generateMessage($userId, $msgType, ['amount' => $winAmount]);
@@ -692,7 +1220,7 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
                     $xpGain = ($personality === 'whale') ? 10 : 5;
                     $state['xp'] += $xpGain;
                     
-                    uiLog('💰', "<b>Thắng Lớn:</b> Húp <span class='highlight-money'>" . number_format($winAmount) . "</span> GTLM tại <span style='color:#38bdf8'>$chosenGame</span> (x" . round($winAmount/$bet, 2) . ")", 'color:#22c55e; font-weight:bold;');
+                    uiLog('💰', "<b>Ăn ngập mặt:</b> Húp <span class='highlight-money'>" . number_format($winAmount) . "</span> GTLM tại <span style='color:#38bdf8'>$chosenGame</span> (x" . round($winAmount/$bet, 2) . ")", 'color:#22c55e; font-weight:bold;');
                     
                     // --- EVOLUTION: Wealth Redistribution (Lì xì) ---
                     if ($winAmount >= 50000000 && rand(1, 100) <= 50) {
@@ -1261,7 +1789,7 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
                     } else {
                         // Create a new guild if the bot is rich enough
                         if ($userMoney >= 600000 && rand(1, 100) <= 25) {
-                            $gNames = ["Anh Em Lương Sơn", "Hắc Long Hội", "Vua Tài Xỉu", "Đại Gia GTLM", "Thiên Hạ Đệ Nhất", "Săn Boss VIP", "Hội Húp Lộc"];
+                            $gNames = ["Anh Em Lương Sơn", "Hắc Long Hội", "Vua Xanh Đỏ Đối Kháng", "Đại Gia GTLM", "Thiên Hạ Đệ Nhất", "Săn Boss VIP", "Hội Húp Lộc"];
                             $gTags = ["AELS", "HLH", "VTX", "DGG", "THDN", "SBV", "HHL"];
                             $gIdx = rand(0, count($gNames)-1);
                             $gName = $gNames[$gIdx] . " " . rand(10, 99);
@@ -1639,7 +2167,7 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
 
         // --- PHASE 3.5: Market Trend Analysis (Reporter) ---
         if ($socialRole === 'reporter' && rand(1, 100) <= 20) {
-            $trends = ["Tài xỉu đang vào dây Bệt kìa anh em!", "Xóc đĩa hôm nay về Lẻ nhiều quá, cẩn thận nhé!", "Hũ Jackpot game Quay hũ sắp nổ rồi, ai nhanh tay thì húp!"];
+            $trends = ["Xanh Đỏ Đối Kháng đang vào dây Bệt kìa anh em!", "Xóc đĩa hôm nay về Lẻ nhiều quá, cẩn thận nhé!", "Hũ Jackpot game Quay hũ sắp nổ rồi, ai nhanh tay thì húp!"];
             $trendMsg = "📊 [XU HƯỚNG] " . $trends[array_rand($trends)] . " 📈";
             executeBotAction($baseUrl . "/chat.php", ['message' => $trendMsg], $cFile);
             uiLog('📈', "<b>Reporter:</b> Đã đăng tin về xu hướng thị trường.");
@@ -1785,14 +2313,29 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
                 if (rand(1, 100) <= 50) executeBotAction($baseUrl . "/chat.php", ['message' => $hypeMsg], $cFile);
             }
             
-            // 2. Tet Lucky Wheel Participation
-            if (file_exists(__DIR__ . '/../api_luckywheel_tet.php') && rand(1, 100) <= 30) {
-                $betTet = rand(5000, 50000);
-                if ($userMoney >= $betTet) {
-                    $resTet = executeBotAction($baseUrl . "/api_luckywheel_tet.php", ['cuoc' => $betTet], $cFile);
-                    if (isset($resTet['success']) && $resTet['success']) {
-                        uiLog('🧧', "Bot quay Lì xì Tết: {$resTet['label']}");
-                    }
+
+        }
+
+        // --- MODULE 10.9.1: Bot Baiting (Gà Mồi) ---
+        if ($personality === 'whale' || $userMoney >= 500000) {
+            $userAvatar = $res['ImageURL'] ?? 'https://ui-avatars.com/api/?name='.urlencode($userName);
+            $baitingRes = handleBaitingBot($conn, $baseUrl, $cFile, $userMoney, $userId, $userName, $userAvatar);
+            if ($baitingRes) {
+                foreach ($baitingRes['actions'] as $act) {
+                    uiLog('🐔', "<b>Gà Mồi:</b> $act", 'color:#eab308;');
+                    writeBotLog($email, "BAITING", "Action", $act);
+                }
+            }
+        }
+
+        // --- MODULE 10.9.2: Bot Vendetta (Thù Dai) ---
+        if ($userMoney >= 100000) {
+            $userAvatar = $res['ImageURL'] ?? 'https://ui-avatars.com/api/?name='.urlencode($userName);
+            $vendettaRes = handleVendettaBot($conn, $baseUrl, $cFile, $userMoney, $userId, $userName, $userAvatar);
+            if ($vendettaRes) {
+                foreach ($vendettaRes['actions'] as $act) {
+                    uiLog('🩸', "<b>Thù Dai:</b> $act", 'color:#ef4444; font-weight:bold;');
+                    writeBotLog($email, "VENDETTA", "Action", $act);
                 }
             }
         }

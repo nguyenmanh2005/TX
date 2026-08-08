@@ -15,7 +15,7 @@ if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
 }
 
 $userId = $_SESSION['Iduser'];
-$stmt = $conn->prepare("SELECT ImageURL, chat_frame_id, avatar_frame_id FROM users WHERE Iduser = ?");
+$stmt = $conn->prepare("SELECT ImageURL, chat_frame_id, avatar_frame_id, Role FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -23,20 +23,24 @@ $user = $result->fetch_assoc();
 $avatar = $user['ImageURL'] ?? "https://ui-avatars.com/api/?name=" . urlencode($_SESSION['Name']);
 $chatFrame = $user['chat_frame_id'] ?? null;
 $avatarFrame = $user['avatar_frame_id'] ?? null;
+$userRole = (int)($user['Role'] ?? 0);
 $stmt->close();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message'])) {
     // Rate limit: Tối đa 1 tin nhắn mỗi 1.5 giây để tránh spam
-    $now = microtime(true);
-    if (isset($_SESSION['last_chat_time'])) {
-        $diff = $now - $_SESSION['last_chat_time'];
-        if ($diff < 1.5) {
-            http_response_code(429);
-            echo json_encode(['success' => false, 'message' => 'Bạn gửi quá nhanh! Vui lòng giãn cách 1.5 giây.']);
-            exit;
+    // KOC (Role 2) và Thương Gia (Role 3) được bypass rate limit
+    if ($userRole < 2) {
+        $now = microtime(true);
+        if (isset($_SESSION['last_chat_time'])) {
+            $diff = $now - $_SESSION['last_chat_time'];
+            if ($diff < 1.5) {
+                http_response_code(429);
+                echo json_encode(['success' => false, 'message' => 'Bạn gửi quá nhanh! Vui lòng giãn cách 1.5 giây.']);
+                exit;
+            }
         }
+        $_SESSION['last_chat_time'] = $now;
     }
-    $_SESSION['last_chat_time'] = $now;
 
     $username = $_SESSION['Name'];
     $message = trim($_POST['message']);
@@ -147,7 +151,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'load') {
     $result = $conn->query("
         SELECT cm.id, cm.username, cm.message, cm.created_at, cm.avatar, cm.chat_frame_id, 
                cf.ImageURL AS frame_image,
-               u.active_title_id, u.avatar_frame_id,
+               u.active_title_id, u.avatar_frame_id, u.Role,
                a.icon as title_icon, a.name as title_name,
                af.ImageURL AS avatar_frame_image
         FROM chat_messages cm
@@ -203,6 +207,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'react' && isset($_GET['msg_id
 <html lang="vi">
 <head>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <meta charset="UTF-8">
   <title>Chat Thế Giới</title>
       <link rel="stylesheet" href="assets/css/main.css">
@@ -210,6 +215,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'react' && isset($_GET['msg_id
     <link rel="stylesheet" href="assets/css/responsive.css">
     <link rel="stylesheet" href="assets/css/loading.css">
     <link rel="stylesheet" href="assets/css/animations.css">
+    <link rel="stylesheet" href="assets/css/red-envelope.css">
+    <link rel="stylesheet" href="assets/css/sound-fx-hub.css">
+    <script src="assets/js/sound-fx-hub.js"></script>
+    <script src="assets/js/red-envelope.js"></script>
   <style>
     body { 
         cursor: url('chuot.png'), url('../chuot.png'), auto !important;
@@ -612,10 +621,20 @@ if (isset($_GET['action']) && $_GET['action'] === 'react' && isset($_GET['msg_id
   <div id="chat-box"></div>
   <div id="chat-form">
     <form onsubmit="sendMessage(); return false;">
-      <input type="text" id="message" placeholder="Nhập tin nhắn của bạn..." autocomplete="off">
-      <button type="submit">Gửi</button>
+      <input type="text" id="message" placeholder="Nhập tin nhắn của bạn... (thử !nhận khi có event)" autocomplete="off">
+      <button type="submit">💬 Gửi</button>
+      <button type="button" id="btn-red-packet" onclick="openRedPacketModal()" style="background: linear-gradient(135deg, #e53935 0%, #b71c1c 100%); margin-left: 10px; position:relative;">🧧 Lì Xì
+        <span id="rp-pulse" style="display:none; position:absolute; top:-4px; right:-4px; width:12px; height:12px; background:#fbbf24; border-radius:50%; box-shadow:0 0 8px #fbbf24; animation:rpPulse 1s infinite;"></span>
+      </button>
+      <button type="button" onclick="toggleSoundWidget()" title="Âm Thanh" style="background:linear-gradient(135deg,#1e293b,#0f172a); border:1px solid #475569; margin-left:8px; padding:14px 16px; font-size:18px;">🔊</button>
     </form>
   </div>
+  <style>
+  @keyframes rpPulse {
+    0%,100%{transform:scale(1);opacity:1;}
+    50%{transform:scale(1.6);opacity:0.5;}
+  }
+  </style>
   <div style="text-align:center; margin-top: 20px;">
     <a href="index.php" class="nav-button">🏠 Trang chủ</a>
     <a href="chat2.php" class="nav-button">💬 Chat 2</a>
@@ -660,6 +679,27 @@ if (isset($_GET['action']) && $_GET['action'] === 'react' && isset($_GET['msg_id
     let lastMessageId = 0;
     let isInitialLoad = true;
 
+    // --- AVATAR FALLBACK: Tạo SVG avatar từ chữ cái đầu, không cần internet ---
+    function makeAvatarFallback(username) {
+        const colors = [
+            '#ef4444','#f97316','#eab308','#22c55e','#14b8a6',
+            '#3b82f6','#8b5cf6','#ec4899','#06b6d4','#f59e0b'
+        ];
+        const name = (username || 'U').trim();
+        // Hash tên để chọn màu ổn định (cùng tên luôn cùng màu)
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        const color = colors[Math.abs(hash) % colors.length];
+        // Lấy 1-2 ký tự đầu
+        const initials = name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50">
+            <rect width="50" height="50" rx="25" fill="${color}"/>
+            <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle"
+                font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="700" fill="white">${initials}</text>
+        </svg>`;
+        return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    }
+
     function loadMessages() {
       fetch("chat.php?action=load")
         .then(res => {
@@ -680,7 +720,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'react' && isset($_GET['msg_id
           
           data.forEach((msg, index) => {
             try {
-              const avatarUrl = msg.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(msg.username || 'User');
+              const avatarUrl = (msg.avatar && msg.avatar.trim() && !msg.avatar.includes('avatar_default')) 
+                  ? msg.avatar 
+                  : makeAvatarFallback(msg.username);
               const frameImage = msg.frame_image || null;
               const avatarFrameImage = msg.avatar_frame_image || null;
               
@@ -689,6 +731,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'react' && isset($_GET['msg_id
               const titleIcon = msg.title_icon ? msg.title_icon.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
               const titleName = msg.title_name ? msg.title_name.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
               const titleDisplay = titleIcon ? `<span style="font-size: 18px; margin-right: 5px;" title="${titleName}">${titleIcon}</span>` : '';
+              
+              const role = parseInt(msg.Role) || 0;
+              let roleBadge = '';
+              if (role === 2) {
+                  roleBadge = '<span style="background: #00e5ff; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-right: 5px; font-weight: bold; text-shadow: 0 0 5px rgba(255,255,255,0.5);">💎 KOC</span>';
+              } else if (role === 3) {
+                  roleBadge = '<span style="background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-right: 5px; font-weight: bold; box-shadow: 0 0 8px rgba(255,215,0,0.6);">👑 Thương Gia</span>';
+              }
 
               let reactionHtml = '<div class="reaction-bar">';
               if (msg.reactions && msg.reactions.length > 0) {
@@ -724,7 +774,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'react' && isset($_GET['msg_id
                 if (avatarFrameImage && typeof avatarFrameImage === 'string' && avatarFrameImage.trim() !== '') {
                   avatarHtml += `<div class="frame-overlay" style="pointer-events: none !important;"><img src="${avatarFrameImage.replace(/</g, '&lt;').replace(/>/g, '&gt;')}" alt="Frame" style="pointer-events: none !important;" onerror="this.style.display='none'"></div>`;
                 }
-                avatarHtml += `<img src="${avatarUrl}" alt="${safeUsername}" style="pointer-events: auto;" onerror="this.src='images.ico'"></div>`;
+                 const _safeAvtUrl = avatarUrl.replace(/"/g, '&quot;');
+                 avatarHtml += `<img src="${_safeAvtUrl}" alt="${safeUsername}" style="pointer-events: auto;" onerror="this.onerror=null; this.src=makeAvatarFallback('${safeUsername.replace(/'/g, '')}');"></div>`;
 
                 let messageDiv = document.createElement('div');
                 messageDiv.setAttribute('data-msg-id', msg.id);
@@ -747,10 +798,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'react' && isset($_GET['msg_id
                   ${avatarHtml}
                   <div class="message-content">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                      <strong>${titleDisplay}${safeUsername}</strong>
+                      <strong>${roleBadge}${titleDisplay}${safeUsername}</strong>
                       ${pickerHtml}
                     </div>
-                    <p>${safeMessage}</p>
+                    <p>${safeMessage.replace(/\[Click để nhận\]\(#packet-(\d+)\)/g, '<br><button type="button" class="btn-sm btn-danger" style="margin-top:5px; padding:5px 10px; font-size:12px; background: #e53935; color: #fff; border:none; border-radius:5px; cursor:pointer;" onclick="claimRedPacket($1)">🧧 Nhận Lì Xì</button>')}</p>
                     ${reactionHtml}
                     <small>(${msg.created_at})</small>
                   </div>
@@ -790,7 +841,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'react' && isset($_GET['msg_id
       const submitButton = document.querySelector('button[type="submit"]');
       
       if (message === '') {
-        alert("Vui lòng nhập nội dung!");
+        if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String("Vui lòng nhập nội dung!"), 'warning'); }
         return;
       }
       
@@ -815,7 +866,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'react' && isset($_GET['msg_id
         })
         .catch(err => {
           console.error('Error sending message:', err);
-          alert(err.message || 'Có lỗi xảy ra khi gửi tin nhắn!');
+          if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String(err.message || 'Có lỗi xảy ra khi gửi tin nhắn!'), 'info'); }
         })
         .finally(() => {
           messageInput.disabled = false;
@@ -827,19 +878,151 @@ if (isset($_GET['action']) && $_GET['action'] === 'react' && isset($_GET['msg_id
         });
     }
     
-    // Auto refresh messages every 3 seconds
+    // --- LÌ XÌ (RED ENVELOPE) LOGIC — Dùng api_red_envelope.php (4B) ---
+    function openRedPacketModal() {
+        if (typeof Swal === 'undefined') return;
+        Swal.fire({
+            title: '🧧 Phát Mưa Lì Xì Lên Kênh Chat',
+            background: '#1e293b',
+            color: '#f8fafc',
+            html: `
+                <div style="text-align:left; margin-top:15px;">
+                    <label style="font-weight:800; color:#fbbf24; display:block; margin-bottom:4px;">💰 Tổng Số GTLM Phát (tối thiểu 10,000):</label>
+                    <input type="number" id="rp-amount" class="swal2-input" placeholder="VD: 50000" min="10000" style="background:#0f172a; color:#f8fafc; border-color:#475569;">
+
+                    <label style="font-weight:800; color:#fbbf24; display:block; margin:14px 0 4px;">📦 Số Lượng Bao Lì Xì (1-50):</label>
+                    <input type="number" id="rp-pieces" class="swal2-input" placeholder="VD: 10" min="1" max="50" style="background:#0f172a; color:#f8fafc; border-color:#475569;">
+
+                    <label style="font-weight:800; color:#fbbf24; display:block; margin:14px 0 4px;">🎊 Kiểu Chia Lộc:</label>
+                    <select id="rp-type" class="swal2-input" style="background:#0f172a; color:#f8fafc; border-color:#475569;">
+                        <option value="random">🎲 May Mắn — Ngẫu nhiên (giật nhiều hơn nếu may)</option>
+                        <option value="equal">⚖️ Chia Đều — Mỗi bao như nhau</option>
+                    </select>
+
+                    <label style="font-weight:800; color:#fbbf24; display:block; margin:14px 0 4px;">💬 Lời Chúc Phát Lộc:</label>
+                    <input type="text" id="rp-message" class="swal2-input" placeholder="Chúc đạo hữu húp đậm GTLM!" value="Chúc đạo hữu húp đậm GTLM! 🧧" style="background:#0f172a; color:#f8fafc; border-color:#475569;">
+                </div>
+            `,
+            confirmButtonText: '🧧 Phát Mưa Lì Xì',
+            confirmButtonColor: '#dc2626',
+            showCancelButton: true,
+            cancelButtonText: 'Hủy',
+            preConfirm: () => {
+                const amt = parseInt(document.getElementById('rp-amount').value);
+                const pcs = parseInt(document.getElementById('rp-pieces').value);
+                const msg = document.getElementById('rp-message').value;
+                const type = document.getElementById('rp-type').value;
+                if (!amt || amt < 10000) {
+                    Swal.showValidationMessage('Số GTLM tối thiểu là 10,000!');
+                    return false;
+                }
+                if (!pcs || pcs < 1 || pcs > 50) {
+                    Swal.showValidationMessage('Số lượng bao từ 1 đến 50!');
+                    return false;
+                }
+                if (amt / pcs < 100) {
+                    Swal.showValidationMessage('Mỗi bao tối thiểu 100 GTLM!');
+                    return false;
+                }
+                return { amt, pcs, msg, type };
+            }
+        }).then((res) => {
+            if (res.isConfirmed) {
+                const fd = new FormData();
+                fd.append('total_amount', res.value.amt);
+                fd.append('total_count', res.value.pcs);
+                fd.append('message', res.value.msg);
+                fd.append('type', res.value.type);
+
+                fetch('api_red_envelope.php?action=create', {
+                    method: 'POST',
+                    body: fd
+                }).then(r => r.json()).then(data => {
+                    if (data.success) {
+                        if (typeof SoundFXHub !== 'undefined') SoundFXHub.playLuckySpin();
+                        Swal.fire({
+                            title: '🎉 Mưa Lì Xì Đã Rơi!',
+                            text: data.message,
+                            icon: 'success',
+                            background: '#1e293b',
+                            color: '#f8fafc',
+                            confirmButtonColor: '#dc2626'
+                        });
+                        loadMessages();
+                        // Trigger RedEnvelopeHub poll ngay lập tức
+                        if (typeof RedEnvelopeHub !== 'undefined') RedEnvelopeHub.poll();
+                    } else {
+                        Swal.fire({ title: 'Lỗi', text: data.message, icon: 'error', background: '#1e293b', color: '#f8fafc' });
+                    }
+                }).catch(() => {
+                    Swal.fire('Lỗi', 'Có lỗi xảy ra khi phát lì xì!', 'error');
+                });
+            }
+        });
+    }
+
+    function toggleSoundWidget() {
+        const widget = document.getElementById('gtlm-sound-widget');
+        if (widget) {
+            widget.style.display = widget.style.display === 'none' ? 'flex' : 'none';
+        } else if (typeof SoundFXHub !== 'undefined') {
+            SoundFXHub.playPop();
+        }
+    }
+
+    // Hiện pulse khi có lì xì active
+    setInterval(() => {
+        fetch('api_red_envelope.php?action=list')
+            .then(r => r.json())
+            .then(d => {
+                const pulse = document.getElementById('rp-pulse');
+                if (pulse) pulse.style.display = (d.success && d.envelopes && d.envelopes.length > 0) ? 'block' : 'none';
+            })
+            .catch(() => {});
+    }, 10000);
+    // Lần đầu check ngay
+    setTimeout(() => {
+        fetch('api_red_envelope.php?action=list').then(r=>r.json()).then(d=>{
+            const pulse = document.getElementById('rp-pulse');
+            if (pulse) pulse.style.display = (d.success && d.envelopes && d.envelopes.length > 0) ? 'block' : 'none';
+        }).catch(()=>{});
+    }, 1500);
+
+    function claimRedPacket(packetId) {
+        if (!packetId) return;
+        // Dùng RedEnvelopeHub nếu có, fallback về api cũ
+        if (typeof RedEnvelopeHub !== 'undefined') {
+            RedEnvelopeHub.claim(packetId);
+            return;
+        }
+        const fd = new FormData();
+        fd.append('envelope_id', packetId);
+        fetch('api_red_envelope.php?action=claim', {
+            method: 'POST',
+            body: fd
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                if (typeof SoundFXHub !== 'undefined') SoundFXHub.playLotteryWin();
+                Swal.fire({
+                    title: '🧧 GIẬT LỘC THÀNH CÔNG!',
+                    html: `<b>+${new Intl.NumberFormat().format(data.amount)} GTLM</b><br>${data.message}`,
+                    icon: 'success',
+                    background: '#1e293b',
+                    color: '#f8fafc',
+                    confirmButtonColor: '#dc2626'
+                });
+            } else {
+                Swal.fire({ title: 'Thông báo', text: data.message, icon: 'warning', background: '#1e293b', color: '#f8fafc' });
+            }
+        }).catch(() => {
+            Swal.fire('Lỗi', 'Có lỗi xảy ra khi nhận lì xì!', 'error');
+        });
+    }
+
+    // Refresh chat auto
     setInterval(loadMessages, 3000);
-    
-    window.onload = function() {
-        loadMessages();
-    };
+    loadMessages(); // Gọi hàm load message ban đầu
   </script>
-
-
-
-    
-    
-
 
     <!-- Three.js Background System -->
     <canvas id="threejs-background"></canvas>

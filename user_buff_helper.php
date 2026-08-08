@@ -69,7 +69,7 @@ class UserBuffHelper {
         $stmt->close();
 
         // Log transaction
-        $stmt = $conn->prepare("INSERT INTO bot_transactions (user_id, amount, type, reason) VALUES (?, ?, 'receive', 'Kích hoạt Khiên Hộ Mệnh (Bảo hiểm 50% số liều)')");
+        $stmt = $conn->prepare("INSERT INTO bot_transactions (user_id, amount, type, reason) VALUES (?, ?, 'receive', 'Kích hoạt Khiên Hộ Mệnh (Bảo hiểm 50% số Chiến)')");
         $stmt->bind_param("id", $userId, $refund);
         $stmt->execute();
         $stmt->close();

@@ -62,7 +62,7 @@ class HorseRacePvP {
             const now = new Date(server_time).getTime();
             const diff = Math.max(0, Math.floor((start - now) / 1000));
             countdownEl.innerText = diff + "s";
-            
+
             this.resetHorses();
         } else if (this.status === 'racing') {
             statusEl.innerText = "CUỘC ĐUA ĐANG DIỄN RA!";
@@ -72,7 +72,7 @@ class HorseRacePvP {
             statusEl.innerText = "CUỘC ĐUA KẾT THÚC!";
             countdownEl.innerText = "Winner: Horse #" + room.winner_horse;
             this.showFinishPositions(room.winner_horse);
-            
+
             if (this.roomId !== this.notifiedFinishedRoomId) {
                 this.notifiedFinishedRoomId = this.roomId;
                 this.checkResult(room.winner_horse);
@@ -92,11 +92,11 @@ class HorseRacePvP {
         for (let i = 1; i <= 6; i++) {
             const horse = document.getElementById(`horse-${i}`);
             // Mỗi ngựa có tốc độ base + random nhẹ dựa trên seed (startTime)
-            const speed = 10 + (Math.sin(start + i) * 2); 
+            const speed = 10 + (Math.sin(start + i) * 2);
             let progress = elapsed * speed;
-            
+
             // Giới hạn không quá vạch đích (90%)
-            progress = Math.min(progress, 85); 
+            progress = Math.min(progress, 85);
             horse.style.left = progress + "%";
         }
     }
@@ -131,9 +131,9 @@ class HorseRacePvP {
 
     checkResult(winner) {
         if (!this.myBet) return;
-        
+
         const winAmount = this.myBet.amount * 6;
-        
+
         if (this.myBet.horseId == winner) {
             Swal.fire({
                 icon: 'success',
@@ -141,7 +141,7 @@ class HorseRacePvP {
                 html: `Chúc mừng! Chiến mã #${winner} đã về nhất.<br>Bạn nhận được <b>+${new Intl.NumberFormat('vi-VN').format(winAmount)}</b> GTLM!`,
                 confirmButtonText: 'Tuyệt vời'
             });
-            // Cộng tiền hiển thị
+            // Cộng GTLM hiển thị
             const balanceEl = document.getElementById('user-balance');
             if (balanceEl) {
                 let currentBal = parseInt(balanceEl.innerText.replace(/\./g, ''));
@@ -156,13 +156,13 @@ class HorseRacePvP {
                 confirmButtonText: 'Thử lại'
             });
         }
-        
+
         this.myBet = null;
     }
 
     async placeBet() {
         if (!this.selectedHorse) {
-            Swal.fire({icon: 'warning', title: 'Oops...', text: 'Vui lòng chọn ngựa!'});
+            Swal.fire({ icon: 'warning', title: 'Oops...', text: 'Vui lòng chọn ngựa!' });
             return;
         }
 
@@ -170,7 +170,7 @@ class HorseRacePvP {
         const betAmount = parseInt(betAmountInput.value) || 0;
 
         if (betAmount < 1000) {
-            Swal.fire({icon: 'warning', title: 'Lỗi', text: 'Tối thiểu 1.000 GTLM'});
+            Swal.fire({ icon: 'warning', title: 'Lỗi', text: 'Tối thiểu 1.000 GTLM' });
             return;
         }
 
@@ -185,10 +185,10 @@ class HorseRacePvP {
             });
             const data = await response.json();
             if (data.success) {
-                Swal.fire({icon: 'success', title: 'Thành công!', text: 'Đặt cược thành công!', timer: 1500, showConfirmButton: false});
+                Swal.fire({ icon: 'success', title: 'Thành công!', text: 'Đặt cược thành công!', timer: 1500, showConfirmButton: false });
                 this.myBet = { horseId: parseInt(this.selectedHorse), amount: betAmount };
-                
-                // Trừ tiền hiển thị
+
+                // Trừ GTLM hiển thị
                 const balanceEl = document.getElementById('user-balance');
                 if (balanceEl) {
                     let currentBal = parseInt(balanceEl.innerText.replace(/\./g, ''));
@@ -196,7 +196,7 @@ class HorseRacePvP {
                     balanceEl.innerText = new Intl.NumberFormat('vi-VN').format(currentBal);
                 }
             } else {
-                Swal.fire({icon: 'error', title: 'Lỗi', text: data.message});
+                Swal.fire({ icon: 'error', title: 'Lỗi', text: data.message });
             }
         } catch (e) {
             console.error(e);

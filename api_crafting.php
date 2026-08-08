@@ -27,8 +27,8 @@ if ($action === 'craft') {
         exit();
     }
 
-    $reqs = json_decode($recipe['input_requirements'], true);
-    $matReqs = json_decode($recipe['material_requirements'], true) ?? [];
+    $reqs = json_decode($recipe['input_requirements'] ?? '{}', true) ?? [];
+    $matReqs = json_decode($recipe['material_requirements'] ?? '{}', true) ?? [];
     $gtlmCost = $recipe['gtlm_cost'];
     $outType = $recipe['output_type'];
     $outId = $recipe['output_item_id'];
@@ -39,6 +39,10 @@ if ($action === 'craft') {
     elseif ($outType === 'cursor') { $outTable = 'user_cursors'; $outCol = 'cursor_id'; }
     elseif ($outType === 'avatar_frame') { $outTable = 'user_avatar_frames'; $outCol = 'avatar_frame_id'; }
     elseif ($outType === 'chat_frame') { $outTable = 'user_chat_frames'; $outCol = 'chat_frame_id'; }
+    elseif ($outType === 'buff_card') {
+        // Buff card cho phép sở hữu nhiều thẻ (nhiều uses_left), nên không block
+        $outTable = '';
+    }
 
     if ($outTable) {
         $stmt = $conn->prepare("SELECT id FROM $outTable WHERE user_id = ? AND $outCol = ?");
@@ -54,26 +58,32 @@ if ($action === 'craft') {
 
     $conn->begin_transaction();
     try {
-        // 2. Kiểm tra  Gtlm
-        $user = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc();
+        // 2. Kiểm tra  Gtlm (Lock Row)
+        $user = $conn->query("SELECT Money FROM users WHERE Iduser = $userId FOR UPDATE")->fetch_assoc();
         if ($user['Money'] < $gtlmCost) {
             throw new Exception("Bạn không đủ GTLM để thực hiện chế tác!");
         }
 
         // 3. Kiểm tra và tiêu hao Item (Theme, Cursor, Frame)
         foreach ($reqs as $type => $amt) {
-            $tableName = ''; $idCol = '';
-            if ($type === 'theme') { $tableName = 'user_themes'; $idCol = 'theme_id'; }
-            elseif ($type === 'cursor') { $tableName = 'user_cursors'; $idCol = 'cursor_id'; }
-            elseif ($type === 'avatar_frame') { $tableName = 'user_avatar_frames'; $idCol = 'avatar_frame_id'; }
-            elseif ($type === 'chat_frame') { $tableName = 'user_chat_frames'; $idCol = 'chat_frame_id'; }
+            if ($amt <= 0) continue;
             
-            $sql = "SELECT id FROM $tableName WHERE user_id = ? ";
-            if ($type !== 'avatar_frame') $sql .= " AND is_active = 0 ";
-            $sql .= " LIMIT $amt";
+            $tableName = ''; $idCol = ''; $activeColQuery = '';
+            if ($type === 'theme') { 
+                $tableName = 'user_themes'; 
+                $activeColQuery = "AND theme_id != IFNULL((SELECT current_theme_id FROM users WHERE Iduser = ?), -1)";
+            } elseif ($type === 'cursor') { 
+                $tableName = 'user_cursors'; 
+                $activeColQuery = "AND cursor_id != IFNULL((SELECT current_cursor_id FROM users WHERE Iduser = ?), -1)";
+            } elseif ($type === 'avatar_frame') { 
+                $tableName = 'user_avatar_frames'; 
+                $activeColQuery = "AND avatar_frame_id != IFNULL((SELECT avatar_frame_id FROM users WHERE Iduser = ?), -1)";
+            }
+            
+            $sql = "SELECT id FROM $tableName WHERE user_id = ? $activeColQuery LIMIT ? FOR UPDATE";
             
             $stmt = $conn->prepare($sql);
-            $stmt->bind_param("i", $userId);
+            $stmt->bind_param("iii", $userId, $userId, $amt);
             $stmt->execute();
             $itemsToConsume = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             $stmt->close();
@@ -115,15 +125,21 @@ if ($action === 'craft') {
             elseif ($type === 'avatar_frame') { $tableName = 'user_avatar_frames'; $idCol = 'avatar_frame_id'; }
             elseif ($type === 'chat_frame') { $tableName = 'user_chat_frames'; $idCol = 'chat_frame_id'; }
 
-            // Kiểm tra xem đã có item này chưa
-            $stmt = $conn->prepare("SELECT id FROM $tableName WHERE user_id = ? AND $idCol = ?");
-            $stmt->bind_param("ii", $userId, $outputId);
-            $stmt->execute();
-            $exists = $stmt->get_result()->num_rows > 0;
-            $stmt->close();
+            if ($type === 'buff_card') {
+                require_once 'user_buff_helper.php';
+                // output_item_id là buff_type, vd: 'shield', 'luck', 'x2_reward'
+                UserBuffHelper::addBuff($conn, $userId, $outputId, 3); // Cấp 3 lượt sử dụng
+            } else if ($tableName) {
+                // Kiểm tra xem đã có item này chưa
+                $stmt = $conn->prepare("SELECT id FROM $tableName WHERE user_id = ? AND $idCol = ?");
+                $stmt->bind_param("ii", $userId, $outputId);
+                $stmt->execute();
+                $exists = $stmt->get_result()->num_rows > 0;
+                $stmt->close();
 
-            if (!$exists) {
-                $conn->query("INSERT INTO $tableName (user_id, $idCol) VALUES ($userId, $outputId)");
+                if (!$exists) {
+                    $conn->query("INSERT INTO $tableName (user_id, $idCol) VALUES ($userId, $outputId)");
+                }
             }
 
             $conn->query("INSERT INTO crafting_logs (user_id, recipe_id, is_success, gtlm_spent) VALUES ($userId, $recipeId, 1, $gtlmCost)");

@@ -32,7 +32,7 @@ $cost = 50000;
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if ($currentBalance < $cost) {
-        $message = "⚠️ Bạn không đủ số dư để rút thưởng. Cần ít nhất " . number_format($cost) . " VNĐ.";
+        $message = "⚠️ Bạn không đủ số dư để rút thưởng. Cần ít nhất " . number_format($cost) . " GTLM.";
     } else {
         // Trừ phí 50k
         $currentBalance -= $cost;
@@ -53,13 +53,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             ["label" => "Trượt!", "reward" => 0],
             ["label" => "Trượt!", "reward" => 0],
             ["label" => "Trượt!", "reward" => 0],
-            ["label" => "10.000 VNĐ", "reward" => 10000],
-            ["label" => "10.000 VNĐ", "reward" => 10000],
-            ["label" => "50.000 VNĐ", "reward" => 50000],
-            ["label" => "100.000 VNĐ", "reward" => 100000],
-            ["label" => "200.000 VNĐ", "reward" => 200000],
-            ["label" => "500.000 VNĐ", "reward" => 500000],
-            ["label" => "1.000.000 VNĐ", "reward" => 1000000],
+            ["label" => "10.000 GTLM", "reward" => 10000],
+            ["label" => "10.000 GTLM", "reward" => 10000],
+            ["label" => "50.000 GTLM", "reward" => 50000],
+            ["label" => "100.000 GTLM", "reward" => 100000],
+            ["label" => "200.000 GTLM", "reward" => 200000],
+            ["label" => "500.000 GTLM", "reward" => 500000],
+            ["label" => "1.000.000 GTLM", "reward" => 1000000],
         ];
 
         // Random bag
@@ -310,8 +310,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   <div class="game-container">
     <h1>🎁 Bóc Túi Mù</h1>
     <p style="font-size: 18px; margin: 10px 0;">Xin chào <strong><?= htmlspecialchars($userName, ENT_QUOTES, 'UTF-8') ?></strong></p>
-    <div class="balance-display">💰 Số dư hiện tại: <strong><?= number_format($currentBalance, 0, ',', '.') ?> VNĐ</strong></div>
-    <div class="cost-info">💸 Chi phí mỗi lần bóc: <strong><?= number_format($cost, 0, ',', '.') ?> VNĐ</strong></div>
+    <div class="balance-display">💰 Số dư hiện tại: <strong><?= number_format($currentBalance, 0, ',', '.') ?> GTLM</strong></div>
+    <div class="cost-info">💸 Chi phí mỗi lần bóc: <strong><?= number_format($cost, 0, ',', '.') ?> GTLM</strong></div>
 
     <div class="bag-icon">🎁</div>
 

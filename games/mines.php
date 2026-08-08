@@ -4,12 +4,10 @@ include '../db_connect.php';
 require_once '../include_css.php';
 include '../load_theme.php';
 require_once '../game_history_helper.php';
-
 if (!isset($_SESSION['Iduser'])) {
     header('Location: ../login.php');
     exit;
 }
-
 $userId = $_SESSION['Iduser'];
 $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
@@ -18,9 +16,6 @@ $user = $stmt->get_result()->fetch_assoc();
 $money = $user['Money'];
 $userName = $user['Name'];
 $stmt->close();
-
-$conn->query("CREATE TABLE IF NOT EXISTS history_mines (Id INT AUTO_INCREMENT PRIMARY KEY, Iduser INT NOT NULL, Bet DECIMAL(30,2) NOT NULL, Result VARCHAR(255) NOT NULL, WinAmount DECIMAL(30,2) NOT NULL, Time DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
 function getMinesMultiplier($mines, $revealed)
 {
     if ($revealed <= 0)
@@ -32,7 +27,6 @@ function getMinesMultiplier($mines, $revealed)
         $prob *= ($safe - $i) / ($total - $i);
     return round((1.0 / $prob) * 0.97, 2); // 3% House Edge for premium
 }
-
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
     $action = $_GET['action'];
@@ -40,16 +34,13 @@ if (isset($_GET['action'])) {
     if ($action === 'start') {
         $rawBet = $_POST['bet'] ?? 0;
         $minesCount = (int)($_POST['mines'] ?? 3);
-
         // FIX: Chống Array Injection & Validate
         if (is_array($rawBet) || !is_numeric($rawBet)) {
             $response['message'] = "Dữ liệu cược không hợp lệ!";
             echo json_encode($response); exit;
         }
-
         $bet = (float)$rawBet;
         $minBet = 1000;
-
         if ($bet < $minBet || $minesCount < 1 || $minesCount > 24) {
             $response['message'] = "Yêu cầu không hợp lệ! Mức cược tối thiểu là " . number_format($minBet) . " gtlm.";
         } else {
@@ -60,19 +51,15 @@ if (isset($_GET['action'])) {
                 $stmt->bind_param("i", $userId);
                 $stmt->execute();
                 $userData = $stmt->get_result()->fetch_assoc();
-
                 if (!$userData || $userData['Money'] < $bet) throw new Exception("Không đủ  Gtlm!");
-
                 // Trừ  Gtlm an toàn
                 $stmt = $conn->prepare("UPDATE users SET Money = Money - ? WHERE Iduser = ?");
                 $stmt->bind_param("di", $bet, $userId);
                 $stmt->execute();
-
                 $allTiles = range(0, 24);
                 shuffle($allTiles);
                 $mines = array_slice($allTiles, 0, $minesCount);
                 $_SESSION['mines_game'] = ['bet' => $bet, 'mines' => $mines, 'revealed' => [], 'minesCount' => $minesCount, 'status' => 'active'];
-                
                 $conn->commit();
                 $newMoney = $userData['Money'] - $bet;
                 $response = ['success' => true, 'money' => number_format($newMoney, 0, ',', '.')];
@@ -121,29 +108,22 @@ if (isset($_GET['action'])) {
                     $stmt->bind_param("i", $userId);
                     $stmt->execute();
                     $stmt->get_result();
-
                     $mult = getMinesMultiplier($game['minesCount'], $revealedCount);
                     $winAmount = round($game['bet'] * $mult);
-                    
                     $updateStmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
                     $updateStmt->bind_param("di", $winAmount, $userId);
                     $updateStmt->execute();
-
                     $resStr = "Win x$mult | Tiles: $revealedCount";
                     $profit = $winAmount - $game['bet'];
                     $his = $conn->prepare("INSERT INTO history_mines (Iduser,Bet,Result,WinAmount,Time) VALUES (?,?,?,?,NOW())");
                     $his->bind_param("idid", $userId, $game['bet'], $resStr, $profit);
                     $his->execute();
-
                     logGameHistoryWithAll($conn, $userId, 'Mines', $game['bet'], $winAmount, true);
-                    
                     $conn->commit();
-
                     $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
                     $stmt->bind_param("i", $userId);
                     $stmt->execute();
                     $newMoney = $stmt->get_result()->fetch_assoc()['Money'];
-
                     $response = [
                         'success' => true, 
                         'winAmount' => number_format($winAmount, 0, ',', '.'), 
@@ -164,7 +144,6 @@ if (isset($_GET['action'])) {
 ?>
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
     <title>Laser Mines Premium - Vegas Royale</title>
@@ -183,7 +162,6 @@ if (isset($_GET['action'])) {
             --danger: #ff4757;
             --glass: rgba(255, 255, 255, 0.08);
         }
-
         body {
             margin: 0;
             background:
@@ -195,7 +173,6 @@ if (isset($_GET['action'])) {
             overflow: hidden;
             cursor: url('../img/chuot.png'), auto !important;
         }
-
         .main-container {
             height: 100vh;
             display: flex;
@@ -204,7 +181,6 @@ if (isset($_GET['action'])) {
             padding: 20px;
             box-sizing: border-box;
         }
-
         .glass-card {
             background: var(--glass);
             backdrop-filter: blur(30px);
@@ -220,13 +196,11 @@ if (isset($_GET['action'])) {
             max-height: 92vh;
             align-self: center;
         }
-
         .sidebar {
             display: flex;
             flex-direction: column;
             gap: 1rem;
         }
-
         .grid-area {
             position: relative;
             width: 100%;
@@ -241,7 +215,6 @@ if (isset($_GET['action'])) {
             justify-content: center;
             padding: 20px;
         }
-
         .mines-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
@@ -250,7 +223,6 @@ if (isset($_GET['action'])) {
             max-width: 500px;
             aspect-ratio: 1;
         }
-
         .tile {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -265,36 +237,30 @@ if (isset($_GET['action'])) {
             overflow: hidden;
             transform-style: preserve-3d;
         }
-
         .tile:hover:not(.revealed) {
             transform: translateY(-5px) scale(1.05);
             background: rgba(18, 194, 233, 0.1);
             border-color: var(--primary);
             box-shadow: 0 10px 20px rgba(18, 194, 233, 0.2);
         }
-
         .tile.revealed {
             cursor: default;
             border: none;
         }
-
         .tile.safe {
             background: linear-gradient(135deg, #12c2e9, #c471ed) !important;
             box-shadow: 0 0 20px rgba(18, 194, 233, 0.6);
         }
-
         .tile.mine {
             background: linear-gradient(135deg, #ff4757, #ff6b81) !important;
             box-shadow: 0 0 20px rgba(255, 71, 87, 0.6);
         }
-
         .input-group {
             background: rgba(0, 0, 0, 0.4);
             padding: 0.8rem 1.2rem;
             border-radius: 1.2rem;
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
-
         .input-group label {
             display: block;
             font-size: 0.6rem;
@@ -304,7 +270,6 @@ if (isset($_GET['action'])) {
             font-weight: 700;
             letter-spacing: 1px;
         }
-
         .input-group input,
         .input-group select {
             background: none;
@@ -317,7 +282,6 @@ if (isset($_GET['action'])) {
             font-family: 'Orbitron';
             color: var(--primary);
         }
-
         .btn-action {
             padding: 1.2rem;
             border-radius: 1.5rem;
@@ -333,18 +297,15 @@ if (isset($_GET['action'])) {
             color: #fff;
             box-shadow: 0 10px 30px rgba(18, 194, 233, 0.3);
         }
-
         .btn-action:hover:not(:disabled) {
             transform: translateY(-3px);
             filter: brightness(1.1);
         }
-
         #cashoutBtn {
             background: linear-gradient(135deg, #2ecc71, #27ae60);
             box-shadow: 0 10px 30px rgba(46, 204, 113, 0.3);
             display: none;
         }
-
         .stat-card {
             background: rgba(0, 0, 0, 0.2);
             padding: 0.8rem;
@@ -352,7 +313,6 @@ if (isset($_GET['action'])) {
             border: 1px solid rgba(255, 255, 255, 0.05);
             text-align: center;
         }
-
         .stat-card span {
             display: block;
             font-size: 0.6rem;
@@ -360,13 +320,11 @@ if (isset($_GET['action'])) {
             font-weight: 700;
             margin-bottom: 3px;
         }
-
         .stat-card b {
             font-size: 1.4rem;
             font-family: 'Orbitron';
             color: var(--accent);
         }
-
         .mult-bar {
             display: flex;
             gap: 8px;
@@ -377,7 +335,6 @@ if (isset($_GET['action'])) {
             padding: 10px 0;
             scrollbar-width: none;
         }
-
         .mult-step {
             min-width: 80px;
             padding: 10px;
@@ -390,7 +347,6 @@ if (isset($_GET['action'])) {
             opacity: 0.5;
             transition: 0.3s;
         }
-
         .mult-step.active {
             opacity: 1;
             background: var(--primary);
@@ -398,7 +354,6 @@ if (isset($_GET['action'])) {
             transform: scale(1.1);
             box-shadow: 0 0 15px var(--primary);
         }
-
         .btn-quick-bet {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -410,7 +365,6 @@ if (isset($_GET['action'])) {
             transition: 0.3s;
             font-size: 0.75rem;
         }
-
         .btn-quick-bet:hover {
             background: var(--primary);
             color: #000;
@@ -418,7 +372,6 @@ if (isset($_GET['action'])) {
         }
     </style>
 </head>
-
 <body>
     <div class="main-container">
         <div class="glass-card">
@@ -429,7 +382,6 @@ if (isset($_GET['action'])) {
                         MINES</h1>
                     <p style="margin:0; opacity:0.4; font-size: 0.75rem; letter-spacing: 1px;">Cyber Laser Protocol</p>
                 </div>
-
                 <div class="input-group">
                     <label>Gtlm cược (gtlm)</label>
                     <input type="number" id="betAmount" value="10000" min="1000">
@@ -443,7 +395,6 @@ if (isset($_GET['action'])) {
                         <button class="btn-quick-bet" onclick="setBet('ALLIN')" style="grid-column: span 3; background: var(--primary); color:#000; border:none; font-weight:800;">ALL IN</button>
                     </div>
                 </div>
-
                 <div class="input-group">
                     <label>Số lượng mìn</label>
                     <select id="minesCount" onchange="updateMultBar()">
@@ -451,7 +402,6 @@ if (isset($_GET['action'])) {
                             echo "<option value='$i' " . ($i == 3 ? 'selected' : '') . ">$i Mìn</option>"; ?>
                     </select>
                 </div>
-
                 <div class="stat-card">
                     <span>LỢI NHUẬN TIỀM NĂNG</span>
                     <div style="display:flex; align-items:baseline; justify-content:center; gap:5px;">
@@ -459,11 +409,9 @@ if (isset($_GET['action'])) {
                         <small style="opacity:0.5; font-weight:900; font-size:0.6rem;">GTLM</small>
                     </div>
                 </div>
-
                 <button id="startBtn" class="btn-action" onclick="startGame()">🚀 BẮT ĐẦU DÒ</button>
                 <button id="cashoutBtn" class="btn-action" onclick="cashout()">💰 RÚT (x<span
                         id="curMult">1.0</span>)</button>
-
                 <div style="margin-top:auto; padding-top:1rem; border-top:1px solid rgba(255,255,255,0.1);">
                     <div class="stat-card" style="background:rgba(0,0,0,0.4)">
                         <span>Số Gtlm HIỆN TẠI</span>
@@ -479,7 +427,6 @@ if (isset($_GET['action'])) {
                     </div>
                 </div>
             </div>
-
             <div class="grid-area">
                 <div class="mult-bar" id="multBar"></div>
                 <div class="mines-grid" id="minesGrid">
@@ -490,10 +437,8 @@ if (isset($_GET['action'])) {
             </div>
         </div>
     </div>
-
     <script>
         let isGameActive = false, revealedCount = 0;
-
         function setBet(amount) {
             const money = parseFloat($('#userMoney').text().replace(/\./g, ''));
             if (amount === 'ALLIN') {
@@ -502,14 +447,12 @@ if (isset($_GET['action'])) {
                 $('#betAmount').val(amount);
             }
         }
-
         function getMultJS(mines, revealed) {
             if (revealed <= 0) return 1.0;
             let total = 25, safe = total - mines, prob = 1.0;
             for (let i = 0; i < revealed; i++) prob *= (safe - i) / (total - i);
             return (1.0 / prob * 0.97).toFixed(2);
         }
-
         function updateMultBar() {
             const mines = parseInt($('#minesCount').val());
             const bar = $('#multBar').empty();
@@ -518,7 +461,6 @@ if (isset($_GET['action'])) {
             }
         }
         updateMultBar();
-
         function startGame() {
             const bet = $('#betAmount').val();
             const mines = $('#minesCount').val();
@@ -535,12 +477,10 @@ if (isset($_GET['action'])) {
                 } else { Swal.fire('Lỗi', res.message, 'error'); }
             });
         }
-
         function revealTile(idx) {
             if (!isGameActive) return;
             const tile = $(`.tile[data-index="${idx}"]`);
             if (tile.hasClass('revealed')) return;
-
             $.post('mines.php?action=reveal', { index: idx }, function (res) {
                 if (res.success) {
                     tile.addClass('revealed');
@@ -557,21 +497,17 @@ if (isset($_GET['action'])) {
                         revealedCount++;
                         tile.addClass('safe').html('💎');
                         gsap.from(tile, { scale: 0, duration: 0.4, ease: "back.out(2)" });
-
                         $('#curMult').text(res.multiplier);
                         const win = Math.floor($('#betAmount').val() * res.multiplier);
                         $('#potentialWin').text(win.toLocaleString('vi-VN'));
                         $('#cashoutBtn').prop('disabled', false);
-
                         $('.mult-step').removeClass('active');
                         $(`#step-${revealedCount}`).addClass('active');
-
                         if (window.GameEffects) window.GameEffects.towerSafe(tile[0]);
                     }
                 }
             });
         }
-
         function cashout() {
             if (!isGameActive || revealedCount === 0) return;
             $.post('mines.php?action=cashout', function (res) {
@@ -588,7 +524,6 @@ if (isset($_GET['action'])) {
                 }
             });
         }
-
         function showAll(mines) {
             mines.forEach(m => {
                 const t = $(`.tile[data-index="${m}"]`);
@@ -596,13 +531,11 @@ if (isset($_GET['action'])) {
             });
             $('.tile:not(.revealed):not(.mine)').addClass('safe').html('💎').css('opacity', '0.4');
         }
-
         function resetUI() {
             $('#startBtn').show(); $('#cashoutBtn').hide();
             $('#minesCount, #betAmount').prop('disabled', false);
         }
     </script>
-
     <canvas id="threejs-background"></canvas>
     <script>
         (function () {
@@ -625,5 +558,4 @@ if (isset($_GET['action'])) {
         })();
     </script>
 </body>
-
 </html>

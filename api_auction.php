@@ -123,6 +123,11 @@ switch ($action) {
 
             // Hoàn  Gtlm người cũ (nếu có)
             if ($auction['winner_id'] !== null) {
+                // Khóa tài khoản người cũ để tránh deadlock hoặc race condition
+                $stmtLock = $conn->prepare("SELECT Iduser FROM users WHERE Iduser = ? FOR UPDATE");
+                $stmtLock->bind_param("i", $auction['winner_id']);
+                $stmtLock->execute();
+
                 $stmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
                 $stmt->bind_param("ii", $auction['current_price'], $auction['winner_id']);
                 $stmt->execute();

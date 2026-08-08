@@ -102,10 +102,13 @@ if (!$userExists) {
     exit();
 }
 
-// Kiểm tra quyền admin (Role = 1)
+// Kiểm tra quyền Admin (Role >= 1)
 if (!isAdmin($conn, $userId)) {
-    die("⚠️ Bạn không có quyền truy cập trang này! Chỉ admin (Role = 1) mới có thể truy cập. Vui lòng liên hệ admin để được cấp quyền.");
+    header("Location: Shared/403/403.php");
+    exit();
 }
+
+$currentUserRole = getUserRole($conn, $userId);
 
 $message = '';
 $messageType = '';
@@ -125,9 +128,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['update_role'])) {
         $message = "❌ Bạn không thể thay đổi vai trò của chính mình!";
         $messageType = 'error';
     } else {
-        // Validate role (0 = user, 1 = admin)
-        if ($newRole != 0 && $newRole != 1) {
-            $message = "❌ Vai trò không hợp lệ!";
+        // Validation: Role 1 là quyền cao nhất, có thể cấp mọi Role (0, 1, 2, 3)
+        $isValidRole = false;
+        if ($currentUserRole == 1 && in_array($newRole, [0, 1, 2, 3])) {
+            $isValidRole = true;
+        }
+
+        if (!$isValidRole) {
+            $message = "❌ Bạn không có quyền cấp vai trò này!";
             $messageType = 'error';
         } else {
             $updateSql = "UPDATE users SET Role = ? WHERE Iduser = ?";
@@ -675,7 +683,12 @@ if ($stmt) {
                             <td><?= number_format($user['Money'], 0, ',', '.') ?> gtlm</td>
                             <td>
                                 <span class="role-badge <?= $user['Role'] == 1 ? 'admin' : 'user' ?>">
-                                    <?= $user['Role'] == 1 ? '👑 Admin' : '👤 User' ?>
+                                    <?php 
+                                        if ($user['Role'] == 3) echo '👑 Thương Gia Vàng';
+                                        elseif ($user['Role'] == 2) echo '💎 KOC / Tiktoker';
+                                        elseif ($user['Role'] == 1) echo '🛡️ Admin (Nhà phát triển)';
+                                        else echo '👤 User';
+                                    ?>
                                 </span>
                             </td>
                             <td><?= number_format($user['achievement_count'], 0, ',', '.') ?> danh hiệu</td>
@@ -685,10 +698,12 @@ if ($stmt) {
                                     onsubmit="return confirm('Bạn có chắc muốn thay đổi vai trò của <?= htmlspecialchars($user['Name'], ENT_QUOTES, 'UTF-8') ?>?')">
                                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                                     <input type="hidden" name="user_id" value="<?= $user['Iduser'] ?>">
-                                    <select name="role" class="role-select" required>
-                                        <option value="0" <?= $user['Role'] == 0 ? 'selected' : '' ?>>👤 User</option>
-                                        <option value="1" <?= $user['Role'] == 1 ? 'selected' : '' ?>>👑 Admin</option>
-                                    </select>
+                                        <select name="role" class="role-select" required>
+                                            <option value="0" <?= $user['Role'] == 0 ? 'selected' : '' ?>>👤 User</option>
+                                            <option value="1" <?= $user['Role'] == 1 ? 'selected' : '' ?>>🛡️ Admin (Nhà phát triển)</option>
+                                            <option value="2" <?= $user['Role'] == 2 ? 'selected' : '' ?>>💎 KOC / Tiktoker</option>
+                                            <option value="3" <?= $user['Role'] == 3 ? 'selected' : '' ?>>👑 Thương Gia Vàng</option>
+                                        </select>
                                     <?php if ($user['Iduser'] != $userId): ?>
                                         <button type="submit" name="update_role" class="btn btn-small btn-success">
                                             <i class="fa-solid fa-save"></i> Cập nhật

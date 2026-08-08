@@ -463,7 +463,7 @@ function getConvertRate(string $endsAt, ?array $theme = null): array {
         } else {
             btn.disabled = false;
             btn.innerHTML = '<i class="fa fa-exchange-alt"></i> Quy Đổi Ngay';
-            alert('⚠️ ' + data.message);
+            if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('⚠️ ' + data.message), 'warning'); } else { alert('⚠️ ' + data.message); };
         }
     }
     </script>

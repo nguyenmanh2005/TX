@@ -1,34 +1,17 @@
 <?php
 session_start();
 require 'db_connect.php';
-
 if (!isset($_SESSION['Iduser'])) {
     header("Location: login.php");
     exit();
 }
-
 // Load theme
 require_once 'load_theme.php';
-
 $userId = $_SESSION['Iduser'];
-
 // Kiểm tra và tạo bảng vip_levels và user_vip nếu chưa có
 $checkVipLevels = $conn->query("SHOW TABLES LIKE 'vip_levels'");
 if (!$checkVipLevels || $checkVipLevels->num_rows == 0) {
-    $createVipLevels = "CREATE TABLE IF NOT EXISTS vip_levels (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        level INT NOT NULL UNIQUE,
-        name VARCHAR(100) NOT NULL,
-        required_spent DECIMAL(15,2) DEFAULT 0,
-        bonus_multiplier DECIMAL(3,2) DEFAULT 1.00,
-        daily_bonus INT DEFAULT 0,
-        color VARCHAR(20) DEFAULT '#667eea',
-        icon VARCHAR(50) DEFAULT '⭐',
-        benefits TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )";
     $conn->query($createVipLevels);
-
     // Tạo dữ liệu mẫu
     $vipLevels = [
         [1, 'Bronze', 0, 1.05, 10000, '#cd7f32', '🥉', 'Húp thêm 5% khi thắng, Quà tặng 10,000 GTLM'],
@@ -37,7 +20,6 @@ if (!$checkVipLevels || $checkVipLevels->num_rows == 0) {
         [4, 'Platinum', 20000000, 1.25, 250000, '#e5e4e2', '💎', 'Húp thêm 25% khi thắng, Quà tặng 250,000 GTLM'],
         [5, 'Diamond', 50000000, 1.50, 500000, '#b9f2ff', '💠', 'Húp thêm 50% khi thắng, Quà tặng 500,000 GTLM']
     ];
-
     foreach ($vipLevels as $level) {
         $sql = "INSERT INTO vip_levels (level, name, required_spent, bonus_multiplier, daily_bonus, color, icon, benefits)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -48,25 +30,10 @@ if (!$checkVipLevels || $checkVipLevels->num_rows == 0) {
         $stmt->close();
     }
 }
-
 $checkUserVip = $conn->query("SHOW TABLES LIKE 'user_vip'");
 if (!$checkUserVip || $checkUserVip->num_rows == 0) {
-    $createUserVip = "CREATE TABLE IF NOT EXISTS user_vip (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL UNIQUE,
-        vip_level INT DEFAULT 1,
-        total_spent DECIMAL(15,2) DEFAULT 0,
-        daily_bonus_claimed DATE NULL,
-        vip_points INT DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(Iduser) ON DELETE CASCADE,
-        INDEX idx_level (vip_level),
-        INDEX idx_spent (total_spent DESC)
-    )";
     $conn->query($createUserVip);
 }
-
 // Lấy thông tin người dùng
 $sql = "SELECT Iduser, Name, Money FROM users WHERE Iduser = ?";
 $stmt = $conn->prepare($sql);
@@ -75,7 +42,6 @@ $stmt->execute();
 $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 $stmt->close();
-
 // Lấy thông tin VIP của user
 $sql = "SELECT uv.*, vl.name as vip_name, vl.bonus_multiplier, vl.daily_bonus, vl.color, vl.icon, vl.benefits
         FROM user_vip uv
@@ -87,7 +53,6 @@ $stmt->execute();
 $result = $stmt->get_result();
 $userVip = $result->fetch_assoc();
 $stmt->close();
-
 // Nếu chưa có, tạo mới
 if (!$userVip) {
     $sql = "INSERT INTO user_vip (user_id, vip_level, total_spent) VALUES (?, 1, 0)";
@@ -95,7 +60,6 @@ if (!$userVip) {
     $stmt->bind_param("i", $userId);
     $stmt->execute();
     $stmt->close();
-
     // Reload
     $sql = "SELECT uv.*, vl.name as vip_name, vl.bonus_multiplier, vl.daily_bonus, vl.color, vl.icon, vl.benefits
             FROM user_vip uv
@@ -108,7 +72,6 @@ if (!$userVip) {
     $userVip = $result->fetch_assoc();
     $stmt->close();
 }
-
 // Tính toán total_spent từ game_history
 $checkGameHistory = $conn->query("SHOW TABLES LIKE 'game_history'");
 if ($checkGameHistory && $checkGameHistory->num_rows > 0) {
@@ -119,7 +82,6 @@ if ($checkGameHistory && $checkGameHistory->num_rows > 0) {
     $result = $stmt->get_result();
     $totalSpent = $result->fetch_assoc()['total'] ?? 0;
     $stmt->close();
-
     // Cập nhật total_spent
     if ($userVip['total_spent'] != $totalSpent) {
         $sql = "UPDATE user_vip SET total_spent = ? WHERE user_id = ?";
@@ -130,7 +92,6 @@ if ($checkGameHistory && $checkGameHistory->num_rows > 0) {
         $userVip['total_spent'] = $totalSpent;
     }
 }
-
 // Xác định VIP level hiện tại dựa trên total_spent
 $sql = "SELECT * FROM vip_levels WHERE required_spent <= ? ORDER BY level DESC LIMIT 1";
 $stmt = $conn->prepare($sql);
@@ -139,7 +100,6 @@ $stmt->execute();
 $result = $stmt->get_result();
 $currentVipLevel = $result->fetch_assoc();
 $stmt->close();
-
 // Cập nhật VIP level nếu cần
 if ($currentVipLevel && $currentVipLevel['level'] > $userVip['vip_level']) {
     $sql = "UPDATE user_vip SET vip_level = ? WHERE user_id = ?";
@@ -155,7 +115,6 @@ if ($currentVipLevel && $currentVipLevel['level'] > $userVip['vip_level']) {
     $userVip['icon'] = $currentVipLevel['icon'];
     $userVip['benefits'] = $currentVipLevel['benefits'];
 }
-
 // Lấy tất cả VIP levels
 $sql = "SELECT * FROM vip_levels ORDER BY level ASC";
 $result = $conn->query($sql);
@@ -163,7 +122,6 @@ $allVipLevels = [];
 while ($row = $result->fetch_assoc()) {
     $allVipLevels[] = $row;
 }
-
 // Tính progress đến level tiếp theo
 $nextLevel = null;
 foreach ($allVipLevels as $level) {
@@ -172,7 +130,6 @@ foreach ($allVipLevels as $level) {
         break;
     }
 }
-
 $progressPercent = 0;
 if ($nextLevel) {
     $currentLevel = $allVipLevels[$userVip['vip_level'] - 1] ?? null;
@@ -185,7 +142,6 @@ if ($nextLevel) {
 ?>
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -210,11 +166,9 @@ if ($nextLevel) {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             animation: fadeIn 0.6s ease;
         }
-
         * {
             cursor: inherit;
         }
-
         button,
         a,
         input[type="button"],
@@ -223,12 +177,10 @@ if ($nextLevel) {
         select {
             cursor: url('img/tay.png'), url('../img/tay.png'), pointer !important;
         }
-
         .container {
             max-width: 1200px;
             margin: 0 auto;
         }
-
         .header-vip {
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
@@ -243,7 +195,6 @@ if ($nextLevel) {
             position: relative;
             overflow: hidden;
         }
-
         .header-vip::before {
             content: '';
             position: absolute;
@@ -254,7 +205,6 @@ if ($nextLevel) {
             background: radial-gradient(circle, rgba(102, 126, 234, 0.05) 0%, transparent 70%);
             animation: float 6s ease-in-out infinite;
         }
-
         .header-vip h1 {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             -webkit-background-clip: text;
@@ -266,7 +216,6 @@ if ($nextLevel) {
             position: relative;
             z-index: 1;
         }
-
         .current-vip-card {
             background: linear-gradient(135deg,
                     <?= $userVip['color'] ?? '#667eea' ?>
@@ -283,7 +232,6 @@ if ($nextLevel) {
             position: relative;
             overflow: hidden;
         }
-
         .current-vip-card::before {
             content: '';
             position: absolute;
@@ -294,34 +242,29 @@ if ($nextLevel) {
             background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
             animation: float 8s ease-in-out infinite;
         }
-
         .vip-icon {
             font-size: 80px;
             margin-bottom: 20px;
             filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
             animation: pulse 2s ease-in-out infinite;
         }
-
         .vip-level-name {
             font-size: 36px;
             font-weight: 900;
             margin-bottom: 10px;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
-
         .vip-benefits {
             margin-top: 20px;
             font-size: 18px;
             opacity: 0.95;
         }
-
         .vip-stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin-top: 30px;
         }
-
         .stat-box {
             background: rgba(255, 255, 255, 0.2);
             backdrop-filter: blur(10px);
@@ -329,18 +272,15 @@ if ($nextLevel) {
             border-radius: 16px;
             text-align: center;
         }
-
         .stat-label {
             font-size: 14px;
             opacity: 0.9;
             margin-bottom: 8px;
         }
-
         .stat-value {
             font-size: 28px;
             font-weight: 800;
         }
-
         .progress-section {
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
@@ -350,7 +290,6 @@ if ($nextLevel) {
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
             animation: fadeInUp 0.6s ease 0.4s backwards;
         }
-
         .progress-title {
             font-size: 24px;
             font-weight: 700;
@@ -358,7 +297,6 @@ if ($nextLevel) {
             margin-bottom: 20px;
             text-align: center;
         }
-
         .progress-bar {
             width: 100%;
             height: 20px;
@@ -368,7 +306,6 @@ if ($nextLevel) {
             position: relative;
             margin-bottom: 15px;
         }
-
         .progress-fill {
             height: 100%;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -377,7 +314,6 @@ if ($nextLevel) {
             position: relative;
             overflow: hidden;
         }
-
         .progress-fill::after {
             content: '';
             position: absolute;
@@ -388,21 +324,18 @@ if ($nextLevel) {
             background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
             animation: shimmer 2s infinite;
         }
-
         .progress-text {
             text-align: center;
             color: #666;
             font-size: 16px;
             font-weight: 600;
         }
-
         .vip-levels-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 24px;
             margin-bottom: 30px;
         }
-
         .vip-level-card {
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
@@ -415,7 +348,6 @@ if ($nextLevel) {
             overflow: hidden;
             animation: fadeInScale 0.5s ease backwards;
         }
-
         .vip-level-card::before {
             content: '';
             position: absolute;
@@ -427,7 +359,6 @@ if ($nextLevel) {
             opacity: 0;
             transition: opacity 0.4s ease;
         }
-
         .vip-level-card::after {
             content: '';
             position: absolute;
@@ -438,7 +369,6 @@ if ($nextLevel) {
             background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
             transition: left 0.5s ease;
         }
-
         .vip-level-card.current {
             border-color:
                 <?= $userVip['color'] ?? '#667eea' ?>
@@ -446,35 +376,28 @@ if ($nextLevel) {
             background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(255, 255, 255, 0.98) 100%);
             box-shadow: 0 12px 35px rgba(102, 126, 234, 0.3);
         }
-
         .vip-level-card.unlocked {
             border-color: #28a745;
         }
-
         .vip-level-card.locked {
             opacity: 0.6;
             filter: grayscale(50%);
         }
-
         .vip-level-card:hover {
             transform: translateY(-10px) scale(1.04) rotate(1deg);
             box-shadow: 0 18px 45px rgba(0, 0, 0, 0.25);
         }
-
         .vip-level-card:hover::before {
             opacity: 1;
         }
-
         .vip-level-card:hover::after {
             left: 100%;
         }
-
         .level-icon {
             font-size: 56px;
             text-align: center;
             margin-bottom: 15px;
         }
-
         .level-name {
             font-size: 24px;
             font-weight: 700;
@@ -482,14 +405,12 @@ if ($nextLevel) {
             margin-bottom: 10px;
             text-align: center;
         }
-
         .level-required {
             text-align: center;
             color: #666;
             margin-bottom: 15px;
             font-size: 16px;
         }
-
         .level-benefits {
             padding: 15px;
             background: rgba(102, 126, 234, 0.1);
@@ -499,7 +420,6 @@ if ($nextLevel) {
             color: #666;
             line-height: 1.6;
         }
-
         .claim-daily-btn {
             width: 100%;
             padding: 14px;
@@ -516,7 +436,6 @@ if ($nextLevel) {
             overflow: hidden;
             box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
         }
-
         .claim-daily-btn::before {
             content: '';
             position: absolute;
@@ -529,17 +448,14 @@ if ($nextLevel) {
             transform: translate(-50%, -50%);
             transition: width 0.6s, height 0.6s;
         }
-
         .claim-daily-btn:hover::before {
             width: 300px;
             height: 300px;
         }
-
         .claim-daily-btn:hover {
             transform: translateY(-3px) scale(1.05);
             box-shadow: 0 8px 25px rgba(40, 167, 69, 0.5);
         }
-
         .claim-daily-btn:disabled {
             background: #ccc;
             cursor: not-allowed;
@@ -547,7 +463,6 @@ if ($nextLevel) {
         }
     </style>
 </head>
-
 <body>
     <div class="container">
         <div class="header-vip">
@@ -559,18 +474,15 @@ if ($nextLevel) {
                 </a>
             </div>
         </div>
-
         <div class="current-vip-card">
             <div class="vip-icon"><?= htmlspecialchars($userVip['icon'] ?? '⭐') ?></div>
             <div class="vip-level-name"><?= htmlspecialchars($userVip['vip_name'] ?? 'Bronze') ?> VIP</div>
             <div style="font-size: 20px; opacity: 0.9; margin-bottom: 20px;">
                 Level <?= $userVip['vip_level'] ?>
             </div>
-
             <div class="vip-benefits">
                 <?= htmlspecialchars($userVip['benefits'] ?? '') ?>
             </div>
-
             <div class="vip-stats">
                 <div class="stat-box">
                     <div class="stat-label">Bonus Multiplier</div>
@@ -586,7 +498,6 @@ if ($nextLevel) {
                     <div class="stat-value"><?= number_format($userVip['total_spent']) ?> GTLM</div>
                 </div>
             </div>
-
             <?php if ($userVip['daily_bonus'] > 0):
                 $today = date('Y-m-d');
                 $lastClaimed = $userVip['daily_bonus_claimed'] ?? null;
@@ -605,7 +516,6 @@ if ($nextLevel) {
                 </div>
             <?php endif; ?>
         </div>
-
         <?php if ($nextLevel): ?>
             <div class="progress-section">
                 <div class="progress-title">Tiến Độ Đến <?= htmlspecialchars($nextLevel['name']) ?> VIP</div>
@@ -618,7 +528,6 @@ if ($nextLevel) {
                 </div>
             </div>
         <?php endif; ?>
-
         <div class="vip-levels-grid">
             <?php foreach ($allVipLevels as $level):
                 $isCurrent = $level['level'] == $userVip['vip_level'];
@@ -657,7 +566,6 @@ if ($nextLevel) {
                 </div>
             <?php endforeach; ?>
         </div>
-
         <div style="text-align: center; margin-top: 30px;">
             <a href="index.php"
                 style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 12px; font-weight: 600;">
@@ -665,7 +573,6 @@ if ($nextLevel) {
             </a>
         </div>
     </div>
-
     <script>
         function claimDailyBonus() {
             $.ajax({
@@ -705,5 +612,4 @@ if ($nextLevel) {
         }
     </script>
 </body>
-
 </html>

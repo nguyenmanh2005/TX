@@ -1,36 +1,18 @@
 <?php
 session_start();
 require 'db_connect.php';
-
 if (!isset($_SESSION['Iduser'])) {
     header("Location: login.php");
     exit();
 }
-
 // Load theme
 require_once 'load_theme.php';
-
 $userId = $_SESSION['Iduser'];
-
 // Kiểm tra và tạo bảng streak nếu chưa có
 $checkTable = $conn->query("SHOW TABLES LIKE 'user_streaks'");
 if (!$checkTable || $checkTable->num_rows == 0) {
-    $createTable = "CREATE TABLE IF NOT EXISTS user_streaks (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL UNIQUE,
-        current_streak INT DEFAULT 0,
-        longest_streak INT DEFAULT 0,
-        last_play_date DATE,
-        total_days_played INT DEFAULT 0,
-        streak_bonus_multiplier DECIMAL(3,2) DEFAULT 1.00,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(Iduser) ON DELETE CASCADE,
-        INDEX idx_user_date (user_id, last_play_date)
-    )";
     $conn->query($createTable);
 }
-
 // Lấy thông tin người dùng
 $sql = "SELECT Iduser, Name, Money FROM users WHERE Iduser = ?";
 $stmt = $conn->prepare($sql);
@@ -39,7 +21,6 @@ $stmt->execute();
 $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 $stmt->close();
-
 // Lấy thông tin streak
 $sql = "SELECT * FROM user_streaks WHERE user_id = ?";
 $stmt = $conn->prepare($sql);
@@ -48,7 +29,6 @@ $stmt->execute();
 $result = $stmt->get_result();
 $streakData = $result->fetch_assoc();
 $stmt->close();
-
 // Nếu chưa có record, tạo mới
 if (!$streakData) {
     $sql = "INSERT INTO user_streaks (user_id, current_streak, longest_streak, last_play_date, total_days_played)
@@ -57,7 +37,6 @@ if (!$streakData) {
     $stmt->bind_param("i", $userId);
     $stmt->execute();
     $stmt->close();
-
     // Reload
     $sql = "SELECT * FROM user_streaks WHERE user_id = ?";
     $stmt = $conn->prepare($sql);
@@ -67,7 +46,6 @@ if (!$streakData) {
     $streakData = $result->fetch_assoc();
     $stmt->close();
 }
-
 // Tính toán streak bonus multiplier
 $currentStreak = $streakData['current_streak'] ?? 0;
 $streakBonus = 1.00;
@@ -80,7 +58,6 @@ if ($currentStreak >= 30) {
 } elseif ($currentStreak >= 3) {
     $streakBonus = 1.10; // 10% bonus cho streak 3+ ngày
 }
-
 // Cập nhật multiplier nếu khác
 if ($streakData['streak_bonus_multiplier'] != $streakBonus) {
     $sql = "UPDATE user_streaks SET streak_bonus_multiplier = ? WHERE user_id = ?";
@@ -89,7 +66,6 @@ if ($streakData['streak_bonus_multiplier'] != $streakBonus) {
     $stmt->execute();
     $stmt->close();
 }
-
 // Lấy lịch sử streak gần đây (30 ngày)
 $sql = "SELECT DATE(played_at) as play_date, COUNT(*) as games_played
         FROM game_history
@@ -105,7 +81,6 @@ while ($row = $result->fetch_assoc()) {
     $playHistory[$row['play_date']] = $row['games_played'];
 }
 $stmt->close();
-
 // Tính streak milestones và rewards
 $milestones = [
     3 => ['reward' => 50000, 'xp' => 50, 'name' => '🔥 Streak 3 Ngày'],
@@ -115,7 +90,6 @@ $milestones = [
     60 => ['reward' => 2500000, 'xp' => 2500, 'name' => '🌟 Streak 2 Tháng'],
     100 => ['reward' => 5000000, 'xp' => 5000, 'name' => '🏆 Streak 100 Ngày']
 ];
-
 // Kiểm tra milestone đã claim chưa
 $claimedMilestones = [];
 $checkClaimed = $conn->query("SHOW TABLES LIKE 'streak_milestone_rewards'");
@@ -131,22 +105,11 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
     $stmt->close();
 } else {
     // Tạo bảng nếu chưa có
-    $createClaimed = "CREATE TABLE IF NOT EXISTS streak_milestone_rewards (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        milestone_days INT NOT NULL,
-        reward_money INT NOT NULL,
-        reward_xp INT NOT NULL,
-        claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(Iduser) ON DELETE CASCADE,
-        UNIQUE KEY unique_user_milestone (user_id, milestone_days)
-    )";
     $conn->query($createClaimed);
 }
 ?>
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -168,11 +131,9 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             animation: fadeIn 0.6s ease;
         }
-
         * {
             cursor: inherit;
         }
-
         button,
         a,
         input[type="button"],
@@ -181,12 +142,10 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
         select {
             cursor: url('img/tay.png'), url('../img/tay.png'), pointer !important;
         }
-
         .container {
             max-width: 1200px;
             margin: 0 auto;
         }
-
         .header-streak {
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
@@ -201,7 +160,6 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
             position: relative;
             overflow: hidden;
         }
-
         .header-streak::before {
             content: '';
             position: absolute;
@@ -212,7 +170,6 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
             background: radial-gradient(circle, rgba(102, 126, 234, 0.05) 0%, transparent 70%);
             animation: float 6s ease-in-out infinite;
         }
-
         .header-streak h1 {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             -webkit-background-clip: text;
@@ -224,7 +181,6 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
             position: relative;
             z-index: 1;
         }
-
         .streak-display {
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
@@ -235,7 +191,6 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
             text-align: center;
             animation: fadeInUp 0.6s ease 0.2s backwards;
         }
-
         .streak-number {
             font-size: 72px;
             font-weight: 900;
@@ -246,14 +201,12 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
             margin: 20px 0;
             animation: pulse 2s ease-in-out infinite;
         }
-
         .streak-label {
             font-size: 24px;
             color: #666;
             font-weight: 600;
             margin-bottom: 20px;
         }
-
         .bonus-info {
             display: flex;
             justify-content: center;
@@ -261,33 +214,28 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
             margin-top: 30px;
             flex-wrap: wrap;
         }
-
         .bonus-item {
             padding: 20px 30px;
             background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
             border-radius: 16px;
             border: 2px solid rgba(102, 126, 234, 0.3);
         }
-
         .bonus-item-label {
             font-size: 14px;
             color: #666;
             margin-bottom: 8px;
         }
-
         .bonus-item-value {
             font-size: 28px;
             font-weight: 700;
             color: #667eea;
         }
-
         .milestones-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 24px;
             margin-bottom: 30px;
         }
-
         .milestone-card {
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
@@ -300,7 +248,6 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
             overflow: hidden;
             animation: fadeInScale 0.5s ease backwards;
         }
-
         .milestone-card::before {
             content: '';
             position: absolute;
@@ -312,7 +259,6 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
             opacity: 0;
             transition: opacity 0.4s ease;
         }
-
         .milestone-card::after {
             content: '';
             position: absolute;
@@ -323,36 +269,29 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
             background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
             transition: left 0.5s ease;
         }
-
         .milestone-card.achieved {
             border-color: #28a745;
             background: linear-gradient(135deg, rgba(40, 167, 69, 0.15) 0%, rgba(255, 255, 255, 0.98) 100%);
         }
-
         .milestone-card.claimed {
             opacity: 0.6;
             border-color: #ccc;
         }
-
         .milestone-card:hover {
             transform: translateY(-10px) scale(1.04) rotate(1deg);
             box-shadow: 0 18px 45px rgba(0, 0, 0, 0.25);
         }
-
         .milestone-card:hover::before {
             opacity: 1;
         }
-
         .milestone-card:hover::after {
             left: 100%;
         }
-
         .milestone-icon {
             font-size: 48px;
             text-align: center;
             margin-bottom: 15px;
         }
-
         .milestone-name {
             font-size: 22px;
             font-weight: 700;
@@ -360,7 +299,6 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
             margin-bottom: 15px;
             text-align: center;
         }
-
         .milestone-reward {
             display: flex;
             justify-content: center;
@@ -368,7 +306,6 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
             margin-bottom: 15px;
             flex-wrap: wrap;
         }
-
         .reward-item {
             display: flex;
             align-items: center;
@@ -379,7 +316,6 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
             font-weight: 600;
             color: #667eea;
         }
-
         .claim-milestone-btn {
             width: 100%;
             padding: 14px;
@@ -396,7 +332,6 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
             overflow: hidden;
             box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
         }
-
         .claim-milestone-btn::before {
             content: '';
             position: absolute;
@@ -409,23 +344,19 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
             transform: translate(-50%, -50%);
             transition: width 0.6s, height 0.6s;
         }
-
         .claim-milestone-btn:hover::before {
             width: 300px;
             height: 300px;
         }
-
         .claim-milestone-btn:hover {
             transform: translateY(-3px) scale(1.05);
             box-shadow: 0 8px 25px rgba(40, 167, 69, 0.5);
         }
-
         .claim-milestone-btn:disabled {
             background: #ccc;
             cursor: not-allowed;
             opacity: 0.6;
         }
-
         .calendar-view {
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
@@ -434,7 +365,6 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
             margin-bottom: 30px;
         }
-
         .calendar-title {
             font-size: 24px;
             font-weight: 700;
@@ -442,13 +372,11 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
             margin-bottom: 20px;
             text-align: center;
         }
-
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             gap: 8px;
         }
-
         .calendar-day {
             aspect-ratio: 1;
             display: flex;
@@ -458,25 +386,21 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
             font-weight: 600;
             transition: all 0.3s ease;
         }
-
         .calendar-day.played {
             background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
             color: white;
             box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
         }
-
         .calendar-day.today {
             border: 3px solid #667eea;
             background: rgba(102, 126, 234, 0.1);
         }
-
         .calendar-day.empty {
             background: #f0f0f0;
             color: #ccc;
         }
     </style>
 </head>
-
 <body>
     <div class="container">
         <div class="header-streak">
@@ -484,14 +408,12 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
             <p style="color: #666; margin-top: 10px; font-size: 18px;">Chơi game mỗi ngày để duy trì streak và nhận
                 bonus!</p>
         </div>
-
         <div class="streak-display">
             <div class="streak-label">Chuỗi Ngày Chơi Hiện Tại</div>
             <div class="streak-number"><?= $currentStreak ?></div>
             <div style="color: #666; font-size: 18px; margin-bottom: 20px;">
                 Chuỗi dài nhất: <strong><?= $streakData['longest_streak'] ?? 0 ?></strong> ngày
             </div>
-
             <div class="bonus-info">
                 <div class="bonus-item">
                     <div class="bonus-item-label">Bonus Multiplier</div>
@@ -503,7 +425,6 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
                 </div>
             </div>
         </div>
-
         <div class="calendar-view">
             <div class="calendar-title">📅 Lịch Chơi 30 Ngày Gần Đây</div>
             <div class="calendar-grid">
@@ -520,7 +441,6 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
                 ?>
             </div>
         </div>
-
         <div class="milestones-grid">
             <?php foreach ($milestones as $days => $milestone):
                 $isAchieved = $currentStreak >= $days;
@@ -548,7 +468,6 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
                     <div style="text-align: center; color: #666; margin-bottom: 15px;">
                         Streak <?= $days ?> ngày
                     </div>
-
                     <div class="milestone-reward">
                         <div class="reward-item">
                             <i class="fas fa-coins"></i>
@@ -559,7 +478,6 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
                             <span><?= number_format($milestone['xp']) ?> XP</span>
                         </div>
                     </div>
-
                     <?php if ($isClaimed): ?>
                         <div
                             style="text-align: center; padding: 14px; background: #6c757d; color: white; border-radius: 12px; font-weight: 700;">
@@ -577,7 +495,6 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
                 </div>
             <?php endforeach; ?>
         </div>
-
         <div style="text-align: center; margin-top: 30px;">
             <a href="index.php"
                 style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 12px; font-weight: 600;">
@@ -585,7 +502,6 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
             </a>
         </div>
     </div>
-
     <script>
         function claimMilestone(days) {
             $.ajax({
@@ -626,5 +542,4 @@ if ($checkClaimed && $checkClaimed->num_rows > 0) {
         }
     </script>
 </body>
-
 </html>

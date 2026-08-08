@@ -19,29 +19,10 @@ $eventId = (int)($activeEvent['id'] ?? 0);
 
 // NOTE: Bảng event_voting_options, user_event_votes, event_vote_results
 // phải được tạo bằng SQL riêng (xem block SQL trong tài liệu) — Rule 1.1
+// Migration đã hoàn thành: cột event_id đã được thêm vào user_event_votes.
+// ALTER TABLE đã được xóa khỏi đây để tránh tốn chi phí schema check mỗi request.
 
-// Migrate: thêm cột event_id vào user_event_votes cũ nếu chưa có (chạy 1 lần)
-// Nếu đã có cột event_id, lệnh này tự động bỏ qua nhờ IF NOT EXISTS
-$conn->query("ALTER TABLE user_event_votes ADD COLUMN IF NOT EXISTS event_id INT NOT NULL DEFAULT 0 AFTER user_id");
-
-// Khởi tạo data mẫu nếu chưa có (chỉ tạo cho event đang active)
-if ($eventId > 0) {
-    $stmtCheck = $conn->prepare("SELECT COUNT(*) as c FROM event_voting_options WHERE event_id = ?");
-    $stmtCheck->bind_param("i", $eventId);
-    $stmtCheck->execute();
-    $check = $stmtCheck->get_result()->fetch_assoc()['c'];
-    $stmtCheck->close();
-
-    if ($check == 0) {
-        $stmtInsOptions = $conn->prepare("INSERT INTO event_voting_options (event_id, title, description, icon) VALUES 
-            (?, 'Đua Tốc Độ (Speedrun)', 'Sự kiện đua tốc độ hoàn thành nhiệm vụ nhanh nhất.', '🏃'),
-            (?, 'Chiến Tranh Liên Minh', 'Sự kiện PvP quy mô lớn giữa các Guild.', '⚔️'),
-            (?, 'Lễ Hội May Mắn', 'Sự kiện tăng tỷ lệ rớt đồ và Jackpot x2.', '🍀')");
-        $stmtInsOptions->bind_param("iii", $eventId, $eventId, $eventId);
-        $stmtInsOptions->execute();
-        $stmtInsOptions->close();
-    }
-}
+// Khởi tạo data mẫu nếu chưa có -> ĐÃ XÓA (Admin giờ phải tự quản lý)
 
 switch ($action) {
     case 'get_options':

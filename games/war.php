@@ -17,18 +17,7 @@ $stmt->bind_param("i", $userId);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
 $money = $user['Money'];
-$userName = $user['Name'];
 $stmt->close();
-
-// Auto-create history table
-$conn->query("CREATE TABLE IF NOT EXISTS history_war (
-    Id INT AUTO_INCREMENT PRIMARY KEY,
-    Iduser INT NOT NULL,
-    Bet DECIMAL(30,2) NOT NULL,
-    Result VARCHAR(255) NOT NULL,
-    WinAmount DECIMAL(30,2) NOT NULL,
-    Time DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
 
 // AJAX handler
 if (isset($_GET['action'])) {
@@ -82,13 +71,6 @@ if (isset($_GET['action'])) {
                 $stmt->bind_param("di", $newMoney, $userId);
                 $stmt->execute();
                 $stmt->close();
-
-                // Lưu lịch sử
-                $resStr = "P: " . $playerCard['val'] . $playerCard['suit'] . " vs D: " . $dealerCard['val'] . $dealerCard['suit'];
-                $his = $conn->prepare("INSERT INTO history_war (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-                $his->bind_param("idss", $userId, $bet, $resStr, $winAmount);
-                $his->execute();
-                $his->close();
             }
 
             $response = [
@@ -96,16 +78,15 @@ if (isset($_GET['action'])) {
                 'playerCard' => $playerCard,
                 'dealerCard' => $dealerCard,
                 'status' => $status,
-                'money' => number_format($money + ($over ? $winAmount : 0), 0, ',', '.'),
-                'rawMoney' => $money + ($over ? $winAmount : 0)
+                'winAmount' => $winAmount,
+                'money' => number_format($money + ($over ? $winAmount : 0), 0, ',', '.')
             ];
         }
     } elseif ($action === 'war') {
         $bet = $_SESSION['war_bet'];
-        if ($money < $bet) {
-            $response['message'] = "Không đủ gtlm để tham chiến!";
+        if ($money < $bet * 2) {
+            $response['message'] = "Không đủ gtlm để tham chiến (cần gấp đôi cược ban đầu)!";
         } else {
-            // Rút thêm 2 lá sau khi bỏ qua 3 lá (visual only, here we just pick 2)
             $pValIdx = rand(0, 12);
             $pSuitIdx = rand(0, 3);
             $dValIdx = rand(0, 12);
@@ -117,13 +98,9 @@ if (isset($_GET['action'])) {
             $winAmount = 0;
             $status = "";
             if ($playerCardNew['score'] >= $dealerCardNew['score']) {
-                // Thắng trận War: Ăn cược War (1-1) và đẩy (push) cược Ante. Tổng là thắng 1 đơn vị bet ban đầu.
-                // User requirement says "Thắng -> nhân đôi bet". In War context, usually player pays 1 more unit.
-                // If they win, they get 2 units back (the new bet + 1 win).
                 $winAmount = $bet;
                 $status = "WIN_WAR";
             } else {
-                // Thua trận War: Mất cả Ante và War bet. Tổng là mất 2 đơn vị bet ban đầu.
                 $winAmount = -($bet * 2);
                 $status = "LOSE_WAR";
             }
@@ -134,21 +111,13 @@ if (isset($_GET['action'])) {
             $stmt->execute();
             $stmt->close();
 
-            // Lưu lịch sử
-            $resStr = "WAR! P: " . $playerCardNew['val'] . $playerCardNew['suit'] . " vs D: " . $dealerCardNew['val'] . $dealerCardNew['suit'];
-            $totalBet = $bet * 2;
-            $his = $conn->prepare("INSERT INTO history_war (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-            $his->bind_param("idss", $userId, $totalBet, $resStr, $winAmount);
-            $his->execute();
-            $his->close();
-
             $response = [
                 'success' => true,
                 'playerCard' => $playerCardNew,
                 'dealerCard' => $dealerCardNew,
                 'status' => $status,
-                'money' => number_format($newMoney, 0, ',', '.'),
-                'rawMoney' => $newMoney
+                'winAmount' => $winAmount,
+                'money' => number_format($newMoney, 0, ',', '.')
             ];
         }
     } elseif ($action === 'surrender') {
@@ -161,37 +130,18 @@ if (isset($_GET['action'])) {
         $stmt->execute();
         $stmt->close();
 
-        // Lưu lịch sử
-        $resStr = "Surrender";
-        $his = $conn->prepare("INSERT INTO history_war (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-        $winAmt = -$loss;
-        $his->bind_param("iisi", $userId, $bet, $resStr, $winAmt);
-        $his->execute();
-        $his->close();
-
         $response = [
             'success' => true,
             'status' => 'SURRENDER',
-            'money' => number_format($newMoney, 0, ',', '.'),
-            'rawMoney' => $newMoney
+            'winAmount' => -$loss,
+            'money' => number_format($newMoney, 0, ',', '.')
         ];
-    } elseif ($action === 'get_history') {
-        $stmt = $conn->prepare("SELECT * FROM history_war WHERE Iduser = ? ORDER BY Time DESC LIMIT 10");
-        $stmt->bind_param("i", $userId);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        $history = [];
-        while ($row = $res->fetch_assoc()) {
-            $history[] = $row;
-        }
-        $response = ['success' => true, 'history' => $history];
     }
 
     echo json_encode($response);
     exit;
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="vi">
 
@@ -200,35 +150,18 @@ if (isset($_GET['action'])) {
     <title>Casino War - Trận Chiến Bài Tây</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../assets/css/main.css">
-    <link rel="stylesheet" href="../assets/css/animations.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        :root {
-            --primary: #e94560;
-            --secondary: #4ecca3;
-            --accent: #f0932b;
-            --bg-dark: #1a1a2e;
-            --glass: rgba(255, 255, 255, 0.05);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --text-muted: rgba(255, 255, 255, 0.6);
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
         body {
             background:
                 <?= $bgGradientCSS ?>
             ;
             background-attachment: fixed;
             color: #fff;
+            font-family: 'Exo 2', sans-serif;
             min-height: 100vh;
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             overflow-x: hidden;
         }
 
@@ -238,52 +171,15 @@ if (isset($_GET['action'])) {
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 0;
+            z-index: -1;
             pointer-events: none;
         }
 
-        .main-container {
-            position: relative;
-            z-index: 1;
-            width: 95%;
-            max-width: 900px;
-            margin: 2rem auto;
-            padding: 1rem;
-            text-align: center;
-        }
-
-        .glass-card {
-            background: var(--glass);
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 2rem;
-            padding: 2.5rem 1.5rem;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
-            margin-bottom: 2rem;
-            transition: transform 0.3s ease;
-        }
-
-        .game-title {
-            font-size: clamp(2rem, 8vw, 3.5rem);
-            font-weight: 900;
-            margin-bottom: 1.5rem;
-            text-transform: uppercase;
-            letter-spacing: 4px;
-            background: linear-gradient(to right, #fff, var(--primary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .balance-pill {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 0.8rem 1.5rem;
-            border-radius: 50px;
-            display: inline-block;
-            margin-bottom: 2rem;
-            border: 1px solid var(--glass-border);
-            font-weight: 700;
-            font-size: 1.1rem;
         }
 
         .card-area {
@@ -307,24 +203,29 @@ if (isset($_GET['action'])) {
             text-transform: uppercase;
             letter-spacing: 2px;
             margin-bottom: 1rem;
-            color: var(--text-muted);
-            font-weight: 600;
+            color: #00d2ff;
+            font-weight: 800;
         }
 
         .playing-card {
             width: clamp(100px, 20vw, 140px);
             aspect-ratio: 2/3;
-            background: #fff;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px dashed rgba(255, 255, 255, 0.2);
             border-radius: 1rem;
-            color: #000;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
             position: relative;
             transform-style: preserve-3d;
             transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .playing-card.revealed {
+            background: #fff;
+            border: none;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
         }
 
         .playing-card.red {
@@ -347,233 +248,127 @@ if (isset($_GET['action'])) {
             font-size: clamp(3rem, 10vw, 4.5rem);
         }
 
-        .controls {
-            margin-top: 2rem;
-        }
-
-        .bet-input-wrapper {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        input[type="number"] {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid var(--glass-border);
-            padding: 1rem 1.5rem;
-            border-radius: 1rem;
-            color: #fff;
-            font-size: 1.3rem;
-            width: 100%;
-            max-width: 250px;
-            text-align: center;
-            outline: none;
-            transition: border-color 0.3s;
-        }
-
-        input[type="number"]:focus {
-            border-color: var(--primary);
-        }
-
-        .btn {
-            background: linear-gradient(135deg, var(--primary) 0%, #c62a48 100%);
-            border: none;
+        .btn-premium {
             padding: 1rem 2.5rem;
-            border-radius: 1rem;
-            color: #fff;
-            font-size: 1.1rem;
-            font-weight: 800;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin: 0.5rem;
-            width: auto;
-            min-width: 180px;
-        }
-
-        .btn:hover:not(:disabled) {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(233, 69, 96, 0.4);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .btn-secondary {
-            background: linear-gradient(135deg, var(--secondary) 0%, #3a9679 100%);
-        }
-
-        .btn-war {
-            background: linear-gradient(135deg, var(--accent) 0%, #d35400 100%);
-        }
-
-        .status-msg {
-            margin-top: 1.5rem;
-            font-size: 1.8rem;
+            border: none;
+            border-radius: 50px;
             font-weight: 900;
-            min-height: 2.5rem;
-            text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-        }
-
-        .history-container {
-            overflow-x: auto;
-            width: 100%;
-            margin-top: 1rem;
-        }
-
-        .history-table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 500px;
-        }
-
-        .history-table th {
+            cursor: pointer;
+            transition: 0.3s;
             text-transform: uppercase;
-            font-size: 0.8rem;
-            letter-spacing: 1px;
-            color: var(--text-muted);
-            padding: 1rem;
-            border-bottom: 2px solid var(--glass-border);
         }
+        .btn-deal { background: #f1c40f; color: #000; }
+        .btn-war { background: #e74c3c; color: #fff; }
+        .btn-surrender { background: #34495e; color: #fff; }
 
-        .history-table td {
-            padding: 1rem;
-            border-bottom: 1px solid var(--glass-border);
-            font-weight: 600;
+        .chip-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 25px;
+            width: 100%;
         }
-
-        .shimmer {
-            animation: shimmer 2s infinite ease-in-out;
+        .chip {
+            padding: 8px 18px;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            color: #fff;
+            transition: 0.3s;
+            user-select: none;
         }
-
-        @keyframes shimmer {
-
-            0%,
-            100% {
-                opacity: 0.6;
-            }
-
-            50% {
-                opacity: 1;
-            }
+        .chip:hover, .chip.active {
+            background: #00d2ff;
+            color: #000;
+            border-color: #00d2ff;
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(0, 210, 255, 0.4);
         }
-
-        @media (max-width: 600px) {
-            .main-container {
-                padding: 0.5rem;
-            }
-
-            .glass-card {
-                padding: 1.5rem 1rem;
-            }
-
-            .card-area {
-                gap: 1rem;
-            }
-
-            .btn {
-                width: 100%;
-                margin: 0.5rem 0;
-            }
+        .vs-text {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #f1c40f;
+            opacity: 0.8;
         }
     </style>
 </head>
 
 <body>
-
-
-    <div class="main-container">
-        <h1 class="game-title">CASINO WAR</h1>
-        <p style="color: rgba(255,255,255,0.6); margin-bottom: 2rem;">Lớn hơn là thắng - Đơn giản & Kịch tính</p>
-
-        <div class="glass-card">
-            <div class="balance-pill">💰 Số Gtlm: <span id="balance-display"
-                    style="color: var(--secondary);"><?= number_format($money, 0, ',', '.') ?></span> gtlm</div>
+    <div class="game-wrapper" style="max-width:800px; margin:2rem auto; position:relative; z-index:1; padding: 0 15px; width: 100%;">
+        <div class="glass" style="padding: 2.5rem; text-align: center; border-radius: 2rem; width: 100%;">
+            <h1 style="margin: 0 0 1rem; font-size: 2.5rem; font-weight: 900; color: #00d2ff; text-transform: uppercase; letter-spacing: 2px;">CASINO WAR</h1>
+            <p style="color: rgba(255,255,255,0.6); margin-bottom: 2rem;">Lớn hơn là thắng - Đơn giản & Kịch tính</p>
+            
+            <div style="background: rgba(0,0,0,0.3); padding: 10px 25px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.2); display: inline-block; margin-bottom: 2rem; max-width: 100%;">
+                <span style="opacity: 0.8; font-size: 0.9rem; margin-right: 5px;">SỐ GTLM:</span>
+                <span id="balance-val" style="font-weight: 900; font-size: clamp(14px, 3vw, 1.5rem); color: #f1c40f; word-break: break-all;"><?php echo number_format($money, 0, ',', '.'); ?></span> <span style="font-weight: 900; font-size: clamp(14px, 3vw, 1.5rem); color: #f1c40f;">gtlm</span>
+            </div>
 
             <div class="card-area">
                 <div class="card-container">
-                    <div class="card-label">Dealer</div>
+                    <div class="card-label">Nhà Cái (Dealer)</div>
                     <div id="dealer-card" class="playing-card">
-                        <div class="card-value">?</div>
-                        <div class="card-suit">🂠</div>
+                        <div class="card-suit" style="color:rgba(255,255,255,0.2)">🂠</div>
                     </div>
                 </div>
+                
+                <div class="vs-text">VS</div>
+
                 <div class="card-container">
-                    <div class="card-label">Bạn</div>
+                    <div class="card-label">Bạn (Player)</div>
                     <div id="player-card" class="playing-card">
-                        <div class="card-value">?</div>
-                        <div class="card-suit">🂠</div>
+                        <div class="card-suit" style="color:rgba(255,255,255,0.2)">🂠</div>
                     </div>
                 </div>
             </div>
 
-            <div id="status" class="status-msg"></div>
-
-            <div class="controls">
-                <div id="betting-controls" class="bet-input-wrapper">
-                    <input type="number" id="bet-amount" value="1000" min="100" step="100">
-                    <button id="deal-btn" class="btn">Chia bài</button>
+            <div id="bet-form" class="betting-area" style="display:flex; flex-direction:column; align-items:center;">
+                <div class="chip-selector" id="chipSelector">
+                    <div class="chip active" data-value="10000">10K</div>
+                    <div class="chip" data-value="50000">50K</div>
+                    <div class="chip" data-value="100000">100K</div>
+                    <div class="chip" data-value="500000">500K</div>
+                    <div class="chip" data-value="1000000">1M</div>
+                    <div class="chip" data-value="5000000">5M</div>
+                    <div class="chip" data-value="allin">MAX</div>
                 </div>
 
-                <div id="tie-controls" style="display: none;">
-                    <p style="margin-bottom: 15px; font-weight: 600;">HÒA! Bạn muốn làm gì?</p>
-                    <button id="war-btn" class="btn btn-war">THAM CHIẾN (WAR)</button>
-                    <button id="surrender-btn" class="btn btn-secondary">ĐẦU HÀNG (Lose 1/2)</button>
-                </div>
-
-                <div id="result-controls" style="display: none;">
-                    <button id="reset-btn" class="btn">Ván mới</button>
+                <div class="controls" style="display:flex; gap:20px; justify-content:center; align-items:center; flex-wrap: wrap;">
+                    <div style="background: rgba(0,0,0,0.3); padding: 5px 15px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; gap: 10px;">
+                        <span style="font-weight: bold; opacity: 0.8;">CƯỢC:</span>
+                        <input type="number" id="bet-amt" value="10000" style="background: transparent; color:#fff; outline:none; font-size:1.3rem; font-weight:900; text-align:center; width:120px; border: none;">
+                    </div>
+                    
+                    <button class="btn-premium btn-deal" id="deal-btn">CHIA BÀI</button>
                 </div>
             </div>
-        </div>
 
-        <div class="glass-card" style="margin-top: 3rem;">
-            <h2 style="margin-bottom: 2rem; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 2px;">Lịch sử
-                ván đấu</h2>
-            <div class="history-container">
-                <table class="history-table">
-                    <thead>
-                        <tr>
-                            <th>Thời gian</th>
-                            <th>gtlm cược</th>
-                            <th>Kết quả</th>
-                            <th>Thắng/Thua</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-body">
-                        <!-- History via AJAX -->
-                    </tbody>
-                </table>
+            <div id="tie-controls" style="display: none;">
+                <h3 style="margin-bottom: 1.5rem; color: #00d2ff; font-weight: bold;">HÒA! BẠN MUỐN LÀM GÌ?</h3>
+                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                    <button id="war-btn" class="btn-premium btn-war">THAM CHIẾN (WAR)</button>
+                    <button id="surrender-btn" class="btn-premium btn-surrender">ĐẦU HÀNG (MẤT 1/2 CƯỢC)</button>
+                </div>
+            </div>
+
+            <div id="result-area" style="display: none; margin-top: 2rem;">
+                <button id="reset-btn" class="btn-premium btn-deal">VÁN MỚI</button>
+            </div>
+            
+            <div style="margin-top: 3rem;">
+                <a href="../index.php" style="color:#fff; text-decoration:none; border:1px solid rgba(255,255,255,0.2); padding:0.8rem 2rem; border-radius:50px; font-weight: bold; background: rgba(0,0,0,0.2); transition: 0.3s; display: inline-block;">🏠 THOÁT VỀ SẢNH</a>
             </div>
         </div>
-
-        <a href="../index.php" class="btn btn-secondary"
-            style="margin-top: 2rem; display: inline-block; text-decoration: none; width: auto;">Quay lại gtlm sảnh</a>
     </div>
-
-
-    <?php require_once '../casino_help.php'; ?>
-
-
-
-
-
-
-
-
-
-
-
 
     <!-- Premium Effects System -->
     <canvas id="threejs-background"></canvas>
     <script>
-        (function () {
+        (function() {
             window.themeConfig = {
                 particleCount: <?= $particleCount ?? 800 ?>,
                 particleSize: <?= $particleSize ?? 0.05 ?>,
@@ -586,7 +381,7 @@ if (isset($_GET['action'])) {
             };
             const prefix = window.location.pathname.includes('/games/') ? '../' : '';
             const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
-
+            
             scripts.forEach(src => {
                 const s = document.createElement('script');
                 s.src = prefix + src;
@@ -594,8 +389,103 @@ if (isset($_GET['action'])) {
                 document.head.appendChild(s);
             });
         })();
+
+        $(document).ready(function() {
+            $('.chip').click(function() {
+                if ($('#deal-btn').is(':hidden')) return;
+                $('.chip').removeClass('active');
+                $(this).addClass('active');
+                const val = $(this).data('value');
+                if (val === 'allin') {
+                    $('#bet-amt').val(<?= $money ?>);
+                } else {
+                    $('#bet-amt').val(val);
+                }
+            });
+
+            function renderCard(target, card) {
+                const colorClass = (card.suit === '♥' || card.suit === '♦') ? 'red' : 'black';
+                $(target).addClass('revealed ' + colorClass)
+                         .html(`<div class="card-value">${card.val}</div><div class="card-suit">${card.suit}</div>`);
+            }
+
+            function handleResult(res) {
+                $('#balance-val').text(res.money);
+
+                if (res.status === 'TIE') {
+                    $('#tie-controls').show();
+                } else {
+                    setTimeout(() => {
+                        if (res.winAmount > 0) {
+                            if (typeof GameEffects !== 'undefined') GameEffects.showWin(res.winAmount);
+                            let title = res.status === 'WIN_WAR' ? 'Thắng Chiến Tranh' : 'Thắng';
+                            Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'success', title: title, text: 'Bạn đã chiến thắng Dealer!' });
+                        } else if (res.winAmount < 0) {
+                            if (typeof GameEffects !== 'undefined') GameEffects.showLoss();
+                            let title = res.status === 'LOSE_WAR' ? 'Thua Chiến Tranh' : 'Thua';
+                            Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'error', title: title, text: 'Dealer đã chiến thắng!' });
+                        }
+                    }, 500);
+                    
+                    $('#result-area').show();
+                }
+            }
+
+            $('#deal-btn').click(function() {
+                const bet = $('#bet-amt').val();
+                if (bet < 100) return Swal.fire('Lỗi', 'Cược tối thiểu 100 gtlm!', 'error');
+
+                $.post('war.php?action=deal', { bet: bet }, function(res) {
+                    if (!res.success) return Swal.fire('Lỗi', res.message, 'error');
+                    
+                    $('#bet-form').hide();
+                    
+                    renderCard('#player-card', res.playerCard);
+                    renderCard('#dealer-card', res.dealerCard);
+                    
+                    handleResult(res);
+                });
+            });
+
+            $('#war-btn').click(function() {
+                $.post('war.php?action=war', function(res) {
+                    if (!res.success) return Swal.fire('Lỗi', res.message, 'error');
+                    
+                    $('#tie-controls').hide();
+                    
+                    // Render new cards
+                    renderCard('#player-card', res.playerCard);
+                    renderCard('#dealer-card', res.dealerCard);
+                    
+                    handleResult(res);
+                });
+            });
+
+            $('#surrender-btn').click(function() {
+                $.post('war.php?action=surrender', function(res) {
+                    if (!res.success) return;
+                    
+                    $('#tie-controls').hide();
+                    $('#balance-val').text(res.money);
+                    
+                    if (typeof GameEffects !== 'undefined') GameEffects.showLoss();
+                    Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'info', title: 'Đầu hàng', text: 'Bạn đã mất một nửa GTLM cược.' });
+                    
+                    $('#result-area').show();
+                });
+            });
+
+            $('#reset-btn').click(function() {
+                $('#result-area').hide();
+                $('#tie-controls').hide();
+                $('#bet-form').show();
+                
+                $('#player-card').removeClass('revealed red black').html('<div class="card-suit" style="color:rgba(255,255,255,0.2)">🂠</div>');
+                $('#dealer-card').removeClass('revealed red black').html('<div class="card-suit" style="color:rgba(255,255,255,0.2)">🂠</div>');
+                
+                $('.chip.active').click();
+            });
+        });
     </script>
-
 </body>
-
 </html>

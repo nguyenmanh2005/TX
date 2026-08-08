@@ -73,40 +73,42 @@ $gameId = "baccarat";
 
                 <!-- Betting Area -->
                 <div class="betting-board">
-                    <div class="bet-option player" data-type="player">
+                    <div class="bet-option player" id="box-player" data-type="player" onclick="selectBetBox('player')">
                         <span class="label">QUEEN</span>
                         <span class="payout">Reward 1:1</span>
                         <div class="bet-amount" id="betPlayer">0</div>
+                        <input type="hidden" id="bet-player" value="0">
                     </div>
-                    <div class="bet-option tie" data-type="tie">
+                    <div class="bet-option tie" id="box-tie" data-type="tie" onclick="selectBetBox('tie')">
                         <span class="label">DRAW</span>
                         <span class="payout">Reward 1:8</span>
                         <div class="bet-amount" id="betTie">0</div>
+                        <input type="hidden" id="bet-tie" value="0">
                     </div>
-                    <div class="bet-option banker" data-type="banker">
+                    <div class="bet-option banker" id="box-banker" data-type="banker" onclick="selectBetBox('banker')">
                         <span class="label">KING</span>
-                        <span class="payout">Reward 1:0.95</span>
+                        <span class="payout">Reward 1:1</span>
                         <div class="bet-amount" id="betBanker">0</div>
+                        <input type="hidden" id="bet-banker" value="0">
                     </div>
                 </div>
 
                 <!-- Control Panel -->
                 <div class="controls">
-                    <div class="chip-selector">
-                        <div class="chip active" data-value="1000">1K GTLM</div>
-                        <div class="chip" data-value="5000">5K GTLM</div>
-                        <div class="chip" data-value="10000">10K GTLM</div>
-                        <div class="chip" data-value="50000">50K GTLM</div>
-                        <div class="chip" data-value="100000">100K GTLM</div>
-                <div class="chip" data-value="500000">500K GTLM</div>
-                <div class="chip" data-value="1000000">1M GTLM</div>
-                <div class="chip" data-value="2000000">2M GTLM</div>
-                <div class="chip" data-value="5000000">5M GTLM</div>
-                <div class="chip" data-value="<?=$user['Money']?>">MAX</div>
+                    <p style="margin-bottom: 0; opacity: 0.8; font-size: 0.9rem;">CHỌN Ô CƯỢC SAU ĐÓ CHỌN VÀNG ĐỂ ĐẶT GTLM</p>
+                    <div class="chip-selector" id="chipSelector">
+                        <div class="chip" data-value="1000">1K</div>
+                        <div class="chip" data-value="5000">5K</div>
+                        <div class="chip" data-value="10000">10K</div>
+                        <div class="chip" data-value="50000">50K</div>
+                        <div class="chip" data-value="100000">100K</div>
+                        <div class="chip" data-value="500000">500K</div>
+                        <div class="chip" data-value="1000000">1M</div>
+                        <div class="chip" data-value="5000000">5M</div>
+                        <div class="chip" data-value="0" style="background: #333; font-size: 0.8rem;">XÓA</div>
                     </div>
-                    <div class="action-btns">
-                        <button id="clearBet" class="btn btn-danger">Hủy chọn</button>
-                        <button id="dealBtn" class="btn btn-success disabled">KHAI CUỘC</button>
+                    <div class="action-btns" style="margin-top: 10px;">
+                        <button id="dealBtn" class="btn btn-success">KHAI CUỘC</button>
                     </div>
                 </div>
             </div>
@@ -145,7 +147,7 @@ $gameId = "baccarat";
                     <h3>🎁 Phần thưởng (Reward)</h3>
                     <div class="reward-table">
                         <div class="reward-row"><span>Dự đoán QUEEN</span> <span>Thưởng 1 : 1</span></div>
-                        <div class="reward-row"><span>Dự đoán KING</span> <span>Thưởng 1 : 0.95</span></div>
+                        <div class="reward-row"><span>Dự đoán KING</span> <span>Thưởng 1 : 1</span></div>
                         <div class="reward-row"><span>Dự đoán DRAW</span> <span>Thưởng 1 : 8</span></div>
                     </div>
                 </section>
@@ -182,5 +184,13 @@ $gameId = "baccarat";
             });
         })();
     </script>
+    <style>
+        .bet-option.focused {
+            border-color: #d4af37 !important;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+            background: rgba(255, 255, 255, 0.15) !important;
+            transform: translateY(-5px);
+        }
+    </style>
 </body>
 </html>

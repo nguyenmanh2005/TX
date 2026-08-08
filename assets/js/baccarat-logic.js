@@ -18,6 +18,10 @@ const BaccaratLogic = {
         // Chip selection
         document.querySelectorAll('.chip').forEach(chip => {
             chip.addEventListener('click', (e) => {
+                if (parseInt(chip.dataset.value) === 0) {
+                    this.clearBets();
+                    return;
+                }
                 document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
                 chip.classList.add('active');
                 this.selectedChip = parseInt(chip.dataset.value);
@@ -35,7 +39,6 @@ const BaccaratLogic = {
 
         // Controls
         document.getElementById('dealBtn').addEventListener('click', () => this.startGame());
-        document.getElementById('clearBet').addEventListener('click', () => this.clearBets());
 
         // Royale Guide Logic
         const modal = document.getElementById('guideModal');
@@ -64,16 +67,33 @@ const BaccaratLogic = {
     clearBets() {
         if (this.isGameRunning) return;
         this.currentBet = { player: 0, banker: 0, tie: 0 };
+        document.getElementById('bet-player').value = 0;
+        document.getElementById('bet-banker').value = 0;
+        document.getElementById('bet-tie').value = 0;
+        
         document.querySelectorAll('.bet-amount').forEach(el => {
             el.innerText = '0';
             el.style.display = 'none';
         });
-        document.getElementById('dealBtn').classList.add('disabled');
+
+        document.getElementById('dealBtn').classList.remove('disabled');
     },
 
     async startGame() {
-        if (this.isGameRunning || (this.currentBet.player === 0 && this.currentBet.banker === 0 && this.currentBet.tie === 0)) return;
-        
+        if (this.isGameRunning || (this.currentBet.player === 0 && this.currentBet.banker === 0 && this.currentBet.tie === 0)) {
+            if (this.currentBet.player === 0 && this.currentBet.banker === 0 && this.currentBet.tie === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Nhắc nhở',
+                    text: 'Vui lòng chọn Vàng và đặt cược ít nhất một cửa!',
+                    background: '#1a1a1a',
+                    color: '#fff',
+                    confirmButtonColor: '#d4af37'
+                });
+            }
+            return;
+        }
+
         this.isGameRunning = true;
         document.getElementById('dealBtn').classList.add('disabled');
         

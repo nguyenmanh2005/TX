@@ -38,6 +38,17 @@ if (isset($_GET['action'])) {
 
         if ($totalCharge <= 0 || $totalCharge > $money) { $response['message'] = "Năng lượng không đủ!"; }
         else {
+            $conn->begin_transaction();
+            $stmtLock = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+            $stmtLock->bind_param("i", $userId);
+            $stmtLock->execute();
+            $lockedMoney = $stmtLock->get_result()->fetch_assoc()['Money'] ?? 0;
+            $stmtLock->close();
+            if ($totalCharge > $lockedMoney) {
+                $conn->rollback();
+                echo json_encode(['success' => false, 'message' => 'Số dư không đủ hoặc thao tác quá nhanh!']);
+                exit;
+            }
             $conn->query("UPDATE users SET Money = Money - $totalCharge WHERE Iduser = $userId");
             
             // 4 Orbs: 0=Negative (Cyan), 1=Positive (Magenta)
@@ -64,6 +75,7 @@ if (isset($_GET['action'])) {
             $his->bind_param("idss", $userId, $totalCharge, $resStr, $profit); $his->execute();
             logGameHistoryWithAll($conn, $userId, 'Quantum Pulse', $totalCharge, $totalReward, $totalReward > 0);
             
+            $conn->commit();
             $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
             $response = [
                 'success'=>true, 'orbs'=>$orbs, 'state'=>$state, 'posCount'=>$posCount,

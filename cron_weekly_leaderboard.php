@@ -35,9 +35,16 @@ logCron("Xử lý tuần: $prevWeekStart → $prevWeekEnd");
 
 // Phần thưởng theo hạng
 $rewards = [
-    1 => ['gtlm' => 5000000, 'badge_name' => 'Vô địch tuần',  'badge_icon' => '🏆', 'color' => '#FFD700'],
-    2 => ['gtlm' => 2000000, 'badge_name' => 'Á quân tuần',   'badge_icon' => '🥈', 'color' => '#C0C0C0'],
-    3 => ['gtlm' => 1000000, 'badge_name' => 'Hạng ba tuần',  'badge_icon' => '🥉', 'color' => '#CD7F32'],
+    1 => ['gtlm' => 5000000, 'badge_name' => 'Vương Giả Trận Địa', 'badge_icon' => '👑', 'color' => '#FFD700', 'title_class' => 'sparkle-text'],
+    2 => ['gtlm' => 2000000, 'badge_name' => 'Nhất Lưu Cao Thủ',  'badge_icon' => '🥈', 'color' => '#C0C0C0', 'title_class' => 'sparkle-gold'],
+    3 => ['gtlm' => 1000000, 'badge_name' => 'Tuyệt Đỉnh Hạng Ba', 'badge_icon' => '🥉', 'color' => '#CD7F32', 'title_class' => 'sparkle-gold'],
+    4 => ['gtlm' => 500000,  'badge_name' => 'Cao Thủ Top 10',     'badge_icon' => '🏅', 'color' => '#9C27B0', 'title_class' => ''],
+    5 => ['gtlm' => 500000,  'badge_name' => 'Cao Thủ Top 10',     'badge_icon' => '🏅', 'color' => '#9C27B0', 'title_class' => ''],
+    6 => ['gtlm' => 500000,  'badge_name' => 'Cao Thủ Top 10',     'badge_icon' => '🏅', 'color' => '#9C27B0', 'title_class' => ''],
+    7 => ['gtlm' => 500000,  'badge_name' => 'Cao Thủ Top 10',     'badge_icon' => '🏅', 'color' => '#9C27B0', 'title_class' => ''],
+    8 => ['gtlm' => 500000,  'badge_name' => 'Cao Thủ Top 10',     'badge_icon' => '🏅', 'color' => '#9C27B0', 'title_class' => ''],
+    9 => ['gtlm' => 500000,  'badge_name' => 'Cao Thủ Top 10',     'badge_icon' => '🏅', 'color' => '#9C27B0', 'title_class' => ''],
+    10=> ['gtlm' => 500000,  'badge_name' => 'Cao Thủ Top 10',     'badge_icon' => '🏅', 'color' => '#9C27B0', 'title_class' => ''],
 ];
 
 $conn->begin_transaction();
@@ -147,8 +154,29 @@ try {
         $logLogStmt->execute();
         $logLogStmt->close();
 
+        // [NEW] Cấp Khung Chat Danh Vọng
+        $chatFrameName = 'Vinh Quang Hạng ' . $position;
+        $frameCheck = $conn->query("SELECT id FROM chat_frames WHERE name = '$chatFrameName'");
+        if ($frameCheck && $frameCheck->num_rows > 0) {
+            $frameId = $frameCheck->fetch_assoc()['id'];
+        } else {
+            // Tạo Khung Chat Mới nếu chưa có
+            $desc = 'Khung Chat Độc Quyền Dành Cho Top ' . $position . ' Tuần';
+            $conn->query("INSERT INTO chat_frames (name, description, rarity, price) VALUES ('$chatFrameName', '$desc', 'Legendary', 0)");
+            $frameId = $conn->insert_id;
+        }
+        if ($frameId) {
+            $conn->query("INSERT IGNORE INTO user_chat_frames (user_id, chat_frame_id) VALUES ($userId, $frameId)");
+            $conn->query("UPDATE users SET chat_frame_id = $frameId WHERE Iduser = $userId");
+        }
+
         // Gửi thông báo cho người thắng
-        $rankLabel = ['', '🥇 Hạng 1', '🥈 Hạng 2', '🥉 Hạng 3'][$position];
+        $rankLabels = [
+            1 => '🥇 Hạng 1', 2 => '🥈 Hạng 2', 3 => '🥉 Hạng 3',
+            4 => '🏅 Hạng 4', 5 => '🏅 Hạng 5', 6 => '🏅 Hạng 6',
+            7 => '🏅 Hạng 7', 8 => '🏅 Hạng 8', 9 => '🏅 Hạng 9', 10 => '🏅 Hạng 10'
+        ];
+        $rankLabel = isset($rankLabels[$position]) ? $rankLabels[$position] : "Hạng $position";
         $weekLabelStr  = date('d/m/Y', strtotime($prevWeekStart));
         $notifMsg = "Chúc mừng! Bạn đạt $rankLabel BXH tuần $weekLabelStr. Phần thưởng: +".number_format($gtlm)." GTLM và huy hiệu vinh danh đã được trao!";
         sendNotification($conn, $userId, "🎁 PHẦN THƯỞNG TUẦN", $notifMsg, 'weekly_reward');
@@ -209,7 +237,7 @@ function broadcastWeeklyResults(mysqli $conn, array $rankings, string $weekStart
     $weekLabelStr = date('d/m/Y', strtotime($weekStart));
     $lines = ["🏆 KẾT QUẢ BXH TUẦN $weekLabelStr:"];
 
-    foreach ([1, 2, 3] as $pos) {
+    foreach ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as $pos) {
         if (!isset($rankings[$pos - 1])) continue;
         $p = $rankings[$pos - 1];
         $icon  = $rewards[$pos]['badge_icon'];

@@ -7,26 +7,26 @@
 function initLiveClock() {
     const timeEl = document.getElementById('liveTime');
     const dateEl = document.getElementById('liveDate');
-    
+
     if (!timeEl || !dateEl) return;
-    
+
     function updateClock() {
         const now = new Date();
         const hours = String(now.getHours()).padStart(2, '0');
         const minutes = String(now.getMinutes()).padStart(2, '0');
         const seconds = String(now.getSeconds()).padStart(2, '0');
-        
+
         timeEl.textContent = `${hours}:${minutes}:${seconds}`;
-        
-        const options = { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
+
+        const options = {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
         };
         dateEl.textContent = now.toLocaleDateString('vi-VN', options);
     }
-    
+
     updateClock();
     setInterval(updateClock, 1000);
 }
@@ -34,7 +34,7 @@ function initLiveClock() {
 // Animated Statistics Counter
 function initAnimatedStats() {
     const statCards = document.querySelectorAll('.stat-value[data-target]');
-    
+
     statCards.forEach(card => {
         const target = parseInt(card.getAttribute('data-target')) || 0;
         animateValue(card, 0, target, 1500);
@@ -44,41 +44,41 @@ function initAnimatedStats() {
 function animateValue(element, start, end, duration) {
     const startTime = performance.now();
     const range = end - start;
-    
+
     function update(currentTime) {
         const elapsed = currentTime - startTime;
         const progress = Math.min(elapsed / duration, 1);
-        
+
         // Easing function (ease-out)
         const easeProgress = 1 - Math.pow(1 - progress, 3);
         const current = Math.floor(start + (range * easeProgress));
-        
+
         element.textContent = current.toLocaleString('vi-VN');
-        
+
         if (progress < 1) {
             requestAnimationFrame(update);
         } else {
             element.textContent = end.toLocaleString('vi-VN');
         }
     }
-    
+
     requestAnimationFrame(update);
 }
 
 // Quick Actions Widget
 function initQuickActions() {
     const quickActionButtons = document.querySelectorAll('.quick-action-btn');
-    
+
     quickActionButtons.forEach(btn => {
-        btn.addEventListener('click', function(e) {
+        btn.addEventListener('click', function (e) {
             e.preventDefault();
             const action = this.getAttribute('data-action');
             const url = this.getAttribute('href');
-            
+
             // Add loading state
             this.classList.add('btn-loading');
             this.disabled = true;
-            
+
             // Navigate after short delay for visual feedback
             setTimeout(() => {
                 window.location.href = url;
@@ -114,21 +114,21 @@ const BALANCE_CACHE_DURATION = 10000; // 10 seconds cache
 function initBalanceUpdater() {
     const balanceEl = document.querySelector('.balance-value');
     if (!balanceEl) return;
-    
+
     // Debounced update function
     function updateBalance() {
         const now = Date.now();
-        
+
         // Check cache
         if (now - lastBalanceUpdate < BALANCE_CACHE_DURATION) {
             return;
         }
-        
+
         // Clear previous timer
         if (balanceUpdateTimer) {
             clearTimeout(balanceUpdateTimer);
         }
-        
+
         balanceUpdateTimer = setTimeout(() => {
             fetch('api_profile.php?action=get_balance', {
                 credentials: 'same-origin',
@@ -145,7 +145,7 @@ function initBalanceUpdater() {
                     if (data.success && balanceEl) {
                         const newBalance = parseFloat(data.balance) || 0;
                         const oldBalance = parseFloat(balanceEl.getAttribute('data-balance')) || 0;
-                        
+
                         if (newBalance !== oldBalance) {
                             // Animate balance change
                             animateBalanceChange(balanceEl, oldBalance, newBalance);
@@ -161,20 +161,20 @@ function initBalanceUpdater() {
                 });
         }, 500); // Debounce 500ms
     }
-    
+
     // Update on visibility change
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
             updateBalance();
         }
     });
-    
+
     // Update on focus
     window.addEventListener('focus', updateBalance);
-    
+
     // Initial update
     updateBalance();
-    
+
     // Periodic update
     setInterval(updateBalance, BALANCE_UPDATE_INTERVAL);
 }
@@ -183,31 +183,31 @@ function animateBalanceChange(element, from, to) {
     const duration = 1000;
     const startTime = performance.now();
     const range = to - from;
-    
+
     function update(currentTime) {
         const elapsed = currentTime - startTime;
         const progress = Math.min(elapsed / duration, 1);
         const easeProgress = 1 - Math.pow(1 - progress, 2);
         const current = from + (range * easeProgress);
-        
+
         element.textContent = Math.floor(current).toLocaleString('vi-VN');
-        
+
         if (progress < 1) {
             requestAnimationFrame(update);
         } else {
             element.textContent = Math.floor(to).toLocaleString('vi-VN');
         }
     }
-    
+
     requestAnimationFrame(update);
 }
 
 // Tooltip Initializer
 function initTooltips() {
     const tooltips = document.querySelectorAll('[data-tooltip]');
-    
+
     tooltips.forEach(element => {
-        element.addEventListener('mouseenter', function() {
+        element.addEventListener('mouseenter', function () {
             // Tooltip được xử lý bởi CSS
         });
     });
@@ -217,9 +217,9 @@ function initTooltips() {
 function initScrollToTop() {
     const scrollBtn = document.querySelector('.fab[onclick*="scrollTo"]');
     if (!scrollBtn) return;
-    
+
     let isVisible = false;
-    
+
     window.addEventListener('scroll', () => {
         if (window.pageYOffset > 300 && !isVisible) {
             scrollBtn.style.opacity = '1';
@@ -234,7 +234,7 @@ function initScrollToTop() {
 }
 
 // Initialize all widgets when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     initLiveClock();
     initAnimatedStats();
     initQuickActions();
@@ -243,7 +243,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initTooltips();
     initScrollToTop();
     initRealTimeDashboard();
-    
+
     // Update notification badge every 30 seconds
     setInterval(updateNotificationBadge, 30000);
 });
@@ -256,15 +256,15 @@ const DASHBOARD_UPDATE_INTERVAL = 10000; // 10 seconds
 function initRealTimeDashboard() {
     const dashboardContainer = document.getElementById('real-time-dashboard');
     if (!dashboardContainer) return;
-    
+
     function updateDashboard() {
         const now = Date.now();
-        
+
         // Throttle updates
         if (now - lastDashboardUpdate < 5000) {
             return;
         }
-        
+
         fetch('api_dashboard_widgets.php?action=get_all', {
             credentials: 'same-origin',
             cache: 'no-cache'
@@ -278,16 +278,16 @@ function initRealTimeDashboard() {
             })
             .catch(err => console.log('Dashboard update error:', err));
     }
-    
+
     // Initial update
     updateDashboard();
-    
+
     // Periodic updates
     if (dashboardUpdateInterval) {
         clearInterval(dashboardUpdateInterval);
     }
     dashboardUpdateInterval = setInterval(updateDashboard, DASHBOARD_UPDATE_INTERVAL);
-    
+
     // Update on visibility change
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
@@ -301,17 +301,17 @@ function updateDashboardWidgets(data) {
     if (data.overview) {
         updateOverviewWidget(data.overview);
     }
-    
+
     // Update recent activity
     if (data.recent_activity) {
         updateActivityWidget(data.recent_activity);
     }
-    
+
     // Update game stats
     if (data.game_stats) {
         updateGameStatsWidget(data.game_stats);
     }
-    
+
     // Update notifications
     if (data.notifications) {
         updateNotificationsWidget(data.notifications);
@@ -328,19 +328,19 @@ function updateOverviewWidget(stats) {
             balanceEl.setAttribute('data-balance', stats.balance);
         }
     }
-    
+
     // Update today stats
     if (stats.today) {
         updateElement('dashboard-games-today', stats.today.games_played);
         updateElement('dashboard-wins-today', stats.today.games_won);
         updateElement('dashboard-profit-today', stats.today.net_profit);
     }
-    
+
     // Update streak
     if (stats.streak) {
         updateElement('dashboard-streak', stats.streak.current);
     }
-    
+
     // Update rank
     if (stats.rank) {
         updateElement('dashboard-rank', stats.rank);
@@ -350,12 +350,12 @@ function updateOverviewWidget(stats) {
 function updateActivityWidget(activities) {
     const container = document.getElementById('dashboard-activity');
     if (!container) return;
-    
+
     if (activities.length === 0) {
         container.innerHTML = '<div class="empty-activity">Chưa có hoạt động gần đây</div>';
         return;
     }
-    
+
     let html = '';
     activities.forEach(activity => {
         const timeAgo = getTimeAgo(activity.time);
@@ -369,19 +369,19 @@ function updateActivityWidget(activities) {
             </div>
         `;
     });
-    
+
     container.innerHTML = html;
 }
 
 function updateGameStatsWidget(stats) {
     const container = document.getElementById('dashboard-game-stats');
     if (!container) return;
-    
+
     if (stats.length === 0) {
         container.innerHTML = '<div class="empty-stats">Chưa có thống kê game</div>';
         return;
     }
-    
+
     let html = '<div class="game-stats-list">';
     stats.forEach(game => {
         html += `
@@ -391,14 +391,14 @@ function updateGameStatsWidget(stats) {
                     <span>${game.plays} lượt</span>
                     <span>${game.win_rate}% thắng</span>
                     <span class="${game.net_profit >= 0 ? 'profit-positive' : 'profit-negative'}">
-                        ${game.net_profit >= 0 ? '+' : ''}${formatNumber(game.net_profit)} VNĐ
+                        ${game.net_profit >= 0 ? '+' : ''}${formatNumber(game.net_profit)} GTLM
                     </span>
                 </div>
             </div>
         `;
     });
     html += '</div>';
-    
+
     container.innerHTML = html;
 }
 
@@ -429,7 +429,7 @@ function getTimeAgo(timestamp) {
     const now = new Date();
     const time = new Date(timestamp);
     const diff = Math.floor((now - time) / 1000);
-    
+
     if (diff < 60) return 'Vừa xong';
     if (diff < 3600) return Math.floor(diff / 60) + ' phút trước';
     if (diff < 86400) return Math.floor(diff / 3600) + ' giờ trước';

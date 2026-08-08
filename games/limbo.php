@@ -4,12 +4,10 @@ include '../db_connect.php';
 require_once '../include_css.php';
 include '../load_theme.php';
 require_once '../game_history_helper.php';
-
 if (!isset($_SESSION['Iduser'])) {
     header('Location: ../login.php');
     exit;
 }
-
 $userId = $_SESSION['Iduser'];
 $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
@@ -18,9 +16,6 @@ $user = $stmt->get_result()->fetch_assoc();
 $money = $user['Money'];
 $userName = $user['Name'];
 $stmt->close();
-
-$conn->query("CREATE TABLE IF NOT EXISTS history_limbo (Id INT AUTO_INCREMENT PRIMARY KEY, Iduser INT NOT NULL, Bet DECIMAL(30,2) NOT NULL, Result VARCHAR(255) NOT NULL, WinAmount DECIMAL(30,2) NOT NULL, Time DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
     $action = $_GET['action'];
@@ -28,12 +23,10 @@ if (isset($_GET['action'])) {
     if ($action === 'roll') {
         $bet = (float) ($_POST['bet'] ?? 0);
         $target = (float) ($_POST['target'] ?? 2.0);
-        
         if ($bet <= 0 || $target < 1.01 || $target > 1000000) {
             echo json_encode(['success' => false, 'message' => "Tham số không hợp lệ!"]);
             exit;
         }
-
         $conn->begin_transaction();
         try {
             // Khóa bản ghi user
@@ -41,48 +34,39 @@ if (isset($_GET['action'])) {
             $stmt->bind_param("i", $userId);
             $stmt->execute();
             $u = $stmt->get_result()->fetch_assoc();
-
             if (!$u || $u['Money'] < $bet) {
                 throw new Exception("Ngân khố không đủ để phóng tên lửa!");
             }
-
             // Trừ  Gtlm cược
             $updateStmt = $conn->prepare("UPDATE users SET Money = Money - ? WHERE Iduser = ?");
             $updateStmt->bind_param("di", $bet, $userId);
             $updateStmt->execute();
-
             // Provably fair logic
             $houseEdge = 1.0;
             $result = (100 / (rand(1, 100000000) / 1000000)) * (1 - $houseEdge / 100);
             $result = max(1.00, round($result, 2));
             $win = ($result >= $target);
             $winAmount = $win ? round($bet * $target) : 0;
-            
             if ($winAmount > 0) {
                 $winStmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
                 $winStmt->bind_param("di", $winAmount, $userId);
                 $winStmt->execute();
             }
-
             $profit = $winAmount - $bet;
             $resStr = "Target: x$target | Result: x$result";
             $his = $conn->prepare("INSERT INTO history_limbo (Iduser,Bet,Result,WinAmount,Time) VALUES (?,?,?,?,NOW())");
             $his->bind_param("idid", $userId, $bet, $resStr, $profit);
             $his->execute();
-
             // Log history helper
             if (file_exists('../game_history_helper.php')) {
                 require_once '../game_history_helper.php';
                 logGameHistoryWithAll($conn, $userId, 'Limbo', $bet, $winAmount, $win);
             }
-
             $conn->commit();
-
             $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
             $stmt->bind_param("i", $userId);
             $stmt->execute();
             $newMoney = $stmt->get_result()->fetch_assoc()['Money'];
-
             $response = [
                 'success' => true,
                 'result' => $result,
@@ -102,7 +86,6 @@ if (isset($_GET['action'])) {
 ?>
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
     <title>Limbo High-Voltage - Vegas Royale</title>
@@ -122,7 +105,6 @@ if (isset($_GET['action'])) {
             --danger: #ff4757;
             --glass: rgba(255, 255, 255, 0.08);
         }
-
         body {
             margin: 0;
             background:
@@ -134,7 +116,6 @@ if (isset($_GET['action'])) {
             overflow: hidden;
             cursor: url('../img/chuot.png'), auto !important;
         }
-
         .main-container {
             height: 100vh;
             display: flex;
@@ -143,7 +124,6 @@ if (isset($_GET['action'])) {
             padding: 20px;
             box-sizing: border-box;
         }
-
         .glass-card {
             background: var(--glass);
             backdrop-filter: blur(30px);
@@ -159,13 +139,11 @@ if (isset($_GET['action'])) {
             max-height: 92vh;
             align-self: center;
         }
-
         .sidebar {
             display: flex;
             flex-direction: column;
             gap: 1.2rem;
         }
-
         .display-area {
             position: relative;
             width: 100%;
@@ -179,14 +157,12 @@ if (isset($_GET['action'])) {
             align-items: center;
             justify-content: center;
         }
-
         .input-group {
             background: rgba(0, 0, 0, 0.4);
             padding: 0.8rem 1.2rem;
             border-radius: 1.2rem;
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
-
         .input-group label {
             display: block;
             font-size: 0.6rem;
@@ -196,7 +172,6 @@ if (isset($_GET['action'])) {
             font-weight: 700;
             letter-spacing: 1px;
         }
-
         .input-group input {
             background: none;
             border: none;
@@ -207,7 +182,6 @@ if (isset($_GET['action'])) {
             outline: none;
             font-family: 'Orbitron';
         }
-
         .btn-roll {
             padding: 1.2rem;
             border-radius: 1.5rem;
@@ -223,18 +197,15 @@ if (isset($_GET['action'])) {
             color: #fff;
             box-shadow: 0 10px 30px rgba(0, 210, 255, 0.3);
         }
-
         .btn-roll:hover:not(:disabled) {
             transform: translateY(-3px);
             filter: brightness(1.1);
             box-shadow: 0 15px 40px rgba(0, 210, 255, 0.4);
         }
-
         .btn-roll:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
-
         /* Rocket Styling */
         .rocket-wrap {
             position: absolute;
@@ -247,14 +218,12 @@ if (isset($_GET['action'])) {
             z-index: 5;
             pointer-events: none;
         }
-
         .rocket {
             width: 40px;
             height: 70px;
             position: relative;
             filter: drop-shadow(0 0 15px var(--primary));
         }
-
         .rocket-body {
             width: 24px;
             height: 50px;
@@ -263,7 +232,6 @@ if (isset($_GET['action'])) {
             margin: 0 auto;
             position: relative;
         }
-
         .rocket-tip {
             width: 0;
             height: 0;
@@ -274,7 +242,6 @@ if (isset($_GET['action'])) {
             top: -12px;
             left: 0;
         }
-
         .rocket-window {
             width: 8px;
             height: 8px;
@@ -286,26 +253,22 @@ if (isset($_GET['action'])) {
             transform: translateX(-50%);
             box-shadow: 0 0 10px #00d2ff;
         }
-
         .rocket-fin {
             position: absolute;
             bottom: 0;
             width: 0;
             height: 0;
         }
-
         .rocket-fin.l {
             border-right: 10px solid var(--danger);
             border-top: 15px solid transparent;
             left: -10px;
         }
-
         .rocket-fin.r {
             border-left: 10px solid var(--danger);
             border-top: 15px solid transparent;
             right: -10px;
         }
-
         .flames {
             position: absolute;
             bottom: -25px;
@@ -313,7 +276,6 @@ if (isset($_GET['action'])) {
             transform: translateX(-50%);
             display: none;
         }
-
         .flame-main {
             width: 14px;
             height: 30px;
@@ -321,19 +283,16 @@ if (isset($_GET['action'])) {
             border-radius: 50% 50% 20% 20%;
             animation: flicker 0.1s infinite alternate;
         }
-
         @keyframes flicker {
             0% {
                 transform: scale(1);
                 opacity: 0.8;
             }
-
             100% {
                 transform: scale(1.2) scaleX(0.8);
                 opacity: 1;
             }
         }
-
         .multiplier-display {
             font-size: 6rem;
             font-weight: 900;
@@ -345,17 +304,14 @@ if (isset($_GET['action'])) {
             position: relative;
             margin-bottom: 20px;
         }
-
         .multiplier-display.win {
             color: var(--success);
             text-shadow: 0 0 50px var(--success);
         }
-
         .multiplier-display.loss {
             color: var(--danger);
             text-shadow: 0 0 50px var(--danger);
         }
-
         .target-indicator {
             position: absolute;
             bottom: 40px;
@@ -367,7 +323,6 @@ if (isset($_GET['action'])) {
             flex-direction: column;
             align-items: center;
         }
-
         .target-indicator span {
             font-size: 0.6rem;
             opacity: 0.5;
@@ -375,19 +330,16 @@ if (isset($_GET['action'])) {
             font-weight: 700;
             letter-spacing: 1px;
         }
-
         .target-indicator b {
             font-size: 1.2rem;
             font-family: 'Orbitron';
             color: var(--accent);
         }
-
         .stat-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
         }
-
         .stat-item {
             background: rgba(0, 0, 0, 0.2);
             padding: 0.8rem;
@@ -395,7 +347,6 @@ if (isset($_GET['action'])) {
             text-align: center;
             border: 1px solid rgba(255, 255, 255, 0.03);
         }
-
         .stat-item span {
             display: block;
             font-size: 0.55rem;
@@ -403,13 +354,11 @@ if (isset($_GET['action'])) {
             margin-bottom: 3px;
             font-weight: 700;
         }
-
         .stat-item b {
             font-size: 0.9rem;
             font-family: 'Orbitron';
             color: var(--accent);
         }
-
         /* Electric Sparks FX */
         .spark {
             position: absolute;
@@ -418,7 +367,6 @@ if (isset($_GET['action'])) {
             border-radius: 50%;
             z-index: 5;
         }
-
         .btn-quick-bet {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -430,7 +378,6 @@ if (isset($_GET['action'])) {
             transition: 0.3s;
             font-size: 0.75rem;
         }
-
         .btn-quick-bet:hover {
             background: var(--primary);
             color: #000;
@@ -438,7 +385,6 @@ if (isset($_GET['action'])) {
         }
     </style>
 </head>
-
 <body>
     <div class="main-container">
         <div class="glass-card">
@@ -449,7 +395,6 @@ if (isset($_GET['action'])) {
                         LIMBO</h1>
                     <p style="margin:0; opacity:0.4; font-size: 0.8rem; letter-spacing: 1px;">High Voltage · Premium</p>
                 </div>
-
                 <div class="input-group">
                     <label>Gtlm cược (gtlm)</label>
                     <input type="number" id="betAmount" value="10000" min="1000">
@@ -463,7 +408,6 @@ if (isset($_GET['action'])) {
                         <button class="btn-quick-bet" onclick="setBet('ALLIN')" style="grid-column: span 3; background: var(--primary); color:#000; border:none; font-weight:800;">ALL IN</button>
                     </div>
                 </div>
-
                 <div class="input-group">
                     <label>Mục tiêu (Multiplier)</label>
                     <input type="number" id="targetMult" value="2.00" min="1.01" step="0.1">
@@ -478,7 +422,6 @@ if (isset($_GET['action'])) {
                             style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:4px; font-size:0.6rem; cursor:pointer;">100x</button>
                     </div>
                 </div>
-
                 <div class="stat-grid">
                     <div class="stat-item">
                         <span>XÁC SUẤT</span>
@@ -489,9 +432,7 @@ if (isset($_GET['action'])) {
                         <b id="potentialWin">20.000</b>
                     </div>
                 </div>
-
                 <button id="rollBtn" class="btn-roll" onclick="playLimbo()">⚡ PHÓNG TÊN LỬA</button>
-
                 <div style="margin-top:auto; padding-top:1rem; border-top:1px solid rgba(255,255,255,0.1);">
                     <div
                         style="background:rgba(0,0,0,0.2); padding: 0.8rem; border-radius: 1.2rem; border: 1px solid rgba(255,255,255,0.05);">
@@ -511,10 +452,8 @@ if (isset($_GET['action'])) {
                     </div>
                 </div>
             </div>
-
             <div class="display-area">
                 <div id="resultMult" class="multiplier-display">1.00x</div>
-
                 <div class="rocket-wrap" id="rocketWrapper">
                     <div class="rocket">
                         <div class="rocket-tip"></div>
@@ -528,7 +467,6 @@ if (isset($_GET['action'])) {
                         </div>
                     </div>
                 </div>
-
                 <div class="target-indicator">
                     <span>Mục tiêu hiện tại</span>
                     <b id="targetDisp">2.00x</b>
@@ -536,7 +474,6 @@ if (isset($_GET['action'])) {
             </div>
         </div>
     </div>
-
     <script>
         function updateInfo() {
             const t = parseFloat($('#targetMult').val()) || 1.01;
@@ -548,7 +485,6 @@ if (isset($_GET['action'])) {
         }
         $('#targetMult, #betAmount').on('input', updateInfo);
         updateInfo();
-
         function setBet(amount) {
             const money = parseFloat($('#userMoney').text().replace(/\./g, ''));
             if (amount === 'ALLIN') {
@@ -558,31 +494,24 @@ if (isset($_GET['action'])) {
             }
             updateInfo();
         }
-
         let isRolling = false;
-
         function playLimbo() {
             if (isRolling) return;
             const bet = $('#betAmount').val();
             const target = $('#targetMult').val();
             isRolling = true;
-
             $('#rollBtn').prop('disabled', true).text('ĐANG PHÓNG...');
             $('#resultMult').removeClass('win loss').text('1.00x').css('opacity', '1');
             $('#rocketFlames').show();
             gsap.set('#rocketWrapper', { bottom: '20px', opacity: 1, scale: 1 });
-
             // Start "Warp" background if exists
             if (window.backgroundEngine) window.backgroundEngine.setSpeed(2);
-
             $.post('limbo.php?action=roll', { bet, target }, function (res) {
                 if (res.success) {
                     $('#userMoney').text(res.money);
-
                     const duration = res.result > 10 ? 2 : 1;
                     const resultMult = res.result;
                     const isWin = res.win;
-
                     // Counter Animation
                     animateCounter(1.00, resultMult, duration, isWin, res);
                 } else {
@@ -593,11 +522,9 @@ if (isset($_GET['action'])) {
                 }
             });
         }
-
         function animateCounter(start, end, duration, isWin, res) {
             const el = document.getElementById('resultMult');
             let obj = { val: start };
-
             gsap.to(obj, {
                 val: end,
                 duration: duration,
@@ -608,7 +535,6 @@ if (isset($_GET['action'])) {
                     // Move rocket up
                     const progress = (obj.val - start) / (end - start || 1);
                     gsap.set('#rocketWrapper', { bottom: (20 + progress * 300) + 'px' });
-
                     if (obj.val > 5) {
                         gsap.set(el, { x: (Math.random() - 0.5) * 5, y: (Math.random() - 0.5) * 5 });
                     }
@@ -616,7 +542,6 @@ if (isset($_GET['action'])) {
                 onComplete: () => {
                     gsap.set(el, { x: 0, y: 0 });
                     $('#rocketFlames').hide();
-
                     if (isWin) {
                         el.classList.add('win');
                         gsap.to(el, { scale: 1.3, duration: 0.3, yoyo: true, repeat: 1, ease: "back.out(2)" });
@@ -630,9 +555,7 @@ if (isset($_GET['action'])) {
                         const betAmt = parseInt($('#betAmount').val());
                         if (window.GameEffects) window.GameEffects.showLoss(betAmt);
                     }
-
                     if (window.backgroundEngine) window.backgroundEngine.setSpeed(0.05);
-
                     setTimeout(() => {
                         $('#rollBtn').prop('disabled', false).text('⚡ PHÓNG TÊN LỬA');
                         isRolling = false;
@@ -640,7 +563,6 @@ if (isset($_GET['action'])) {
                 }
             });
         }
-
         function createSparks() {
             const area = document.querySelector('.display-area');
             for (let i = 0; i < 2; i++) {
@@ -652,7 +574,6 @@ if (isset($_GET['action'])) {
                 spark.style.left = '50%';
                 spark.style.top = '50%';
                 area.appendChild(spark);
-
                 const angle = Math.random() * Math.PI * 2;
                 const dist = Math.random() * 200 + 50;
                 gsap.to(spark, {
@@ -665,7 +586,6 @@ if (isset($_GET['action'])) {
             }
         }
     </script>
-
     <canvas id="threejs-background"></canvas>
     <script>
         (function () {
@@ -688,5 +608,4 @@ if (isset($_GET['action'])) {
         })();
     </script>
 </body>
-
 </html>

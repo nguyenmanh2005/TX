@@ -432,7 +432,7 @@ if ($gameInfo && $gameInfo['game_type'] == 'caro') {
 
         function submitChoice(choice) {
             if (myChoice) {
-                alert('Bạn đã nộp lựa chọn rồi!');
+                if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Bạn đã nộp lựa chọn rồi!'), 'info'); } else { alert('Bạn đã nộp lựa chọn rồi!'); };
                 return;
             }
 
@@ -460,7 +460,7 @@ if ($gameInfo && $gameInfo['game_type'] == 'caro') {
                             refreshInterval = setInterval(loadChallenge, 2000);
                         }
                     } else {
-                        alert(data.message || 'Lỗi!');
+                        if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String(data.message || 'Lỗi!'), 'error'); } else { alert(data.message || 'Lỗi!'); };
                         myChoice = null;
                     }
                 });
@@ -469,7 +469,7 @@ if ($gameInfo && $gameInfo['game_type'] == 'caro') {
         function submitNumberChoice() {
             const number = document.getElementById('numberInput').value;
             if (!number || number < 1 || number > 100) {
-                alert('Vui lòng nhập số từ 1-100!');
+                if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Vui lòng nhập số từ 1-100!'), 'warning'); } else { alert('Vui lòng nhập số từ 1-100!'); };
                 return;
             }
             submitChoice(number);

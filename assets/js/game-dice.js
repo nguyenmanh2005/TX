@@ -29,7 +29,7 @@ class DiceEnhanced {
             form.addEventListener('submit', (e) => {
                 if (!this.selectedNumber) {
                     e.preventDefault();
-                    alert('Vui lòng chọn số từ 1 đến 6!');
+                    if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Vui lòng chọn số từ 1 đến 6!'), 'warning'); } else { alert('Vui lòng chọn số từ 1 đến 6!'); };
                     return;
                 }
                 

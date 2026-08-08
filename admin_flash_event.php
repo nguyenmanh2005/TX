@@ -9,7 +9,7 @@ if (empty($_SESSION['csrf_token'])) {
 }
 
 $userId = $_SESSION['Iduser'] ?? 0;
-requireAdmin($conn, $userId);
+requireSuperAdmin($conn, $userId); // Chỉ Super Admin (Role >= 2) trở lên
 
 $msg = $_GET['msg'] ?? '';
 

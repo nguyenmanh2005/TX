@@ -224,10 +224,12 @@ require_once 'load_theme.php';
 
     <div class="controls" style="display:flex; flex-direction:column; align-items:center; gap:15px;">
         <div style="display:flex; gap:15px; flex-wrap:wrap; justify-content:center;">
-            <button class="btn-spin" id="spin-btn" onclick="spin()">QUAY NGAY</button>
+            <button class="btn-spin" id="spin-btn-1" onclick="spin(1)">QUAY 1</button>
+            <button class="btn-spin" id="spin-btn-5" onclick="spin(5)" style="background: linear-gradient(135deg, #10b981, #3b82f6);">QUAY x5</button>
+            <button class="btn-spin" id="spin-btn-10" onclick="spin(10)" style="background: linear-gradient(135deg, #8b5cf6, #ec4899);">QUAY x10</button>
             <button class="btn-preview" onclick="showRewardsPreview()" style="background:rgba(255,255,255,0.08); color:white; padding:18px 30px; border-radius:50px; border:1px solid rgba(255,255,255,0.1); font-size:24px; font-weight:900; cursor:pointer; backdrop-filter:blur(10px); transition:all 0.3s; text-transform:uppercase;"><i class="fa fa-list-ul"></i> BẢNG THƯỞNG</button>
         </div>
-        <div class="spin-cost" id="spin-cost">Chi phí: 10,000 gtlm</div>
+        <div class="spin-cost" id="spin-cost">Chi phí: 10,000 gtlm / 1 lần</div>
     </div>
 
     <script>
@@ -330,19 +332,18 @@ require_once 'load_theme.php';
             $('#lights-container').html(html);
         }
 
-        function spin() {
+        function spin(count = 1) {
             if (isSpinning) return;
             
-            $('#spin-btn').prop('disabled', true);
+            $('.btn-spin').prop('disabled', true);
             
-            $.post('api_events.php', { action: 'spin' }, function(res) {
+            $.post('api_events.php', { action: 'spin', spin_count: count }, function(res) {
                 if (res.success) {
                     isSpinning = true;
                     const rewardIndex = rewards.findIndex(r => r.id == res.reward.id);
                     const angle = 360 / rewards.length;
                     
                     // Tính toán vòng quay: quay ít nhất 5 vòng + tới vị trí quà
-                    // Vị trí quà trên vòng tròn (theo độ) là: - (rewardIndex * angle + angle/2)
                     const extraRotation = 360 * 5 + (360 - (rewardIndex * angle + angle / 2));
                     currentRotation += extraRotation;
                     
@@ -350,21 +351,51 @@ require_once 'load_theme.php';
                     
                     setTimeout(() => {
                         isSpinning = false;
-                        $('#spin-btn').prop('disabled', false);
+                        $('.btn-spin').prop('disabled', false);
                         
-                        Swal.fire({
-                            title: 'Chúc Mừng!',
-                            html: `
-                                <div style="font-size: 60px; margin: 20px 0;">${res.reward.reward_icon}</div>
-                                <p>Bạn đã nhận được: <b style="color: #f59e0b;">${res.reward.reward_name}</b></p>
-                            `,
-                            icon: 'success',
-                            confirmButtonColor: '#f59e0b'
-                        });
+                        if (count === 1) {
+                            Swal.fire({
+                                title: 'Chúc Mừng!',
+                                html: `
+                                    <div style="font-size: 60px; margin: 20px 0;">${res.reward.reward_icon}</div>
+                                    <p>Bạn đã nhận được: <b style="color: #f59e0b;">${res.reward.reward_name}</b></p>
+                                `,
+                                icon: 'success',
+                                confirmButtonColor: '#f59e0b'
+                            });
+                        } else {
+                            // Render list for x5, x10
+                            // Count similar items
+                            let aggregated = {};
+                            res.results.forEach(r => {
+                                if(!aggregated[r.id]) {
+                                    aggregated[r.id] = {...r, count: 0};
+                                }
+                                aggregated[r.id].count++;
+                            });
+
+                            let htmlList = '<div style="display:flex; flex-wrap:wrap; justify-content:center; gap:10px; margin-top:20px;">';
+                            Object.values(aggregated).forEach(r => {
+                                htmlList += `<div style="background:rgba(255,255,255,0.1); padding:10px; border-radius:10px; text-align:center; min-width:80px; position:relative;">
+                                    <div style="position:absolute; top:-10px; right:-10px; background:#ef4444; color:white; border-radius:50%; width:24px; height:24px; font-weight:bold; font-size:12px; display:flex; align-items:center; justify-content:center;">x${r.count}</div>
+                                    <div style="font-size:30px;">${r.reward_icon}</div>
+                                    <div style="font-size:12px; font-weight:bold; margin-top:5px; color:#f59e0b;">${r.reward_name}</div>
+                                </div>`;
+                            });
+                            htmlList += '</div>';
+                            Swal.fire({
+                                title: `🎉 THÀNH CÔNG (x${count})`,
+                                html: htmlList,
+                                width: 600,
+                                background: '#1e293b',
+                                color: '#fff',
+                                confirmButtonColor: '#f59e0b'
+                            });
+                        }
                     }, 5000);
                 } else {
                     Swal.fire('Lỗi', res.message, 'error');
-                    $('#spin-btn').prop('disabled', false);
+                    $('.btn-spin').prop('disabled', false);
                 }
             });
         }

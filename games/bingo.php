@@ -169,7 +169,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <link rel="stylesheet" href="../assets/css/game-ui-enhancements.css">
     <style>
         body {
-            cursor: url('../chuot.png'), auto !important;
+            cursor: url('../img/chuot.png'), auto !important;
             font-family: 'Segoe UI', sans-serif;
             text-align: center;
             background:
@@ -202,7 +202,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         button,
         a,
-        input {
+        input,
+        .chip {
             cursor: url('../img/tay.png'), pointer !important;
         }
 
@@ -249,7 +250,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             align-items: center;
             justify-content: center;
             transition: all 0.3s cubic-bezier(0.36, 0, 0.66, 1);
-            cursor: default;
             will-change: transform, background, box-shadow;
         }
 
@@ -471,6 +471,24 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             background: linear-gradient(135deg, #5a54d8 0%, #6c63ff 100%) !important;
             box-shadow: 0 8px 25px rgba(108, 99, 255, 0.5) !important;
         }
+
+        .chip {
+            padding: 8px 15px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            color: white;
+            transition: 0.3s;
+            user-select: none;
+        }
+        .chip:hover, .chip.active {
+            background: #ffc107;
+            color: #000;
+            border-color: #ffc107;
+            transform: scale(1.1);
+        }
     </style>
 </head>
 
@@ -567,8 +585,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         <form method="post" id="gameForm">
             <label style="display: block; margin: 15px 0 8px; font-weight: 600; color: white; font-size: 16px;">💰 Số
-                GTLM muốn liều:</label>
-            <input type="number" name="cuoc" id="betInput" placeholder="Nhập số GTLM muốn liều" required min="1"
+                GTLM muốn Chiến:</label>
+                
+            <div class="chip-selector" style="margin: 15px auto; max-width: 600px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
+                <div class="chip" data-value="10000">10K</div>
+                <div class="chip" data-value="50000">50K</div>
+                <div class="chip" data-value="100000">100K</div>
+                <div class="chip" data-value="500000">500K</div>
+                <div class="chip" data-value="1000000">1M</div>
+                <div class="chip" data-value="5000000">5M</div>
+                <div class="chip" data-value="allin">ALL IN</div>
+            </div>
+                
+            <input type="number" name="cuoc" id="betInput" placeholder="Nhập số GTLM muốn Chiến" required min="1"
                 value="<?= $lastBetAmount > 0 ? $lastBetAmount : '' ?>"><br>
 
             <div class="button-group">
@@ -643,6 +672,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     }
                 }
             } catch (error) { console.error('Draw error:', error); }
+        });
+
+        // Chip selection logic
+        document.querySelectorAll('.chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+                const val = this.getAttribute('data-value');
+                if (val === 'allin') {
+                    document.getElementById('betInput').value = <?= $soDu ?>;
+                } else {
+                    document.getElementById('betInput').value = val;
+                }
+            });
         });
 
         (function () {

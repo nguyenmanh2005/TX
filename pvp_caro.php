@@ -332,7 +332,7 @@ if ($challenge['challenger_id'] != $userId && $challenge['opponent_id'] != $user
                         $('#statusBar').text('Đang chờ đối thủ...').addClass('status-opponent-turn').removeClass('status-my-turn');
                     }
                 } else {
-                    alert(res.message);
+                    if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String(res.message), 'info'); } else { alert(res.message); };
                 }
             });
         }

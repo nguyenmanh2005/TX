@@ -472,7 +472,7 @@ if ($chatFrameIdExists) {
             form.addEventListener('submit', function(e) {
                 if (!hiddenInput.value) {
                     e.preventDefault();
-                    alert('Vui lòng chọn một khung chat!');
+                    if (typeof Swal !== 'undefined') { Swal.fire('Thông báo', String('Vui lòng chọn một khung chat!'), 'warning'); } else { alert('Vui lòng chọn một khung chat!'); };
                     return false;
                 }
                 

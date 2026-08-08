@@ -71,7 +71,7 @@ function updateGuildWarPoints(mysqli $conn, int $userId, float $winAmount, float
         $gameToTerritory = [
             'Thiên Thần Ác Quỷ' => 1, 'Xanh Đỏ Đối Kháng' => 1,
             'Rồng Hổ' => 2, 'Poker Texas' => 2, 'Baccarat' => 2, 'Trận Địa Trắng Đỏ' => 2,
-            'Bầu Cua' => 3, 'Thế Giới Linh Thú' => 3,
+            'Chiến Trường Linh Thú' => 3, 'Thế Giới Linh Thú' => 3, 'Chiến Trường Linh Thú' => 3,
             'Đá Gà' => 4, 'Đua Ngựa' => 4, 'Đại Chiến Thần Kê' => 4
         ];
 

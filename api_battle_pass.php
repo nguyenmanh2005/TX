@@ -21,12 +21,6 @@ function checkAndResetBPSeason(mysqli $conn, int $userId) {
     
     $seasonId = (int)$season['id'];
     
-    // Đảm bảo cột season_id tồn tại
-    $checkCol = $conn->query("SHOW COLUMNS FROM bp_stats LIKE 'season_id'");
-    if ($checkCol->num_rows == 0) {
-        $conn->query("ALTER TABLE bp_stats ADD COLUMN season_id INT DEFAULT 0");
-    }
-    
     $stmtStats = $conn->prepare("SELECT season_id FROM bp_stats WHERE user_id = ?");
     $stmtStats->bind_param("i", $userId);
     $stmtStats->execute();

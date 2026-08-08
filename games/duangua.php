@@ -1066,8 +1066,8 @@ $animalEmojis = ["🐶", "🐱", "🦁", "🐵", "🦓", "🐯", "🦊", "🐰"]
                     </div>
                 </div>
                 <div class="form-group">
-                    <span class="s-label">Số GTLM muốn liều</span>
-                    <input type="number" name="amount" id="betInput" class="bet-input" placeholder="Nhập số muốn liều…"
+                    <span class="s-label">Số GTLM muốn Chiến</span>
+                    <input type="number" name="amount" id="betInput" class="bet-input" placeholder="Nhập số muốn Chiến…"
                         min="1" autocomplete="off">
                     <div class="qbets">
                         <button type="button" class="qbtn" onclick="qbet(10000)">10K GTLM</button>
