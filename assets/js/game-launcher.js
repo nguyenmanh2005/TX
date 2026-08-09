@@ -31,7 +31,7 @@ class GameLauncher {
             { id: 'sicbo', name: 'Xanh Đỏ Đối Kháng', icon: '🎲', url: 'games/sicbo_v2.php', category: 'casino', new: true },
             { id: 'xocdia', name: 'Trận Địa Trắng Đỏ', icon: '⚪🔴', url: 'games/xocdia.php', category: 'casino', new: true },
             { id: 'fantan', name: 'Fan Tan', icon: '🟡', url: 'games/fantan.php', category: 'casino', new: true },
-            
+
             // Mini Games Category
             { id: 'combo_bet', name: 'Combo Bet Slip', icon: '🔥', url: 'combo_bet.php', category: 'mini', new: true },
             { id: 'spectator_mode', name: 'Trận Địa Live', icon: '📺', url: 'spectator.php', category: 'mini', new: true },
@@ -45,27 +45,27 @@ class GameLauncher {
             { id: 'hilo', name: 'Hi-Lo', icon: '📈', url: 'games/hilo.php', category: 'mini', new: true },
             { id: 'coinflip', name: 'Coin Flip', icon: '🪙', url: 'games/coinflip.php', category: 'mini', new: false },
             { id: 'rps', name: 'Oẳn Tù Tì', icon: '✌️✊🖐️', url: 'games/rps.php', category: 'mini', new: true },
-            
+
             // Special & Social Games
             { id: 'banharc', name: 'Bắn Cá Arcade', icon: '🐟', url: 'games/banharc.php', category: 'arcade', new: true },
             { id: 'jojo_battle', name: 'JOJO Battle', icon: '⚔️', url: 'games/jojo_battle.php', category: 'mini', new: true },
             { id: 'battleroyale', name: 'Battle Royale', icon: '🪂', url: 'games/battleroyale.php', category: 'mini', new: true },
             { id: 'trivia', name: 'Đố Vui Có Thưởng', icon: '💡', url: 'trivia.php', category: 'mini', new: true },
             { id: 'world_boss', name: 'World Boss', icon: '👹', url: 'world_boss.php', category: 'mini', new: true },
-            
+
             // Lottery Category
             { id: 'lottery_mini', name: 'Xổ số Mini', icon: '🎯', url: 'games/lottery.php', category: 'mini', new: true },
             { id: 'vietlott', name: 'Vietlott 6/45', icon: '🎱', url: 'games/vietlott.php', category: 'mini', new: true },
             { id: 'community_lottery', name: 'Xổ số Cộng Đồng', icon: '🏛️', url: 'games/community_lottery.php', category: 'mini', new: true },
-            
+
             // Classic Vietnamese Games
             { id: 'baucua', name: 'Thế Giới Linh Thú', icon: '🎲', url: 'games/baucua.php', category: 'casino', new: false },
-            { id: 'daga', name: 'Đá Gà SV388', icon: '🐓', url: 'games/daga.php', category: 'casino', new: true },
+            { id: 'daga', name: 'Đại Chiến Thần Kê SV388', icon: '🐓', url: 'games/daga.php', category: 'casino', new: true },
             { id: 'duangua', name: 'Đua Ngựa Royal', icon: '🐎', url: 'games/duangua.php', category: 'casino', new: true },
             { id: 'samloc', name: 'Sâm Lốc', icon: '🃏', url: 'games/samloc.php', category: 'card', new: true },
             { id: 'threecard', name: 'Ba Cây', icon: '🃏', url: 'games/threecard.php', category: 'card', new: true },
             { id: 'tusac', name: 'Tứ Sắc', icon: '🎴', url: 'games/tusac.php', category: 'card', new: true },
-            
+
             // Others
             { id: 'lucky_wheel', name: 'Vòng Quay May Mắn', icon: '🎡', url: 'lucky_wheel.php', category: 'casino', new: false },
             { id: 'bingo', name: 'Bingo Live', icon: '🎯', url: 'games/bingo.php', category: 'casino', new: false },

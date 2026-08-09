@@ -6,35 +6,42 @@
 
 class VocabularyHelper {
     private static $map = [
-        'thắng Gtlm' => ['húp GTLM'],
-        'thua Gtlm'  => ['bay màu', 'bốc hơi', 'về cõi'],
-        'thắng'      => ['húp', 'ăn ngập mặt'],
-        'thua'       => ['bay màu', 'về cõi', 'thành tro'],
-        'hết Gtlm'   => ['nick trắng tay', 'nick khô hạn'],
-        'cá cược'    => ['giao lưu', 'thử vận'],
-        'đặt cược'   => ['thả thính', 'ra chiêu'],
-        'ván bài'    => ['ván giao lưu'],
-        ' Gtlm'       => ['GTLM'],
-        'túi'        => ['nick'],
-        'cược'       => ['chiến', 'Chiến'],
-        'casino'     => ['trận địa'],
-      
-        'xóc đĩa'    => ['Trận Địa Trắng Đỏ'],
-        'Chiến Trường Linh Thú'    => ['Chiến Trường Linh Thú'],
-        'đá gà'      => ['Đại Chiến Thần Kê'],
-        'rồng hổ'     => ['Chiến Trường Rồng Hổ']
+        'thắng GTLM'            => ['húp GTLM'],
+        'thua GTLM'             => ['bay màu', 'bốc hơi', 'về cõi'],
+        'hết GTLM'              => ['nick trắng tay', 'nick khô hạn'],
+        'thắng Gtlm'            => ['húp GTLM'],
+        'thua Gtlm'             => ['bay màu', 'bốc hơi', 'về cõi'],
+        'hết Gtlm'              => ['nick trắng tay', 'nick khô hạn'],
+        'sòng bài'              => ['trận địa'],
+        'máy đánh bạc'          => ['máy vận may'],
+        'slot machine'          => ['máy vận may'],
+        'giao lưu giải trí'     => ['giao lưu giải trí'],
+        'cờ bạc'                => ['giao lưu giải trí'],
+        'đánh bạc'              => ['giao lưu giải trí'],
+        'cá cược'               => ['giao lưu', 'thử vận'],
+        'đặt cược'              => ['thả thính', 'ra chiêu'],
+        'ván bài'               => ['ván giao lưu'],
+        'thắng'                 => ['húp', 'ăn ngập mặt'],
+        'thua'                  => ['bay màu', 'về cõi', 'thành tro'],
+        'túi'                   => ['nick'],
+        'cược'                  => ['chiến', 'Chiến'],
+        'casino'                => ['trận địa'],
+        'xóc đĩa'               => ['Trận Địa Trắng Đỏ'],
+        'Chiến Trường Linh Thú' => ['Thế Giới Linh Thú'],
+        'đá gà'                 => ['Đại Chiến Thần Kê'],
+        'rồng hổ'                => ['Chiến Trường Rồng Hổ']
     ];
 
     /**
-     * Hàm callback xử lý thay thế chuỗi
-     * @param string $buffer Nội dung HTML đầu ra
+     * Hàm callback xử lý thay thế chuỗi (hỗ trợ cả HTML, JSON và Text thuần từ Bot/Chat)
+     * @param string $buffer Nội dung đầu ra cần lọc từ vựng
      * @return string Nội dung đã được thay thế
      */
     public static function mask($buffer) {
-        if (empty($buffer)) return $buffer;
+        if (empty($buffer) || !is_string($buffer)) return $buffer;
 
-        // Chỉ xử lý nếu là HTML (tránh làm hỏng JSON API hoặc ảnh)
-        if (strpos($buffer, '<html') === false && strpos($buffer, '<div') === false) {
+        // Tránh làm hỏng dữ liệu nhị phân (ảnh, zip, pdf, v.v.)
+        if (preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', substr($buffer, 0, 500))) {
             return $buffer;
         }
 

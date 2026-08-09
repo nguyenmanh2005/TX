@@ -397,7 +397,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $currentGotd = EventHelper::getGameOfTheDay($conn);
 $seasons = $conn->query("SELECT * FROM seasonal_pass_configs ORDER BY start_date DESC")->fetch_all(MYSQLI_ASSOC);
 $seasonalEvents = $conn->query("SELECT * FROM seasonal_events ORDER BY starts_at DESC")->fetch_all(MYSQLI_ASSOC);
-$availableGames = ['Baccarat', 'Blackjack', 'Roulette', 'Sicbo', 'Xanh Đỏ Đối Kháng', 'RPS', 'Vietlott', 'Xóc Đĩa', 'Poker', 'Chiến Trường Linh Thú', 'Slot Cyber', 'Mega Spin', 'Horse Race'];
+$availableGames = ['Baccarat', 'Blackjack', 'Roulette', 'Sicbo', 'Xanh Đỏ Đối Kháng', 'RPS', 'Vietlott', 'Trận Địa Trắng Đỏ', 'Poker', 'Chiến Trường Linh Thú', 'Slot Cyber', 'Mega Spin', 'Horse Race'];
 
 // Logic load Event phụ thuộc để quản lý chi tiết (Missions, Spin rewards, Shop)
 $manageEventId = (int)($_GET['manage_event_id'] ?? 0);

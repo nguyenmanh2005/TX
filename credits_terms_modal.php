@@ -851,7 +851,7 @@
                 <div class="gtlm-credit-row">
                     <div class="gtlm-credit-name"><span class="icon">🖼️</span> AI Image Generation</div>
                     <div class="gtlm-credit-desc">
-                        Các hình ảnh nền (BR, Đá Gà, Tú Sắc) và Assets sự kiện được tạo bởi AI.
+                        Các hình ảnh nền (BR, Đại Chiến Thần Kê, Tú Sắc) và Assets sự kiện được tạo bởi AI.
                     </div>
                 </div>
 

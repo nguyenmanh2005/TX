@@ -6,6 +6,17 @@
  *  Omni-Bot Engine v16.6 - Visual Overhaul
  */
 
+// --- Global action handler for Kill-Switch status (Rule 5.4) ---
+if (isset($_GET['action']) && $_GET['action'] === 'set_status') {
+    $enabled = isset($_GET['enabled']) && ($_GET['enabled'] == '1' || $_GET['enabled'] == 'true');
+    $statusFile = __DIR__ . '/sessions/bot_status.json';
+    if (!is_dir(__DIR__ . '/sessions')) @mkdir(__DIR__ . '/sessions', 0755, true);
+    @file_put_contents($statusFile, json_encode(['enabled' => $enabled, 'updated_at' => time()]));
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['success' => true, 'enabled' => $enabled]);
+    exit;
+}
+
 // 1. Load config & brain (Moved to top for better IDE support)
 require_once __DIR__ . '/../db_connect.php'; 
 $config = require __DIR__ . '/config.php';
@@ -327,6 +338,15 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
     echo "<div class='bot-system-msg'>[" . date('H:i:s') . "] Cycle Initiated: Bắt đầu chu kỳ mới (" . count($activeBots) . " Bot)</div>";
     
     foreach ($activeBots as $email) {
+        // --- RULE 5.4: Server-side Kill-Switch check ---
+        $statusFile = __DIR__ . '/sessions/bot_status.json';
+        if (file_exists($statusFile)) {
+            $sysStatus = json_decode(@file_get_contents($statusFile), true);
+            if (isset($sysStatus['enabled']) && $sysStatus['enabled'] === false) {
+                uiLog('⏹️', 'Hệ thống Bot đã được Admin phát lệnh DỪNG HẲN. Ngắt chu kỳ khẩn cấp!', 'color:#ef4444; font-weight:bold;');
+                break;
+            }
+        }
         try {
             $currentBotEmail = $email;
             $botMd5 = md5($email);
@@ -392,6 +412,23 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
     $userId = (int)$res['Iduser'];
     $userName = $res['Name'];
     $userMoney = (float)$res['Money'];
+
+    // --- MODULE 0.2: Capital Relief (Tự động trợ cấp vốn khi bot cháy túi < 10,000 GTLM) ---
+    if ($userMoney < 10000) {
+        $reliefAmount = (float)rand(100000, 500000);
+        $conn->query("UPDATE users SET Money = Money + {$reliefAmount} WHERE Iduser = {$userId}");
+        $userMoney += $reliefAmount;
+        uiLog('💰', "<b>Trợ Cấp Trận Địa:</b> Nhận " . number_format($reliefAmount) . " GTLM trợ cấp phục hồi tài sản!", "color:#34d399; font-weight:bold;");
+        
+        if (rand(1, 100) <= 60) {
+            $reliefMsgs = [
+                "Nick vừa nhận trợ cấp Trận Địa " . number_format($reliefAmount) . " GTLM, chuẩn bị ra chiêu gỡ gạc thôi! 🔥",
+                "Húp lộc trợ cấp " . number_format($reliefAmount) . " GTLM từ hệ thống, nick lại hồi sinh rồi anh em! 🚀",
+                "Có vốn trợ cấp rồi, ván này ra chiêu khô máu gỡ lại nàooo! 💪"
+            ];
+            executeBotAction($baseUrl . "/chat.php", ['message' => $reliefMsgs[array_rand($reliefMsgs)]], $cFile);
+        }
+    }
 
     // --- EVOLUTION: Phân lớp xã hội dựa trên tài sản & kinh nghiệm (Cập nhật sau khi có $userMoney) ---
     if ($userMoney > 1000000000) $socialRole = 'whale';
@@ -2167,7 +2204,7 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
 
         // --- PHASE 3.5: Market Trend Analysis (Reporter) ---
         if ($socialRole === 'reporter' && rand(1, 100) <= 20) {
-            $trends = ["Xanh Đỏ Đối Kháng đang vào dây Bệt kìa anh em!", "Xóc đĩa hôm nay về Lẻ nhiều quá, cẩn thận nhé!", "Hũ Jackpot game Quay hũ sắp nổ rồi, ai nhanh tay thì húp!"];
+            $trends = ["Xanh Đỏ Đối Kháng đang vào dây Bệt kìa anh em!", "Trận Địa Trắng Đỏ hôm nay về Lẻ nhiều quá, cẩn thận nhé!", "Hũ Jackpot game Quay hũ sắp nổ rồi, ai nhanh tay thì húp!"];
             $trendMsg = "📊 [XU HƯỚNG] " . $trends[array_rand($trends)] . " 📈";
             executeBotAction($baseUrl . "/chat.php", ['message' => $trendMsg], $cFile);
             uiLog('📈', "<b>Reporter:</b> Đã đăng tin về xu hướng thị trường.");

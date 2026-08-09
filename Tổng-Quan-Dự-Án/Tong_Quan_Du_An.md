@@ -88,9 +88,9 @@ Những trò chơi đánh nhanh rút gọn, có tính gây nghiện cao:
 2.  **Mines (Dò Mìn Premium) & Minesweeper**: Có 25 ô, chọn số lượng mìn. Càng bước trúng nhiều kim cương, hệ số nhân càng to.
 3.  **Limbo Rocket**: Tự đặt mục tiêu (Ví dụ x100). Nếu hệ thống quay ra số > 100 thì thắng đậm.
 4.  **Plinko Royale**: Thả bóng vật lý từ trên chóp tháp. Bóng rơi đập vào đinh (Pegs) rồi lọt vào lỗ x0.5, x2 hay x100.
-5.  **Hệ Đua Thú (Racing)**: Đá Gà Premium, Đua Thú, Đua Ngựa Pari-Mutuel. Đặc biệt có **Đua Ngựa PvP** (Người chơi tự đặt cược thi với nhau).
+5.  **Hệ Đua Thú (Racing)**: Đại Chiến Thần Kê Premium, Đua Thú, Đua Ngựa Pari-Mutuel. Đặc biệt có **Đua Ngựa PvP** (Người chơi tự đặt cược thi với nhau).
 6.  **Hệ Xúc Xắc (Dice)**: Dice (Lắc Xí Ngầu), Sicbo (Xanh Đỏ), Craps, Yahtzee.
-7.  **Dân Gian & Giải Trí Khác**: Chiến Trường Linh Thú (Cyber Pets), Xóc Đĩa (Quantum Pulse), Oẳn Tù Tì (RPS), Tung Đồng Xu (Coinflip), Đoán Số, Cào Thẻ, Đoán Màu Bài.
+7.  **Dân Gian & Giải Trí Khác**: Chiến Trường Linh Thú (Cyber Pets), Trận Địa Trắng Đỏ (Quantum Pulse), Oẳn Tù Tì (RPS), Tung Đồng Xu (Coinflip), Đoán Số, Cào Thẻ, Đoán Màu Bài.
 8.  **Thách Đấu PvP (1vs1)**: Cho phép 2 người chơi tự gạ kèo nhau, server làm trọng tài ăn phần trăm (Rake).
 9.  **Arcade Nhập Vai**: Đại Chiến JoJo, Hộp Mù (Gacha Mở Hộp), Tower Climb (Leo tháp sinh tồn).
 

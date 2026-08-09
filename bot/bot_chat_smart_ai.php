@@ -97,6 +97,49 @@ class BotChatSmartAI {
         return $reply;
     }
 
+    private function generateRealtimeResponse($text, $author) {
+        $lower = mb_strtolower($text);
+        
+        // 1. Hỏi Hũ Jackpot Realtime
+        if (preg_match('/(jackpot|hũ|nổ hũ|kho gtlm)/ui', $lower)) {
+            $res = $this->conn->query("SELECT amount FROM jackpots ORDER BY amount DESC LIMIT 1");
+            $jpAmount = ($res && $row = $res->fetch_assoc()) ? (float)$row['amount'] : 50000000;
+            $templates = [
+                "Hũ Jackpot hiện tại đang ở mức **" . number_format($jpAmount) . " GTLM** đó bác @{$author}! Ra chiêu ngay kẻo nổ mất! 🚀",
+                "Kho Jackpot rực rỡ đang tích đến **" . number_format($jpAmount) . " GTLM** nhé @{$author}! Nhanh tay húp lộc nào! 🔥",
+                "Bác @{$author} hỏi đúng lúc thế, hũ Jackpot đang chứa **" . number_format($jpAmount) . " GTLM** rồi đó!"
+            ];
+            return $templates[array_rand($templates)];
+        }
+        
+        // 2. Hỏi Top Giàu Nhất Realtime
+        if (preg_match('/(top 1|giàu nhất|bá chủ|đại gia|ai giàu)/ui', $lower)) {
+            $res = $this->conn->query("SELECT Name, Money FROM users WHERE Email NOT REGEXP '^bot[0-9]+@' ORDER BY Money DESC LIMIT 1");
+            if ($res && $topUser = $res->fetch_assoc()) {
+                $templates = [
+                    "Bá chủ Trận Địa hiện tại là đại gia **@{$topUser['Name']}** với **" . number_format($topUser['Money']) . " GTLM** nhé bác @{$author}! 😎",
+                    "Top 1 server đang thuộc về đại gia **@{$topUser['Name']}** (nắm giữ " . number_format($topUser['Money']) . " GTLM) đó @{$author}! 🏆",
+                    "Đại gia **@{$topUser['Name']}** đang làm trùm Trận Địa với " . number_format($topUser['Money']) . " GTLM nhé bác!"
+                ];
+                return $templates[array_rand($templates)];
+            }
+        }
+        
+        // 3. Hỏi Ván Húp Đậm Gần Nhất
+        if (preg_match('/(ai thắng|ai húp|húp đậm|thắng lớn|vận khí)/ui', $lower)) {
+            $res = $this->conn->query("SELECT u.Name, h.win_amount, h.game_name FROM game_history h JOIN users u ON h.user_id = u.Iduser WHERE h.is_win = 1 ORDER BY h.win_amount DESC LIMIT 1");
+            if ($res && $bigWin = $res->fetch_assoc()) {
+                $templates = [
+                    "Gần đây nhất có cao thủ **@{$bigWin['Name']}** vừa húp đậm **" . number_format($bigWin['win_amount']) . " GTLM** tại " . $bigWin['game_name'] . " đó bác @{$author}! 🔥",
+                    "Bái phục vận khí của **@{$bigWin['Name']}**, vừa bỏ túi " . number_format($bigWin['win_amount']) . " GTLM ở " . $bigWin['game_name'] . " kìa bác @{$author}! 💎"
+                ];
+                return $templates[array_rand($templates)];
+            }
+        }
+
+        return null;
+    }
+
     public function scanAndRespond() {
         if (!$this->conn) return ['success' => false, 'message' => 'No database connection'];
 
@@ -131,8 +174,16 @@ class BotChatSmartAI {
             $botMood = 'happy';
             $extraData = [];
 
-            // 0. Phân tích Kẻ Thù (Rivalry Interception - Ưu tiên cao nhất)
-            if ($authorId > 0) {
+            // --- THỬ GIẢI MÃ BẰNG REALTIME SYSTEM QUERY ENGINE ---
+            $realtimeReply = $this->generateRealtimeResponse($text, $author);
+            if ($realtimeReply) {
+                $selectedBot = $this->botList[0]; // Cụ Giáo hoặc Bot Trợ Lý
+                $replyText = $realtimeReply;
+                $detectedKeyword = 'Realtime_System_Query';
+            }
+
+            // 0. Phân tích Kẻ Thù (Rivalry Interception - Ưu tiên tiếp theo)
+            if (!$selectedBot && $authorId > 0) {
                 foreach ($this->botList as $bot) {
                     if (isset($allRivals[$bot['id']][$authorId])) {
                         $enemy = $allRivals[$bot['id']][$authorId];
@@ -178,7 +229,7 @@ class BotChatSmartAI {
             }
 
             // Ghi phản hồi vào CSDL
-            if ($selectedBot && $detectedKeyword !== '') {
+            if ($selectedBot && ($detectedKeyword !== '' || !empty($replyText))) {
                 $botId = (int)$selectedBot['id'];
                 $botUsername = $selectedBot['username'];
                 $botAvatar = $selectedBot['avatar'];

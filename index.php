@@ -3691,7 +3691,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                 <a href="games/daga.php" class="game-card" data-category="mini">
                     <span class="game-badge badge-new">New</span>
                     <span class="game-icon">🐓</span>
-                    <span class="game-name">Đá Gà Premium</span>
+                    <span class="game-name">Đại Chiến Thần Kê Premium</span>
                 </a>
                 <a href="games/battleroyale.php" class="game-card" data-category="mini">
                     <span class="game-badge badge-new">New</span>

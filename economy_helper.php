@@ -2,15 +2,15 @@
 /**
  * EconomyHelper - Core Security Module
  * 
- * Quản lý toàn bộ giao dịch trừ/cộng tiền GTLM của dự án.
+ * Quản lý toàn bộ giao dịch trừ/cộng GTLM GTLM của dự án.
  * Ngăn chặn Race Condition và Auto-Click Spam bằng Transaction và Row Lock (FOR UPDATE).
  */
 
 class EconomyHelper {
     
     /**
-     * Trừ tiền an toàn.
-     * @return bool True nếu đủ tiền và trừ thành công, False nếu không đủ tiền hoặc lỗi.
+     * Trừ GTLM an toàn.
+     * @return bool True nếu đủ GTLM và trừ thành công, False nếu không đủ GTLM hoặc lỗi.
      */
     public static function deductMoney(mysqli $conn, int $userId, float $amount, string $reason = '') {
         if ($amount <= 0) return true; // Hoặc ném Exception nếu muốn
@@ -32,10 +32,10 @@ class EconomyHelper {
             
             if ($currentMoney < $amount) {
                 $conn->rollback();
-                return false; // Không đủ tiền
+                return false; // Không đủ GTLM
             }
             
-            // Đủ tiền -> Trừ
+            // Đủ GTLM -> Trừ
             $stmtUpd = $conn->prepare("UPDATE users SET Money = Money - ? WHERE Iduser = ?");
             $stmtUpd->bind_param("di", $amount, $userId);
             if ($stmtUpd->execute()) {
@@ -52,7 +52,7 @@ class EconomyHelper {
     }
 
     /**
-     * Cộng tiền an toàn.
+     * Cộng GTLM an toàn.
      * @return bool
      */
     public static function addMoney(mysqli $conn, int $userId, float $amount, string $reason = '') {

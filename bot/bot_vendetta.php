@@ -55,7 +55,7 @@ function handleVendettaBot($conn, $baseUrl, $cFile, $botMoney, $botId, $botName,
         $enemyId = array_rand($rivals[$botId]);
         $enemy = $rivals[$botId][$enemyId];
         
-        // Thách cược = 1.5 lần số tiền đã mất hoặc tối thiểu 50k
+        // Thách cược = 1.5 lần số GTLM đã mất hoặc tối thiểu 50k
         $betAmount = max(50000, min($botMoney, $enemy['amount_lost'] * 1.5));
         $betAmount = floor($betAmount);
         

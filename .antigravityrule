@@ -12,7 +12,9 @@ Mọi thay đổi Database sẽ được tách thành khối SQL riêng biệt (
 Quá trình xử lý phải đảm bảo bảo mật tuyệt đối bằng cách kiểm tra session/quyền, dùng Prepared Statements, và áp dụng Transaction + Row Lock cho các thao tác nhạy cảm.
 Khi tích hợp Bot, logic phải được giữ gọn trong thư mục bot/, tuân thủ bảng từ lóng của dự án (GTLM, húp, bay màu...), và ghi nhận đầy đủ vào game_history.
 Cuối cùng, bạn chỉ cung cấp phần code thay đổi (diff) để dễ theo dõi, cấp sẵn link test thực tế (không dùng localhost), và tự động cập nhật tiến độ theo dạng nối tiếp vào tệp Công-Việc-Phát-Triển/[ngày_tháng].md.
+> Đặc biệt phải gọi tôi là xếp
 ---
+
 
 ## 1. 🗄️ Quy tắc Database — Bảng & Cột
 

@@ -22,45 +22,41 @@ if (isset($_GET['action'])) {
         $count = isset($_GET['count']) ? max(1, (int)$_GET['count']) : 1;
         $count = min($count, 50); // Giới hạn 50 bot/lần
         
-        $spawned = 0;
-        $duplicates = 0;
+        // Lấy số lớn nhất hiện tại 1 lần duy nhất
+        $maxRes = $conn->query("SELECT MAX(CAST(SUBSTRING(Email, 4, LOCATE('@', Email) - 4) AS UNSIGNED)) as max_num FROM users WHERE Email REGEXP '^bot[0-9]+@'");
+        $currentMax = (int)($maxRes->fetch_assoc()['max_num'] ?? 0);
         
-        for ($i = 0; $i < $count; $i++) {
-            // Lấy số tiếp theo
-            $res = $conn->query("SELECT COUNT(*) as total FROM users WHERE Email REGEXP '^bot[0-9]+@'");
-            $nextNumber = $res->fetch_assoc()['total'] + 1 + $i; // +$i vì query count không tăng ngay lập tức trong vòng lặp nếu ta dùng transaction/chưa commit
-            
-            // Fix better next number logic to avoid collision when mass spawning:
-            // Lấy số lớn nhất hiện tại
-            $maxRes = $conn->query("SELECT MAX(CAST(SUBSTRING(Email, 4, LOCATE('@', Email) - 4) AS UNSIGNED)) as max_num FROM users WHERE Email REGEXP '^bot[0-9]+@'");
-            $maxNum = (int)($maxRes->fetch_assoc()['max_num'] ?? 0);
-            $nextNumber = $maxNum + 1;
-            
+        $passText = $env['BOT_PASSWORD'] ?? '123456';
+        $passHash = password_hash($passText, PASSWORD_DEFAULT);
+        
+        $values = [];
+        $params = [];
+        $types = "";
+        $spawned = 0;
+        
+        for ($i = 1; $i <= $count; $i++) {
+            $nextNumber = $currentMax + $i;
             $newName = "Bot " . str_pad($nextNumber, 2, '0', STR_PAD_LEFT);
             $email = "bot" . $nextNumber . "@gmail.com";
-            $passText = $env['BOT_PASSWORD'] ?? '123456';
-            $passHash = password_hash($passText, PASSWORD_DEFAULT);
             $avatarUrl = "https://ui-avatars.com/api/?name=" . urlencode($newName) . "&background=random";
             
-            // Check trùng
-            $check = $conn->prepare("SELECT Iduser FROM users WHERE Email = ?");
-            $check->bind_param("s", $email);
-            $check->execute();
-            if ($check->get_result()->num_rows > 0) {
-                $duplicates++;
-                continue;
-            }
-            
-            // Tạo bot
-            $stmt = $conn->prepare("INSERT INTO users (Name, Email, Pass, Money, ImageURL) VALUES (?, ?, ?, 1000000, ?)");
-            $stmt->bind_param("ssss", $newName, $email, $passHash, $avatarUrl);
-            if ($stmt->execute()) {
-                $spawned++;
-            }
+            $values[] = "(?, ?, ?, 1000000, ?)";
+            $params[] = $newName;
+            $params[] = $email;
+            $params[] = $passHash;
+            $params[] = $avatarUrl;
+            $types .= "ssss";
+            $spawned++;
         }
         
-        $msg = "Đã sinh thành công $spawned bot.";
-        if ($duplicates > 0) $msg .= " ($duplicates bot bị trùng email).";
+        if (!empty($values)) {
+            $sql = "INSERT INTO users (Name, Email, Pass, Money, ImageURL) VALUES " . implode(", ", $values);
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param($types, ...$params);
+            $stmt->execute();
+        }
+        
+        $msg = "Đã sinh thành công $spawned bot siêu tốc.";
         header("Location: index.php?msg=" . urlencode($msg));
         exit;
     }

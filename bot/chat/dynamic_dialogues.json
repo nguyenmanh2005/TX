@@ -1,9 +1,34 @@
 {
   "greetings": {
-    "happy": ["Haha,", "Chào {author} nhé!", "Ây da,", "Ô kìa!", "Hế lô {author},", "Yo!", "Đỉnh cao,"],
-    "angry": ["Này {author},", "Bực mình,", "Thật sự,", "Ê,", "Cay quá,"],
-    "sad": ["Haizz,", "Buồn quá {author} ơi,", "Chán nản,", "Ôi trời ơi,"],
-    "neutral": ["Chào {author},", "Này đạo hữu,", "Hửm,", "Ah,", "Này bạn,"]
+    "happy": [
+      "Haha,",
+      "Chào {author} nhé!",
+      "Ây da,",
+      "Ô kìa!",
+      "Hế lô {author},",
+      "Yo!",
+      "Đỉnh cao,"
+    ],
+    "angry": [
+      "Này {author},",
+      "Bực mình,",
+      "Thật sự,",
+      "Ê,",
+      "Cay quá,"
+    ],
+    "sad": [
+      "Haizz,",
+      "Buồn quá {author} ơi,",
+      "Chán nản,",
+      "Ôi trời ơi,"
+    ],
+    "neutral": [
+      "Chào {author},",
+      "Này đạo hữu,",
+      "Hửm,",
+      "Ah,",
+      "Này bạn,"
+    ]
   },
   "contexts": {
     "Win_Context": {
@@ -15,7 +40,7 @@
       ],
       "angry": [
         "ăn hên thôi, giỏi thì vào {game_name} làm ván PvP với tao xem!",
-        "húp được có tí mà khoe mãi, vác tiền vào chiến tiếp đi!",
+        "húp được có tí mà khoe mãi, vác GTLM vào chiến tiếp đi!",
         "đừng tinh tướng, tao đang cay đây!"
       ],
       "sad": [
@@ -70,13 +95,13 @@
     },
     "Rivalry_Trigger": {
       "happy": [
-        "haha mày nợ tao {amount} GTLM đấy, nay có tiền trả chưa?",
+        "haha mày nợ tao {amount} GTLM đấy, nay có GTLM trả chưa?",
         "vào phục thù đi con trai, tao đang ngứa tay đây!"
       ],
       "angry": [
         "nhớ mặt mày rồi đấy! Trận trước húp của tao {amount} GTLM, nay có ngon ra làm ván nữa xem ai bay màu! 🔪",
         "kẻ thù không đội trời chung! Trả tao {amount} GTLM mau lên, vào phòng PvP lẹ!",
-        "để tao chống mắt lên xem mày giữ được số tiền {amount} GTLM đó bao lâu!"
+        "để tao chống mắt lên xem mày giữ được số GTLM {amount} GTLM đó bao lâu!"
       ],
       "sad": [
         "nghĩ tới món nợ {amount} GTLM bị mày lột mà tao trầm cảm...",
@@ -89,9 +114,27 @@
     }
   },
   "games": [
-    "Sâm Lốc", "Đua Ngựa", "Crash", "Dò Mìn", "Plinko", "Xóc Đĩa", "Xổ Số", "Tài Xỉu", "Bầu Cua"
+    "Sâm Lốc",
+    "Đua Ngựa",
+    "Crash",
+    "Dò Mìn",
+    "Plinko",
+    "Trận Địa Trắng Đỏ",
+    "Xổ Số",
+    "Tài Xỉu",
+    "Bầu Cua"
   ],
   "endings": [
-    "", " 🔥", " 🚀", " 😎", " 🤑", " 🔪", " 😞", " 🤬", " ^^", " 🥶", " ☠️"
+    "",
+    " 🔥",
+    " 🚀",
+    " 😎",
+    " 🤑",
+    " 🔪",
+    " 😞",
+    " 🤬",
+    " ^^",
+    " 🥶",
+    " ☠️"
   ]
 }

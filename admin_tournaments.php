@@ -459,7 +459,7 @@ $tournaments = $conn->query("SELECT t.*, (SELECT COUNT(*) FROM tournament_partic
                             <option value="Baccarat">Baccarat</option>
                             <option value="Roulette">Roulette</option>
                             <option value="Poker">Poker</option>
-                            <option value="Xóc Đĩa">Xóc Đĩa</option>
+                            <option value="Trận Địa Trắng Đỏ">Trận Địa Trắng Đỏ</option>
                             <option value="Tất cả">Tất cả Game</option>
                         </select>
                     </div>

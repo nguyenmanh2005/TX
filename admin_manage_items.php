@@ -784,7 +784,7 @@ if ($themesResult) {
                     <div class="form-group">
                         <label>Loại yêu cầu *</label>
                         <select id="achievement_type" name="achievement_type">
-                            <option value="money">Số tiền (money)</option>
+                            <option value="money">Số GTLM (money)</option>
                             <option value="games_played">Số game chơi (games_played)</option>
                             <option value="big_win">Thắng lớn (big_win)</option>
                             <option value="streak">Chuỗi thắng (streak)</option>

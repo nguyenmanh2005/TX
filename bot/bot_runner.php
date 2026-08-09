@@ -217,6 +217,9 @@ $totalBots = count($config['bot_emails']);
             statusBadge.className = 'status-badge status-running';
             statusBadge.innerText = 'Đang chạy';
 
+            // Kích hoạt cờ hệ thống Server (Rule 5.4)
+            await fetch('bot_engine.php?action=set_status&enabled=1');
+
             consoleEl.innerHTML += `<div style="color: var(--primary); margin: 15px 0 10px 0; border-top: 1px dashed rgba(99, 102, 241, 0.3); padding-top: 10px;">[${new Date().toLocaleTimeString()}] Bắt đầu chu kỳ mới (${maxBots} Bot)...</div>`;
 
             controller = new AbortController();
@@ -273,6 +276,8 @@ $totalBots = count($config['bot_emails']);
         function stopCycle() {
             document.getElementById('autoRun').checked = false;
             clearTimeout(autoRunTimeout);
+            // Phát tín hiệu dừng Server-side Kill-Switch (Rule 5.4)
+            fetch('bot_engine.php?action=set_status&enabled=0');
             if (controller) {
                 controller.abort();
             }

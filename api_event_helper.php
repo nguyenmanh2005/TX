@@ -52,7 +52,7 @@ class EventHelper {
         // Tỷ lệ/Danh sách fallback game cứng cũ
         $fallbackGames = [
             'Baccarat', 'Blackjack', 'Roulette', 'Sicbo', 'Xanh Đỏ Đối Kháng', 
-            'RPS', 'Vietlott', 'Xóc Đĩa', 'Poker', 'Chiến Trường Linh Thú',
+            'RPS', 'Vietlott', 'Trận Địa Trắng Đỏ', 'Poker', 'Chiến Trường Linh Thú',
             'Slot Cyber', 'Mega Spin', 'Horse Race'
         ];
         // Đọc động từ thư mục games/
@@ -99,7 +99,7 @@ class EventHelper {
                 'community_lottery'  => 'Xổ Số Cộng Đồng',
                 'craps'              => 'Đổ Xúc Xắc (Craps)',
                 'crash'              => 'Đua Phi Thuyền (Crash)',
-                'daga'               => 'Đá Gà (Đại Chiến Thần Kê)',
+                'daga'               => 'Đại Chiến Thần Kê (Đại Chiến Thần Kê)',
                 'dice'               => 'Dice',
                 'dragontiger'        => 'Rồng Hổ (Dragon Tiger)',
                 'duangua'            => 'Đua Ngựa',
@@ -138,7 +138,7 @@ class EventHelper {
                 'videopoker'         => 'Video Poker',
                 'vietlott'           => 'Vietlott',
                 'war'                => 'Chiến Tranh Bài (Casino War)',
-                'xocdia'             => 'Xóc Đĩa (Trận Địa Trắng Đỏ)',
+                'xocdia'             => 'Trận Địa Trắng Đỏ (Trận Địa Trắng Đỏ)',
                 'yahtzee'            => 'Yahtzee'
             ];
             if (isset($gameMapping[$selectedFileKey])) {

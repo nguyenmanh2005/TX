@@ -246,7 +246,7 @@ if ($action === 'card_result') {
             break;
     }
 
-    // 3. ÁP DỤNG SKILL CUỒNG CHIẾN SĨ (HÉT THẤU TRỜI CD 20S) NHÂN ĐÔI TIỀN THƯỞNG KHI THẮNG
+    // 3. ÁP DỤNG SKILL CUỒNG CHIẾN SĨ (HÉT THẤU TRỜI CD 20S) NHÂN ĐÔI GTLM THƯỞNG KHI THẮNG
     if ($char === 'cuong_chien_si' && $activeBuff === 'het_thau_troi' && $multiplier > 0) {
         $multiplier = $multiplier * 2;
         $msg .= " 📢 [Hét Thấu Trời] kích hoạt, nhân đôi toàn bộ thạch thưởng GTLM của tầng này!";
