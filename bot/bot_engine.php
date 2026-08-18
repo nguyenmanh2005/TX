@@ -58,6 +58,7 @@ require_once __DIR__ . '/bot_marketplace.php';
 require_once __DIR__ . '/bot_dungeon.php';
 require_once __DIR__ . '/bot_coinflip.php';
 require_once __DIR__ . '/bot_friends.php';
+require_once __DIR__ . '/bot_cyber_racing.php';
 require_once __DIR__ . '/bot_daily_login.php';
 require_once __DIR__ . '/bot_daily_missions.php';
 require_once __DIR__ . '/bot_achievements.php';
@@ -79,6 +80,22 @@ $currentCookieFile = __DIR__ . '/sessions/system.txt';
 
 $inError = false;
 
+function reportToChat2($msgPrefix, $msgContent) {
+    global $conn;
+    if (isset($conn) && $conn instanceof mysqli) {
+        $sysUser = 0;
+        $sysName = "OmniBot System";
+        $sysAvatar = "https://ui-avatars.com/api/?name=SYS&background=dc2626&color=fff";
+        $fullMsg = $msgPrefix . $msgContent;
+        $stmt = $conn->prepare("INSERT INTO chat_errors (user_id, username, message, avatar) VALUES (?, ?, ?, ?)");
+        if ($stmt) {
+            $stmt->bind_param("isss", $sysUser, $sysName, $fullMsg, $sysAvatar);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+}
+
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
     global $currentBotEmail, $baseUrl, $currentCookieFile, $inError;
     if ($inError) return false;
@@ -89,9 +106,7 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
     $msg = "[$severity] $errstr in $safeFile:$errline";
     
     writeBotLog($currentBotEmail, "ERROR", "PHP_SYSTEM", $msg);
-    if (isset($baseUrl) && file_exists($currentCookieFile)) {
-        executeBotAction($baseUrl . "/chat2.php", ['message' => "⚠️ ALERT: $msg"], $currentCookieFile);
-    }
+    reportToChat2("⚠️ ALERT: ", $msg);
     
     $inError = false;
     return false; // Continue to internal PHP error handler
@@ -105,9 +120,7 @@ set_exception_handler(function($e) {
     $safeFile = str_ireplace('config.php', '[HIDDEN]', basename($e->getFile()));
     $msg = "[CRITICAL] " . $e->getMessage() . " in $safeFile:" . $e->getLine();
     writeBotLog($currentBotEmail, "ERROR", "PHP_EXCEPTION", $msg);
-    if (isset($baseUrl) && file_exists($currentCookieFile)) {
-        executeBotAction($baseUrl . "/chat2.php", ['message' => "🚨 EXCEPTION: $msg"], $currentCookieFile);
-    }
+    reportToChat2("🚨 EXCEPTION: ", $msg);
     $inError = false;
 });
 
@@ -454,6 +467,42 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
     $msg = "Đang dạo chơi quanh trận địa... 😊";
     $chosenGame = "trận địa";
 
+    // --- COMMAND OVERRIDE ---
+    $cmdOverride = isset($_GET['cmd']) ? trim($_GET['cmd']) : '';
+    if (!empty($cmdOverride) && $cmdOverride !== 'auto') {
+        $parts = explode(' ', $cmdOverride);
+        $target = strtolower($parts[0]);
+        
+        echo "<div>";
+        echo "<b style='color:#a5b4fc;'>🛡️ Chỉ Huy: $userName</b><br>";
+        
+        if ($target === '/farm') {
+            $farmRes = handleFarmBot($baseUrl, $cFile);
+            if ($farmRes && isset($farmRes['actions'])) {
+                foreach ($farmRes['actions'] as $act) uiLog('⛏️', "<b>Nông Trại (Lệnh):</b> $act", "color:#84cc16; font-weight:bold;");
+            } else {
+                uiLog('⛏️', "Nông trại đang yên ắng.", "color:#84cc16; font-weight:bold;");
+            }
+        } elseif ($target === '/chat') {
+            $msgOverride = count($parts) > 1 ? implode(' ', array_slice($parts, 1)) : "Xếp tôi vô địch, OmniBot vạn tuế!";
+            executeBotAction($baseUrl . "/chat.php", ['message' => $msgOverride], $cFile);
+            uiLog('📣', "<b>Chat (Lệnh):</b> $msgOverride", "color:#3b82f6; font-weight:bold;");
+        } elseif ($target === '/pvp') {
+            $pvpRes = handlePvpChallengeBot($baseUrl, $cFile, $userMoney, $userId);
+            if ($pvpRes && isset($pvpRes['actions'])) {
+                foreach ($pvpRes['actions'] as $act) uiLog('⚔️', "<b>PvP (Lệnh):</b> $act", "color:#ef4444; font-weight:bold;");
+            } else {
+                uiLog('⚔️', "Không tìm thấy đối thủ.", "color:#ef4444; font-weight:bold;");
+            }
+        } else {
+            uiLog('⚠️', "Lệnh không hợp lệ: $target", "color:#f59e0b; font-weight:bold;");
+        }
+        echo "</div></div></div>";
+        if (ob_get_level() > 0) ob_flush(); 
+        flush();
+        continue; // Bỏ qua tất cả logic random phía sau, chuyển qua Bot tiếp theo
+    }
+
     // --- MODULE 0.0: Announcer Tasks ---
     if ($isAnnouncer) {
         echo "<div>";
@@ -680,7 +729,7 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
 
         // 15. Bot Chém Gió Kênh Chat
         if (rand(1, 100) <= 10) { // 10% cơ hội gáy trên kênh chat
-            $chatterRes = handleChatterBot($baseUrl, $cFile, $personality);
+            $chatterRes = handleChatterBot($baseUrl, $cFile, $personality, $brain, $userId, $state);
             if ($chatterRes && isset($chatterRes['actions'])) {
                 foreach ($chatterRes['actions'] as $act) {
                     uiLog('📣', "<b>Chat Thế Giới:</b> $act", "color:#3b82f6; font-weight:bold;");
@@ -969,8 +1018,9 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
         }
 
         // 44. Bot Khán Giả (Spectator)
-        if (rand(1, 100) <= 15) { 
-            $specRes = handleSpectatorBot($baseUrl, $cFile, $userMoney);
+        $justWon = (isset($isWin) && $isWin) ? true : false;
+        if ($justWon || rand(1, 100) <= 15) { 
+            $specRes = handleSpectatorBot($baseUrl, $cFile, $userMoney, $brain, $userId, $userName, $justWon);
             if ($specRes && isset($specRes['actions'])) {
                 foreach ($specRes['actions'] as $act) {
                     uiLog('👀', "<b>Livestream:</b> $act", "color:#e67e22; font-weight:bold;");
@@ -991,6 +1041,7 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
         // Special Real-time Games Hook
         handleBlackjackMultiBot($conn, $baseUrl, $cFile, $state);
         handleHorseRacePvPBot($conn, $baseUrl, $cFile);
+        handleCyberRacingBot($conn, $baseUrl, $cFile, $userMoney);
 
         // --- MODULE 2.5: World Boss Raid (Real Gameplay) ---
         if (rand(1, 100) <= 20) { // 20% cơ hội tham gia Raid Ma Thần
@@ -1061,7 +1112,7 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
                 else if ($rGame === 'dice') $realGameResult = handleDiceBot($conn, $baseUrl, $cFile, $userMoney);
             }
 
-            if ($realGameResult && isset($realGameResult['status']) && $realGameResult['status'] === 'success') {
+            if ($realGameResult && ((isset($realGameResult['status']) && $realGameResult['status'] === 'success') || (isset($realGameResult['success']) && $realGameResult['success'] === true))) {
                 $isWin = $realGameResult['win'] ?? ($realGameResult['is_win'] ?? false);
                 $winAmount = $realGameResult['amount'] ?? ($realGameResult['payout'] ?? 0);
                 $chosenGame = $realGameResult['game'] ?? 'Sicbo Real';
@@ -1339,10 +1390,10 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
                 $feedMsg = null;
                 if (isset($isWin)) {
                     if ($isWin) {
-                        $feedMsg = $brain->generateMessage($userId, 'social_brag', ['amount' => number_format($winAmount) . ' GTLM']);
+                        $feedMsg = $brain->generateMessage($userId, 'social_brag', ['amount' => number_format((float)$winAmount) . ' GTLM']);
                     } else {
-                        $actualBet = ($realGameResult ? $realBet : $bet);
-                        $feedMsg = $brain->generateMessage($userId, 'social_complain', ['amount' => number_format($actualBet) . ' GTLM']);
+                        $actualBet = (!empty($realGameResult) && isset($realBet) ? $realBet : $bet);
+                        $feedMsg = $brain->generateMessage($userId, 'social_complain', ['amount' => number_format((float)$actualBet) . ' GTLM']);
                     }
                 }
                 
@@ -2419,7 +2470,11 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
         echo "</div></div>"; // Close bot-log and bot-card
         if (ob_get_level() > 0) ob_flush();
         flush();
-        sleep(1); 
+        
+        $isCron = isset($_GET['cron']) && $_GET['cron'] == '1';
+        if (!$isCron) {
+            usleep(200000); // 0.2s delay for UI rendering
+        }
     } catch (Throwable $e) {
         uiLog('⚠️', "Error: " . $e->getMessage(), 'color:#ff3333; font-size:0.8rem;');
         echo "</div></div>";
@@ -2453,6 +2508,21 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
     recordEconomySnapshot($conn);
 
     if (isset($updateMoneyStmt)) $updateMoneyStmt->close();
+    // --- TOP BOTS LEADERBOARD ---
+    $botEmailsArr = array_map(function($e) use ($conn) { return "'" . $conn->real_escape_string($e) . "'"; }, $config['bot_emails']);
+    if (!empty($botEmailsArr)) {
+        $emailsStr = implode(',', $botEmailsArr);
+        $topBotsRes = $conn->query("SELECT Name, Money FROM users WHERE Email IN ($emailsStr) ORDER BY Money DESC LIMIT 5");
+        if ($topBotsRes && $topBotsRes->num_rows > 0) {
+            echo "<div class='top-bots-data' style='display:none;'>";
+            $topList = [];
+            while ($tb = $topBotsRes->fetch_assoc()) {
+                $topList[] = ['name' => $tb['Name'], 'money' => (float)$tb['Money']];
+            }
+            echo json_encode($topList);
+            echo "</div>";
+        }
+    }
     uiLog('✅', "Chu kỳ hoàn tất [" . date('H:i:s') . "]");
     echo "</div>"; // Close container
 }

@@ -1,0 +1,235 @@
+<?php
+session_start();
+
+require_once '../game_history_helper.php';
+require_once 'bot_streamer_helper.php';
+$botUser = getOrCreateBotStreamerUser($conn, 'bot_blackjack', 50000000);
+$botUserId = $botUser['Iduser'];
+$_SESSION['Iduser_temp_bot'] = $botUserId;
+
+require_once '../db_connect.php';
+require_once '../include_css.php';
+
+// Kiểm tra đăng nhập
+
+
+$userId = $botUserId;
+require_once '../load_theme.php'; // Nạp thông số theme
+
+/** @var int $particleCount */
+/** @var float $particleSize */
+/** @var string $particleColor */
+/** @var float $particleOpacity */
+/** @var int $shapeCount */
+/** @var array $shapeColors */
+/** @var float $shapeOpacity */
+/** @var array $bgGradient */
+/** @var string $bgGradientCSS */
+
+// Lấy thông tin người chơi để hiển thị Gtlm
+$sql = "SELECT * FROM users WHERE Iduser = ?";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$user = $stmt->get_result()->fetch_assoc();
+
+$gameTitle = "Xì Dách Royale";
+?>
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= $gameTitle ?> - Sòng Bài Hoàng Gia</title>
+    <link rel="stylesheet" href="../assets/css/blackjack.css">
+
+    <!-- Theme Config for Three.js Background -->
+    <script>
+        window.themeConfig = {
+            particleCount: <?= $particleCount ?>,
+            particleSize: <?= $particleSize ?>,
+            particleColor: '<?= $particleColor ?>',
+            particleOpacity: <?= $particleOpacity ?>,
+            shapeCount: <?= $shapeCount ?>,
+            shapeColors: <?= json_encode($shapeColors) ?>,
+            shapeOpacity: <?= $shapeOpacity ?>,
+            bgGradient: <?= json_encode($bgGradient) ?>
+        };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/gsap.min.js"></script>
+    <style>
+        html,
+        body.blackjack-theme {
+            background:
+                <?= $bgGradientCSS ?>
+            ;
+            background-attachment: fixed;
+            cursor: url('../chuot.png'), auto !important;
+        }
+
+        * {
+            cursor: inherit !important;
+        }
+
+        button,
+        a,
+        .chip,
+        input {
+            cursor: url('../img/tay.png'), pointer !important;
+        }
+    </style>
+</head>
+
+<body class="game-page blackjack-theme">
+    <!-- Canvas nền Three.js của hệ thống -->
+    <canvas id="threejs-background"></canvas>
+
+    <div class="game-container">
+        <!-- Header -->
+        <div class="game-header">
+            <a href="../index.php" class="back-btn">← Trang chủ</a>
+            <div class="game-info">
+                <h1><?= $gameTitle ?></h1>
+                <div class="balance-box">
+                    <span>Ngân khố:</span>
+                    <strong id="userBalance"><?= number_format($user['Money'], 0, ',', '.') ?></strong> GTLM
+                </div>
+            </div>
+            <button id="guideBtn" class="help-btn">?</button>
+        </div>
+
+        <!-- 3D Canvas -->
+        <div id="blackjack-canvas"></div>
+
+        <!-- UI Overlays -->
+        <div class="game-ui">
+            <div class="score-display">
+                <div class="score-badge player-score">CHALLENGER: <span id="playerScore">0</span></div>
+                <div class="score-badge king-score">THE KING: <span id="kingScore">?</span></div>
+            </div>
+
+            <div id="resultAnnounce" class="result-announcement"></div>
+
+            <!-- Controls Area -->
+            <div class="controls-area" style="padding-bottom: 60px;">
+                <div class="chip-selector">
+                    <div class="chip active" data-value="10000" style="background: radial-gradient(circle at 30% 30%, #475569, #1e293b); color: #fff; border-color: #94a3b8; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">10K</div>
+                    <div class="chip" data-value="50000" style="background: radial-gradient(circle at 30% 30%, #3b82f6, #1d4ed8); color: #fff; border-color: #60a5fa; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">50K</div>
+                    <div class="chip" data-value="100000" style="background: radial-gradient(circle at 30% 30%, #10b981, #047857); color: #fff; border-color: #34d399; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">100K</div>
+                    <div class="chip" data-value="500000" style="background: radial-gradient(circle at 30% 30%, #8b5cf6, #5b21b6); color: #fff; border-color: #a78bfa; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">500K</div>
+                    <div class="chip" data-value="1000000" style="background: radial-gradient(circle at 30% 30%, #f59e0b, #b45309); color: #fff; border-color: #fcd34d; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">1M</div>
+                    <div class="chip" data-value="5000000" style="background: radial-gradient(circle at 30% 30%, #ec4899, #be185d); color: #fff; border-color: #f472b6; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">5M</div>
+                    <div class="chip" data-value="<?=$user['Money']?>" style="background: radial-gradient(circle at 30% 30%, #ef4444, #b91c1c); color: #fff; border-color: #fca5a5; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">ALL IN</div>
+                    <div class="custom-bet-box">
+                        <input type="number" id="customBetInput" placeholder="Cược khác..." min="1000" step="1000">
+                    </div>
+                </div>
+
+                <div class="bet-info">
+                    <span>Mức thách đấu: <strong id="currentBetDisplay">10.000</strong> GTLM</span>
+                </div>
+
+                <div class="action-buttons">
+                    <button id="dealBtn" class="btn btn-primary">KHAI CUỘC</button>
+                    <div id="gameActions" class="sub-actions" style="display: none;">
+                        <button id="hitBtn" class="btn btn-hit">RÚT THÊM</button>
+                        <button id="standBtn" class="btn btn-stand">DẰN BÀI</button>
+                        <button id="doubleBtn" class="btn btn-double">GẤP ĐÔI</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Guide Modal -->
+        <div id="guideModal" class="guide-modal">
+            <div class="guide-content">
+                <span class="close-guide">&times;</span>
+                <h2>📖 BÍ KÍP XÌ DÁCH ROYALE</h2>
+                <div class="guide-sections">
+                    <section>
+                        <h3>✨ Mục tiêu</h3>
+                        <p>Đạt tổng điểm gần <strong>21</strong> nhất nhưng không được vượt quá. Bạn cần cao điểm hơn
+                            <strong>THE KING</strong> để thắng.</p>
+                    </section>
+                    <section>
+                        <h3>🃏 Cách tính điểm</h3>
+                        <ul>
+                            <li>Lá 2-10: Tính theo mặt số.</li>
+                            <li>Lá J, Q, K: Tính là 10 điểm.</li>
+                            <li>Lá A: Tính linh hoạt là 1 hoặc 11 điểm.</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h3>🛠️ Hành động</h3>
+                        <ul>
+                            <li><strong>RÚT THÊM</strong>: Nhận thêm 1 lá bài.</li>
+                            <li><strong>DẰN BÀI</strong>: Giữ nguyên điểm và so bài.</li>
+                            <li><strong>GẤP ĐÔI</strong>: Tăng gấp đôi Gtlm cược và chỉ được rút thêm đúng 1 lá.</li>
+                        </ul>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../assets/js/blackjack-3d.js?v=<?= time() ?>"></script>
+    <script src="../assets/js/blackjack-logic.js?v=<?= time() ?>"></script>
+
+    <!-- Premium Effects Loader -->
+    <script>
+        (function () {
+            const prefix = '../';
+            const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
+            scripts.forEach(src => {
+                const s = document.createElement('script');
+                s.src = prefix + src;
+                s.async = false;
+                document.head.appendChild(s);
+            });
+        })();
+    </script>
+
+<!-- AUTO-GENERATED BOT SCRIPT -->
+<script>
+if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
+if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
+</script>
+<script src="../assets/js/bot_virtual_cursor.js"></script>
+<script>
+    if (typeof BotVirtualCursor !== "undefined") {
+        BotVirtualCursor.init("Bot Streamer");
+        setInterval(() => {
+            const allBtns = Array.from(document.querySelectorAll("button, .btn-bet, .chip, .spin-btn, #btnSpin, .bet-button, .card, .btn-primary, .btn-success, input[type='button'], input[type='submit']"));
+            const btns = allBtns.filter(b => {
+                if(b.offsetParent === null || b.disabled) return false;
+                const txt = (b.innerText || b.value || "").toLowerCase();
+                const cls = (b.className || "").toLowerCase();
+                const id = (b.id || "").toLowerCase();
+                
+                // Exclude common navigation/help buttons
+                if(txt.includes("hướng dẫn") || txt.includes("trang chủ") || txt.includes("nạp") || txt.includes("rút") || txt.includes("lịch sử") || txt.includes("quay lại") || txt.includes("thoát")) return false;
+                if(cls.includes("back") || cls.includes("help") || cls.includes("guide") || cls.includes("close") || cls.includes("swal") || cls.includes("nav")) return false;
+                if(id.includes("guide") || id.includes("back") || id.includes("close") || id.includes("nav")) return false;
+                
+                return true;
+            });
+            
+            if(btns.length > 0) {
+                const btn = btns[Math.floor(Math.random() * btns.length)];
+                BotVirtualCursor.moveToElement($(btn), 1, 0, () => {
+                    setTimeout(() => { 
+                        BotVirtualCursor.simulateClick(() => {
+                            try { btn.click(); } catch(e){}
+                        });
+                    }, 500);
+                });
+            }
+        }, 3000 + Math.random() * 4000);
+    }
+</script>
+
+</body>
+
+</html>

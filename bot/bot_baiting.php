@@ -21,7 +21,7 @@ function handleBaitingBot($conn, $baseUrl, $cFile, $botMoney, $botId, $botName, 
             $target = $result->fetch_assoc();
             
             // Tính số GTLM thách đấu: 10% đến 20% GTLM của nạn nhân (hoặc tối đa số GTLM bot đang có)
-            $baitAmount = rand($target['Money'] * 0.1, $target['Money'] * 0.2);
+            $baitAmount = rand((int)($target['Money'] * 0.1), (int)($target['Money'] * 0.2));
             if ($baitAmount > $botMoney) {
                 $baitAmount = $botMoney;
             }

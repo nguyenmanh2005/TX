@@ -411,11 +411,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
             letter-spacing: 2px;
         }
         .jackpot-banner-modern .amount {
-            font-size: 32px;
+            font-size: clamp(20px, 4vw, 32px);
             font-weight: 900;
             color: #ffffff;
             text-shadow: 0 0 20px #eab308;
             margin: 4px 0;
+            word-break: break-all;
+            line-height: 1.1;
         }
         .stats-container-modern {
             display: flex;
@@ -644,16 +646,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
 <!-- Three.js Canvas Container -->
 <div id="three-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none;"></div>
 
-<!-- Header (Khung Top từ V1 với chức năng Switch UI trong Avatar) -->
 <header class="header" style="background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(15px); border-bottom: 1px solid rgba(255,255,255,0.1); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1000;">
     <div style="display: flex; align-items: center; gap: 15px;">
-        <a href="v3/index.php" style="text-decoration: none; display: flex; align-items: center; gap: 10px;">
+        <a href="index.php" style="text-decoration: none; display: flex; align-items: center; gap: 10px;">
             <span style="font-size: 28px;">🎮</span>
             <div>
                 <span style="font-size: 18px; font-weight: 900; background: linear-gradient(90deg, #38bdf8, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">GTLM PORTAL</span>
                 <span style="background: #a855f7; color: #fff; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 6px; margin-left: 6px;">V3</span>
             </div>
         </a>
+
+        <!-- Quick UI Switcher Bar trực tiếp trên Header -->
+        <div style="display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.06); padding: 4px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); margin-left: 10px;">
+            <a href="switch_ui.php?v=v1" title="Về Giao diện V1 (PHP Mặc Định)" style="color: #94a3b8; font-weight: 700; text-decoration: none; padding: 5px 10px; border-radius: 8px; font-size: 12px; display: flex; align-items: center; gap: 5px; transition: all 0.2s;" onmouseover="this.style.color='#60a5fa';this.style.background='rgba(96,165,250,0.15)'" onmouseout="this.style.color='#94a3b8';this.style.background='transparent'">🖥️ V1</a>
+            <a href="switch_ui.php?v=v2" title="Chuyển sang Giao diện V2 (React / Vite)" style="color: #94a3b8; font-weight: 700; text-decoration: none; padding: 5px 10px; border-radius: 8px; font-size: 12px; display: flex; align-items: center; gap: 5px; transition: all 0.2s;" onmouseover="this.style.color='#f59e0b';this.style.background='rgba(245,158,11,0.15)'" onmouseout="this.style.color='#94a3b8';this.style.background='transparent'">⚡ V2</a>
+            <a href="switch_ui.php?v=v3" title="Giao diện V3 Hiện Tại" style="background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; font-weight: 800; text-decoration: none; padding: 5px 10px; border-radius: 8px; font-size: 12px; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(16,185,129,0.3);">✨ V3</a>
+        </div>
     </div>
 
     <div style="display: flex; align-items: center; gap: 20px;">
@@ -848,7 +856,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                 <div class="date" id="liveDate">--/--/----</div>
             </div>
 
-            <div class="jackpot-banner-modern">
+            <div class="jackpot-banner-modern" onclick="window.location.href='hu_rong_than.php'" style="cursor: pointer;" title="Đến trang Hũ Rồng Thần">
                 <div class="label">🏆 HŨ RỒNG THẦN TOÀN SERVER 🏆</div>
                 <div class="amount" id="jackpotAmount"><?= number_format($currentJackpot, 0, ',', '.') ?> GTLM</div>
                 <div style="font-size: 12px; color: #cbd5e1;">Cùng tranh tài nổ hũ nhận giải thưởng cực đại mỗi ngày</div>

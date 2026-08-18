@@ -389,12 +389,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'play') {
                         if (data.winAmount > 0) {
                             addLog(`Dừng ở hạng ${data.finalRank}. Giải an ủi: +${data.winAmount.toLocaleString()} GTLM`);
                             if (window.GameEffects) window.GameEffects.showWin(data.winAmount);
-                            Swal.fire('KHÔNG TỒI!', `Bạn đạt hạng #${data.finalRank} và nhận giải an ủi <b style="color:#f1c40f">${data.winAmount.toLocaleString()} GTLM</b>!`, 'success');
+                            
+                            const float = $('<div class="floating-win">+' + data.winAmount.toLocaleString('vi-VN') + '</div>').appendTo($(`#p-${myPosition}`));
+                            gsap.to(float, { y: -100, opacity: 0, duration: 2, onComplete: () => float.remove() });
+                            
                             $('#balance').text(data.newMoney);
                         } else {
                             addLog(`BẠN ĐÃ VỀ CÕI! Hạng: ${data.finalRank}`);
                             if (window.GameEffects) window.GameEffects.showLoss(bet);
-                            Swal.fire('BAY MÀU!', `Vị trí dừng chân: #${data.finalRank}`, 'error');
+                            
+                            const float = $('<div class="floating-win" style="color: #ff4757;">-' + parseInt(bet).toLocaleString('vi-VN') + '</div>').appendTo($(`#p-${myPosition}`));
+                            gsap.to(float, { y: -100, opacity: 0, duration: 2, onComplete: () => float.remove() });
                         }
                         $('#join-btn').prop('disabled', false);
                         isPlaying = false;
@@ -409,7 +414,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'play') {
                 $('#round-text').text(`CHÚC MỪNG! BẠN LÀ NGƯỜI DUY NHẤT CÒN SỐNG!`);
                 addLog(`HÚP TRỌN JACKPOT! +${data.winAmount.toLocaleString()} GTLM!`);
                 if (window.GameEffects) window.GameEffects.showWin(data.winAmount);
-                Swal.fire('TOP 1 SERVER!', `Nhân phẩm tuyệt đỉnh! Húp trọn <b style="color:#f1c40f">${data.winAmount.toLocaleString()} GTLM</b>!`, 'success');
+                
+                const float = $('<div class="floating-win">+' + data.winAmount.toLocaleString('vi-VN') + '</div>').appendTo($(`#p-${myPosition}`));
+                gsap.to(float, { y: -100, opacity: 0, duration: 2, onComplete: () => float.remove() });
+                
                 $('#balance').text(data.newMoney);
                 $('#join-btn').prop('disabled', false);
                 isPlaying = false;

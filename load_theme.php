@@ -36,6 +36,14 @@ if (isset($_SESSION['Iduser'])) {
     // Kiểm tra xem bảng themes có tồn tại không
     $checkThemesTable = $conn->query("SHOW TABLES LIKE 'themes'");
     if ($checkThemesTable && $checkThemesTable->num_rows > 0) {
+        // Tự động seed theme Cyberpunk 3D & Thạch Anh Tinh Vân nếu chưa có
+        $checkThemesCount = $conn->query("SELECT COUNT(*) as c FROM themes");
+        if ($checkThemesCount && (int)$checkThemesCount->fetch_assoc()['c'] < 4) {
+            $conn->query("INSERT IGNORE INTO themes (id, name, background_gradient, particle_count, particle_size, particle_color, particle_opacity, shape_count, shape_colors, shape_opacity) VALUES 
+                (4, 'Cyberpunk Neon 3D', '[\"#0f172a\", \"#3b0764\", \"#0284c7\"]', 350, 0.06, '#38bdf8', 0.8, 8, '[\"#38bdf8\", \"#c084fc\", \"#f43f5e\"]', 0.4),
+                (5, 'Thạch Anh Tinh Vân 3D', '[\"#1e1b4b\", \"#701a75\", \"#4338ca\"]', 400, 0.05, '#f472b6', 0.75, 10, '[\"#f472b6\", \"#818cf8\", \"#fbbf24\"]', 0.35)
+            ");
+        }
         // Lấy current_theme_id của user
         $userSql = "SELECT current_theme_id FROM users WHERE Iduser = ?";
         $userStmt = $conn->prepare($userSql);

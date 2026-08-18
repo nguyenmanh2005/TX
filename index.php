@@ -827,6 +827,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
             margin: 0 auto;
             padding: 30px 20px;
             overflow: visible;
+            flex-wrap: wrap;
         }
 
         .info-column {
@@ -1783,6 +1784,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
             box-shadow: 0 10px 40px rgba(241, 196, 15, 0.4);
             border: 3px solid rgba(255, 255, 255, 0.2);
             animation: pulse-glow 2s infinite alternate;
+            width: 100%;
         }
 
         @keyframes pulse-glow {
@@ -1800,12 +1802,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
         }
 
         .jackpot-amount {
-            font-size: 4em;
+            font-size: clamp(2rem, 5vw, 4em);
             font-weight: 900;
             color: #fff;
             font-family: 'Courier New', Courier, monospace;
             text-shadow: 0 0 20px #000;
             margin: 5px 0;
+            word-break: break-all;
+            line-height: 1.1;
         }
 
         .jackpot-winner {
@@ -2152,22 +2156,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
             border-left: 4px solid var(--error-color);
         }
 
-        /* Floating Action Button */
+        /* Floating Action Buttons System (Stacked Vertically without Overlap) */
         .fab {
             position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 60px;
-            height: 60px;
+            bottom: 25px;
+            right: 25px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
-            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--secondary-dark) 100%);
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
             color: white;
-            border: none;
-            font-size: 24px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            font-size: 20px;
             cursor: url('img/tay.png'), url('../img/tay.png'), pointer !important;
-            box-shadow: 0 4px 20px rgba(52, 152, 219, 0.4);
-            transition: all 0.3s ease;
-            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 99990;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -2175,19 +2179,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
 
         .messages-fab {
             position: fixed;
-            bottom: 100px;
-            right: 30px;
-            width: 52px;
-            height: 52px;
+            bottom: 85px;
+            right: 25px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
-            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--secondary-dark) 100%);
+            background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%);
             color: white;
-            border: none;
-            font-size: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            font-size: 18px;
             cursor: url('img/tay.png'), url('../img/tay.png'), pointer !important;
-            box-shadow: 0 4px 18px rgba(52, 152, 219, 0.45);
-            transition: all 0.3s ease;
-            z-index: 99999;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 99991;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -3095,7 +3099,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
 
     <div class="container">
         <!-- Global Jackpot -->
-        <div class="jackpot-banner">
+        <div class="jackpot-banner" onclick="window.location.href='hu_rong_than.php'" style="cursor: pointer;" title="Đến trang Hũ Rồng Thần">
             <div class="jackpot-coins"></div>
             <div class="jackpot-label">🏆 HŨ RỒNG THẦN 🏆</div>
             <div class="jackpot-amount" id="jackpotAmount">100.000.000</div>
@@ -3502,6 +3506,24 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                             style="margin-top: 15px; background: var(--accent-gold); color: #000;">Chơi Ngay</a>
                     </div>
                     <div class="slide-img" style="font-size: 100px;">🎡</div>
+                </div>
+                <div class="slide">
+                    <div class="slide-content">
+                        <h2>🗼 Tháp Thần Bài</h2>
+                        <p>Dẫn dắt tổ đội 3 người khiêu chiến 100 tầng Boss!</p>
+                        <a href="tower_of_gods.php" class="btn"
+                            style="margin-top: 15px; background: #a855f7; color: #fff;">Chinh Phục</a>
+                    </div>
+                    <div class="slide-img" style="font-size: 100px;">🗼</div>
+                </div>
+                <div class="slide">
+                    <div class="slide-content">
+                        <h2>📺 Live Stream</h2>
+                        <p>Xem các thần bài đại chiến và tặng Tip tương tác ngay!</p>
+                        <a href="spectator.php" class="btn"
+                            style="margin-top: 15px; background: #ef4444; color: #fff;">Xem Trực Tiếp</a>
+                    </div>
+                    <div class="slide-img" style="font-size: 100px;">👀</div>
                 </div>
                 <div class="slide">
                     <div class="slide-content">
@@ -4081,10 +4103,43 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
 
 
 
-    <!-- Switch UI Button -->
-    <a href="switch_ui.php?v=new" class="fab" style="bottom: 80px; background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%); color: #000; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 20px; box-shadow: 0 4px 15px rgba(241, 196, 15, 0.4);" title="Chuyển sang giao diện mới">
-        ✨
-    </a>
+    <!-- Animated Slide-Out UI Switcher Widget -->
+    <div id="uiSwitcherWidget" style="position: fixed; bottom: 145px; right: 25px; z-index: 99995; display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+        <!-- Slide-out Options Panel -->
+        <div id="uiSwitcherOptions" style="display: flex; align-items: center; gap: 8px; max-width: 0; opacity: 0; overflow: hidden; transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1); background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(15px); padding: 0; border-radius: 99px; border: 1.5px solid transparent; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <a href="switch_ui.php?v=v2" title="Chuyển sang Giao Diện V2 (React / Vite)" style="color: #f59e0b; font-weight: 800; text-decoration: none; padding: 7px 14px; border-radius: 20px; font-size: 13px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); white-space: nowrap; transition: all 0.2s; display: flex; align-items: center; gap: 6px;">⚡ V2 (React)</a>
+            <a href="switch_ui.php?v=v3" title="Chuyển sang Giao Diện V3 (Dashboard 3 Cột)" style="color: #4ade80; font-weight: 800; text-decoration: none; padding: 7px 14px; border-radius: 20px; font-size: 13px; background: rgba(74, 222, 128, 0.15); border: 1px solid rgba(74, 222, 128, 0.3); white-space: nowrap; transition: all 0.2s; display: flex; align-items: center; gap: 6px;">✨ V3 (3-Col)</a>
+        </div>
+        
+        <!-- Main Trigger Button -->
+        <button type="button" id="btnToggleUiWidget" onclick="toggleUiSwitcherWidget()" class="fab" style="position: relative; bottom: auto; right: auto; width: 48px; height: 48px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #000; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 18px rgba(245, 158, 11, 0.45); border: 2px solid rgba(255, 255, 255, 0.25); flex-shrink: 0; margin: 0; transition: transform 0.3s ease;" title="Bấm để chọn Giao Diện V2 hoặc V3">
+            ✨
+        </button>
+    </div>
+
+    <script>
+    function toggleUiSwitcherWidget() {
+        const opts = document.getElementById('uiSwitcherOptions');
+        const btn = document.getElementById('btnToggleUiWidget');
+        const isExpanded = opts.classList.contains('expanded');
+        
+        if (!isExpanded) {
+            opts.classList.add('expanded');
+            opts.style.maxWidth = '320px';
+            opts.style.opacity = '1';
+            opts.style.padding = '6px 10px';
+            opts.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+            btn.style.transform = 'rotate(180deg) scale(1.1)';
+        } else {
+            opts.classList.remove('expanded');
+            opts.style.maxWidth = '0';
+            opts.style.opacity = '0';
+            opts.style.padding = '0';
+            opts.style.borderColor = 'transparent';
+            btn.style.transform = 'rotate(0deg) scale(1)';
+        }
+    }
+    </script>
 
     <!-- Premium Effects System -->
     <canvas id="threejs-background"></canvas>
@@ -4569,32 +4624,32 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
     <style>
         .oracle-bubble {
             position: fixed;
-            bottom: 30px;
-            left: 30px;
-            width: 70px;
-            height: 70px;
+            bottom: 85px;
+            left: 25px;
+            width: 50px;
+            height: 50px;
             background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 32px;
+            font-size: 24px;
             cursor: pointer;
-            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
-            z-index: 99999;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 3px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+            z-index: 99995;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid rgba(255, 255, 255, 0.25);
         }
         .oracle-bubble:hover {
-            transform: scale(1.1) translateY(-5px);
-            box-shadow: 0 12px 35px rgba(99, 102, 241, 0.7);
+            transform: scale(1.1) translateY(-3px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.7);
         }
         .oracle-bubble .status-dot {
             position: absolute;
-            bottom: 5px;
-            right: 5px;
-            width: 15px;
-            height: 15px;
+            bottom: 3px;
+            right: 3px;
+            width: 12px;
+            height: 12px;
             background: #10b981;
             border-radius: 50%;
             border: 2px solid white;
@@ -4603,8 +4658,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
 
         .oracle-window {
             position: fixed;
-            bottom: 110px;
-            left: 30px;
+            bottom: 145px;
+            left: 25px;
             width: 350px;
             height: 500px;
             background: rgba(15, 23, 42, 0.95);

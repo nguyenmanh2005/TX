@@ -6,10 +6,31 @@
     <link rel="icon" type="image/x-icon" href="images.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GTLM Gaming V2 (React/Vite)</title>
-    <script type="module" crossorigin src="v2/assets/index-DP_Ep1RF.js"></script>
-    <link rel="stylesheet" crossorigin href="v2/assets/index-ZOzDEAfS.css">
+    <script>
+      (function() {
+        try {
+          var xhr = new XMLHttpRequest();
+          xhr.open('GET', 'api_v2_data.php', false);
+          xhr.send(null);
+          if (xhr.status === 200) {
+            window.REAL_DATA = JSON.parse(xhr.responseText);
+          }
+        } catch(e) {}
+      })();
+    </script>
+    <link rel="stylesheet" crossorigin href="v2/assets/index-ZOzDEAfS.css?v=2">
   </head>
   <body>
+    <!-- UI Switcher Floating Bar for V2 (Chuyển nhanh sang V1 & V3) -->
+    <div id="v2-ui-switcher" style="position: fixed; top: 15px; right: 20px; z-index: 99999; display: flex; align-items: center; gap: 8px; background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(15px); padding: 6px 14px; border-radius: 999px; border: 1.5px solid rgba(255, 255, 255, 0.2); box-shadow: 0 10px 25px rgba(0,0,0,0.5); font-family: system-ui, -apple-system, sans-serif;">
+      <span style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-right: 4px;">Giao Diện:</span>
+      <a href="switch_ui.php?v=v1" title="Về Giao diện V1 (PHP Mặc Định)" style="color: #60a5fa; font-weight: 800; text-decoration: none; padding: 5px 12px; border-radius: 20px; font-size: 12px; background: rgba(96, 165, 250, 0.15); border: 1px solid rgba(96, 165, 250, 0.3); transition: all 0.2s; display: flex; align-items: center; gap: 5px;">🖥️ V1</a>
+      <a href="switch_ui.php?v=v2" title="Giao diện V2 (React/Vite) Hiện Tại" style="color: #000; font-weight: 900; text-decoration: none; padding: 5px 12px; border-radius: 20px; font-size: 12px; background: linear-gradient(135deg, #fbbf24, #f59e0b); border: none; box-shadow: 0 2px 10px rgba(245, 158, 11, 0.4); display: flex; align-items: center; gap: 5px;">⚡ V2</a>
+      <a href="switch_ui.php?v=v3" title="Chuyển sang Giao diện V3 (Dashboard 3 Cột)" style="color: #4ade80; font-weight: 800; text-decoration: none; padding: 5px 12px; border-radius: 20px; font-size: 12px; background: rgba(74, 222, 128, 0.15); border: 1px solid rgba(74, 222, 128, 0.3); transition: all 0.2s; display: flex; align-items: center; gap: 5px;">✨ V3</a>
+    </div>
+
     <div id="root"></div>
+
+    <script type="module" crossorigin src="v2/assets/index-DP_Ep1RF.js?v=2"></script>
   </body>
 </html>

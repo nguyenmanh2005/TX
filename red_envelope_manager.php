@@ -220,12 +220,15 @@ class RedEnvelopeManager {
                 $stmtAddMoney->close();
             }
 
+            $isVip = ($env['total_amount'] >= 1000000 || $claimAmount >= 100000);
             $this->conn->commit();
             return [
                 'success' => true,
                 'amount' => $claimAmount,
                 'sender_name' => $env['sender_name'],
-                'message' => "Chúc mừng! Bạn vừa giật được bao lì xì trị giá " . number_format($claimAmount) . " GTLM từ " . $env['sender_name'] . "!"
+                'is_vip' => $isVip,
+                'fireworks_fx' => $isVip ? '3d_fireworks_burst' : null,
+                'message' => "🎉 Chúc mừng! Bạn vừa giật được bao lì xì" . ($isVip ? " VIP 🎆" : "") . " trị giá " . number_format($claimAmount) . " GTLM từ " . $env['sender_name'] . "!"
             ];
         } catch (Throwable $e) {
             $this->conn->rollback();

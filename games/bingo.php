@@ -1,6 +1,15 @@
 <?php
 session_start();
 
+// -- BOT STREAMER SESSION ISOLATION --
+if (isset($_POST['is_bot']) && $_POST['is_bot'] == 1 && isset($_SESSION['Iduser_temp_bot'])) {
+    // Đóng session thật để không lưu đè Iduser của Streamer
+    session_write_close();
+    // Gán Iduser thành của Bot để script chạy bằng tài khoản Bot
+    $_SESSION['Iduser'] = $_SESSION['Iduser_temp_bot'];
+}
+// ------------------------------------
+
 if (!isset($_SESSION['Iduser'])) {
     header("Location: ../login.php");
     exit();

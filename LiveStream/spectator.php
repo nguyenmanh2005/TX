@@ -40,11 +40,11 @@ $userAvatar = !empty($userData['ImageURL']) ? $userData['ImageURL'] : '../img/av
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         html, body, div, p, span, section, header, footer, aside, nav, table, tr, td, iframe, canvas {
-            cursor: url('../img/chuot.png'), default;
+            cursor: url('img/chuot.png'), default;
         }
         a, button, input, select, textarea, label, .btn, [role="button"], [onclick], .clickable, .live-card, .cat-chip,
         a *, button *, [onclick] *, .live-card *, .cat-chip *, .swal2-popup button, .swal2-popup [onclick] {
-            cursor: url('../img/tay.png'), pointer !important;
+            cursor: url('img/tay.png'), pointer !important;
         }
         #threejs-background { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
         :root {
@@ -459,7 +459,7 @@ $userAvatar = !empty($userData['ImageURL']) ? $userData['ImageURL'] : '../img/av
         <aside>
             <div class="sidebar-card">
                 <div style="font-size: 0.85rem; font-weight: 800; text-transform: uppercase; color: var(--text-sub); margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
-                    <i class="fa fa-fire" style="color: var(--rose);"></i> 5 Bàn Live 24/7
+                    <i class="fa fa-fire" style="color: var(--rose);"></i> 8 Bàn Live 24/7
                 </div>
                 <div id="sidebar-tables-list">
                     <div style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">
@@ -498,7 +498,7 @@ $userAvatar = !empty($userData['ImageURL']) ? $userData['ImageURL'] : '../img/av
             </div>
 
             <div class="category-bar">
-                <div class="cat-chip active" onclick="filterCategory('all')">🔥 Tất cả 5 bàn</div>
+                <div class="cat-chip active" onclick="filterCategory('all')">🔥 Tất cả 8 bàn</div>
                 <div class="cat-chip" onclick="filterCategory('xocdia')">🎲 Trận Địa Trắng Đỏ</div>
                 <div class="cat-chip" onclick="filterCategory('baucua')">🐾 Thế Giới Linh Thú</div>
                 <div class="cat-chip" onclick="filterCategory('crash')">🚀 Tiên Tri Vũ Trụ</div>

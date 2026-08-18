@@ -23,7 +23,8 @@ function handleQuestsBot($baseUrl, $cFile) {
                     ], $cFile, true);
                     
                     if ((isset($claimRes['success']) && $claimRes['success']) || (isset($claimRes['status']) && $claimRes['status'] === 'success')) {
-                        $actions[] = "Đã hoàn thành Nhiệm vụ Hàng Ngày <b>\"" . $quest['title'] . "\"</b> và nhận thưởng!";
+                        $qName = $quest['name'] ?? $quest['quest_name'] ?? $quest['title'] ?? 'Nhiệm vụ hàng ngày';
+                        $actions[] = "Đã hoàn thành Nhiệm vụ Hàng Ngày <b>\"" . $qName . "\"</b> và nhận thưởng!";
                     }
                 }
             }

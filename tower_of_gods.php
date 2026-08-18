@@ -149,15 +149,40 @@ html,body{height:100%;overflow:hidden;font-family:'Outfit',sans-serif;background
 @keyframes buffPulse{from{filter:brightness(1)}to{filter:brightness(1.2)}}
 .btn-skill-cast.cooldown{background:rgba(15,23,42,0.6);border-color:rgba(255,255,255,0.08);color:#475569;cursor:default!important}
 
-/* Character Selector Bar */
-.char-selector-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+/* Character Selector Bar - Premium Upgrade */
+.char-selector-bar{display:grid;grid-template-columns:repeat(4, 1fr);gap:8px;margin-top:10px;}
 .char-select-btn{
-  background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:10px;
-  padding:8px 4px;font-size:11px;font-weight:800;color:#64748b;font-family:'Outfit',sans-serif;
-  cursor:url('img/tay.png'),pointer!important;transition:all 0.2s;text-align:center;
+  background:rgba(15,23,42,0.7);border:1px solid rgba(255,255,255,0.05);border-radius:12px;
+  padding:10px 4px;font-size:11.5px;font-weight:800;color:#94a3b8;font-family:'Outfit',sans-serif;
+  cursor:url('img/tay.png'),pointer!important;transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align:center;position:relative;overflow:hidden;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);
+  width:100%;
 }
-.char-select-btn.active{background:rgba(251,191,36,0.12);border-color:rgba(251,191,36,0.4);color:#fbbf24}
-.char-select-btn:hover:not(.active){background:rgba(255,255,255,0.03);color:#e2e8f0}
+.char-select-btn::before{
+  content:'';position:absolute;top:0;left:-100%;width:50%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);
+  transform:skewX(-20deg);transition:all 0.5s;
+}
+.char-select-btn:hover:not(.active)::before{left:150%}
+.char-select-btn.active{
+  background:linear-gradient(135deg,rgba(251,191,36,0.15),rgba(217,119,6,0.15));
+  border-color:rgba(251,191,36,0.5);color:#fbbf24;
+  box-shadow:0 0 20px rgba(251,191,36,0.15),inset 0 0 10px rgba(251,191,36,0.05);
+  transform:translateY(-3px);
+}
+.char-select-btn.active::after{
+  content:'✓';position:absolute;top:6px;right:8px;font-size:12px;color:#fbbf24;font-weight:bold;
+  text-shadow:0 0 8px rgba(251,191,36,0.8);
+}
+.char-select-btn:hover:not(.active){
+  background:rgba(30,41,59,0.9);color:#f1f5f9;border-color:rgba(255,255,255,0.15);transform:translateY(-2px);
+}
+.char-select-icon{
+  display:block;font-size:26px;margin-bottom:8px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  transition:transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.char-select-btn.active .char-select-icon{transform:scale(1.15)}
+.char-select-name{display:block;letter-spacing:0.5px}
 
 /* Particle Canvas */
 #pc{position:fixed;inset:0;pointer-events:none;z-index:999}
@@ -179,6 +204,7 @@ html,body{height:100%;overflow:hidden;font-family:'Outfit',sans-serif;background
       <div style="color:#334155;font-size:13px;text-align:center;padding:20px;">Đang tải lộ trình...</div>
     </div>
     <div class="stats-panel">
+      <div class="stat-row"><span class="stat-label">Số Dư Tài Khoản</span><span class="stat-value" style="color:#60a5fa;font-size:12.5px;font-weight:900" id="sBalance">-</span></div>
       <div class="stat-row"><span class="stat-label">Kỷ Lục Cao Nhất</span><span class="stat-value" style="color:#fbbf24">Tầng <span id="sBest">-</span></span></div>
       <div class="stat-row"><span class="stat-label">Tổng Trận Thắng</span><span class="stat-value" style="color:#34d399"><span id="sWins">-</span> trận</span></div>
       <div class="stat-row"><span class="stat-label">Tổng Phúc Lộc GTLM</span><span class="stat-value" style="color:#c084fc;font-size:12.5px;" id="sGtlm">-</span></div>
@@ -188,27 +214,39 @@ html,body{height:100%;overflow:hidden;font-family:'Outfit',sans-serif;background
   <!-- ================= CENTER ARENA ================= -->
   <div id="center">
     <!-- Header top -->
-    <div class="arena-header">
+    <div class="arena-header" style="justify-content:center;">
       <div class="floor-pill" id="floorPill">🔥 TẦNG <span id="floorNum">-</span></div>
-      <div class="floor-number-text" id="floorBig">-</div>
-      <div class="reward-display-pill" id="rewardPill">💰 <span id="rewardAmt">-</span></div>
     </div>
 
-    <!-- Canvas Wheel -->
-    <div class="wheel-container">
-      <div class="mult-flash" id="multFlash" style="display:none;position:absolute;font-family:'Cinzel Decorative',serif;font-size:72px;font-weight:900;z-index:10;pointer-events:none;"></div>
-      <canvas id="wheelCanvas" width="420" height="420"></canvas>
+    <!-- Combat Arena -->
+    <div class="combat-container" style="display:flex; flex-direction:column; gap:20px; padding:20px;">
+        <div style="text-align:center;"><div class="floor-pill" id="weatherPill" style="background:rgba(124, 58, 237, 0.2); color:#c4b5fd; border-color:rgba(139, 92, 246, 0.4); display:none;">☀️ Bình Thường</div></div>
+        
+        <div class="combat-stage" style="display:flex; justify-content:space-between; align-items:stretch; background:rgba(0,0,0,0.4); border-radius:16px; padding:20px; border:1px solid rgba(255,255,255,0.1);">
+            
+            <!-- Phe Ta (3 slots) -->
+            <div id="playerTeamArea" style="display:flex; flex-direction:column; gap:10px; width:42%; justify-content:center;">
+                <!-- Template for a player entity, injected via JS -->
+            </div>
+            
+            <div style="display:flex; align-items:center; font-size:30px; font-weight:900; color:#ef4444; font-style:italic;">VS</div>
+
+            <!-- Phe Địch (3 slots) -->
+            <div id="monsterTeamArea" style="display:flex; flex-direction:column; gap:10px; width:42%; justify-content:center;">
+                <!-- Template for a monster entity, injected via JS -->
+            </div>
+            
+        </div>
+
+        <div class="combat-log" id="combatLog" style="background:#0f172a; border-radius:12px; padding:15px; height:220px; overflow-y:auto; border:1px solid #1e293b; font-family:'Courier New', monospace; font-size:13px; color:#94a3b8; display:flex; flex-direction:column; gap:8px; scroll-behavior: smooth;">
+            <div style="text-align:center; color:#64748b; font-style:italic;">Sẵn sàng chiến đấu...</div>
+        </div>
     </div>
 
     <!-- Controls -->
-    <div class="control-zone">
-      <div class="speed-bar-wrap">
-        <div class="speed-lbl-row"><span>⚡ Tốc Độ Trục Kim</span><span id="speedText">Đang thiết lập...</span></div>
-        <div class="speed-track"><div class="speed-bar-fill" id="speedFill"></div></div>
-      </div>
-      <div class="prompt-text" id="prompt">Kim đang chuyển động xoay — bấm nút bên dưới đúng thời khắc để hãm kim dừng vào ô mong muốn!</div>
+    <div class="control-zone" style="margin-top:0;">
       <div id="actionBtns">
-        <button class="btn-stop" id="btnStop" onclick="Game.stop()">🛑 DỪNG KIM!</button>
+        <button class="btn-stop" style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); border-bottom: 4px solid #7f1d1d;" id="btnStart" onclick="Game.startBattle()">⚔️ TIẾN VÀO CHIẾN ĐẬU</button>
       </div>
     </div>
 
@@ -254,12 +292,14 @@ html,body{height:100%;overflow:hidden;font-family:'Outfit',sans-serif;background
       </div>
 
       <!-- Selectors -->
-      <div>
-        <div style="font-size:11px;color:#334155;letter-spacing:1px;font-weight:800;margin-bottom:6px">🔄 LỰA CHỌN CHIẾN BINH</div>
-        <div class="char-selector-bar">
-          <button class="char-select-btn" id="btnChar_kiem_thanh" onclick="Game.switchCharacter('kiem_thanh')">🥷 Kiếm Thánh</button>
-          <button class="char-select-btn" id="btnChar_phap_su" onclick="Game.switchCharacter('phap_su')">🧙‍♂️ Pháp Sư</button>
-          <button class="char-select-btn" id="btnChar_cuong_chien_si" onclick="Game.switchCharacter('cuong_chien_si')">🛡️ Cuồng Sĩ</button>
+      <div style="margin-top:4px">
+        <div style="font-size:12px;color:#94a3b8;letter-spacing:2px;text-transform:uppercase;font-weight:900;margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+          <span style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08))"></span>
+          🔄 LỰA CHỌN CHIẾN BINH
+          <span style="flex:1;height:1px;background:linear-gradient(270deg,transparent,rgba(255,255,255,0.08))"></span>
+        </div>
+        <div class="char-selector-bar" id="charSelectorBar">
+          <!-- JS sẽ generate tự động 20 buttons ở đây -->
         </div>
       </div>
 
@@ -306,44 +346,50 @@ function spawnBurst(x, y, color, count=40) {
   }
 }
 function animateParticles() {
-  pctx.clearRect(0,0,pc.width,pc.height);
-  pts = pts.filter(p => p.life > 0);
-  pts.forEach(p => {
-    p.x += p.vx; p.y += p.vy; p.vy += 0.16; p.life -= p.decay;
-    pctx.globalAlpha = p.life; pctx.fillStyle = p.color;
-    pctx.font = `${p.r*3.5}px serif`; pctx.fillText(p.chars, p.x, p.y);
-  });
-  pctx.globalAlpha = 1;
-  requestAnimationFrame(animateParticles);
+    if (pts.length === 0) return;
+    pctx.clearRect(0,0,pc.width,pc.height);
+    pts = pts.filter(p => p.life > 0);
+    if (pts.length === 0) return; 
+
+    pts.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.vy += 0.16; p.life -= p.decay;
+      pctx.globalAlpha = p.life; pctx.fillStyle = p.color;
+      pctx.font = `${p.r*3.5}px serif`; pctx.fillText(p.chars, p.x, p.y);
+    });
+    pctx.globalAlpha = 1;
 }
-animateParticles();
+
+  function particleLoop() {
+    animateParticles();
+    requestAnimationFrame(particleLoop);
+  }
+  particleLoop();
 
 // ===== CHARACTER DATABASE =====
 const CHARACTER_DB = {
-  kiem_thanh: {
-    name: 'Kiếm Thánh',
-    tag: 'Tốc độ / Phản xạ',
-    passive: 'Nội tại: Tốc độ kim quay được giảm sẵn 15% giúp bạn canh hãm kim dễ dàng hơn.',
-    activeName: 'Tuyệt kỹ: Ngưng Đọng',
-    activeDesc: 'Hãm kim chậm lại ngay 70% trong 1.5 giây để ra chiêu chuẩn xác nhất! (Hồi chiêu 10s)',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=samurai'
-  },
-  phap_su: {
-    name: 'Pháp Sư Tối Thượng',
-    tag: 'May rủi / Lợi nhuận',
-    passive: 'Nội tại: Ô Thần Bài (Jackpot x5) trên vòng quay vận mệnh được kéo giãn thêm 5% diện tích.',
-    activeName: 'Tuyệt kỹ: Chuyển Mệnh',
-    activeDesc: 'Nếu dừng vào ô Tử Thần, kỹ năng tự động kích hoạt chuyển hóa thành Thử Lại! (Hồi chiêu 15s)',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=wizard'
-  },
-  cuong_chien_si: {
-    name: 'Cuồng Chiến Sĩ',
-    tag: 'Chống chịu / Bất tử',
-    passive: 'Nội tại: Khởi đầu mỗi trận leo tháp nhận sẵn 1 Khiên Hộ Mệnh chống kẹt khi trúng ô Tử Thần.',
-    activeName: 'Tuyệt kỹ: Hét Thấu Trời',
-    activeDesc: 'Nhân đôi toàn bộ thạch thưởng GTLM của tầng này nếu dừng trúng ô Chiến Thắng trở lên! (Hồi chiêu 20s)',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=barbarian'
-  }
+  kiem_thanh: { tag: 'Kiểm Soát', name: 'Kiếm Thánh', icon: '🥷', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=kiemthanh', passive: 'Tăng mạnh ATK (+50%), tỷ lệ bạo kích 30%.', activeDesc: 'Nhất Kiếm Đoạt Mệnh: Đòn chém đầu tiên x3 Sát thương. (CD: 3 tầng)' },
+  cung_thu: { tag: 'Kiểm Soát', name: 'Cung Thủ', icon: '🏹', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=cungthu', passive: 'Tỷ lệ bạo kích 50%, nhưng HP rất thấp (-20%).', activeDesc: 'Phong Thần Tiễn: Tỷ lệ bạo kích lượt đầu là 100%. (CD: 3 tầng)' },
+  ninja: { tag: 'Kiểm Soát', name: 'Ninja', icon: '🗡️', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ninja', passive: '30% né tránh sát thương. ATK khá.', activeDesc: 'Phân Thân: Miễn nhiễm sát thương trong 2 hiệp đầu. (CD: 4 tầng)' },
+  tien_tri: { tag: 'Kiểm Soát', name: 'Tiên Tri', icon: '🔮', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=tientri', passive: 'Giảm 20% sức mạnh tấn công của quái vật.', activeDesc: 'Thấu Thị: Trực tiếp kết liễu quái vật nếu HP quái < 50%. (CD: 4 tầng)' },
+  ma_kiem_si: { tag: 'Kiểm Soát', name: 'Ma Kiếm Sĩ', icon: '⚔️', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=makiemsi', passive: 'Hút máu cơ bản 10%.', activeDesc: 'Song Long Kích: Chém liên tiếp 2 lần trong hiệp đấu này. (CD: 3 tầng)' },
+  
+  phap_su: { tag: 'Sinh Tồn', name: 'Pháp Sư', icon: '🧙‍♂️', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=phapsu', passive: 'Sát thương phép lực lớn (ATK x2), máu giấy.', activeDesc: 'Nghịch Chuyển: Tự động hồi phục 100% HP khi máu dưới 20%. (CD: 5 tầng)' },
+  cuong_chien_si: { tag: 'Sinh Tồn', name: 'Cuồng Sĩ', icon: '🛡️', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=cuongsj', passive: 'Trâu bò (HP x2).', activeDesc: 'Thịnh Nộ: Hy sinh 30% HP để tăng x2 ATK toàn trận. (CD: 4 tầng)' },
+  hac_am: { tag: 'Sinh Tồn', name: 'Hắc Ám', icon: '🧛‍♂️', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=hacam', passive: 'Hút máu cực mạnh (50% ST gây ra).', activeDesc: 'Bóng Tối: Vô hiệu hóa đòn đánh của quái trong 3 hiệp. (CD: 6 tầng)' },
+  muc_su: { tag: 'Sinh Tồn', name: 'Mục Sư', icon: '⛪', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=mucsu', passive: 'HP dồi dào, hút máu 20%.', activeDesc: 'Thánh Ca: Hồi phục toàn bộ máu và nhân đôi HP tối đa. (CD: 5 tầng)' },
+  trieu_hoi: { tag: 'Sinh Tồn', name: 'Triệu Hồi Sư', icon: '🐉', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=trieuhoi', passive: 'Chỉ số đồng đều, mạnh về HP.', activeDesc: 'Triệu Hồi: Trực tiếp rút đi 50% máu tối đa của quái vật ngay đầu trận. (CD: 5 tầng)' },
+  
+  dao_tac: { tag: 'Kiếm Tiền', name: 'Đạo Tặc', icon: '🦹', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=daotac', passive: '+15% tiền thưởng cơ bản.', activeDesc: 'Tráo Phụng: x2 tiền thưởng của tầng này nếu chiến thắng. (CD: 4 tầng)' },
+  than_tai: { tag: 'Kiếm Tiền', name: 'Thần Tài', icon: '🤑', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=thantai', passive: 'Nhận x4 GTLM ở các tầng chia hết cho 5.', activeDesc: 'Hào Quang: Nếu thắng tầng này, nhận tiền thưởng tương đương tầng Boss. (CD: 4 tầng)' },
+  thuong_nhan: { tag: 'Kiếm Tiền', name: 'Thương Nhân', icon: '💰', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=thuongnhan', passive: 'Mỗi tầng tự sinh ra 5% lãi dựa trên tổng thưởng.', activeDesc: 'Hối Lộ: Bỏ qua việc đánh quái (thắng tự động), nhưng bị trừ 20% tổng tiền tích lũy. (CD: 4 tầng)' },
+  tho_san: { tag: 'Kiếm Tiền', name: 'Thợ Săn', icon: '🤠', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=thosan', passive: 'Tiền thưởng từ đánh Boss (Tầng 10, 20...) luôn x2.', activeDesc: 'Đóng Dấu: X10 thưởng nếu thắng, nhưng ATK của quái cũng x2. (CD: 4 tầng)' },
+  nhac_si: { tag: 'Kiếm Tiền', name: 'Nhạc Sĩ', icon: '🪕', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=nhacsi', passive: 'HP dày.', activeDesc: 'Ru Ngủ: Quái vật bỏ qua 2 hiệp đánh đầu tiên. (CD: 5 tầng)' },
+  
+  gia_kim: { tag: 'Đột Biến', name: 'Giả Kim', icon: '🧪', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=giakim', passive: 'Chuyển hóa 10% sát thương gây ra thành GTLM thưởng.', activeDesc: 'Chế Thuốc Nổ: Đặt bom nổ chết quái ở hiệp 3 (nếu sống sót đến hiệp 3). (CD: 3 tầng)' },
+  cuong_tin: { tag: 'Đột Biến', name: 'Cuồng Tín', icon: '🩸', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=cuongtin', passive: 'HP cực thấp, ATK x2.5.', activeDesc: 'Hy Sinh: Trực tiếp tự sát để tiêu diệt quái, bảo toàn tiền thưởng và tiến lên tầng mới. (CD: 4 tầng)' },
+  xuyen_khong: { tag: 'Đột Biến', name: 'Xuyên Không', icon: '⏳', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=xuyenkhong', passive: 'Trâu, sát thương vừa. Nếu bị quái giết, không rớt về tầng 1 mà chỉ lùi 1 tầng.', activeDesc: 'Bẻ Cong: Bỏ qua hoàn toàn tầng này nhảy lên tầng kế (Không nhận thưởng). (CD: 4 tầng)' },
+  do_te: { tag: 'Đột Biến', name: 'Đồ Tể', icon: '🪓', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=dote', passive: 'Hút máu 40%. Trâu bò.', activeDesc: 'Chặt Chém: One-hit tiêu diệt quái thường (Không tác dụng với Boss). (CD: 3 tầng)' },
+  vua_tro_choi: { tag: 'Đột Biến', name: 'Gambler', icon: '🎲', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=gambler', passive: 'HP và ATK đều x2, nhưng có 20% đột tử mỗi hiệp.', activeDesc: 'Lật Kèo: Trò chơi tử thần 50/50: 50% quái chết ngay lập tức, 50% bạn tự sát. (CD: 8 tầng)' }
 };
 
 const ALL_SEGS = [
@@ -355,339 +401,227 @@ const ALL_SEGS = [
   { key:'death',   label:'TỬ THẦN', icon:'💀', color:'#ef4444', dark:'#3b0000', mult:-1, desc:'Bay màu: Bị kẹt lại tầng hiện tại' }
 ];
 
+// Tạo DOM cho 20 nhân vật
+const charBar = document.getElementById('charSelectorBar');
+Object.keys(CHARACTER_DB).forEach(k => {
+  const c = CHARACTER_DB[k];
+  const btn = document.createElement('button');
+  btn.className = 'char-select-btn';
+  btn.id = `btnChar_${k}`;
+  btn.onclick = () => Game.switchCharacter(k);
+  btn.innerHTML = `<span class="char-select-icon">${c.icon}</span><span class="char-select-name">${c.name}</span>`;
+  charBar.appendChild(btn);
+});
+
 // Phân bổ tỷ lệ theo tầng (vùng góc)
-function getSegs(floor, char) {
+function getSegs(floor, char, activeBuff = null) {
   const boss = floor % 10 === 0;
   
-  // Buff nội tại của Pháp Sư Tối Thượng: Tăng 5% ô Thần Bài (Jackpot)
-  const jackpotBonus = (char === 'phap_su') ? 0.05 : 0.0;
+  let pJackpot = boss ? 0.05 : (floor <= 10 ? 0.10 : (floor <= 25 ? 0.08 : (floor <= 50 ? 0.06 : (floor <= 75 ? 0.05 : 0.04))));
+  let pWin3    = boss ? 0.15 : (floor <= 10 ? 0.20 : (floor <= 25 ? 0.15 : (floor <= 50 ? 0.12 : (floor <= 75 ? 0.10 : 0.08))));
+  let pWin     = boss ? 0.20 : (floor <= 10 ? 0.30 : (floor <= 25 ? 0.25 : (floor <= 50 ? 0.22 : (floor <= 75 ? 0.18 : 0.14))));
+  let pHalf    = boss ? 0.12 : (floor <= 10 ? 0.15 : (floor <= 25 ? 0.18 : (floor <= 50 ? 0.18 : (floor <= 75 ? 0.17 : 0.14))));
+  let pRetry   = boss ? 0.10 : (floor <= 10 ? 0.15 : (floor <= 25 ? 0.14 : (floor <= 50 ? 0.14 : (floor <= 75 ? 0.10 : 0.10))));
+  let pDeath   = boss ? 0.38 : (floor <= 10 ? 0.10 : (floor <= 25 ? 0.20 : (floor <= 50 ? 0.28 : (floor <= 75 ? 0.40 : 0.50))));
 
-  let dist = [];
-  if (boss) {
-    // Tầng Boss: Tỷ lệ tử thần rộng hơn
-    dist = [
-      { key: 'jackpot', p: 0.05 + jackpotBonus },
-      { key: 'win3',    p: 0.15 },
-      { key: 'win',     p: 0.20 },
-      { key: 'half',    p: 0.12 },
-      { key: 'retry',   p: 0.10 },
-      { key: 'death',   p: 0.38 - jackpotBonus }
-    ];
-  } else if (floor <= 10) {
-    dist = [
-      { key: 'jackpot', p: 0.10 + jackpotBonus },
-      { key: 'win3',    p: 0.20 },
-      { key: 'win',     p: 0.30 },
-      { key: 'half',    p: 0.15 },
-      { key: 'retry',   p: 0.15 },
-      { key: 'death',   p: 0.10 - jackpotBonus }
-    ];
-  } else if (floor <= 25) {
-    dist = [
-      { key: 'jackpot', p: 0.08 + jackpotBonus },
-      { key: 'win3',    p: 0.15 },
-      { key: 'win',     p: 0.25 },
-      { key: 'half',    p: 0.18 },
-      { key: 'retry',   p: 0.14 },
-      { key: 'death',   p: 0.20 - jackpotBonus }
-    ];
-  } else if (floor <= 50) {
-    dist = [
-      { key: 'jackpot', p: 0.06 + jackpotBonus },
-      { key: 'win3',    p: 0.12 },
-      { key: 'win',     p: 0.22 },
-      { key: 'half',    p: 0.18 },
-      { key: 'retry',   p: 0.14 },
-      { key: 'death',   p: 0.28 - jackpotBonus }
-    ];
-  } else if (floor <= 75) {
-    dist = [
-      { key: 'jackpot', p: 0.05 + jackpotBonus },
-      { key: 'win3',    p: 0.10 },
-      { key: 'win',     p: 0.18 },
-      { key: 'half',    p: 0.17 },
-      { key: 'retry',   p: 0.10 },
-      { key: 'death',   p: 0.40 - jackpotBonus }
-    ];
-  } else {
-    // Tầng 76-100
-    dist = [
-      { key: 'jackpot', p: 0.04 + jackpotBonus },
-      { key: 'win3',    p: 0.08 },
-      { key: 'win',     p: 0.14 },
-      { key: 'half',    p: 0.14 },
-      { key: 'retry',   p: 0.10 },
-      { key: 'death',   p: 0.50 - jackpotBonus }
-    ];
+  // 1. NỘI TẠI (PASSIVE)
+  if (char === 'phap_su') { pJackpot += 0.05; pDeath -= 0.05; }
+  if (char === 'cung_thu') { pWin3 += 0.05; pWin += 0.05; pDeath -= 0.10; }
+  if (char === 'ninja') { pDeath -= 0.05; pWin += 0.05; }
+  if (char === 'ma_kiem_si') { pDeath += 0.05; pWin -= 0.05; }
+  if (char === 'gia_kim') { pWin3 += pHalf; pHalf = 0; }
+  if (char === 'cuong_tin') { if ((window.shieldCount || 0) === 0) { pJackpot += 0.10; pDeath -= 0.10; } }
+  if (char === 'do_te') { pDeath += pRetry; pRetry = 0; }
+  if (char === 'vua_tro_choi') { pJackpot = 0.2; pDeath = 0.8; pWin3 = 0; pWin = 0; pHalf = 0; pRetry = 0; }
+
+  // Chuẩn hóa lỡ < 0
+  pDeath = Math.max(0, pDeath); pWin = Math.max(0, pWin);
+
+  // 2. TUYỆT KỸ (ACTIVE BUFF)
+  if (activeBuff === 'nhat_kiem') { let add = pJackpot; pJackpot += add; pDeath = Math.max(0, pDeath - add); }
+  if (activeBuff === 'bong_toi') { pWin3 += pJackpot; pJackpot = 0; pRetry += pDeath; pDeath = 0; }
+  if (activeBuff === 'hop_the') { pWin3 += pWin + pHalf; pWin = 0; pHalf = 0; }
+  if (activeBuff === 'hao_quang') { pJackpot += pHalf; pHalf = 0; pDeath += 0.05; pWin = Math.max(0, pWin - 0.05); }
+  if (activeBuff === 'ru_ngu') { pHalf += pRetry + pDeath; pRetry = 0; pDeath = 0; }
+  if (activeBuff === 'che_thuoc') { pJackpot += pWin / 2; pDeath += pWin / 2; pWin = 0; }
+  if (activeBuff === 'hy_sinh') {
+    let shields = window.shieldCount || 0;
+    if (shields > 0) {
+      pJackpot += shields * 0.05;
+      pDeath = Math.max(0, pDeath - (shields * 0.05));
+    }
   }
+  if (activeBuff === 'chat_chem') { pWin += pDeath / 2; pDeath /= 2; }
+  if (activeBuff === 'lat_keo' && char === 'vua_tro_choi') { pJackpot = 0.8; pDeath = 0.2; }
 
-  // Map ngược lại segs hoàn chỉnh
-  return dist.map(d => {
+  const resultDist = [
+    { key: 'jackpot', p: pJackpot },
+    { key: 'win3',    p: pWin3 },
+    { key: 'win',     p: pWin },
+    { key: 'half',    p: pHalf },
+    { key: 'retry',   p: pRetry },
+    { key: 'death',   p: pDeath }
+  ];
+
+  return resultDist.filter(d => d.p > 0).map(d => {
     const s = ALL_SEGS.find(item => item.key === d.key);
     return { ...s, portion: d.p };
   });
 }
 
-// ===== WHEEL CANVAS =====
-const wc = document.getElementById('wheelCanvas'), wctx = wc.getContext('2d');
-const W = wc.width, H = wc.height, CX = W/2, CY = H/2, R = W/2 - 12;
+// ===== WHEEL MODULE =====
+const qteBarEl = document.getElementById('qteBar');
+const qteCursorEl = document.getElementById('qteCursor');
 
 const Game = (() => {
-  let floor = 1, reward = 0, segs = [], segAngles = [];
-  let angle = 0, speed = 0, baseSpeed = 0, spinning = false, canStop = false, cooldownTimer = null;
+  let floor = 1, reward = 0, cooldownTimer = null;
   let activeBuff = null, selectedChar = 'kiem_thanh';
-  let isHaming = false, rafId = null;
+  let teamChars = [];
+  let isBattling = false;
 
-  function buildAngles(s) {
-    segAngles = [];
-    let cur = 0;
-    s.forEach(seg => {
-      const arc = seg.portion * Math.PI*2;
-      segAngles.push({ seg, start: cur, end: cur+arc });
-      cur += arc;
-    });
-  }
-
-  function drawWheel() {
-    wctx.clearRect(0,0,W,H);
-
-    // Neon outer glow ring
-    const grad = wctx.createRadialGradient(CX,CY,R-24,CX,CY,R+6);
-    grad.addColorStop(0, 'transparent');
-    grad.addColorStop(0.9, 'rgba(251,191,36,0.06)');
-    grad.addColorStop(1, 'rgba(251,191,36,0.3)');
-    wctx.beginPath(); wctx.arc(CX,CY,R+6,0,Math.PI*2); wctx.fillStyle = grad; wctx.fill();
-
-    // Segments
-    segAngles.forEach(({seg, start, end}) => {
-      const s = start + angle, e = end + angle;
-      wctx.beginPath();
-      wctx.moveTo(CX,CY);
-      wctx.arc(CX,CY,R,s,e);
-      wctx.closePath();
-
-      // Radial slice gradient
-      const mx = CX + Math.cos((s+e)/2)*R*0.65, my = CY + Math.sin((s+e)/2)*R*0.65;
-      const sg = wctx.createRadialGradient(mx,my,0,CX,CY,R);
-      sg.addColorStop(0, seg.color);
-      sg.addColorStop(1, seg.dark || seg.color);
-      wctx.fillStyle = sg;
-      wctx.fill();
-
-      // Thin outline
-      wctx.strokeStyle = 'rgba(3,6,17,0.45)';
-      wctx.lineWidth = 1.5;
-      wctx.stroke();
-
-      // Render icons
-      const arcMid = (s+e)/2;
-      const tx = CX + Math.cos(arcMid)*R*0.65, ty = CY + Math.sin(arcMid)*R*0.65;
-      wctx.save();
-      wctx.translate(tx,ty); wctx.rotate(arcMid + Math.PI/2);
-      wctx.textAlign = 'center'; wctx.textBaseline = 'middle';
-      
-      const arcLen = end - start;
-      if (arcLen > 0.28) {
-        wctx.font = 'bold 20px serif'; wctx.fillStyle = '#fff';
-        wctx.shadowColor = 'rgba(0,0,0,0.6)'; wctx.shadowBlur = 4;
-        wctx.fillText(seg.icon, 0, 0);
-        if (arcLen > 0.45) {
-          wctx.font = '900 10.5px Outfit';
-          wctx.fillText(seg.mult > 0 ? `×${seg.mult}` : seg.mult === 0 ? '🔄' : '💀', 0, 16);
-        }
-      } else {
-        wctx.font = '16px serif'; wctx.fillText(seg.icon, 0, 0);
-      }
-      wctx.restore();
-    });
-
-    // Center pivot cap
-    const cc = wctx.createRadialGradient(CX,CY,0,CX,CY,26);
-    cc.addColorStop(0, '#10172a'); cc.addColorStop(1, '#020617');
-    wctx.beginPath(); wctx.arc(CX,CY,26,0,Math.PI*2); wctx.fillStyle = cc; wctx.fill();
-    wctx.strokeStyle = 'rgba(251,191,36,0.6)'; wctx.lineWidth = 2.5; wctx.stroke();
-    wctx.fillStyle = '#fbbf24'; wctx.font = 'bold 15px serif'; wctx.textAlign = 'center'; wctx.textBaseline = 'middle';
-    wctx.fillText('🗼', CX, CY);
-
-    // Indicator Needle pointing down from the very top (12 o'clock, 270 degrees or -PI/2)
-    drawNeedle();
-  }
-
-  function drawNeedle() {
-    const nx = CX, ny = 12;
-    wctx.save();
-    wctx.translate(nx,ny);
-    wctx.beginPath();
-    wctx.moveTo(-11,0); wctx.lineTo(11,0); wctx.lineTo(0,46);
-    wctx.closePath();
-    const ng = wctx.createLinearGradient(0,0,0,46);
-    ng.addColorStop(0, '#ef4444'); ng.addColorStop(1, '#7f1d1d');
-    wctx.fillStyle = ng; wctx.fill();
-    wctx.strokeStyle = 'rgba(0,0,0,0.5)'; wctx.lineWidth = 1.5; wctx.stroke();
-
-    // Circle pivot
-    wctx.beginPath(); wctx.arc(0,0,10,0,Math.PI*2);
-    wctx.fillStyle = '#0f172a'; wctx.fill();
-    wctx.strokeStyle = '#ef4444'; wctx.lineWidth = 2.5; wctx.stroke();
-    wctx.restore();
-  }
-
-  function getSegmentAtNeedle() {
-    const needle = -Math.PI/2;
-    // Map angle to range [0, 2PI)
-    let relative = ((needle - angle) % (Math.PI*2) + Math.PI*2) % (Math.PI*2);
-    for(const sa of segAngles) {
-      if (relative >= sa.start && relative < sa.end) return sa.seg;
-    }
-    return segAngles[0].seg;
-  }
-
-  function runLoop() {
-    if (!spinning) return;
-    angle += speed;
-    if (angle > Math.PI*2) angle -= Math.PI*2;
-
-    drawWheel();
-
-    // Speed bar calculation
-    const pct = Math.min(100, (speed / baseSpeed) * 100);
-    const fill = document.getElementById('speedFill');
-    if (fill) fill.style.width = pct + '%';
+  async function startBattle() {
+    if (isBattling) return;
+    isBattling = true;
     
-    const textEl = document.getElementById('speedText');
-    if (textEl) {
-      if (speed > baseSpeed * 0.75) {
-        textEl.innerHTML = '<span style="color:#ef4444">🔥 CỰC NHANH</span>';
-      } else if (speed > baseSpeed * 0.4) {
-        textEl.innerHTML = '<span style="color:#fbbf24">⚡ KHÁ NHANH</span>';
-      } else if (speed > baseSpeed * 0.15) {
-        textEl.innerHTML = '<span style="color:#60a5fa">🐢 ĐANG HÃM TỐC...</span>';
-      } else {
-        textEl.innerHTML = '<span style="color:#22c55e">🐢 SẮP DỪNG!</span>';
-      }
-    }
-
-    if (speed > 0.001) {
-      rafId = requestAnimationFrame(runLoop);
-    } else {
-      spinning = false;
-      speed = 0;
-      drawWheel();
-      const finalSeg = getSegmentAtNeedle();
-      postResult(finalSeg);
-    }
-  }
-
-  async function postResult(seg) {
-    canStop = false;
-    document.getElementById('btnStop').disabled = true;
-
-    // Canvas centre coords for burst effects
-    const rect = wc.getBoundingClientRect();
-    const cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
-
-    // Flash segment text
-    const flash = document.getElementById('multFlash');
-    flash.textContent = seg.mult > 0 ? `×${seg.mult}` : seg.key === 'retry' ? '🔄' : '💀';
-    flash.style.color = seg.color;
-    flash.style.textShadow = `0 0 35px ${seg.color}`;
-    flash.style.display = 'block';
-    flash.classList.add('show');
-    setTimeout(() => { flash.style.display = 'none'; flash.classList.remove('show'); }, 1800);
-
-    // Dynamic color particle bursts
-    spawnBurst(cx, cy, seg.color, seg.key === 'death' ? 65 : 40);
-    if (seg.key === 'jackpot') {
-      setTimeout(() => spawnBurst(cx-80, cy-80, '#fbbf24', 30), 200);
-      setTimeout(() => spawnBurst(cx+80, cy-80, '#a855f7', 30), 400);
-      setTimeout(() => spawnBurst(cx, cy+80, '#22c55e', 30), 600);
-    }
-
-    await new Promise(r => setTimeout(r, 650));
-
-    // Send payload to backend
-    const fd = new FormData();
-    fd.append('card_result', seg.key);
+    document.getElementById('ovResult').classList.remove('active');
+    document.getElementById('btnStart').disabled = true;
+    const logBox = document.getElementById('combatLog');
+    logBox.innerHTML = '';
+    
     try {
-      const res = await fetch('api_tower_gods.php?action=card_result', { method:'POST', body:fd });
+      const res = await fetch('api_tower_gods.php?action=auto_battle', { method:'POST' });
       const data = await res.json();
 
       if (!data.success) {
         Swal.fire({ title:'Lỗi', text:data.message, icon:'error', background:'#080c1e', color:'#e2e8f0' });
-        startSpin();
+        readyPhase();
         return;
       }
 
-      // Sync data
-      if (data.progress) updateUIStats(data.progress);
-      if (data.cooldowns) syncCooldowns(data.cooldowns);
-      
-      const realResult = data.card_result; // Kết quả cuối cùng sau khi áp dụng Tuyệt kỹ
-      const finalReward = data.reward_gtlm || 0;
-      const outcome = ALL_SEGS.find(item => item.key === realResult);
+      await playCombatAnimation(data);
 
-      const ov = document.getElementById('ovResult');
-      document.getElementById('ovIcon').textContent = outcome.icon;
-      document.getElementById('ovTitle').textContent = outcome.label + '!';
-      document.getElementById('ovTitle').style.color = outcome.color;
-      document.getElementById('ovSub').innerHTML = data.message;
-
-      const rewEl = document.getElementById('ovReward');
-      if (finalReward > 0) {
-        rewEl.style.display = 'inline-flex';
-        document.getElementById('ovAmt').textContent = new Intl.NumberFormat().format(finalReward) + ' GTLM';
-      } else {
-        rewEl.style.display = 'none';
-      }
-
-      const actRow = document.getElementById('ovActions');
-      if (data.advanced) {
-        actRow.innerHTML = `<button class="post-action-btn btn-advance-floor" onclick="Game.nextFloor()">🚀 Lên Tầng ${floor+1}!</button>`;
-      } else {
-        actRow.innerHTML = `<button class="post-action-btn btn-retry-floor" onclick="Game.closeOverlay()">🔄 Quay Tiếp</button>`;
-      }
-      
-      ov.classList.add('active');
     } catch(e) {
       console.error(e);
-      startSpin();
+      readyPhase();
     }
   }
 
-  function startSpin() {
-    isHaming = false;
-    document.getElementById('ovResult').classList.remove('active');
-    
-    spinning = true; canStop = true;
-    document.getElementById('btnStop').disabled = false;
-    document.getElementById('prompt').innerHTML = 'Kim đang chuyển động xoay — bấm nút bên dưới đúng thời khắc để hãm kim dừng!';
-    document.getElementById('actionBtns').innerHTML = '<button class="btn-stop" id="btnStop" onclick="Game.stop()">🛑 DỪNG KIM!</button>';
-
-    // Base speed increases with floor height
-    baseSpeed = 0.045 + Math.min(floor, 100) * 0.0022;
-
-    // Kiếm Thánh passive: Reduce base speed by 15%
-    if (selectedChar === 'kiem_thanh') {
-      baseSpeed = baseSpeed * 0.85;
-    }
-
-    speed = baseSpeed;
-    cancelAnimationFrame(rafId);
-    rafId = requestAnimationFrame(runLoop);
+  function createEntityHTML(entity, isPlayer) {
+      const hpPct = Math.max(0, (entity.hp / entity.max_hp) * 100);
+      const color = isPlayer ? '#3b82f6' : '#ef4444';
+      const hpColor = hpPct < 30 ? '#ef4444' : '#22c55e';
+      const avatar = (isPlayer && CHARACTER_DB[entity.char]) ? CHARACTER_DB[entity.char].icon : entity.avatar;
+      return `
+      <div id="${entity.id}" class="combat-entity ${isPlayer?'player':'monster'}" style="text-align:center; padding:10px; background:rgba(255,255,255,0.02); border-radius:12px; transition:all 0.3s; flex:1;">
+          <div id="${entity.id}_avatar" style="font-size:35px; filter:drop-shadow(0 0 10px ${color}); transition:transform 0.1s;">${avatar}</div>
+          <div id="${entity.id}_name" style="font-weight:bold; color:#94a3b8; margin:5px 0 2px 0; font-size:11px;">${entity.name}</div>
+          <div style="background:#1e293b; border-radius:6px; height:8px; overflow:hidden; border:1px solid #334155; margin:0 5px;">
+              <div id="${entity.id}_hpBar" style="background:${hpColor}; height:100%; width:${hpPct}%; transition:width 0.3s;"></div>
+          </div>
+          <div id="${entity.id}_hpText" style="font-size:10px; margin-top:2px; color:#cbd5e1;">${entity.hp}/${entity.max_hp}</div>
+      </div>`;
   }
 
-  function stop() {
-    if (!canStop || !spinning || isHaming) return;
-    isHaming = true;
+  async function playCombatAnimation(data) {
+    const logBox = document.getElementById('combatLog');
+    const pArea = document.getElementById('playerTeamArea');
+    const mArea = document.getElementById('monsterTeamArea');
     
-    // Slow down gradually over time (negative acceleration)
-    const decel = setInterval(() => {
-      speed *= 0.945;
-      if (speed < 0.001) {
-        speed = 0;
-        clearInterval(decel);
-      }
-    }, 28);
+    if (data.pTeam && data.mTeam) {
+        pArea.innerHTML = data.pTeam.map(p => createEntityHTML(p, true)).join('');
+        mArea.innerHTML = data.mTeam.map(m => createEntityHTML(m, false)).join('');
+    }
+
+    for (const log of data.combat_log) {
+        if (log.turn_end) {
+            for (const p of log.pState) {
+                const elBar = document.getElementById(p.id + "_hpBar");
+                const elText = document.getElementById(p.id + "_hpText");
+                const elBox = document.getElementById(p.id);
+                if (elBar) {
+                    const pct = Math.max(0, (p.hp / p.max) * 100);
+                    elBar.style.width = pct + '%';
+                    elText.textContent = `${p.hp}/${p.max}`;
+                    elBar.style.background = pct < 30 ? '#ef4444' : '#22c55e';
+                    if (p.hp <= 0 && elBox) elBox.style.opacity = '0.3';
+                }
+            }
+            for (const m of log.mState) {
+                const elBar = document.getElementById(m.id + "_hpBar");
+                const elText = document.getElementById(m.id + "_hpText");
+                const elBox = document.getElementById(m.id);
+                if (elBar) {
+                    const pct = Math.max(0, (m.hp / m.max) * 100);
+                    elBar.style.width = pct + '%';
+                    elText.textContent = `${m.hp}/${m.max}`;
+                    elBar.style.background = pct < 30 ? '#ef4444' : '#22c55e';
+                    if (m.hp <= 0 && elBox) elBox.style.opacity = '0.3';
+                }
+            }
+            await new Promise(r => setTimeout(r, 600));
+            continue;
+        }
+
+        const d = document.createElement('div');
+        d.style.padding = '4px 8px';
+        d.style.borderRadius = '4px';
+        d.style.background = log.speaker === 'system' ? 'rgba(255, 255, 255, 0.05)' : 
+                            (log.speaker === 'player' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(239, 68, 68, 0.1)');
+        d.style.color = log.speaker === 'system' ? '#fbbf24' : 
+                       (log.speaker === 'player' ? '#93c5fd' : '#fca5a5');
+        d.innerHTML = log.msg;
+        logBox.appendChild(d);
+        logBox.scrollTop = logBox.scrollHeight;
+
+        if (log.speaker === 'player' && logBox.children.length > 0) {
+            pArea.style.transform = 'translateX(10px)';
+            setTimeout(() => pArea.style.transform = 'none', 100);
+        } else if (log.speaker === 'monster') {
+            mArea.style.transform = 'translateX(-10px)';
+            setTimeout(() => mArea.style.transform = 'none', 100);
+        }
+        
+        await new Promise(r => setTimeout(r, 200));
+    }
+
+    await new Promise(r => setTimeout(r, 1000));
+    
+    if (data.progress) updateUIStats(data.progress, data.cooldowns, data.user_balance);
+    
+    const ov = document.getElementById('ovResult');
+    if (data.is_win) {
+        document.getElementById('ovIcon').textContent = '⚔️';
+        document.getElementById('ovTitle').textContent = 'CHIẾN THẮNG!';
+        document.getElementById('ovTitle').style.color = '#22c55e';
+    } else {
+        document.getElementById('ovIcon').textContent = '💀';
+        document.getElementById('ovTitle').textContent = 'TỬ THẦN!';
+        document.getElementById('ovTitle').style.color = '#ef4444';
+    }
+    
+    document.getElementById('ovSub').innerHTML = data.message;
+    const rewEl = document.getElementById('ovReward');
+    if (data.reward_gtlm > 0) {
+        rewEl.style.display = 'inline-flex';
+        document.getElementById('ovAmt').textContent = new Intl.NumberFormat().format(data.reward_gtlm) + ' GTLM';
+    } else {
+        rewEl.style.display = 'none';
+    }
+
+    const actRow = document.getElementById('ovActions');
+    if (data.is_win) {
+        actRow.innerHTML = `<button class="post-action-btn btn-advance-floor" onclick="Game.nextFloor()">🚀 Lên Tầng ${floor+1}!</button>`;
+    } else {
+        actRow.innerHTML = `<button class="post-action-btn btn-retry-floor" onclick="Game.closeOverlay()">🔄 Quay Lại Tầng 1</button>`;
+    }
+    
+    ov.classList.add('active');
+  }
+
+  function readyPhase() {
+    isBattling = false;
+    document.getElementById('btnStart').disabled = false;
+    document.getElementById('combatLog').innerHTML = '<div style="text-align:center; color:#64748b; font-style:italic;">Sẵn sàng chiến đấu...</div>';
   }
 
   function castSkill() {
@@ -706,76 +640,81 @@ const Game = (() => {
         btn.className = 'btn-skill-cast active-buff';
         btn.textContent = 'TUYỆT KỸ ĐANG KÍCH HOẠT!';
         
-        // Kiếm Thánh Active Skill: Hãm phanh 70% tốc độ trong 1.5 giây
-        if (selectedChar === 'kiem_thanh') {
-          const originalSpeed = speed;
-          speed = speed * 0.3; // Chậm đi 70%
-          setTimeout(() => {
-            if (spinning && !isHaming) {
-              speed = originalSpeed; // Hết 1.5 giây phục hồi tốc độ cũ
-              btn.className = 'btn-skill-cast cooldown';
-              btn.disabled = true;
-            }
-          }, 1500);
-        }
+        // No UI rebuild needed in autobattler logic
 
-        // Đếm ngược CD ngay lập tức
+        // Cập nhật CD UI ngay lập tức
         if (data.cooldown_left) {
-          startCdCountdown(selectedChar, data.cooldown_left);
+          updateSkillBtnUI(data.cooldown_left);
         }
 
         if (typeof SoundFXHub !== 'undefined') SoundFXHub.playBossRoar?.();
       });
   }
 
-  function startCdCountdown(char, duration) {
+  function updateSkillBtnUI(cdLeft) {
     const btn = document.getElementById('btnSkill');
-    if (char !== selectedChar) return;
-
-    btn.className = 'btn-skill-cast cooldown';
-    btn.disabled = true;
-
-    let left = duration;
-    clearInterval(cooldownTimer);
-    cooldownTimer = setInterval(() => {
-      left--;
-      if (left <= 0) {
-        clearInterval(cooldownTimer);
-        btn.className = 'btn-skill-cast ready';
-        btn.disabled = false;
-        btn.textContent = 'KÍCH HOẠT TUYỆT KỸ';
-      } else {
-        btn.textContent = `HỒI CHIÊU CHỜ (${left}s)`;
-      }
-    }, 1000);
+    if (activeBuff) {
+      btn.className = 'btn-skill-cast active-buff';
+      btn.textContent = 'TUYỆT KỸ ĐANG KÍCH HOẠT!';
+      btn.disabled = true;
+      return;
+    }
+    
+    if (cdLeft > 0) {
+      btn.className = 'btn-skill-cast cooldown';
+      btn.disabled = true;
+      btn.textContent = `HỒI CHIÊU CHỜ (${cdLeft} TẦNG)`;
+    } else {
+      btn.className = 'btn-skill-cast ready';
+      btn.disabled = false;
+      btn.textContent = 'KÍCH HOẠT TUYỆT KỸ';
+    }
   }
 
   function switchCharacter(char) {
-    if (spinning && !isHaming) {
-      Swal.fire({ title:'Đang giao lưu!', text:'Không thể thay đổi chiến binh khi kim đang xoay!', icon:'warning', background:'#080c1e', color:'#e2e8f0' });
+    if (isBattling) {
+      Swal.fire({ title:'Đang chiến đấu!', text:'Không thể thay đổi chiến binh lúc này!', icon:'warning', background:'#080c1e', color:'#e2e8f0' });
       return;
+    }
+    
+    if (floor >= 50) {
+        Swal.fire('Bị Khóa!', 'Đội hình đã bị khóa vĩnh viễn từ Tầng 50!', 'error');
+        return;
+    }
+
+    if (teamChars.includes(char)) {
+        if (teamChars.length === 1) {
+            Swal.fire('Lỗi', 'Đội hình phải có ít nhất 1 nhân vật!', 'warning');
+            return;
+        }
+        teamChars = teamChars.filter(c => c !== char);
+    } else {
+        if (teamChars.length >= 3) {
+            Swal.fire('Lỗi', 'Đội hình tối đa 3 nhân vật!', 'warning');
+            return;
+        }
+        teamChars.push(char);
     }
 
     const fd = new FormData();
-    fd.append('character', char);
+    fd.append('team', JSON.stringify(teamChars));
     fetch('api_tower_gods.php?action=select_character', { method:'POST', body:fd })
       .then(res => res.json())
       .then(data => {
-        if (!data.success) return;
+        if (!data.success) {
+          Swal.fire('Lỗi', data.message, 'error');
+          return;
+        }
         
-        selectedChar = char;
         activeBuff = null;
-        clearInterval(cooldownTimer);
-        
-        // Sync UI character selection
-        updateUIStats(data.progress);
+        updateUIStats(data.progress, data.cooldowns, data.user_balance);
         loadFloor(floor);
       });
   }
 
   function closeOverlay() {
     document.getElementById('ovResult').classList.remove('active');
-    startSpin();
+    readyPhase();
   }
 
   function nextFloor() {
@@ -784,46 +723,56 @@ const Game = (() => {
     loadFloor(floor);
   }
 
-  function updateUIStats(p) {
+  function updateUIStats(p, cd = null, userBalance = null) {
     floor = parseInt(p.current_floor) || 1;
+    window.shieldCount = parseInt(p.shield_count) || 0;
+    
     document.getElementById('sBest').textContent = p.highest_floor || '-';
     document.getElementById('sWins').textContent = p.total_wins || '0';
     document.getElementById('sGtlm').textContent = new Intl.NumberFormat().format(p.total_gtlm_won || 0) + ' GTLM';
+    if (userBalance !== null) {
+      document.getElementById('sBalance').textContent = new Intl.NumberFormat().format(userBalance) + ' GTLM';
+    }
     
-    // Character setup
-    selectedChar = p.selected_character || 'kiem_thanh';
+    try {
+        teamChars = JSON.parse(p.team_chars);
+    } catch(e) {
+        teamChars = [p.selected_character || 'kiem_thanh'];
+    }
+    
+    selectedChar = teamChars[0];
     const c = CHARACTER_DB[selectedChar];
     
     document.getElementById('charAvatar').src = c.avatar;
-    document.getElementById('charClassTag').textContent = c.tag;
+    document.getElementById('charClassTag').textContent = "Leader: " + c.tag;
     document.getElementById('charName').textContent = c.name;
-    document.getElementById('charPassiveDesc').textContent = c.passive;
-    document.getElementById('skillDescText').textContent = c.activeDesc;
+    
+    let passives = teamChars.map(tc => `<b style="color:#fbbf24">${CHARACTER_DB[tc].name}</b>: ${CHARACTER_DB[tc].passive}`).join('<br>');
+    document.getElementById('charPassiveDesc').innerHTML = passives;
+    document.getElementById('skillDescText').innerHTML = `<b>Tuyệt Kỹ:</b> ${c.activeDesc}`;
 
-    // Show shield row only for Berserker
-    const shieldRow = document.getElementById('charShieldRow');
-    if (selectedChar === 'cuong_chien_si') {
-      shieldRow.style.display = 'block';
-      document.getElementById('charShieldCount').textContent = p.shield_count || 0;
-    } else {
-      shieldRow.style.display = 'none';
-    }
+    document.getElementById('charShieldRow').style.display = 'none';
 
-    // Toggle active selector class
-    document.querySelectorAll('.char-select-btn').forEach(btn => btn.classList.remove('active'));
-    const btnActive = document.getElementById(`btnChar_${selectedChar}`);
-    if (btnActive) btnActive.classList.add('active');
-  }
-
-  function syncCooldowns(cd) {
-    const activeCooldown = cd[selectedChar] || 0;
-    const btn = document.getElementById('btnSkill');
-    if (activeCooldown > 0) {
-      startCdCountdown(selectedChar, activeCooldown);
-    } else {
-      btn.className = 'btn-skill-cast ready';
-      btn.disabled = false;
-      btn.textContent = 'KÍCH HOẠT TUYỆT KỸ';
+    document.querySelectorAll('.char-select-btn').forEach(btn => {
+        btn.classList.remove('active');
+        const badge = btn.querySelector('.team-badge');
+        if (badge) badge.remove();
+    });
+    
+    teamChars.forEach((tc, idx) => {
+        const btnActive = document.getElementById(`btnChar_${tc}`);
+        if (btnActive) {
+            btnActive.classList.add('active');
+            const badge = document.createElement('div');
+            badge.className = 'team-badge';
+            badge.style = 'position:absolute; top:4px; right:4px; background:#fbbf24; color:#000; font-size:10px; padding:2px 5px; border-radius:4px; font-weight:bold; z-index:10;';
+            badge.textContent = idx === 0 ? 'LDR' : (idx + 1);
+            btnActive.appendChild(badge);
+        }
+    });
+    
+    if (cd) {
+      updateSkillBtnUI(cd[selectedChar] || 0);
     }
   }
 
@@ -831,28 +780,35 @@ const Game = (() => {
     try {
       const res = await fetch('api_tower_gods.php?action=info');
       const data = await res.json();
-      if (!data.success) return;
+      if (!data.success) {
+        alert(data.message);
+        if (data.message === 'Chưa đăng nhập!') {
+          window.location.href = 'index.php';
+        }
+        return;
+      }
 
       const p = data.progress;
       floor = parseInt(p.current_floor) || f;
       reward = data.floor_reward || floor * 10000;
-      
-      // Build segment distributions
-      segs = getSegs(floor, selectedChar);
-      buildAngles(segs);
-
-      // Render UI
-      document.getElementById('floorNum').textContent = floor;
-      document.getElementById('floorBig').textContent = floor;
-      document.getElementById('rewardAmt').textContent = '+' + new Intl.NumberFormat().format(reward) + ' GTLM';
+      document.getElementById('playerTeamArea').innerHTML = '<div style="color:#64748b; font-style:italic; padding:20px; text-align:center;">Sẵn sàng chiến đấu...</div>';
+      document.getElementById('monsterTeamArea').innerHTML = '<div style="color:#64748b; font-style:italic; padding:20px; text-align:center;">Đang tìm đối thủ...</div>';
       
       const isBoss = floor % 10 === 0;
+      // Render UI
+      document.getElementById('floorNum').textContent = floor;
       document.getElementById('floorPill').innerHTML = isBoss ? '👑 BOSS TẦNG <span id="floorNum">'+floor+'</span>' : '🔥 TẦNG <span id="floorNum">'+floor+'</span>';
+      
+      const wp = document.getElementById('weatherPill');
+      if (floor > 1) {
+          wp.style.display = 'inline-block';
+          wp.textContent = "Dự báo thời tiết: ☁️ Đang xác định...";
+      } else {
+          wp.style.display = 'none';
+      }
 
-      updateUIStats(p);
-      syncCooldowns(data.cooldowns);
+      updateUIStats(p, data.cooldowns, data.user_balance);
       renderFloorTrack(floor);
-      renderLegend(segs);
 
       // Rewards info column
       const multTxt = isBoss ? 'Tầng Boss: Hệ số phúc lộc cực lớn!' : floor % 5 === 0 ? 'Tầng mốc: Phần thưởng được nhân đôi!' : 'Thường';
@@ -871,8 +827,8 @@ const Game = (() => {
           <span class="lb-floor">Tầng ${u.highest_floor}</span>
         </div>`).join('') || '<div style="color:#334155;font-size:12px;text-align:center;">Chưa có ai leo tháp</div>';
 
-      // Start spinning!
-      startSpin();
+      // Chờ người chơi bấm Bắt đầu (ready phase)
+      readyPhase();
     } catch(e) {
       console.error('Lỗi tải tầng:', e);
     }
@@ -901,27 +857,17 @@ const Game = (() => {
     }, 100);
   }
 
-  function renderLegend(s) {
-    document.getElementById('segLegend').innerHTML = s.map(seg => `
-      <div class="seg-legend">
-        <div class="seg-dot" style="background:${seg.color}"></div>
-        <div class="seg-info">
-          <div class="name" style="color:${seg.color}">${seg.icon} ${seg.label} <span style="font-size:10px;opacity:0.65">(${Math.round(seg.portion*100)}%)</span></div>
-          <div class="desc" style="color:#64748b">${seg.desc}</div>
-        </div>
-      </div>`).join('');
-  }
 
-  // Bind Space and Enter keys for action stopping
+  // Bind Space and Enter keys for action start
   document.addEventListener('keydown', e => {
     if (e.code === 'Space' || e.code === 'Enter') {
       e.preventDefault();
-      const b = document.getElementById('btnStop');
+      const b = document.getElementById('btnStart');
       if (b && !b.disabled) b.click();
     }
   });
 
-  return { stop, nextFloor, castSkill, switchCharacter, closeOverlay, startSpin };
+  return { startBattle, nextFloor, castSkill, switchCharacter, closeOverlay, loadFloor };
 })();
 
 document.addEventListener('DOMContentLoaded', () => Game.loadFloor(1));

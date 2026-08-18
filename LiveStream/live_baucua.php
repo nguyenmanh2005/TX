@@ -1,105 +1,120 @@
 <?php
 session_start();
+
+require_once '../game_history_helper.php';
+require_once 'bot_streamer_helper.php';
+$botUser = getOrCreateBotStreamerUser($conn, 'bot_baucua', 50000000);
+$botUserId = $botUser['Iduser'];
+$_SESSION['Iduser_temp_bot'] = $botUserId;
+
 include '../db_connect.php';
 require_once '../include_css.php';
 include '../load_theme.php';
-require_once 'bot_streamer_helper.php';
 require_once '../game_history_helper.php';
-
-// Nạp thông tin tài khoản Bot thật 'bot_baucua' từ bảng users trong CSDL
-$botUser = getOrCreateBotStreamerUser($conn, 'bot_baucua', 88888000);
-$botId = $botUser['Iduser'];
-$money = $botUser['Money'];
-$userName = $botUser['Name'];
-
-$botTheme = getBotStreamerTheme($conn, $botId);
-$bgGradientCSS = $botTheme['bgGradientCSS'];
-
+if (!isset($botUserId)) {
+    header('Location: ../login.php');
+    exit;
+}
+$userId = $botUserId;
+$stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$user = $stmt->get_result()->fetch_assoc();
+// Get statistics from database for chart
+$gameThang = 0;
+$gameThua = 0;
+$sqlStats = "SELECT COUNT(*) as total, SUM(CASE WHEN WinAmount > 0 THEN 1 ELSE 0 END) as wins FROM history_baucua WHERE Iduser = ?";
+$stmtStats = $conn->prepare($sqlStats);
+$stmtStats->bind_param("i", $userId);
+$stmtStats->execute();
+$resultStats = $stmtStats->get_result();
+if ($rowStats = $resultStats->fetch_assoc()) {
+    $gameThang = $rowStats['wins'] ?? 0;
+    $gameThua = ($rowStats['total'] ?? 0) - $gameThang;
+}
+$stmtStats->close();
+$money = $user['Money'];
+$userName = $user['Name'];
+$stmt->close();
 $animals = ["Chó", "Gà", "Mèo", "Cá", "Chim", "Heo"];
 $emojis = ["Chó" => "🐶", "Gà" => "🐔", "Mèo" => "🐱", "Cá" => "🐟", "Chim" => "🐦", "Heo" => "🐷"];
-
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
     $action = $_GET['action'];
-    
-    if ($action === 'get_smart_bet') {
-        $smartBet = calculateSmartBotBet($conn, $botId, 'history_baucua', 30000);
-        $choice1 = $animals[rand(0, 5)];
-        $choice2 = $animals[rand(0, 5)];
-        echo json_encode([
-            'success' => true,
-            'smartBet' => $smartBet,
-            'choices' => [$choice1, $choice2],
-            'botName' => $userName
-        ]);
-        exit;
-    }
-
+    $response = ['success' => false];
     if ($action === 'play') {
         $bet = (float) ($_POST['bet'] ?? 0);
-        $betsData = json_decode($_POST['bets'] ?? '[]', true);
+        $betsData = json_decode($_POST['bets'] ?? '[]', true); // Format: [{"animal": "Chó", "amount": 1000}, ...]
         $totalBet = 0;
         foreach ($betsData as $b) {
-            if ($b['amount'] > 0) $totalBet += $b['amount'];
+            if ($b['amount'] > 0)
+                $totalBet += $b['amount'];
         }
-        
-        $conn->begin_transaction();
-        $stmtLock = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
-        $stmtLock->bind_param("i", $botId);
-        $stmtLock->execute();
-        $botMoney = (float)($stmtLock->get_result()->fetch_assoc()['Money'] ?? 88888000);
-        $stmtLock->close();
-
-        // Roll 3 dice
-        $results = [];
-        for ($i = 0; $i < 3; $i++) $results[] = $animals[rand(0, 5)];
-        $totalWin = 0;
-        $winAnimals = array_count_values($results);
-        foreach ($betsData as $b) {
-            $a = $b['animal'];
-            $amt = $b['amount'];
-            if (isset($winAnimals[$a])) {
-                $totalWin += $amt * ($winAnimals[$a] + 1);
+        if ($totalBet <= 0 || $totalBet > $money) {
+            $response['message'] = "Yêu cầu không hợp lệ!";
+        } else {
+            $conn->begin_transaction();
+            $stmtLock = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+            $stmtLock->bind_param("i", $userId);
+            $stmtLock->execute();
+            $lockedMoney = $stmtLock->get_result()->fetch_assoc()['Money'] ?? 0;
+            $stmtLock->close();
+            if ($totalBet > $lockedMoney) {
+                $conn->rollback();
+                echo json_encode(['success' => false, 'message' => 'Số dư không đủ hoặc thao tác quá nhanh!']);
+                exit;
             }
+            $conn->query("UPDATE users SET Money = Money - $totalBet WHERE Iduser = $userId");
+            // Roll 3 dice
+            $results = [];
+            for ($i = 0; $i < 3; $i++)
+                $results[] = $animals[rand(0, 5)];
+            $totalWin = 0;
+            $winAnimals = array_count_values($results);
+            foreach ($betsData as $b) {
+                $a = $b['animal'];
+                $amt = $b['amount'];
+                if (isset($winAnimals[$a])) {
+                    // Standard Baucua: win + return bet. 
+                    // 1 matching: 2x, 2 matching: 3x, 3 matching: 4x
+                    $totalWin += $amt * ($winAnimals[$a] + 1);
+                }
+            }
+            if ($totalWin > 0)
+                $conn->query("UPDATE users SET Money = Money + $totalWin WHERE Iduser = $userId");
+            $profit = $totalWin - $totalBet;
+            $resStr = implode(', ', $results);
+            $his = $conn->prepare("INSERT INTO history_baucua (Iduser,Bet,Result,WinAmount,Time) VALUES (?,?,?,?,NOW())");
+            $his->bind_param("idss", $userId, $totalBet, $resStr, $profit);
+            $his->execute();
+            logGameHistoryWithAll($conn, $userId, 'CYBER PETS', $totalBet, $totalWin, $totalWin > 0);
+            $conn->commit();
+            $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
+            $response = [
+                'success' => true,
+                'results' => $results,
+                'winAmount' => number_format($totalWin, 0, ',', '.'),
+                'money' => number_format($newMoney, 0, ',', '.'),
+                'win' => ($totalWin > 0)
+            ];
         }
-
-        $netProfit = $totalWin - $totalBet;
-        $newBotMoney = max(1000000, $botMoney + $netProfit);
-
-        $up = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
-        $up->bind_param("di", $newBotMoney, $botId);
-        $up->execute();
-        $up->close();
-
-        $resStr = implode(', ', $results);
-        $his = $conn->prepare("INSERT INTO history_baucua (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-        $his->bind_param("idss", $botId, $totalBet, $resStr, $netProfit);
-        $his->execute();
-        $his->close();
-
-        $conn->commit();
-
-        echo json_encode([
-            'success' => true,
-            'results' => $results,
-            'winAmount' => number_format($totalWin, 0, ',', '.'),
-            'money' => number_format($newBotMoney, 0, ',', '.'),
-            'win' => ($totalWin > 0)
-        ]);
-        exit;
     }
+    echo json_encode($response);
+    exit;
 }
 ?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Chiến Trường Linh Thú - Live Stream 24/7</title>
+    <title>Chiến Trường Linh Thú - Premium</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;500;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;500;700&display=swap"
+        rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <?php echo getCSSIncludes(['special_effects' => true]); ?>
     <style>
@@ -107,12 +122,6 @@ if (isset($_GET['action'])) {
             --primary: #00ff88;
             --accent: #f1c40f;
             --glass: rgba(255, 255, 255, 0.06);
-        }
-        html, body, div, p, span, section, header, footer, aside, nav, table, tr, td, iframe, canvas {
-            cursor: url('../img/chuot.png'), default !important;
-        }
-        a, button, input, select, textarea, label, .btn, [role="button"], [onclick], .clickable, .animal-tile, .btn-action {
-            cursor: url('../img/tay.png'), pointer !important;
         }
         body {
             margin: 0;
@@ -122,14 +131,8 @@ if (isset($_GET['action'])) {
             font-family: 'Inter', sans-serif;
             overflow: hidden;
         }
-        #threejs-background {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            pointer-events: none;
+        * {
+            cursor: url('../img/tay.png'), auto !important;
         }
         .main-container {
             height: 100vh;
@@ -171,6 +174,7 @@ if (isset($_GET['action'])) {
             justify-content: center;
             padding: 20px;
         }
+        /* Betting Grid */
         .betting-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -178,7 +182,6 @@ if (isset($_GET['action'])) {
             width: 100%;
             max-width: 650px;
             margin-top: 20px;
-            pointer-events: none !important;
         }
         .animal-tile {
             background: rgba(255, 255, 255, 0.03);
@@ -188,8 +191,13 @@ if (isset($_GET['action'])) {
             text-align: center;
             transition: 0.3s;
             position: relative;
-            cursor: default;
+            cursor: pointer;
             overflow: hidden;
+        }
+        .animal-tile:hover {
+            background: rgba(0, 255, 136, 0.05);
+            border-color: var(--primary);
+            transform: translateY(-5px);
         }
         .animal-tile.active {
             border-color: var(--primary);
@@ -202,6 +210,9 @@ if (isset($_GET['action'])) {
             margin-bottom: 5px;
             transition: 0.3s;
             filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.5));
+        }
+        .animal-tile:hover .animal-emoji {
+            transform: scale(1.1);
         }
         .animal-name {
             font-family: 'Orbitron';
@@ -223,6 +234,7 @@ if (isset($_GET['action'])) {
             font-family: 'Orbitron';
             display: none;
         }
+        /* The Shaker (Bát) */
         .shaker-stage {
             width: 100%;
             height: 250px;
@@ -289,13 +301,37 @@ if (isset($_GET['action'])) {
             border: none;
             font-weight: 900;
             font-size: 1.3rem;
+            cursor: pointer;
             transition: 0.3s;
             text-transform: uppercase;
             background: linear-gradient(135deg, var(--primary), #00b894);
             color: #000;
             box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
             width: 100%;
-            pointer-events: none !important;
+        }
+        .btn-action:hover:not(:disabled) {
+            transform: translateY(-3px);
+            filter: brightness(1.1);
+        }
+        .btn-action:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-quick-bet {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: url('../img/tay.png'), pointer !important;
+            font-weight: 600;
+            transition: 0.3s;
+            font-size: 0.75rem;
+        }
+        .btn-quick-bet:hover {
+            background: var(--primary);
+            color: #000;
+            border-color: var(--primary);
         }
         .stat-card {
             background: rgba(0, 0, 0, 0.3);
@@ -314,89 +350,103 @@ if (isset($_GET['action'])) {
         }
         .animal-tile.winner { border-color: #fff; background: rgba(0, 255, 136, 0.4); box-shadow: 0 0 50px var(--primary); animation: animal-bounce 0.6s infinite; z-index: 5; }
         @keyframes animal-bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1) translateY(-10px); } }
-
-        /* 🤖 Virtual Bot Mouse Cursor Style */
-        .bot-virtual-cursor {
-            position: fixed;
-            z-index: 99999;
-            pointer-events: none;
-            opacity: 0;
-            transform: translate(-5px, -5px);
-            transition: opacity 0.3s ease;
+        .floating-win { position: absolute; bottom: 50%; left: 50%; transform: translateX(-50%); color: var(--accent); font-family: 'Orbitron'; font-weight: 900; font-size: 1.5rem; pointer-events: none; text-shadow: 0 0 10px #000; z-index: 100; }
+        .game-area.lose-shake { animation: lose-shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes lose-shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+        .glitch-red { position: absolute; inset: 0; background: rgba(255, 71, 87, 0.2); mix-blend-mode: overlay; pointer-events: none; opacity: 0; }
+        /* Statistics Container */
+        .stats-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
         }
-        .cursor-pointer-arrow svg {
-            filter: drop-shadow(0 0 10px #00ff88) drop-shadow(0 0 20px #00ff88);
+        .stat-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
         }
-        .cursor-bot-tag {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            background: rgba(11, 15, 25, 0.92);
-            backdrop-filter: blur(8px);
-            border: 1px solid #00ff88;
-            color: #fff;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 900;
-            white-space: nowrap;
-            box-shadow: 0 4px 15px rgba(0, 255, 136, 0.4);
+        .stat-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        .stat-item.wins {
+            border-left: 4px solid #4ade80;
+        }
+        .stat-item.losses {
+            border-left: 4px solid #ff6b6b;
+        }
+        .stat-item .label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .stat-item .value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #ffd700;
+        }
+        .chart-box {
             display: flex;
-            align-items: center;
-            gap: 6px;
+            flex-direction: column;
         }
-        .bot-tag-dot {
-            width: 6px;
-            height: 6px;
-            background: #00ff88;
-            border-radius: 50%;
-            box-shadow: 0 0 8px #00ff88;
-            animation: pulse-dot 1.5s infinite;
+        .chart-box canvas {
+            margin-top: 20px;
         }
-        @keyframes pulse-dot { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.4; } }
     </style>
 </head>
 <body>
-
-    <!-- 🤖 Virtual Bot Streamer Animated Pointer Cursor -->
-    <div id="botVirtualCursor" class="bot-virtual-cursor">
-        <div class="cursor-pointer-arrow">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                <path d="M3 3l7 18 3-7 7-3L3 3z" fill="#00ff88" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>
-            </svg>
-        </div>
-        <div class="cursor-bot-tag">
-            <span class="bot-tag-dot"></span>
-            <span id="cursorBotName"><?= htmlspecialchars($userName) ?></span>
-        </div>
-    </div>
-
     <div class="main-container">
         <div class="glass-card">
             <div class="sidebar">
                 <div>
-                    <h1 style="margin:0; font-size: 2.2rem; font-weight: 900; color: var(--primary); font-family: 'Orbitron'; letter-spacing: 2px;">CHIẾN TRƯỜNG LINH THÚ</h1>
-                    <p style="margin:0; color:#ff4757; font-size: 0.75rem; letter-spacing: 1px; font-weight:900;">🔴 LIVE STREAM 24/7 — STREAMER BOT: <?= $userName ?></p>
+                    <h1
+                        style="margin:0; font-size: 2.2rem; font-weight: 900; color: var(--primary); font-family: 'Orbitron'; letter-spacing: 2px;">
+                        CHIẼN TRƯỜNG LINH THÚ</h1>
+                    <p style="margin:0; opacity:0.4; font-size: 0.7rem; letter-spacing: 1px;">Legendary Beast Arena Protocol</p>
                 </div>
                 <div class="stat-card">
-                    <span>Ví Bot CSDL (bot_baucua)</span>
+                    <span>Số Gtlm HIỆN TẠI</span>
                     <div style="display:flex; align-items:baseline; justify-content:center; gap:5px;">
-                        <b id="userMoney" style="color:var(--accent)"><?= number_format($money, 0, ',', '.') ?></b>
+                        <b id="userMoney"><?= number_format($money, 0, ',', '.') ?></b>
                         <small style="opacity:0.5; font-weight:900; font-size:0.6rem;">GTLM</small>
                     </div>
                 </div>
                 <div class="stat-card" style="background:rgba(0,255,136,0.05); border-color:rgba(0,255,136,0.1)">
-                    <span>TỔNG BOT CƯỢC</span>
+                    <span>TỔNG CƯỢC</span>
                     <div style="display:flex; align-items:baseline; justify-content:center; gap:5px;">
                         <b id="totalBet" style="color:var(--primary)">0</b>
                     </div>
                 </div>
                 <div style="margin-top:auto;">
                     <div class="stat-card" style="margin-bottom:10px; padding:0.8rem; border-color:rgba(255,255,255,0.1)">
-                        <span>CƯỢC THÔNG MINH (SMART AI)</span>
-                        <input type="number" id="customBet" value="30000" readonly style="background:none; border:none; color:var(--accent); font-family:'Orbitron'; font-size:1.2rem; font-weight:900; width:100%; text-align:center; outline:none;">
+                        <span>CƯỢC MỖI LẦN NHẤN</span>
+                        <input type="number" id="customBet" value="10000" min="1000" step="1000" 
+                               style="background:none; border:none; color:var(--accent); font-family:'Orbitron'; font-size:1.2rem; font-weight:900; width:100%; text-align:center; outline:none; margin-bottom: 10px;">
+                        <div class="quick-bets" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 10px;">
+                            <button class="btn-quick-bet" onclick="$('#customBet').val(10000)">10K</button>
+                            <button class="btn-quick-bet" onclick="$('#customBet').val(50000)">50K</button>
+                            <button class="btn-quick-bet" onclick="$('#customBet').val(100000)">100K</button>
+                            <button class="btn-quick-bet" onclick="$('#customBet').val(500000)">500K</button>
+                            <button class="btn-quick-bet" onclick="$('#customBet').val(1000000)">1M</button>
+                            <button class="btn-quick-bet" onclick="$('#customBet').val(5000000)">5M</button>
+                            <button class="btn-quick-bet" onclick="$('#customBet').val(parseFloat($('#userMoney').text().replace(/\./g, '')))" style="grid-column: span 3; background: var(--primary); color:#000; border:none; font-weight:800;">ALL IN</button>
+                        </div>
                     </div>
-                    <button id="playBtn" class="btn-action">⚡ STREAMER BOT RA CHIÊU</button>
+                    <button id="playBtn" class="btn-action" onclick="playGame()">⚡ XÓC NGAY</button>
+                    <button class="btn-action" onclick="clearBets()"
+                        style="background:rgba(255,255,255,0.1); color:#fff; font-size:0.8rem; padding:0.8rem; margin-top:10px; box-shadow:none;">XÓA
+                        CƯỢC</button>
+                    <div style="text-align: center; margin-top: 1rem;">
+                        <a href="../index.php"
+                            style="color: #fff; text-decoration: none; font-size: 0.7rem; opacity: 0.3;">← Quay về
+                            Dashboard</a>
+                    </div>
                 </div>
             </div>
             <div class="game-area">
@@ -411,7 +461,7 @@ if (isset($_GET['action'])) {
                 </div>
                 <div class="betting-grid">
                     <?php foreach ($animals as $a): ?>
-                        <div class="animal-tile" data-animal="<?= $a ?>">
+                        <div class="animal-tile" data-animal="<?= $a ?>" onclick="placeBet('<?= $a ?>')">
                             <span class="animal-emoji"><?= $emojis[$a] ?></span>
                             <span class="animal-name"><?= strtoupper($a) ?></span>
                             <span class="bet-amount-badge" id="bet-<?= $a ?>">0</span>
@@ -421,25 +471,63 @@ if (isset($_GET['action'])) {
             </div>
         </div>
     </div>
-
+    <!-- Statistics and History Section -->
+    <div class="stats-card-container" style="max-width: 1200px; margin: 20px auto; padding: 0 20px;">
+        <div class="glass-card" style="display: block; padding: 20px;">
+            <h3 style="font-family: 'Orbitron'; color: var(--primary); margin-top: 0;">BÁO CÁO CHIẾN DỊCH</h3>
+            <div class="stats-container">
+                <div class="stat-item wins">
+                    <div class="label">Lần Thắng</div>
+                    <div class="value"><?= $gameThang ?></div>
+                </div>
+                <div class="stat-item losses">
+                    <div class="label">Lần Thua</div>
+                    <div class="value"><?= $gameThua ?></div>
+                </div>
+            </div>
+            <canvas id="gameChart" style="max-height: 300px;"></canvas>
+        </div>
+    </div>
+    <div class="history-box" style="max-width: 1200px; margin: 20px auto; padding: 0 20px;">
+        <div class="glass-card" style="display: block; padding: 20px;">
+            <h3 style="font-family: 'Orbitron'; color: var(--primary); margin-top: 0;">NHẬT KÝ CHIẾN ĐẤU</h3>
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--primary);">
+                        <th style="padding: 10px; text-align: center;">ID</th>
+                        <th style="padding: 10px; text-align: right;">Cược</th>
+                        <th style="padding: 10px; text-align: left;">Kết quả</th>
+                        <th style="padding: 10px; text-align: right;">Nhận</th>
+                        <th style="padding: 10px; text-align: right;">Thời gian</th>
+                    </tr>
+                </thead>
+                <tbody id="history-tbody">
+                    <!-- AJAX Load -->
+                </tbody>
+            </table>
+            <p id="history-loading" style="text-align: center; opacity: 0.5; margin-top: 20px;">Đang tải dữ liệu...</p>
+        </div>
+    </div>
     <script>
+        let currentChip = 1000;
         let myBets = {};
         let isRolling = false;
         const animalEmojis = <?= json_encode($emojis) ?>;
-
+        $('#customBet').on('input', function() {
+            currentChip = parseInt($(this).val()) || 0;
+        });
         function placeBet(animal) {
             if (isRolling) return;
-            let amt = parseInt($('#customBet').val()) || 30000;
+            let amt = parseInt($('#customBet').val()) || 0;
+            if (amt <= 0) return;
             myBets[animal] = (myBets[animal] || 0) + amt;
             updateBetUI();
         }
-
         function clearBets() {
             if (isRolling) return;
             myBets = {};
             updateBetUI();
         }
-
         function updateBetUI() {
             let total = 0;
             $('.animal-tile').removeClass('active');
@@ -453,7 +541,6 @@ if (isset($_GET['action'])) {
             }
             $('#totalBet').text(total.toLocaleString('vi-VN'));
         }
-
         function playGame() {
             let total = 0;
             const betsData = [];
@@ -463,9 +550,10 @@ if (isset($_GET['action'])) {
                     betsData.push({ animal: a, amount: myBets[a] });
                 }
             }
-            if (total === 0 || isRolling) return;
+            if (total === 0) { Swal.fire('Lỗi', 'Vui lòng đặt cược ít nhất một linh vật!', 'warning'); return; }
+            if (isRolling) return;
             isRolling = true;
-            $('#playBtn').text('ĐANG XÓC LIVE...');
+            $('#playBtn').prop('disabled', true).text('ĐANG XÓC...');
             const bowl = $('#bowl'), sparks = $('#shakingSparks');
             $('.animal-tile').removeClass('winner');
             $('.die').css('opacity', 0);
@@ -485,8 +573,7 @@ if (isset($_GET['action'])) {
                       duration: 0.1, repeat: -1, yoyo: true
                   });
               });
-
-            $.post('live_baucua.php?action=play', { bets: JSON.stringify(betsData) }, function (res) {
+            $.post('?action=play', { bets: JSON.stringify(betsData) }, function (res) {
                 if (res.success) {
                     setTimeout(() => {
                         gsap.killTweensOf(bowl);
@@ -502,113 +589,85 @@ if (isset($_GET['action'])) {
                             $('#userMoney').text(res.money);
                             if (res.win) {
                                 if (window.GameEffects) window.GameEffects.showWin(parseInt(res.winAmount.replace(/\./g, '')));
+                                $('.animal-tile.active.winner').each(function() {
+                                    const betVal = parseInt($(this).find('.bet-amount-badge').text().replace(/\./g, ''));
+                                    const winRatio = res.winAmount ? parseInt(res.winAmount.replace(/\./g, '')) / total : 0;
+                                    const tileWin = Math.round(betVal * winRatio); // Approximate if multiple
+                                    const float = $('<div class="floating-win">+' + tileWin.toLocaleString('vi-VN') + '</div>').appendTo($(this));
+                                    gsap.to(float, { y: -100, opacity: 0, duration: 2, onComplete: () => float.remove() });
+                                });
+                            } else {
+                                $('.game-area').addClass('lose-shake');
+                                if (window.GameEffects) window.GameEffects.showLoss(total);
+                                $('.animal-tile.active:not(.winner)').each(function() {
+                                    const float = $('<div class="floating-win" style="color: #ff4757;">-' + $(this).find('.bet-amount-badge').text() + '</div>').appendTo($(this));
+                                    gsap.to(float, { y: -100, opacity: 0, duration: 2, onComplete: () => float.remove() });
+                                });
+                                setTimeout(() => $('.game-area').removeClass('lose-shake'), 500);
                             }
                             setTimeout(() => {
                                 gsap.to(bowl, { y: 0, x: 0, rotateZ: 0, opacity: 1, duration: 0.5 });
                                 gsap.to('.die', { scale: 0, opacity: 0, duration: 0.3 });
                                 $('.animal-tile').removeClass('winner');
-                                $('#playBtn').text('⚡ STREAMER BOT RA CHIÊU');
+                                $('#playBtn').prop('disabled', false).text('⚡ XÓC NGAY');
                                 isRolling = false;
                                 clearBets();
+                                loadBaucuaHistory();
                             }, 2500);
                         }, 1200);
                     }, 1500);
                 } else {
                     gsap.killTweensOf(bowl);
                     sparks.hide();
+                    Swal.fire('Lỗi', res.message, 'error');
+                    $('#playBtn').prop('disabled', false).text('⚡ XÓC NGAY');
                     isRolling = false;
                 }
             });
         }
-
-        // 🔄 AUTO-PLAY SPECTATOR LOOP WITH VIRTUAL MOUSE CURSOR GSAP ANIMATION 24/7
-        function autoSpectatorLoop() {
-            if (isRolling) return;
-
-            $.get('live_baucua.php?action=get_smart_bet', function(res) {
-                if (!res.success) return;
-                const smartBet = res.smartBet;
-                const choices = res.choices;
-                $('#customBet').val(smartBet);
-
-                const cursor = $('#botVirtualCursor');
-                $('#cursorBotName').text(res.botName);
-
-                // Initial position of Virtual Mouse Cursor
-                gsap.set(cursor, { opacity: 1, left: 100, top: 100, scale: 1 });
-
-                // Step 1: Move mouse cursor to target animal tile 1
-                const targetTile = $(`.animal-tile[data-animal="${choices[0]}"]`);
-                if (targetTile.length === 0) return;
-                const offset1 = targetTile.offset();
-
-                gsap.to(cursor, {
-                    left: offset1.left + targetTile.width() / 2,
-                    top: offset1.top + targetTile.height() / 2,
-                    duration: 0.9,
-                    ease: "power2.out",
-                    onComplete: () => {
-                        // Click animation press
-                        gsap.to(cursor, { scale: 0.7, duration: 0.12, yoyo: true, repeat: 1, onComplete: () => {
-                            placeBet(choices[0]);
-                        }});
-
-                        // Step 2: Move mouse cursor to target animal tile 2 (if different)
-                        if (choices[1] && choices[1] !== choices[0]) {
-                            const targetTile2 = $(`.animal-tile[data-animal="${choices[1]}"]`);
-                            const offset2 = targetTile2.offset();
-                            gsap.to(cursor, {
-                                left: offset2.left + targetTile2.width() / 2,
-                                top: offset2.top + targetTile2.height() / 2,
-                                duration: 0.7,
-                                delay: 0.3,
-                                ease: "power2.out",
-                                onComplete: () => {
-                                    gsap.to(cursor, { scale: 0.7, duration: 0.12, yoyo: true, repeat: 1, onComplete: () => {
-                                        placeBet(choices[1]);
-                                        moveToPlayBtn();
-                                    }});
-                                }
-                            });
-                        } else {
-                            setTimeout(moveToPlayBtn, 300);
-                        }
+        async function loadBaucuaHistory() {
+            try {
+                const response = await fetch('../game_history_universal.php?action=get_history&game=baucua');
+                if (!response.ok) return;
+                const data = await response.json();
+                if (data.success && data.history) {
+                    const tbody = document.getElementById('history-tbody');
+                    const loading = document.getElementById('history-loading');
+                    if (data.history.length > 0) {
+                        tbody.innerHTML = '';
+                        data.history.forEach(record => {
+                            const row = document.createElement('tr');
+                            row.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+                            row.innerHTML = `
+                                <td style="padding: 10px; text-align: center;">${record.Id}</td>
+                                <td style="padding: 10px; text-align: right;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                                <td style="padding: 10px; text-align: left;">${record.Result}</td>
+                                <td style="padding: 10px; text-align: right; color: ${record.WinAmount > 0 ? '#00ff88' : '#ff4757'}">
+                                    ${record.WinAmount > 0 ? '+' : ''}${parseInt(record.WinAmount).toLocaleString('vi-VN')}
+                                </td>
+                                <td style="padding: 10px; text-align: right; opacity: 0.6;">${record.Time}</td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+                        if (loading) loading.style.display = 'none';
+                    } else {
+                        if (loading) loading.textContent = 'Chưa có lịch sử chơi.';
                     }
-                });
-
-                function moveToPlayBtn() {
-                    const playBtn = $('#playBtn');
-                    const offsetBtn = playBtn.offset();
-                    gsap.to(cursor, {
-                        left: offsetBtn.left + playBtn.width() / 2,
-                        top: offsetBtn.top + playBtn.height() / 2,
-                        duration: 0.8,
-                        delay: 0.3,
-                        ease: "power2.inOut",
-                        onComplete: () => {
-                            gsap.to(cursor, { scale: 0.7, duration: 0.12, yoyo: true, repeat: 1, onComplete: () => {
-                                playGame();
-                                gsap.to(cursor, { opacity: 0, delay: 0.5, duration: 0.4 });
-                            }});
-                        }
-                    });
                 }
-            });
+            } catch (error) {
+                console.error('History load error:', error);
+            }
         }
-
-        setTimeout(autoSpectatorLoop, 1500);
-        setInterval(autoSpectatorLoop, 14000);
-
         (function () {
             window.themeConfig = {
-                particleCount: <?= (int)$botTheme['particleCount'] ?>, 
-                particleSize: 0.05, 
-                particleColor: '<?= htmlspecialchars($botTheme['particleColor']) ?>', 
-                particleOpacity: <?= (float)$botTheme['particleOpacity'] ?>,
-                shapeCount: <?= (int)$botTheme['shapeCount'] ?>, 
-                shapeColors: <?= json_encode($botTheme['shapeColors']) ?>, 
-                shapeOpacity: <?= (float)$botTheme['shapeOpacity'] ?>,
-                bgGradient: <?= json_encode($botTheme['bgGradient']) ?>
+                particleCount: 500,
+                particleSize: 0.05,
+                particleColor: '#00ff88',
+                particleOpacity: 0.4,
+                shapeCount: 15,
+                shapeColors: ["#00ff88", "#00b894", "#ffffff"],
+                shapeOpacity: 0.15,
+                bgGradient: ["#000000", "#001a11", "#002a1b"]
             };
             const prefix = '../';
             ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'].forEach(src => {
@@ -617,7 +676,72 @@ if (isset($_GET['action'])) {
                 document.head.appendChild(s);
             });
         })();
+    // Auto-load history and chart on page load
+    window.addEventListener('load', function() {
+        loadBaucuaHistory();
+        const ctx = document.getElementById('gameChart');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Thắng', 'Thua'],
+                    datasets: [{
+                        data: [<?= $gameThang ?>, <?= $gameThua ?>],
+                        backgroundColor: ['#00ff88', '#ff4757'],
+                        borderColor: 'transparent'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#fff', font: { family: 'Orbitron' } }
+                        }
+                    }
+                }
+            });
+        }
+    });
     </script>
     <canvas id="threejs-background"></canvas>
+
+<!-- AUTO-GENERATED BOT SCRIPT -->
+<script>
+if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
+if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
+</script>
+<script src="../assets/js/bot_virtual_cursor.js"></script>
+<script>
+    if (typeof BotVirtualCursor !== "undefined") {
+        BotVirtualCursor.init("Bot Streamer");
+        setInterval(() => {
+            const allBtns = Array.from(document.querySelectorAll("button, .btn-bet, .chip, .spin-btn, #btnSpin, .bet-button, .card, .btn-primary, .btn-success, input[type='button'], input[type='submit']"));
+            const btns = allBtns.filter(b => {
+                if(b.offsetParent === null || b.disabled) return false;
+                const txt = (b.innerText || b.value || "").toLowerCase();
+                const cls = (b.className || "").toLowerCase();
+                const id = (b.id || "").toLowerCase();
+                
+                if(txt.includes("hướng dẫn") || txt.includes("trang chủ") || txt.includes("nạp") || txt.includes("rút") || txt.includes("lịch sử") || txt.includes("quay lại") || txt.includes("thoát")) return false;
+                if(cls.includes("back") || cls.includes("help") || cls.includes("guide") || cls.includes("close") || cls.includes("swal") || cls.includes("nav")) return false;
+                if(id.includes("guide") || id.includes("back") || id.includes("close") || id.includes("nav")) return false;
+                
+                return true;
+            });
+            
+            if(btns.length > 0) {
+                const btn = btns[Math.floor(Math.random() * btns.length)];
+                BotVirtualCursor.moveToElement($(btn), 1, 0, () => {
+                    setTimeout(() => { 
+                        BotVirtualCursor.simulateClick(() => {
+                            try { btn.click(); } catch(e){}
+                        });
+                    }, 500);
+                });
+            }
+        }, 3000 + Math.random() * 4000);
+    }
+</script>
+
 </body>
 </html>

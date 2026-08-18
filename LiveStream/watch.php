@@ -15,22 +15,128 @@ require_once __DIR__ . '/../load_theme.php';
 
 $userId = (int)$_SESSION['Iduser'];
 $tableId = isset($_GET['id']) ? (int)$_GET['id'] : 1;
-if ($tableId < 1 || $tableId > 5) $tableId = 1;
+if ($tableId < 1 || $tableId > 58) $tableId = 1;
 
 $gameFilesMap = [
     1 => ['file' => 'live_baucua.php', 'real_game' => '../games/baucua.php', 'name' => 'Thế Giới Linh Thú', 'icon' => '🐾'],
     2 => ['file' => 'live_xocdia.php', 'real_game' => '../games/xocdia.php', 'name' => 'Trận Địa Trắng Đỏ', 'icon' => '🎲'],
     3 => ['file' => 'live_crash.php', 'real_game' => '../games/crash.php', 'name' => 'Tiên Tri Vũ Trụ', 'icon' => '🚀'],
     4 => ['file' => 'live_daga.php', 'real_game' => '../games/daga.php', 'name' => 'Đại Chiến Thần Kê', 'icon' => '🐓'],
-    5 => ['file' => 'live_dragontiger.php', 'real_game' => '../games/dragontiger.php', 'name' => 'Chiến Trường Rồng Hổ', 'icon' => '🐉']
+    5 => ['file' => 'live_dragontiger.php', 'real_game' => '../games/dragontiger.php', 'name' => 'Chiến Trường Rồng Hổ', 'icon' => '🐉'],
+    6 => ['file' => '../games/cyber_racing.php?live=1', 'real_game' => '../games/cyber_racing.php', 'name' => 'Đua Thú Cyberpunk', 'icon' => '🏎️'],
+    7 => ['file' => 'live_plinko.php', 'real_game' => '../games/plinko.php', 'name' => 'Plinko Royale', 'icon' => '🎱'],
+    8 => ['file' => 'live_slot.php', 'real_game' => '../games/slot.php', 'name' => 'Slot Machine Premium', 'icon' => '🎰'],
+    9 => ['file' => 'live_baccarat.php', 'real_game' => '../games/baccarat.php', 'name' => 'Baccarat', 'icon' => '🎪'],
+    10 => ['file' => 'live_banharc.php', 'real_game' => '../games/banharc.php', 'name' => 'Banharc', 'icon' => '🕹️'],
+    11 => ['file' => 'live_battleroyale.php', 'real_game' => '../games/battleroyale.php', 'name' => 'Battleroyale', 'icon' => '🎮'],
+    12 => ['file' => 'live_bingo.php', 'real_game' => '../games/bingo.php', 'name' => 'Bingo', 'icon' => '🕹️'],
+    13 => ['file' => 'live_bj.php', 'real_game' => '../games/bj.php', 'name' => 'Bj', 'icon' => '🎮'],
+    14 => ['file' => 'live_bjo.php', 'real_game' => '../games/bjo.php', 'name' => 'Bjo', 'icon' => '🎴'],
+    15 => ['file' => 'live_blackjack.php', 'real_game' => '../games/blackjack.php', 'name' => 'Blackjack', 'icon' => '🎯'],
+    16 => ['file' => 'live_blackjack_multi.php', 'real_game' => '../games/blackjack_multi.php', 'name' => 'Blackjack Multi', 'icon' => '🎲'],
+    17 => ['file' => 'live_caribbean.php', 'real_game' => '../games/caribbean.php', 'name' => 'Caribbean', 'icon' => '🕹️'],
+    18 => ['file' => 'live_coinflip.php', 'real_game' => '../games/coinflip.php', 'name' => 'Coinflip', 'icon' => '🎴'],
+    19 => ['file' => 'live_community_lottery.php', 'real_game' => '../games/community_lottery.php', 'name' => 'Community Lottery', 'icon' => '🎮'],
+    20 => ['file' => 'live_craps.php', 'real_game' => '../games/craps.php', 'name' => 'Craps', 'icon' => '🎯'],
+    21 => ['file' => 'live_dice.php', 'real_game' => '../games/dice.php', 'name' => 'Dice', 'icon' => '🎯'],
+    22 => ['file' => 'live_duangua.php', 'real_game' => '../games/duangua.php', 'name' => 'Duangua', 'icon' => '🎲'],
+    23 => ['file' => 'live_fantan.php', 'real_game' => '../games/fantan.php', 'name' => 'Fantan', 'icon' => '🎴'],
+    24 => ['file' => 'live_farm.php', 'real_game' => '../games/farm.php', 'name' => 'Farm', 'icon' => '🃏'],
+    25 => ['file' => 'live_gacha_cards.php', 'real_game' => '../games/gacha_cards.php', 'name' => 'Gacha Cards', 'icon' => '🎲'],
+    26 => ['file' => 'live_greedy_cave.php', 'real_game' => '../games/greedy_cave.php', 'name' => 'Greedy Cave', 'icon' => '🃏'],
+    27 => ['file' => 'live_hilo.php', 'real_game' => '../games/hilo.php', 'name' => 'Hilo', 'icon' => '🎮'],
+    28 => ['file' => 'live_holdem.php', 'real_game' => '../games/holdem.php', 'name' => 'Holdem', 'icon' => '🎪'],
+    29 => ['file' => 'live_hopmu.php', 'real_game' => '../games/hopmu.php', 'name' => 'Hopmu', 'icon' => '🎴'],
+    30 => ['file' => 'live_horserace.php', 'real_game' => '../games/horserace.php', 'name' => 'Horserace', 'icon' => '🕹️'],
+    31 => ['file' => 'live_horserace_pvp.php', 'real_game' => '../games/horserace_pvp.php', 'name' => 'Horserace Pvp', 'icon' => '🎮'],
+    32 => ['file' => 'live_jojo_battle.php', 'real_game' => '../games/jojo_battle.php', 'name' => 'Jojo Battle', 'icon' => '🎮'],
+    33 => ['file' => 'live_keno.php', 'real_game' => '../games/keno.php', 'name' => 'Keno', 'icon' => '🕹️'],
+    34 => ['file' => 'live_letitride.php', 'real_game' => '../games/letitride.php', 'name' => 'Letitride', 'icon' => '🎴'],
+    35 => ['file' => 'live_limbo.php', 'real_game' => '../games/limbo.php', 'name' => 'Limbo', 'icon' => '🎮'],
+    36 => ['file' => 'live_lottery.php', 'real_game' => '../games/lottery.php', 'name' => 'Lottery', 'icon' => '🎴'],
+    37 => ['file' => 'live_mahjong.php', 'real_game' => '../games/mahjong.php', 'name' => 'Mahjong', 'icon' => '🎴'],
+    38 => ['file' => 'live_megaspin.php', 'real_game' => '../games/megaspin.php', 'name' => 'Megaspin', 'icon' => '🎮'],
+    39 => ['file' => 'live_mines.php', 'real_game' => '../games/mines.php', 'name' => 'Mines', 'icon' => '🎯'],
+    40 => ['file' => 'live_minesweeper.php', 'real_game' => '../games/minesweeper.php', 'name' => 'Minesweeper', 'icon' => '🎪'],
+    41 => ['file' => 'live_number.php', 'real_game' => '../games/number.php', 'name' => 'Number', 'icon' => '🎴'],
+    42 => ['file' => 'live_paigow.php', 'real_game' => '../games/paigow.php', 'name' => 'Paigow', 'icon' => '🕹️'],
+    43 => ['file' => 'live_poker.php', 'real_game' => '../games/poker.php', 'name' => 'Poker', 'icon' => '🃏'],
+    44 => ['file' => 'live_pontoon.php', 'real_game' => '../games/pontoon.php', 'name' => 'Pontoon', 'icon' => '🕹️'],
+    45 => ['file' => 'live_reddog.php', 'real_game' => '../games/reddog.php', 'name' => 'Reddog', 'icon' => '🎴'],
+    46 => ['file' => 'live_roulette.php', 'real_game' => '../games/roulette.php', 'name' => 'Roulette', 'icon' => '🎲'],
+    47 => ['file' => 'live_rps.php', 'real_game' => '../games/rps.php', 'name' => 'Rps', 'icon' => '🎲'],
+    48 => ['file' => 'live_ruttham.php', 'real_game' => '../games/ruttham.php', 'name' => 'Ruttham', 'icon' => '🎮'],
+    49 => ['file' => 'live_samloc.php', 'real_game' => '../games/samloc.php', 'name' => 'Samloc', 'icon' => '🃏'],
+    50 => ['file' => 'live_scratch.php', 'real_game' => '../games/scratch.php', 'name' => 'Scratch', 'icon' => '🃏'],
+    51 => ['file' => 'live_sicbo.php', 'real_game' => '../games/sicbo.php', 'name' => 'Sicbo', 'icon' => '🎮'],
+    52 => ['file' => 'live_threecard.php', 'real_game' => '../games/threecard.php', 'name' => 'Threecard', 'icon' => '🎯'],
+    53 => ['file' => 'live_tower.php', 'real_game' => '../games/tower.php', 'name' => 'Tower', 'icon' => '🕹️'],
+    54 => ['file' => 'live_tusac.php', 'real_game' => '../games/tusac.php', 'name' => 'Tusac', 'icon' => '🎴'],
+    55 => ['file' => 'live_videopoker.php', 'real_game' => '../games/videopoker.php', 'name' => 'Videopoker', 'icon' => '🎯'],
+    56 => ['file' => 'live_vietlott.php', 'real_game' => '../games/vietlott.php', 'name' => 'Vietlott', 'icon' => '🎯'],
+    57 => ['file' => 'live_war.php', 'real_game' => '../games/war.php', 'name' => 'War', 'icon' => '🎪'],
+    58 => ['file' => 'live_yahtzee.php', 'real_game' => '../games/yahtzee.php', 'name' => 'Yahtzee', 'icon' => '🎯']
 ];
 
 $botThemesMap = [
-    1 => ['particleColor' => '#00ff88', 'shapeColors' => ["#00ff88", "#00b894", "#fdcb6e"], 'bgGradient' => ["#000000", "#001a11", "#002a1b"]],
-    2 => ['particleColor' => '#00f2fe', 'shapeColors' => ["#00f2fe", "#712cf9", "#ff4757"], 'bgGradient' => ["#000000", "#050015", "#0a0025"]],
-    3 => ['particleColor' => '#ff4757', 'shapeColors' => ["#ff4757", "#ff6b81", "#70a1ff"], 'bgGradient' => ["#000000", "#12001a", "#250033"]],
-    4 => ['particleColor' => '#ff7f50', 'shapeColors' => ["#ff4757", "#ff7f50", "#ffd700"], 'bgGradient' => ["#000000", "#1a0500", "#2d0a00"]],
-    5 => ['particleColor' => '#f1c40f', 'shapeColors' => ["#f1c40f", "#e67e22", "#3498db"], 'bgGradient' => ["#000000", "#1a1500", "#2d2400"]]
+    1 => ['particleColor' => '#00ff88', 'shapeColors' => ['#00ff88', '#00b894', '#fdcb6e'], 'bgGradient' => ['#000000', '#001a11', '#002a1b']],
+    2 => ['particleColor' => '#00f2fe', 'shapeColors' => ['#00f2fe', '#712cf9', '#ff4757'], 'bgGradient' => ['#000000', '#050015', '#0a0025']],
+    3 => ['particleColor' => '#ff4757', 'shapeColors' => ['#ff4757', '#ff6b81', '#70a1ff'], 'bgGradient' => ['#000000', '#12001a', '#250033']],
+    4 => ['particleColor' => '#ff7f50', 'shapeColors' => ['#ff4757', '#ff7f50', '#ffd700'], 'bgGradient' => ['#000000', '#1a0500', '#2d0a00']],
+    5 => ['particleColor' => '#f1c40f', 'shapeColors' => ['#f1c40f', '#e67e22', '#3498db'], 'bgGradient' => ['#000000', '#1a1500', '#2d2400']],
+    6 => ['particleColor' => '#12c2e9', 'shapeColors' => ['#12c2e9', '#c471ed', '#f64f59'], 'bgGradient' => ['#0f0c29', '#302b63', '#24243e']],
+    7 => ['particleColor' => '#ffd700', 'shapeColors' => ['#ffd700', '#ff4757', '#12c2e9'], 'bgGradient' => ['#1a0b2e', '#2a1b3d', '#000000']],
+    8 => ['particleColor' => '#ff00ff', 'shapeColors' => ['#ff00ff', '#00ffff', '#ffff00'], 'bgGradient' => ['#000000', '#110011', '#220022']],
+    9 => ['particleColor' => '#ff7f50', 'shapeColors' => ['#ff4757', '#ff7f50', '#ffd700'], 'bgGradient' => ['#000000', '#1a0500', '#2d0a00']],
+    10 => ['particleColor' => '#12c2e9', 'shapeColors' => ['#12c2e9', '#c471ed', '#f64f59'], 'bgGradient' => ['#0f0c29', '#302b63', '#24243e']],
+    11 => ['particleColor' => '#ffd700', 'shapeColors' => ['#ffd700', '#ff4757', '#12c2e9'], 'bgGradient' => ['#1a0b2e', '#2a1b3d', '#000000']],
+    12 => ['particleColor' => '#f1c40f', 'shapeColors' => ['#f1c40f', '#e67e22', '#3498db'], 'bgGradient' => ['#000000', '#1a1500', '#2d2400']],
+    13 => ['particleColor' => '#00f2fe', 'shapeColors' => ['#00f2fe', '#712cf9', '#ff4757'], 'bgGradient' => ['#000000', '#050015', '#0a0025']],
+    14 => ['particleColor' => '#f1c40f', 'shapeColors' => ['#f1c40f', '#e67e22', '#3498db'], 'bgGradient' => ['#000000', '#1a1500', '#2d2400']],
+    15 => ['particleColor' => '#00ff88', 'shapeColors' => ['#00ff88', '#00b894', '#fdcb6e'], 'bgGradient' => ['#000000', '#001a11', '#002a1b']],
+    16 => ['particleColor' => '#12c2e9', 'shapeColors' => ['#12c2e9', '#c471ed', '#f64f59'], 'bgGradient' => ['#0f0c29', '#302b63', '#24243e']],
+    17 => ['particleColor' => '#ff4757', 'shapeColors' => ['#ff4757', '#ff6b81', '#70a1ff'], 'bgGradient' => ['#000000', '#12001a', '#250033']],
+    18 => ['particleColor' => '#ff4757', 'shapeColors' => ['#ff4757', '#ff6b81', '#70a1ff'], 'bgGradient' => ['#000000', '#12001a', '#250033']],
+    19 => ['particleColor' => '#00f2fe', 'shapeColors' => ['#00f2fe', '#712cf9', '#ff4757'], 'bgGradient' => ['#000000', '#050015', '#0a0025']],
+    20 => ['particleColor' => '#ff00ff', 'shapeColors' => ['#ff00ff', '#00ffff', '#ffff00'], 'bgGradient' => ['#000000', '#110011', '#220022']],
+    21 => ['particleColor' => '#ff4757', 'shapeColors' => ['#ff4757', '#ff6b81', '#70a1ff'], 'bgGradient' => ['#000000', '#12001a', '#250033']],
+    22 => ['particleColor' => '#ff4757', 'shapeColors' => ['#ff4757', '#ff6b81', '#70a1ff'], 'bgGradient' => ['#000000', '#12001a', '#250033']],
+    23 => ['particleColor' => '#12c2e9', 'shapeColors' => ['#12c2e9', '#c471ed', '#f64f59'], 'bgGradient' => ['#0f0c29', '#302b63', '#24243e']],
+    24 => ['particleColor' => '#00f2fe', 'shapeColors' => ['#00f2fe', '#712cf9', '#ff4757'], 'bgGradient' => ['#000000', '#050015', '#0a0025']],
+    25 => ['particleColor' => '#ff7f50', 'shapeColors' => ['#ff4757', '#ff7f50', '#ffd700'], 'bgGradient' => ['#000000', '#1a0500', '#2d0a00']],
+    26 => ['particleColor' => '#ffd700', 'shapeColors' => ['#ffd700', '#ff4757', '#12c2e9'], 'bgGradient' => ['#1a0b2e', '#2a1b3d', '#000000']],
+    27 => ['particleColor' => '#ff4757', 'shapeColors' => ['#ff4757', '#ff6b81', '#70a1ff'], 'bgGradient' => ['#000000', '#12001a', '#250033']],
+    28 => ['particleColor' => '#f1c40f', 'shapeColors' => ['#f1c40f', '#e67e22', '#3498db'], 'bgGradient' => ['#000000', '#1a1500', '#2d2400']],
+    29 => ['particleColor' => '#f1c40f', 'shapeColors' => ['#f1c40f', '#e67e22', '#3498db'], 'bgGradient' => ['#000000', '#1a1500', '#2d2400']],
+    30 => ['particleColor' => '#12c2e9', 'shapeColors' => ['#12c2e9', '#c471ed', '#f64f59'], 'bgGradient' => ['#0f0c29', '#302b63', '#24243e']],
+    31 => ['particleColor' => '#00ff88', 'shapeColors' => ['#00ff88', '#00b894', '#fdcb6e'], 'bgGradient' => ['#000000', '#001a11', '#002a1b']],
+    32 => ['particleColor' => '#12c2e9', 'shapeColors' => ['#12c2e9', '#c471ed', '#f64f59'], 'bgGradient' => ['#0f0c29', '#302b63', '#24243e']],
+    33 => ['particleColor' => '#12c2e9', 'shapeColors' => ['#12c2e9', '#c471ed', '#f64f59'], 'bgGradient' => ['#0f0c29', '#302b63', '#24243e']],
+    34 => ['particleColor' => '#00ff88', 'shapeColors' => ['#00ff88', '#00b894', '#fdcb6e'], 'bgGradient' => ['#000000', '#001a11', '#002a1b']],
+    35 => ['particleColor' => '#ff7f50', 'shapeColors' => ['#ff4757', '#ff7f50', '#ffd700'], 'bgGradient' => ['#000000', '#1a0500', '#2d0a00']],
+    36 => ['particleColor' => '#ff4757', 'shapeColors' => ['#ff4757', '#ff6b81', '#70a1ff'], 'bgGradient' => ['#000000', '#12001a', '#250033']],
+    37 => ['particleColor' => '#f1c40f', 'shapeColors' => ['#f1c40f', '#e67e22', '#3498db'], 'bgGradient' => ['#000000', '#1a1500', '#2d2400']],
+    38 => ['particleColor' => '#ffd700', 'shapeColors' => ['#ffd700', '#ff4757', '#12c2e9'], 'bgGradient' => ['#1a0b2e', '#2a1b3d', '#000000']],
+    39 => ['particleColor' => '#ffd700', 'shapeColors' => ['#ffd700', '#ff4757', '#12c2e9'], 'bgGradient' => ['#1a0b2e', '#2a1b3d', '#000000']],
+    40 => ['particleColor' => '#00f2fe', 'shapeColors' => ['#00f2fe', '#712cf9', '#ff4757'], 'bgGradient' => ['#000000', '#050015', '#0a0025']],
+    41 => ['particleColor' => '#ffd700', 'shapeColors' => ['#ffd700', '#ff4757', '#12c2e9'], 'bgGradient' => ['#1a0b2e', '#2a1b3d', '#000000']],
+    42 => ['particleColor' => '#ff4757', 'shapeColors' => ['#ff4757', '#ff6b81', '#70a1ff'], 'bgGradient' => ['#000000', '#12001a', '#250033']],
+    43 => ['particleColor' => '#ff00ff', 'shapeColors' => ['#ff00ff', '#00ffff', '#ffff00'], 'bgGradient' => ['#000000', '#110011', '#220022']],
+    44 => ['particleColor' => '#ff00ff', 'shapeColors' => ['#ff00ff', '#00ffff', '#ffff00'], 'bgGradient' => ['#000000', '#110011', '#220022']],
+    45 => ['particleColor' => '#ff7f50', 'shapeColors' => ['#ff4757', '#ff7f50', '#ffd700'], 'bgGradient' => ['#000000', '#1a0500', '#2d0a00']],
+    46 => ['particleColor' => '#00ff88', 'shapeColors' => ['#00ff88', '#00b894', '#fdcb6e'], 'bgGradient' => ['#000000', '#001a11', '#002a1b']],
+    47 => ['particleColor' => '#12c2e9', 'shapeColors' => ['#12c2e9', '#c471ed', '#f64f59'], 'bgGradient' => ['#0f0c29', '#302b63', '#24243e']],
+    48 => ['particleColor' => '#ff7f50', 'shapeColors' => ['#ff4757', '#ff7f50', '#ffd700'], 'bgGradient' => ['#000000', '#1a0500', '#2d0a00']],
+    49 => ['particleColor' => '#ff4757', 'shapeColors' => ['#ff4757', '#ff6b81', '#70a1ff'], 'bgGradient' => ['#000000', '#12001a', '#250033']],
+    50 => ['particleColor' => '#00f2fe', 'shapeColors' => ['#00f2fe', '#712cf9', '#ff4757'], 'bgGradient' => ['#000000', '#050015', '#0a0025']],
+    51 => ['particleColor' => '#ff4757', 'shapeColors' => ['#ff4757', '#ff6b81', '#70a1ff'], 'bgGradient' => ['#000000', '#12001a', '#250033']],
+    52 => ['particleColor' => '#00f2fe', 'shapeColors' => ['#00f2fe', '#712cf9', '#ff4757'], 'bgGradient' => ['#000000', '#050015', '#0a0025']],
+    53 => ['particleColor' => '#00ff88', 'shapeColors' => ['#00ff88', '#00b894', '#fdcb6e'], 'bgGradient' => ['#000000', '#001a11', '#002a1b']],
+    54 => ['particleColor' => '#ffd700', 'shapeColors' => ['#ffd700', '#ff4757', '#12c2e9'], 'bgGradient' => ['#1a0b2e', '#2a1b3d', '#000000']],
+    55 => ['particleColor' => '#ff00ff', 'shapeColors' => ['#ff00ff', '#00ffff', '#ffff00'], 'bgGradient' => ['#000000', '#110011', '#220022']],
+    56 => ['particleColor' => '#ff00ff', 'shapeColors' => ['#ff00ff', '#00ffff', '#ffff00'], 'bgGradient' => ['#000000', '#110011', '#220022']],
+    57 => ['particleColor' => '#ffd700', 'shapeColors' => ['#ffd700', '#ff4757', '#12c2e9'], 'bgGradient' => ['#1a0b2e', '#2a1b3d', '#000000']],
+    58 => ['particleColor' => '#ff4757', 'shapeColors' => ['#ff4757', '#ff6b81', '#70a1ff'], 'bgGradient' => ['#000000', '#12001a', '#250033']]
 ];
 
 $currentGame = $gameFilesMap[$tableId];
@@ -45,6 +151,7 @@ $stmtUser->close();
 
 $userMoney = (float)($userRow['Money'] ?? 0);
 $userName = $userRow['Name'] ?? 'Đạo Hữu';
+$isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -58,13 +165,14 @@ $userName = $userRow['Name'] ?? 'Đạo Hữu';
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://code.responsivevoice.org/responsivevoice.js"></script>
     <style>
         html, body, div, p, span, section, header, footer, aside, nav, table, tr, td, iframe, canvas {
-            cursor: url('../img/chuot.png'), default;
+            cursor: url('img/chuot.png'), default;
         }
         a, button, input, select, textarea, label, .btn, [role="button"], [onclick], .clickable, .btn-react, .btn-back, .table-selector, .tiktok-gift-card, .btn-quick-tip, .swal2-confirm, .swal2-cancel, .swal2-close,
         a *, button *, [onclick] *, .tiktok-gift-card *, .btn-quick-tip *, .btn-react *, .swal2-popup button, .swal2-popup [onclick], .swal2-popup div[onclick] {
-            cursor: url('../img/tay.png'), pointer !important;
+            cursor: url('img/tay.png'), pointer !important;
         }
         #threejs-background { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
         :root {
@@ -206,20 +314,24 @@ $userName = $userRow['Name'] ?? 'Đạo Hữu';
         /* 👁️ Banner Thông Báo Chế Độ Chỉ Xem */
         .spectator-mode-banner {
             position: absolute;
-            top: 60px; left: 50%;
-            transform: translateX(-50%);
+            top: 55px; left: 15px; /* Moved below live badge */
             background: rgba(15, 23, 42, 0.85);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(99, 102, 241, 0.4);
             color: #fff;
-            padding: 6px 18px;
-            border-radius: 20px;
+            padding: 6px 12px 6px 14px;
+            border-radius: 12px;
             font-size: 0.8rem;
             font-weight: 800;
             z-index: 35;
             box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-            display: flex; align-items: center; gap: 8px;
+            display: flex; align-items: center; gap: 10px;
         }
+        .btn-close-banner {
+            background: none; border: none; color: rgba(255,255,255,0.5); cursor: pointer;
+            font-size: 0.9rem; padding: 0 4px;
+        }
+        .btn-close-banner:hover { color: #fff; }
 
         /* 🎁 Banner Thông Báo Tip GTLM Vinh Danh Streamer Bot */
         .tip-notification-banner {
@@ -431,11 +543,11 @@ $userName = $userRow['Name'] ?? 'Đạo Hữu';
         <div style="display: flex; align-items: center; gap: 10px;">
             <span style="font-size: 0.85rem; color: var(--text-sub); font-weight: 700;">Đổi Bàn Live:</span>
             <select class="table-selector" id="tableSelect" onchange="switchTable(this.value)">
-                <option value="1">🐾 Thế Giới Linh Thú</option>
-                <option value="2">🎲 Trận Địa Trắng Đỏ</option>
-                <option value="3">🚀 Tiên Tri Vũ Trụ</option>
-                <option value="4">🐓 Đại Chiến Thần Kê</option>
-                <option value="5">🐉 Chiến Trường Rồng Hổ</option>
+                <?php foreach ($gameFilesMap as $id => $game): ?>
+                    <option value="<?= $id ?>" <?= ($id == $tableId) ? 'selected' : '' ?>>
+                        <?= $game['icon'] ?> <?= $game['name'] ?>
+                    </option>
+                <?php endforeach; ?>
             </select>
         </div>
 
@@ -464,18 +576,32 @@ $userName = $userRow['Name'] ?? 'Đạo Hữu';
                 </div>
 
                 <!-- 👁️ Banner Thông Báo Chế Độ Chỉ Xem -->
-                <div class="spectator-mode-banner">
+                <div class="spectator-mode-banner" id="spectatorModeBanner">
                     <i class="fa fa-eye" style="color:var(--cyan)"></i> CHẾ ĐỘ CHỈ XEM LIVE 24/7 (ĐÃ KHÓA BÀN CƯỢC)
+                    <button class="btn-close-banner" onclick="hideSpectatorBanner()"><i class="fa fa-times"></i></button>
                 </div>
+                <script>
+                    if(localStorage.getItem('hideSpectatorBanner') === 'true') {
+                        document.getElementById('spectatorModeBanner').style.display = 'none';
+                    }
+                    function hideSpectatorBanner() {
+                        $('#spectatorModeBanner').fadeOut();
+                        localStorage.setItem('hideSpectatorBanner', 'true');
+                    }
+                </script>
 
                 <!-- 🎁 Banner Thông Báo Tip GTLM Vinh Danh Streamer Bot -->
                 <div id="tipNotificationBanner" class="tip-notification-banner" style="display: none;">
                     <i class="fa fa-gift" style="color: #fef08a; font-size: 1.1rem;"></i>
-                    <span id="tipBannerText">🎉 <b>Tuấn Mạnh</b> vừa Tip vinh danh Streamer <b>bot_baucua</b> +50,000 GTLM! ❤️</span>
+                    <span id="tipBannerText">🎉 <b>Tuấn Mạnh</b> vừa Tip vinh danh Streamer <b>Lão Tiên Tri</b> +50,000 GTLM! ❤️</span>
                 </div>
 
                 <!-- Real Game Iframe (Bản LiveStream Riêng 24/7) -->
-                <iframe src="<?= htmlspecialchars($currentGame['file']) ?>" class="game-iframe" id="gameFrame" title="Real Game Live"></iframe>
+                <?php
+                $isRoot = (basename(dirname($_SERVER['SCRIPT_FILENAME'])) !== 'LiveStream');
+                $iframePrefix = $isRoot ? 'LiveStream/' : '';
+                ?>
+                <iframe src="<?= htmlspecialchars($iframePrefix . $currentGame['file']) ?>" class="game-iframe" id="gameFrame" title="Real Game Live"></iframe>
 
                 <!-- Live Bot Auto-Play Feed Overlay -->
                 <div class="live-bot-feed-overlay" id="botFeedOverlay">
@@ -518,7 +644,12 @@ $userName = $userRow['Name'] ?? 'Đạo Hữu';
         <div class="sidebar-chat">
             <div class="chat-header">
                 <span><i class="fa fa-comments"></i> CHAT TRỰC TIẾP LIVE</span>
-                <span style="font-size: 0.75rem; color: var(--emerald);"><i class="fa fa-circle" style="font-size: 0.5rem;"></i> LIVE 24/7</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <?php if ($isAdmin): ?>
+                    <button onclick="clearLiveChat()" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #ef4444; border-radius: 4px; padding: 2px 6px; font-size: 0.7rem; font-weight: 700; cursor: pointer;"><i class="fa fa-trash"></i> Xóa Chat</button>
+                    <?php endif; ?>
+                    <span style="font-size: 0.75rem; color: var(--emerald);"><i class="fa fa-circle" style="font-size: 0.5rem;"></i> LIVE 24/7</span>
+                </div>
             </div>
 
             <div class="chat-body" id="chatBody">
@@ -563,10 +694,15 @@ $userName = $userRow['Name'] ?? 'Đạo Hữu';
                     if (res.chats) {
                         res.chats.forEach(chat => {
                             if (chat.id > lastChatId) {
+                                let userPrefix = `<span class="chat-user">${chat.user_name}:</span> `;
+                                if (chat.message.startsWith('🎙️') || chat.message.startsWith('🎉') || chat.message.startsWith('🎁')) {
+                                    userPrefix = ''; // Ẩn tên thô từ CSDL đi vì trong message đã format sẵn tên đẹp
+                                }
+                                let formattedMsg = chat.message.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\*(.*?)\*/g, '<b>$1</b>');
+
                                 $('#chatBody').append(`
                                     <div class="chat-line">
-                                        <span class="chat-user">${chat.user_name}:</span>
-                                        <span>${chat.message}</span>
+                                        ${userPrefix}<span>${formattedMsg}</span>
                                     </div>
                                 `);
                                 lastChatId = chat.id;
@@ -615,39 +751,63 @@ $userName = $userRow['Name'] ?? 'Đạo Hữu';
             });
         }
 
-        // Khởi tạo và load sẵn giọng đọc trình duyệt khi tải trang
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.getVoices();
-            if (speechSynthesis.onvoiceschanged !== undefined) {
-                speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
-            }
+        function clearLiveChat() {
+            Swal.fire({
+                title: 'Xóa Chat?',
+                text: "Bạn có chắc muốn xóa toàn bộ tin nhắn chat trong phòng này?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonText: 'Hủy',
+                confirmButtonText: 'Xóa ngay',
+                background: '#0f172a',
+                color: '#f8fafc'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('api_spectator.php', { action: 'clear_chat', table_id: currentTableId }, function(res) {
+                        if (res.success) {
+                            $('#chatBody').empty();
+                            Swal.fire({ title: 'Thành công', text: 'Đã dọn dẹp khung chat.', icon: 'success', background: '#0f172a', color: '#f8fafc' });
+                        } else {
+                            Swal.fire({ title: 'Lỗi', text: res.message, icon: 'error', background: '#0f172a', color: '#f8fafc' });
+                        }
+                    }, 'json');
+                }
+            });
         }
 
         function speakStreamerVoice(text) {
             if (!text) return;
-            const cleanText = text.replace(/[*#_`~]/g, '').trim();
+            // Thay thế GTLM thành "Gờ Tờ Lờ Mờ" để đọc tiếng Việt chuẩn hơn
+            let cleanText = text.replace(/[*#_`~]/g, '').replace(/GTLM/g, 'Gờ Tờ Lờ Mờ').trim();
             if (!cleanText) return;
 
+            if (typeof responsiveVoice !== 'undefined') {
+                // Thử dùng giọng nam tiếng Việt (hoặc nữ nếu nam không khả dụng trên trình duyệt)
+                responsiveVoice.speak(cleanText, "Vietnamese Male", {
+                    pitch: 0.9,
+                    rate: 1.0,
+                    volume: 1,
+                    onend: function() {}
+                });
+            } else {
+                fallbackSpeech(cleanText);
+            }
+        }
+
+        function fallbackSpeech(cleanText) {
             if ('speechSynthesis' in window) {
                 try {
                     window.speechSynthesis.cancel();
-                    
-                    const utterance = new SpeechSynthesisUtterance(cleanText);
-                    utterance.lang = 'vi-VN';
-                    utterance.rate = 1.0;
-                    utterance.pitch = 1.0;
-
-                    const voices = window.speechSynthesis.getVoices();
-                    if (voices && voices.length > 0) {
-                        const viVoice = voices.find(v => v.lang && (v.lang.toLowerCase().includes('vi') || v.name.toLowerCase().includes('vietnam') || v.name.toLowerCase().includes('tiếng việt')));
-                        if (viVoice) {
-                            utterance.voice = viVoice;
-                        }
-                    }
-
-                    window.speechSynthesis.speak(utterance);
+                    const url = 'https://translate.googleapis.com/translate_tts?ie=UTF-8&q=' + encodeURIComponent(cleanText) + '&tl=vi&client=tw-ob';
+                    const audio = new Audio(url);
+                    audio.play().catch(e => {
+                        const utterance = new SpeechSynthesisUtterance(cleanText);
+                        utterance.lang = 'vi-VN';
+                        window.speechSynthesis.speak(utterance);
+                    });
                 } catch(e) {
-                    console.log("Speech synthesis error:", e);
+                    console.log("Speech error:", e);
                 }
             }
         }
@@ -692,6 +852,7 @@ $userName = $userRow['Name'] ?? 'Đạo Hữu';
                         <button type="button" class="btn-quick-tip" onclick="setTipAmount(10000000)" style="background: linear-gradient(135deg, #fbbf24, #f59e0b); border: none; color: #000; padding: 8px; border-radius: 8px; font-weight: 900; cursor: pointer; font-size: 0.85rem; grid-column: span 2;">10M (VIP)</button>
                     </div>
                     <input type="number" id="customTipInput" class="swal2-input" value="10000" min="1000" step="1000" placeholder="Hoặc nhập số GTLM..." style="width: 100%; margin: 0; box-sizing: border-box; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); color: #fff; text-align: center; font-weight: 800;">
+                    <input type="text" id="customTipMessage" class="swal2-input" placeholder="Nhập lời nhắn (tùy chọn)..." maxlength="100" style="width: 100%; margin: 10px 0 0 0; box-sizing: border-box; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); color: #fff; text-align: center;">
                 `,
                 showCancelButton: true,
                 confirmButtonText: 'GỬI TIP! ❤️',
@@ -701,15 +862,20 @@ $userName = $userRow['Name'] ?? 'Đạo Hữu';
                 color: '#f8fafc',
                 preConfirm: () => {
                     const val = parseInt($('#customTipInput').val());
+                    const msg = $('#customTipMessage').val() ? $('#customTipMessage').val().trim() : '';
                     if (!val || val < 1000) {
                         Swal.showValidationMessage('Vui lòng nhập số GTLM tối thiểu từ 1,000 GTLM!');
                         return false;
                     }
-                    return val;
+                    if (val > 1000000000) {
+                        Swal.showValidationMessage('Giới hạn Tip tối đa mỗi lần là 1 Tỷ GTLM!');
+                        return false;
+                    }
+                    return { amount: val, message: msg };
                 }
             }).then((res) => {
                 if (res.isConfirmed && res.value) {
-                    $.post('api_spectator.php', { action: 'tip', table_id: currentTableId, amount: res.value }, function(data) {
+                    $.post('api_spectator.php', { action: 'tip', table_id: currentTableId, amount: res.value.amount, message: res.value.message }, function(data) {
                         if (data.success) {
                             if (data.newMoney) $('#userMoneyDisplay').text(data.newMoney);
                             showTipNotification(data.userName, data.streamerName, data.amountFormatted, data.speechText);
@@ -734,45 +900,45 @@ $userName = $userRow['Name'] ?? 'Đạo Hữu';
                 html: `
                     <div style="font-size:0.85rem; color:#94a3b8; margin-bottom:12px;">Chọn quà vinh danh gửi trực tiếp cho Streamer Bot:</div>
                     <div class="tiktok-gift-store-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-height: 400px; overflow-y: auto; padding-right: 4px;">
-                        <div class="tiktok-gift-card" onclick="sendTikTokGift('rose')">
-                            <div class="gift-icon-wrap">🌹</div>
-                            <div class="gift-title">Hoa Hồng</div>
-                            <div class="gift-price">1,000 GTLM</div>
-                        </div>
-                        <div class="tiktok-gift-card" onclick="sendTikTokGift('heart')">
-                            <div class="gift-icon-wrap">💖</div>
-                            <div class="gift-title">Trái Tim</div>
+                        <div class="tiktok-gift-card" onclick="sendTikTokGift('beer')">
+                            <div class="gift-icon-wrap">🍺</div>
+                            <div class="gift-title">Bia Lạnh</div>
                             <div class="gift-price">5,000 GTLM</div>
                         </div>
-                        <div class="tiktok-gift-card" onclick="sendTikTokGift('icecream')">
-                            <div class="gift-icon-wrap">🍦</div>
-                            <div class="gift-title">Kem Ốc Quế</div>
-                            <div class="gift-price">10,000 GTLM</div>
+                        <div class="tiktok-gift-card" onclick="sendTikTokGift('moneygun')">
+                            <div class="gift-icon-wrap">🔫</div>
+                            <div class="gift-title">Súng Bắn Tiền</div>
+                            <div class="gift-price">20,000 GTLM</div>
                         </div>
-                        <div class="tiktok-gift-card" onclick="sendTikTokGift('donut')">
-                            <div class="gift-icon-wrap">🍩</div>
-                            <div class="gift-title">Bánh Donut</div>
-                            <div class="gift-price">25,000 GTLM</div>
+                        <div class="tiktok-gift-card" onclick="sendTikTokGift('gem')">
+                            <div class="gift-icon-wrap">💎</div>
+                            <div class="gift-title">Kim Cương</div>
+                            <div class="gift-price">50,000 GTLM</div>
+                        </div>
+                        <div class="tiktok-gift-card" onclick="sendTikTokGift('sports_car')">
+                            <div class="gift-icon-wrap">🏎️</div>
+                            <div class="gift-title">Siêu Xe Cyber</div>
+                            <div class="gift-price">200,000 GTLM</div>
+                        </div>
+                        <div class="tiktok-gift-card" onclick="sendTikTokGift('spaceship')">
+                            <div class="gift-icon-wrap">🛸</div>
+                            <div class="gift-title">Phi Thuyền</div>
+                            <div class="gift-price">500,000 GTLM</div>
+                        </div>
+                        <div class="tiktok-gift-card" onclick="sendTikTokGift('dragon')">
+                            <div class="gift-icon-wrap">🐉</div>
+                            <div class="gift-title">Rồng Thần</div>
+                            <div class="gift-price">1,000,000 GTLM</div>
                         </div>
                         <div class="tiktok-gift-card" onclick="sendTikTokGift('crown')">
                             <div class="gift-icon-wrap">👑</div>
-                            <div class="gift-title">Vương Miện VIP</div>
-                            <div class="gift-price">50,000 GTLM</div>
+                            <div class="gift-title">Vương Miện H.Đế</div>
+                            <div class="gift-price">5,000,000 GTLM</div>
                         </div>
-                        <div class="tiktok-gift-card" onclick="sendTikTokGift('rocket')">
-                            <div class="gift-icon-wrap">🚀</div>
-                            <div class="gift-title">Tên Lửa 3D</div>
-                            <div class="gift-price">100,000 GTLM</div>
-                        </div>
-                        <div class="tiktok-gift-card" onclick="sendTikTokGift('supercar')">
-                            <div class="gift-icon-wrap">🏎️</div>
-                            <div class="gift-title">Siêu Xe Neon</div>
-                            <div class="gift-price">500,000 GTLM</div>
-                        </div>
-                        <div class="tiktok-gift-card vip-castle" onclick="sendTikTokGift('castle')">
-                            <div class="gift-icon-wrap">🏰</div>
-                            <div class="gift-title">Lâu Đài VIP</div>
-                            <div class="gift-price">1,000,000 GTLM</div>
+                        <div class="tiktok-gift-card vip-castle" onclick="sendTikTokGift('planet')">
+                            <div class="gift-icon-wrap">💥</div>
+                            <div class="gift-title">Vụ Nổ Big Bang</div>
+                            <div class="gift-price">10,000,000 GTLM</div>
                         </div>
                     </div>
                 `,
@@ -786,17 +952,50 @@ $userName = $userRow['Name'] ?? 'Đạo Hữu';
         }
 
         function sendTikTokGift(giftId) {
+            Swal.fire({
+                title: '🎁 CHỌN COMBO QUÀ TẶNG',
+                html: `
+                    <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                        <button class="combo-btn" onclick="confirmSendGift('${giftId}', 1)">x1</button>
+                        <button class="combo-btn" onclick="confirmSendGift('${giftId}', 10)">x10</button>
+                        <button class="combo-btn" onclick="confirmSendGift('${giftId}', 50)">x50</button>
+                        <button class="combo-btn" onclick="confirmSendGift('${giftId}', 100)">x100</button>
+                    </div>
+                    <style>
+                        .combo-btn { background: rgba(236,72,153,0.2); border: 1px solid #ec4899; color: #f472b6; padding: 10px 20px; border-radius: 8px; font-weight: 900; cursor: pointer; transition: 0.2s; min-width: 60px;}
+                        .combo-btn:hover { background: #ec4899; color: #fff; }
+                    </style>
+                `,
+                showConfirmButton: false,
+                showCancelButton: true,
+                cancelButtonText: 'Hủy',
+                background: '#0f172a',
+                color: '#f8fafc'
+            });
+        }
+
+        function confirmSendGift(giftId, combo) {
             Swal.close();
-            $.post('api_spectator.php', { action: 'gift_tiktok', table_id: currentTableId, gift_id: giftId }, function(res) {
-                if (res.success) {
-                    if (res.newMoney) $('#userMoneyDisplay').text(res.newMoney);
-                    showGiftBanner(res.userName, res.gift.icon, res.gift.name, res.streamerName, res.amountFormatted, res.speechText);
-                    triggerGiftFX(res.gift);
+            $.post('api_spectator.php', { action: 'gift_tiktok', table_id: currentTableId, gift_id: giftId, combo: combo }, function(data) {
+                if (data.success) {
+                    if (data.newMoney) $('#userMoneyDisplay').text(data.newMoney);
+                    
+                    if (window.GameEffects && window.GameEffects.showTikTokGift) {
+                        window.GameEffects.showTikTokGift(data.gift.icon);
+                    }
+                    if (data.speechText) speakStreamerVoice(data.speechText);
+                    
+                    triggerGiftFX(data.gift); // Trigger custom FX
+
+                    const banner = $('#tipNotificationBanner');
+                    $('#tipBannerText').html(`🎁 <b style="color:#fef08a;">${data.userName}</b> vừa tặng <b>Combo x${combo} ${data.gift.name}</b> cho Streamer <b>${data.streamerName}</b>! ❤️`);
+                    banner.stop(true, true).css('display', 'flex').hide().fadeIn(300);
+                    setTimeout(() => banner.fadeOut(800), 5500);
+
                     loadDetails();
                 } else {
                     Swal.fire({
-                        title: 'LỖI TẶNG QUÀ',
-                        text: res.message,
+                        text: data.message,
                         icon: 'error',
                         background: '#0f172a',
                         color: '#f8fafc'
@@ -828,68 +1027,112 @@ $userName = $userRow['Name'] ?? 'Đạo Hữu';
             const giftId = gift.id;
             const icon = gift.icon;
 
-            if (['rose', 'heart', 'icecream', 'donut'].includes(giftId)) {
-                for (let i = 0; i < 40; i++) {
-                    const leftPos = Math.random() * 92 + 4;
-                    const animDelay = Math.random() * 1.0;
-                    const animDur = Math.random() * 1.5 + 2.2;
-                    const size = Math.random() * 30 + 45;
+            if (giftId === 'beer' || giftId === 'gem') {
+                const el = $(`
+                    <div style="position:fixed; top:40%; left:50%; transform:translate(-50%, -50%); font-size:160px; filter:drop-shadow(0 0 50px #3b82f6) drop-shadow(0 0 80px #60a5fa); text-align:center; pointer-events:none; z-index:9999999; animation: giftPopScale 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;">
+                        ${icon}
+                        <div style="font-size:2rem; font-weight:900; color:#60a5fa; text-shadow:0 0 20px #000, 0 0 30px #60a5fa; letter-spacing:2px; font-family:'Outfit', sans-serif;">${gift.name.toUpperCase()}</div>
+                    </div>
+                `).appendTo(container);
+
+                if (window.gsap) {
+                    gsap.fromTo(el, { scale: 0.5, rotation: -20, opacity: 0 }, { scale: 1, rotation: 0, opacity: 1, duration: 1.2, ease: "elastic.out(1, 0.5)" });
+                }
+
+                setTimeout(() => el.fadeOut(800, () => el.remove()), 3000);
+
+            } else if (giftId === 'moneygun') {
+                for (let i = 0; i < 50; i++) {
+                    const leftPos = Math.random() * 100;
+                    const animDelay = Math.random() * 1.5;
+                    const animDur = Math.random() * 1.5 + 2.0;
+                    const size = Math.random() * 30 + 40;
 
                     const el = $(`
-                        <div style="position:fixed; top:-120px; left:${leftPos}vw; font-size:${size}px; z-index:9999999; pointer-events:none; filter:drop-shadow(0 0 15px #fbbf24) drop-shadow(0 0 30px #ec4899); animation: giftRainDown ${animDur}s cubic-bezier(0.25, 0.46, 0.45, 0.94) ${animDelay}s forwards;">
-                            ${icon}
+                        <div style="position:fixed; top:-120px; left:${leftPos}vw; font-size:${size}px; z-index:9999999; pointer-events:none; filter:drop-shadow(0 0 10px #22c55e); animation: giftRainDown ${animDur}s linear ${animDelay}s forwards;">
+                            💵
                         </div>
                     `).appendTo(container);
 
                     setTimeout(() => el.remove(), (animDur + animDelay + 0.5) * 1000);
                 }
-            } else if (giftId === 'crown') {
-                const crown = $(`
-                    <div style="position:fixed; top:20vh; left:50%; transform:translateX(-50%); font-size:160px; filter:drop-shadow(0 0 60px #fbbf24) drop-shadow(0 0 100px #f59e0b); text-align:center; pointer-events:none; z-index:9999999; animation: giftCrownDropBig 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;">
-                        👑
-                        <div style="font-size:2rem; font-weight:900; color:#fbbf24; text-shadow:0 0 20px #000, 0 0 30px #fbbf24; letter-spacing:3px; font-family:'Outfit', sans-serif;">VƯƠNG MIỆN HOÀNG GIA VIP</div>
+            } else if (giftId === 'sports_car') {
+                const car = $(`
+                    <div style="position:fixed; top:40vh; left:-400px; font-size:180px; filter:drop-shadow(0 0 60px #14b8a6) drop-shadow(0 0 100px #2dd4bf); text-align:center; pointer-events:none; z-index:9999999; animation: giftCarSpeedFull 2s cubic-bezier(0.4, 0, 0.2, 1) forwards;">
+                        🏎️💨
+                        <div style="font-size:1.8rem; font-weight:900; color:#2dd4bf; text-shadow:0 0 20px #000, 0 0 30px #2dd4bf; letter-spacing:3px; font-family:'Outfit', sans-serif;">SIÊU XE NEON</div>
+                    </div>
+                `).appendTo(container);
+
+                if (window.GameEffects && window.GameEffects.showWin) window.GameEffects.showWin(200000);
+                setTimeout(() => car.remove(), 2500);
+
+            } else if (giftId === 'spaceship') {
+                const ship = $(`
+                    <div style="position:fixed; top:10vh; left:50%; transform:translateX(-50%); font-size:200px; filter:drop-shadow(0 0 80px #a855f7) drop-shadow(0 0 130px #c084fc); text-align:center; pointer-events:none; z-index:9999999; animation: giftUFOHover 4s ease-in-out forwards;">
+                        🛸
+                        <div style="width: 200px; height: 100vh; background: linear-gradient(to bottom, rgba(168,85,247,0.8), transparent); margin: 0 auto; filter: blur(10px); clip-path: polygon(40% 0, 60% 0, 100% 100%, 0% 100%);"></div>
+                        <div style="font-size:2.2rem; font-weight:900; color:#c084fc; text-shadow:0 0 25px #000, 0 0 40px #c084fc; letter-spacing:4px; font-family:'Outfit', sans-serif; margin-top: -80vh;">PHI THUYỀN VŨ TRỤ</div>
                     </div>
                 `).appendTo(container);
 
                 if (window.gsap) {
-                    gsap.fromTo(crown, { scale: 0.2, opacity: 0 }, { scale: 1.4, opacity: 1, duration: 1.0, ease: "back.out(1.7)" });
+                    gsap.fromTo(ship, { y: -300, opacity: 0 }, { y: 0, opacity: 1, duration: 1.5, ease: "power3.out" });
                 }
 
-                setTimeout(() => {
-                    crown.fadeOut(1000, () => crown.remove());
-                }, 4500);
-            } else if (giftId === 'rocket') {
-                const rocket = $(`
-                    <div style="position:fixed; top:-200px; left:50%; transform:translateX(-50%); font-size:180px; filter:drop-shadow(0 0 70px #ff4757) drop-shadow(0 0 120px #ff6b81); text-align:center; pointer-events:none; z-index:9999999; animation: giftRocketBlastDown 2.2s ease-in forwards;">
-                        🚀
-                        <div style="font-size:2rem; font-weight:900; color:#ff4757; text-shadow:0 0 20px #000, 0 0 30px #ff4757; letter-spacing:3px; font-family:'Outfit', sans-serif;">TÊN LỬA VŨ TRỤ 3D PHÓNG LIVE</div>
-                    </div>
-                `).appendTo(container);
-
-                if (window.GameEffects && window.GameEffects.showWin) window.GameEffects.showWin(100000);
-                setTimeout(() => rocket.remove(), 2800);
-            } else if (giftId === 'supercar') {
-                const car = $(`
-                    <div style="position:fixed; top:35vh; left:-400px; font-size:160px; filter:drop-shadow(0 0 60px #2ed573) drop-shadow(0 0 100px #10b981); text-align:center; pointer-events:none; z-index:9999999; animation: giftCarSpeedFull 1.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;">
-                        🏎️💨
-                        <div style="font-size:1.8rem; font-weight:900; color:#2ed573; text-shadow:0 0 20px #000, 0 0 30px #2ed573; letter-spacing:3px; font-family:'Outfit', sans-serif;">SIÊU XE NEON SPORTSCAR</div>
-                    </div>
-                `).appendTo(container);
-
                 if (window.GameEffects && window.GameEffects.showWin) window.GameEffects.showWin(500000);
-                setTimeout(() => car.remove(), 2500);
-            } else if (giftId === 'castle') {
-                const castle = $(`
-                    <div style="position:fixed; top:20vh; left:50%; transform:translateX(-50%); font-size:190px; filter:drop-shadow(0 0 80px #e84393) drop-shadow(0 0 130px #f472b6); text-align:center; pointer-events:none; z-index:9999999; animation: giftCastleRiseCenter 1.4s ease-out forwards;">
-                        🏰✨
-                        <div style="font-size:2.2rem; font-weight:900; color:#e84393; text-shadow:0 0 25px #000, 0 0 40px #e84393; letter-spacing:4px; font-family:'Outfit', sans-serif;">LÂU ĐÀI HOÀNG GIA VIP</div>
+                setTimeout(() => {
+                    ship.fadeOut(1000, () => ship.remove());
+                }, 4000);
+
+            } else if (giftId === 'dragon') {
+                const dragon = $(`
+                    <div style="position:fixed; bottom:-300px; left:-200px; font-size:250px; filter:drop-shadow(0 0 90px #f97316) drop-shadow(0 0 150px #fdba74); text-align:center; pointer-events:none; z-index:9999999; animation: giftDragonFly 5s cubic-bezier(0.4, 0, 0.2, 1) forwards;">
+                        🐉🔥
+                        <div style="font-size:2.5rem; font-weight:900; color:#fb923c; text-shadow:0 0 30px #000, 0 0 50px #fb923c; letter-spacing:5px; font-family:'Outfit', sans-serif;">RỒNG THẦN THỨC TỈNH</div>
                     </div>
                 `).appendTo(container);
 
                 if (window.GameEffects && window.GameEffects.showWin) window.GameEffects.showWin(1000000);
-                setTimeout(() => {
-                    castle.fadeOut(1200, () => castle.remove());
-                }, 5500);
+                setTimeout(() => dragon.remove(), 5500);
+
+            } else if (giftId === 'crown') {
+                const crown = $(`
+                    <div style="position:fixed; top:20vh; left:50%; transform:translateX(-50%); font-size:220px; filter:drop-shadow(0 0 100px #fbbf24) drop-shadow(0 0 150px #fcd34d); text-align:center; pointer-events:none; z-index:9999999; animation: giftCrownDropBig 2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;">
+                        👑
+                        <div style="font-size:2.8rem; font-weight:900; color:#fbbf24; text-shadow:0 0 30px #000, 0 0 60px #fbbf24; letter-spacing:4px; font-family:'Outfit', sans-serif;">VƯƠNG MIỆN HOÀNG ĐẾ</div>
+                    </div>
+                `).appendTo(container);
+
+                if (window.gsap) {
+                    gsap.fromTo(crown, { scale: 0.1, y: -500, opacity: 0 }, { scale: 1.5, y: 0, opacity: 1, duration: 1.5, ease: "bounce.out" });
+                }
+
+                if (window.GameEffects && window.GameEffects.showWin) window.GameEffects.showWin(5000000);
+                setTimeout(() => crown.fadeOut(1500, () => crown.remove()), 5000);
+
+            } else if (giftId === 'planet') {
+                // Vụ nổ Big Bang
+                const explosion = $(`
+                    <div style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:10vw; height:10vw; background:radial-gradient(circle, #fff 10%, #ef4444 40%, transparent 70%); filter:drop-shadow(0 0 150px #ef4444); border-radius:50%; pointer-events:none; z-index:9999999; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                        <span style="font-size:200px;">💥</span>
+                        <div style="font-size:3.5rem; font-weight:900; color:#fff; text-shadow:0 0 40px #000, 0 0 80px #ef4444; letter-spacing:8px; font-family:'Outfit', sans-serif; white-space:nowrap; margin-top:20px;">VỤ NỔ BIG BANG</div>
+                    </div>
+                `).appendTo(container);
+
+                if (window.gsap) {
+                    gsap.fromTo(explosion, 
+                        { scale: 0.1, opacity: 1 }, 
+                        { scale: 20, opacity: 0, duration: 3.5, ease: "power2.out" }
+                    );
+                    
+                    // Flash screen
+                    const flash = $('<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;z-index:9999998;pointer-events:none;"></div>').appendTo('body');
+                    gsap.to(flash, { opacity: 0, duration: 2, ease: "power3.out", onComplete: () => flash.remove() });
+                }
+
+                if (window.GameEffects && window.GameEffects.showWin) window.GameEffects.showWin(10000000);
+                setTimeout(() => explosion.remove(), 4000);
             }
         }
 

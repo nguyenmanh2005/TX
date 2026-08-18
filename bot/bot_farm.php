@@ -23,7 +23,8 @@ function handleFarmBot($baseUrl, $cFile, $botMoney) {
 
     // Phân tích các ô đất
     foreach ($plots as $plot) {
-        if (!$plot['seed_code']) {
+        if (!is_array($plot)) continue;
+        if (empty($plot['seed_code'])) {
             $emptyPlots++;
         } else if (strtotime($plot['harvest_time']) <= $now) {
             $hasReadyToHarvest = true;
