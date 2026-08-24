@@ -1,44 +1,30 @@
 <?php
 session_start();
 
+require '../db_connect.php';
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_bj', 50000000);
 $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
 
-
-require '../db_connect.php';
-
-
 // AJAX history endpoint
 $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
 if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_history') {
     header('Content-Type: application/json; charset=utf-8');
-
     $id = $botUserId ?? 0;
     $sql = "SELECT * FROM history_bj WHERE Iduser = ? ORDER BY Time DESC LIMIT 20";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $id);
     $stmt->execute();
     $result = $stmt->get_result();
-
     $history = [];
-    while ($row = $result->fetch_assoc()) {
-        $history[] = $row;
-    }
+    while ($row = $result->fetch_assoc()) { $history[] = $row; }
     $stmt->close();
-
-    echo json_encode([
-        'success' => true,
-        'history' => $history
-    ], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['success' => true, 'history' => $history], JSON_UNESCAPED_UNICODE);
     exit;
 }
-
-
-
 
 // Load theme
 require_once '../load_theme.php';
@@ -57,46 +43,27 @@ $soDu = $user['Money'];
 $tenNguoiChoi = $user['Name'];
 $stmt->close();
 
-// Hàm rút bài (A=1 hoặc 11 sẽ xử lý ở tính điểm)
-function rutBai()
-{
+// Hàm rút bài
+function rutBai() {
     $bai = rand(1, 13);
-    // Át = 1, mặt J/Q/K = 10 điểm
-    if ($bai > 10)
-        return 10;
+    if ($bai > 10) return 10;
     return $bai;
 }
 
 // Tính điểm bài, xét Át (A) có thể là 1 hoặc 11
-function tinhDiem($cards)
-{
-    if (!is_array($cards)) {
-        return 0;
-    }
-
-    $total = 0;
-    $soAt = 0;
+function tinhDiem($cards) {
+    if (!is_array($cards)) return 0;
+    $total = 0; $soAt = 0;
     foreach ($cards as $card) {
-        if ($card == 1) {
-            $soAt++;
-            $total += 11; // tạm tính át = 11
-        } else {
-            $total += $card;
-        }
+        if ($card == 1) { $soAt++; $total += 11; }
+        else { $total += $card; }
     }
-
-    // Nếu tổng > 21 và có át, trừ 10 từng át cho đến khi <= 21 hoặc hết át
-    while ($total > 21 && $soAt > 0) {
-        $total -= 10;
-        $soAt--;
-    }
-
+    while ($total > 21 && $soAt > 0) { $total -= 10; $soAt--; }
     return $total;
 }
 
 // Khởi tạo game mới
-function khoiTaoGame($cuoc)
-{
+function khoiTaoGame($cuoc) {
     $_SESSION['cuoc'] = $cuoc;
     $_SESSION['player_cards'] = [rutBai(), rutBai()];
     $_SESSION['dealer_cards'] = [rutBai(), rutBai()];
@@ -107,7 +74,7 @@ function khoiTaoGame($cuoc)
 
 // Xử lý action
 $action = $_POST['action'] ?? '';
-$cuoc = (int) ($_POST['cuoc'] ?? 0);
+$cuoc = (int)($_POST['cuoc'] ?? 0);
 $ketQuaClass = "";
 
 if ($action === 'start') {
@@ -123,7 +90,6 @@ if ($action === 'start') {
     $_SESSION['player_cards'][] = rutBai();
     $playerTotal = tinhDiem($_SESSION['player_cards']);
     if ($playerTotal > 21) {
-        // Người chơi bust => thua
         $moneyBefore = $soDu;
         $cuoc = $_SESSION['cuoc'];
         $soDu -= $cuoc;
@@ -132,37 +98,18 @@ if ($action === 'start') {
         $_SESSION['ketquaShort'] = "Thua";
         $ketQuaClass = "bg-red-500 text-white animate-pulse";
 
-        // Cập nhật Số Gtlm
         $stmt = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
         $stmt->bind_param("ii", $soDu, $userId);
-        $stmt->execute();
-        $stmt->close();
+        $stmt->execute(); $stmt->close();
 
-        // Lưu lịch sử
         $dealerTotal = tinhDiem($_SESSION['dealer_cards']);
         $stmt = $conn->prepare("INSERT INTO blackjack_history (Iduser, Result, Bet, PlayerScore, DealerScore, MoneyBefore, MoneyAfter, PlayedAt) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
         $stmt->bind_param("isiiiii", $userId, $_SESSION['ketquaShort'], $cuoc, $playerTotal, $dealerTotal, $moneyBefore, $soDu);
-        $stmt->execute();
-        $stmt->close();
+        $stmt->execute(); $stmt->close();
 
-        // Track quest progress + Game of Day + Combo Streak + Random Events
-        require_once '../game_history_helper.php';
         logGameHistoryWithAll($conn, $userId, 'Blackjack', $cuoc, 0, false);
-
-        // Insert vào history_bj table
-        $historyStmt = $conn->prepare("INSERT INTO history_bj (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-        if ($historyStmt) {
-            $result = $_POST['result'] ?? 'Unknown';
-            $bet = (int) ($_POST['bet'] ?? 0);
-            $winAmount = (int) ($_POST['win'] ?? $reward ?? 0);
-            $userId = $botUserId ?? 0;
-            $historyStmt->bind_param("iisi", $userId, $bet, $result, $winAmount);
-            $historyStmt->execute();
-            $historyStmt->close();
-        }
     }
 } elseif ($action === 'stand' && !($_SESSION['game_over'] ?? true)) {
-    // Dealer rút bài
     $dealerCards = $_SESSION['dealer_cards'] ?? [];
     $playerCards = $_SESSION['player_cards'] ?? [];
     $dealerTotal = tinhDiem($dealerCards);
@@ -173,8 +120,6 @@ if ($action === 'start') {
         $dealerTotal = tinhDiem($dealerCards);
     }
     $_SESSION['dealer_cards'] = $dealerCards;
-
-    // So điểm
     $_SESSION['game_over'] = true;
     $moneyBefore = $soDu;
     $cuoc = $_SESSION['cuoc'];
@@ -195,31 +140,19 @@ if ($action === 'start') {
         $ketQuaClass = "bg-red-500 text-white animate-pulse";
     }
 
-    // Cập nhật Số Gtlm
     $stmt = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
     $stmt->bind_param("ii", $soDu, $userId);
-    $stmt->execute();
-    $stmt->close();
+    $stmt->execute(); $stmt->close();
 
-    // Lưu lịch sử
     $stmt = $conn->prepare("INSERT INTO blackjack_history (Iduser, Result, Bet, PlayerScore, DealerScore, MoneyBefore, MoneyAfter, PlayedAt) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
     $stmt->bind_param("isiiiii", $userId, $_SESSION['ketquaShort'], $cuoc, $playerTotal, $dealerTotal, $moneyBefore, $soDu);
-    $stmt->execute();
-    $stmt->close();
+    $stmt->execute(); $stmt->close();
 
-    // Track quest progress + Game of Day + Combo Streak + Random Events
-    require_once '../game_history_helper.php';
-    $winAmount = 0;
-    $isWin = false;
-    if ($_SESSION['ketquaShort'] === 'Thắng') {
-        $winAmount = $cuoc * 2; // Thắng gấp đôi
-        $isWin = true;
-    } elseif ($_SESSION['ketquaShort'] === 'Hòa') {
-        $winAmount = $cuoc; // Hòa thì hoàn gtlm
-    }
+    $winAmount = 0; $isWin = false;
+    if ($_SESSION['ketquaShort'] === 'Thắng') { $winAmount = $cuoc * 2; $isWin = true; }
+    elseif ($_SESSION['ketquaShort'] === 'Hòa') { $winAmount = $cuoc; }
     logGameHistoryWithAll($conn, $userId, 'Blackjack', $cuoc, $winAmount, $isWin);
 
-    // Track tournament progress
     require_once '../tournament_helper.php';
     logTournamentGame($conn, $userId, 'Blackjack', $cuoc, $winAmount, $isWin);
 }
@@ -230,7 +163,6 @@ $dealerCards = $_SESSION['dealer_cards'] ?? [];
 $gameOver = $_SESSION['game_over'] ?? true;
 $ketQua = $_SESSION['ketqua'] ?? "";
 
-// Clear result message after display
 if (!empty($ketQua)) {
     $ketQuaDisplay = $ketQua;
     unset($_SESSION['ketqua'], $_SESSION['ketquaShort']);
@@ -241,72 +173,54 @@ if (!empty($ketQua)) {
 $playerTotal = tinhDiem($playerCards);
 $dealerTotal = tinhDiem($dealerCards);
 
-// Lấy toàn bộ lịch sử
+// Lấy lịch sử
 $lichSu = [];
 $stmt = $conn->prepare("SELECT * FROM blackjack_history WHERE Iduser = ? ORDER BY PlayedAt DESC");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $result = $stmt->get_result();
-while ($row = $result->fetch_assoc()) {
-    $lichSu[] = $row;
-}
+while ($row = $result->fetch_assoc()) { $lichSu[] = $row; }
 $stmt->close();
 
-// Chuẩn bị dữ liệu biểu đồ
 $thang = $thua = $hoa = 0;
 foreach ($lichSu as $lich) {
-    if ($lich['Result'] === 'Thắng')
-        $thang++;
-    elseif ($lich['Result'] === 'Thua')
-        $thua++;
-    elseif ($lich['Result'] === 'Hòa')
-        $hoa++;
+    if ($lich['Result'] === 'Thắng') $thang++;
+    elseif ($lich['Result'] === 'Thua') $thua++;
+    elseif ($lich['Result'] === 'Hòa') $hoa++;
 }
-
 
 // AJAX Game Actions handler
 if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json; charset=utf-8');
-
-    // Refresh scores and state after logic above
     $playerCardsObj = [];
     foreach ($playerCards as $card) {
-        $playerCardsObj[] = $card == 1 ? 'A' : ($card == 10 ? '10' : (string) $card);
+        $playerCardsObj[] = $card == 1 ? 'A' : ($card == 10 ? '10' : (string)$card);
     }
-
     $dealerCardsObj = [];
     foreach ($dealerCards as $card) {
-        $dealerCardsObj[] = $card == 1 ? 'A' : ($card == 10 ? '10' : (string) $card);
+        $dealerCardsObj[] = $card == 1 ? 'A' : ($card == 10 ? '10' : (string)$card);
     }
-
     echo json_encode([
-        'success' => true,
-        'action' => $action,
-        'playerCards' => $playerCardsObj,
-        'dealerCards' => $dealerCardsObj, // Frontend handles hidden card if !gameOver
-        'playerTotal' => $playerTotal,
-        'dealerTotal' => $dealerTotal,
-        'gameOver' => $gameOver,
-        'message' => $ketQuaDisplay,
+        'success'      => true,
+        'action'       => $action,
+        'playerCards'  => $playerCardsObj,
+        'dealerCards'  => $dealerCardsObj,
+        'playerTotal'  => $playerTotal,
+        'dealerTotal'  => $dealerTotal,
+        'gameOver'     => $gameOver,
+        'message'      => $ketQuaDisplay,
         'messageClass' => $ketQuaClass,
-        'balance' => number_format($soDu, 0, ',', '.'),
-        'rawBalance' => $soDu,
-        'stats' => [
-            'thang' => $thang,
-            'thua' => $thua,
-            'hoa' => $hoa
-        ]
+        'balance'      => number_format($soDu, 0, ',', '.'),
+        'rawBalance'   => $soDu,
+        'stats'        => ['thang' => $thang, 'thua' => $thua, 'hoa' => $hoa]
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-// Đóng kết nối
 $conn->close();
 ?>
-
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8" />
     <title>Blackjack chuẩn</title>
@@ -323,516 +237,222 @@ $conn->close();
     <script src="../assets/js/game-effects.js"></script>
     <script src="../assets/js/game-effects-auto.js"></script>
     <style>
-        body {
-            cursor: url('../chuot.png'), auto !important;
-            background:
-                <?= $bgGradientCSS ?>
-            ;
-            background-attachment: fixed;
-            min-height: 100vh;
-            padding: 20px;
-            position: relative;
-        }
-
-        * {
-            cursor: inherit;
-        }
-
-        button,
-        a,
-        input[type="button"],
-        input[type="submit"],
-        label,
-        select,
-        input[type="number"] {
-            cursor: url('../img/tay.png'), pointer !important;
-        }
-
-        .card {
-            display: inline-block;
-            width: 70px;
-            height: 100px;
-            line-height: 100px;
-            border: 3px solid #333;
-            border-radius: var(--border-radius);
-            margin: 0 10px;
-            font-weight: 700;
-            font-size: 24px;
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-            color: #000;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
-            animation: cardDeal 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-            transition: left 0.5s;
-        }
-
-        .card:hover::before {
-            left: 100%;
-        }
-
-        @keyframes cardDeal {
-            0% {
-                opacity: 0;
-                transform: translateY(-50px) rotateY(-180deg) scale(0.5);
-            }
-
-            50% {
-                transform: translateY(10px) rotateY(0deg) scale(1.1);
-            }
-
-            100% {
-                opacity: 1;
-                transform: translateY(0) rotateY(0deg) scale(1);
-            }
-        }
-
-        .card.new-card {
-            animation: newCardDeal 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        }
-
-        @keyframes newCardDeal {
-            0% {
-                opacity: 0;
-                transform: translateX(-100px) rotateZ(-90deg) scale(0.3);
-            }
-
-            50% {
-                transform: translateX(10px) rotateZ(10deg) scale(1.1);
-            }
-
-            100% {
-                opacity: 1;
-                transform: translateX(0) rotateZ(0deg) scale(1);
-            }
-        }
-
-        .card:hover {
-            transform: translateY(-8px) scale(1.05);
-            box-shadow: 0 10px 30px rgba(52, 152, 219, 0.5);
-            border-color: var(--secondary-color);
-        }
-
-        .card.hidden {
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-            color: #fff;
-            position: relative;
-        }
-
-        .card.hidden::after {
-            content: '?';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 40px;
-            color: #fff;
-        }
-
-        .bg-white {
-            background: rgba(255, 255, 255, 0.98) !important;
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2) !important;
-            border-radius: var(--border-radius-lg) !important;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .bg-white:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25) !important;
-        }
-
-        button {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
-            font-weight: 600 !important;
-            border-radius: var(--border-radius) !important;
-        }
-
-        button:hover:not(:disabled) {
-            transform: translateY(-4px) scale(1.05) !important;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35) !important;
-        }
-
-        button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed !important;
-        }
-
-        .bg-green-500 {
-            animation: winPulse 1.5s ease infinite;
-            box-shadow: 0 0 30px rgba(34, 197, 94, 0.6) !important;
-        }
-
-        .bg-red-500 {
-            animation: loseShake 0.8s ease;
-            box-shadow: 0 0 20px rgba(239, 68, 68, 0.5) !important;
-        }
-
-        .bg-yellow-400 {
-            animation: drawPulse 1s ease infinite;
-        }
-
-        @keyframes winPulse {
-
-            0%,
-            100% {
-                transform: scale(1);
-                box-shadow: 0 0 30px rgba(34, 197, 94, 0.6);
-            }
-
-            50% {
-                transform: scale(1.03);
-                box-shadow: 0 0 50px rgba(34, 197, 94, 0.9);
-            }
-        }
-
-        @keyframes drawPulse {
-
-            0%,
-            100% {
-                transform: scale(1);
-                box-shadow: 0 0 20px rgba(250, 204, 21, 0.5);
-            }
-
-            50% {
-                transform: scale(1.02);
-                box-shadow: 0 0 30px rgba(250, 204, 21, 0.7);
-            }
-        }
-
-        @keyframes loseShake {
-
-            0%,
-            100% {
-                transform: translateX(0) rotate(0deg);
-            }
-
-            10%,
-            30%,
-            50%,
-            70%,
-            90% {
-                transform: translateX(-10px) rotate(-5deg);
-            }
-
-            20%,
-            40%,
-            60%,
-            80% {
-                transform: translateX(10px) rotate(5deg);
-            }
-        }
-
-        input[type="number"] {
-            padding: 12px 18px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: var(--border-radius);
-            background: rgba(255, 255, 255, 0.95);
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
-            font-size: 16px;
-        }
-
-        input[type="number"]:focus {
-            outline: none;
-            border-color: var(--secondary-color);
-            box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.2);
-        }
-
-        h1,
-        h2,
-        h3 {
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .balance-display {
-            font-size: clamp(16px, 2vw, 22px);
-            font-weight: 700;
-            color: var(--success-color);
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: var(--border-radius);
-            border: 2px solid var(--success-color);
-            margin: 15px 0;
-            word-break: break-word;
-            overflow-wrap: break-word;
-            line-height: 1.4;
-        }
-
-        @keyframes messageAppear {
-            0% {
-                opacity: 0;
-                transform: translateY(-30px) scale(0.8);
-            }
-
-            50% {
-                transform: translateY(5px) scale(1.05);
-            }
-
-            100% {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        .chart-box canvas {
-            margin-top: 20px;
-        }
-    
-        /* Statistics Container */
-        .stats-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .stat-item {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 15px;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-        
-        .stat-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
-        }
-        
-        .stat-item.wins {
-            border-left: 4px solid #4ade80;
-        }
-        
-        .stat-item.losses {
-            border-left: 4px solid #ff6b6b;
-        }
-        
-        .stat-item .label {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.6);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 8px;
-        }
-        
-        .stat-item .value {
-            font-size: 28px;
-            font-weight: 700;
-            color: #ffd700;
-        }
-        
-        .chart-box canvas {
-            margin-top: 20px;
-        }
-
-        .chip-selector {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: center;
-            margin-bottom: 12px;
-        }
-
-        .chip {
-            padding: 6px 12px;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.3);
-            border-radius: 20px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 0.85rem;
-            color: #fff;
-            transition: 0.3s;
-            user-select: none;
-        }
-
-        .chip:hover, .chip.active {
-            background: #2563eb;
-            color: #fff;
-            border-color: #2563eb;
-            transform: scale(1.1);
-        }
-
+        body { cursor: url('../chuot.png'), auto !important; background: <?= $bgGradientCSS ?>; background-attachment: fixed; min-height: 100vh; padding: 20px; position: relative; }
+        * { cursor: inherit; }
+        button, a, input[type="button"], input[type="submit"], label, select, input[type="number"] { cursor: url('../img/tay.png'), pointer !important; }
+        .card { display:inline-block; width:70px; height:100px; line-height:100px; border:3px solid #333; border-radius:var(--border-radius); margin:0 10px; font-weight:700; font-size:24px; background:linear-gradient(135deg,#ffffff 0%,#f8f9fa 100%); color:#000; box-shadow:0 6px 20px rgba(0,0,0,0.3); transition:transform 0.3s cubic-bezier(0.4,0,0.2,1),box-shadow 0.3s ease; animation:cardDeal 0.6s cubic-bezier(0.68,-0.55,0.265,1.55); position:relative; overflow:hidden; text-align:center; }
+        .card::before { content:''; position:absolute; top:0; left:-100%; width:100%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent); transition:left 0.5s; }
+        .card:hover::before { left:100%; }
+        @keyframes cardDeal { 0%{opacity:0;transform:translateY(-50px) rotateY(-180deg) scale(0.5);}50%{transform:translateY(10px) rotateY(0deg) scale(1.1);}100%{opacity:1;transform:translateY(0) rotateY(0deg) scale(1);} }
+        .card.new-card { animation:newCardDeal 0.8s cubic-bezier(0.68,-0.55,0.265,1.55); }
+        @keyframes newCardDeal { 0%{opacity:0;transform:translateX(-100px) rotateZ(-90deg) scale(0.3);}50%{transform:translateX(10px) rotateZ(10deg) scale(1.1);}100%{opacity:1;transform:translateX(0) rotateZ(0deg) scale(1);} }
+        .card:hover { transform:translateY(-8px) scale(1.05); box-shadow:0 10px 30px rgba(52,152,219,0.5); border-color:var(--secondary-color); }
+        .card.hidden { background:linear-gradient(135deg,#2c3e50 0%,#34495e 100%); color:#fff; }
+        .card.hidden::after { content:'?'; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:40px; color:#fff; }
+        .bg-white { background:rgba(255,255,255,0.98)!important; border:2px solid rgba(255,255,255,0.5); box-shadow:0 8px 30px rgba(0,0,0,0.2)!important; border-radius:var(--border-radius-lg)!important; transition:transform 0.3s ease,box-shadow 0.3s ease; }
+        .bg-white:hover { transform:translateY(-3px); box-shadow:0 12px 40px rgba(0,0,0,0.25)!important; }
+        button { transition:all 0.3s cubic-bezier(0.4,0,0.2,1)!important; box-shadow:0 4px 15px rgba(0,0,0,0.2)!important; font-weight:600!important; border-radius:var(--border-radius)!important; }
+        button:hover:not(:disabled) { transform:translateY(-4px) scale(1.05)!important; box-shadow:0 8px 25px rgba(0,0,0,0.35)!important; }
+        button:disabled { opacity:0.6; cursor:not-allowed!important; }
+        .bg-green-500 { animation:winPulse 1.5s ease infinite; box-shadow:0 0 30px rgba(34,197,94,0.6)!important; }
+        .bg-red-500 { animation:loseShake 0.8s ease; box-shadow:0 0 20px rgba(239,68,68,0.5)!important; }
+        .bg-yellow-400 { animation:drawPulse 1s ease infinite; }
+        @keyframes winPulse { 0%,100%{transform:scale(1);box-shadow:0 0 30px rgba(34,197,94,0.6);}50%{transform:scale(1.03);box-shadow:0 0 50px rgba(34,197,94,0.9);} }
+        @keyframes drawPulse { 0%,100%{transform:scale(1);box-shadow:0 0 20px rgba(250,204,21,0.5);}50%{transform:scale(1.02);box-shadow:0 0 30px rgba(250,204,21,0.7);} }
+        @keyframes loseShake { 0%,100%{transform:translateX(0) rotate(0deg);}10%,30%,50%,70%,90%{transform:translateX(-10px) rotate(-5deg);}20%,40%,60%,80%{transform:translateX(10px) rotate(5deg);} }
+        input[type="number"] { padding:12px 18px; border:2px solid rgba(255,255,255,0.3); border-radius:var(--border-radius); background:rgba(255,255,255,0.95); transition:border-color 0.2s ease,box-shadow 0.2s ease; font-size:16px; }
+        input[type="number"]:focus { outline:none; border-color:var(--secondary-color); box-shadow:0 0 0 4px rgba(52,152,219,0.2); }
+        h1,h2,h3 { text-shadow:2px 2px 4px rgba(0,0,0,0.1); }
+        .balance-display { font-size:clamp(16px,2vw,22px); font-weight:700; color:var(--success-color); padding:15px; background:rgba(0,0,0,0.3); border-radius:var(--border-radius); border:2px solid var(--success-color); margin:15px 0; word-break:break-word; overflow-wrap:break-word; line-height:1.4; }
+        @keyframes messageAppear { 0%{opacity:0;transform:translateY(-30px) scale(0.8);}50%{transform:translateY(5px) scale(1.05);}100%{opacity:1;transform:translateY(0) scale(1);} }
+        .chip-selector { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:12px; }
+        .chip { padding:6px 12px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); border-radius:20px; cursor:pointer; font-weight:bold; font-size:0.85rem; color:#fff; transition:0.3s; user-select:none; }
+        .chip:hover,.chip.active { background:#2563eb; color:#fff; border-color:#2563eb; transform:scale(1.1); }
     </style>
 </head>
-
 <body class="py-10" style="background: <?= $bgGradientCSS ?>; background-attachment: fixed; min-height: 100vh;">
-
     <div class="max-w-3xl mx-auto px-4">
-        <!-- Blackjack Game -->
         <div class="bg-white p-8 rounded-xl shadow-xl w-full relative">
+            <h1 class="text-3xl font-bold mb-6 text-center">Bờ Lách Jack</h1>
+            <h2 class="text-xl mb-2 text-center">Xin chào, <strong><?= htmlspecialchars($tenNguoiChoi, ENT_QUOTES, 'UTF-8') ?></strong></h2>
+            <div class="balance-display text-center">💰 Số Gtlm: <strong id="balance-amount"><?= number_format($soDu, 0, ',', '.') ?> gtlm</strong></div>
 
-                <h1 class="text-3xl font-bold mb-6 text-center">Bờ Lách Jack</h1>
-
-                <h2 class="text-xl mb-2 text-center">Xin chào,
-                    <strong><?= htmlspecialchars($tenNguoiChoi, ENT_QUOTES, 'UTF-8') ?></strong>
-                </h2>
-                <div class="balance-display text-center">💰 Số Gtlm: <strong
-                        id="balance-amount"><?= number_format($soDu, 0, ',', '.') ?> gtlm</strong></div>
-
-                <div id="game-container">
-                    <!-- Form bắt đầu ván mới -->
-                    <div id="start-form-container"
-                        class="<?= (!isset($_SESSION['player_cards']) || $gameOver) ? '' : 'hidden' ?>">
-                        <form id="start-form" method="POST" class="max-w-md mx-auto mb-6">
-                            
-                            <div class="chip-selector">
-                                <div class="chip active" data-value="10000">10K</div>
-                                <div class="chip" data-value="50000">50K</div>
-                                <div class="chip" data-value="100000">100K</div>
-                                <div class="chip" data-value="500000">500K</div>
-                                <div class="chip" data-value="1000000">1M</div>
-                                <div class="chip" data-value="5000000">5M</div>
-                                <div class="chip" data-value="allin">MAX</div>
-                            </div>
-                            
-                            <input type="number" name="cuoc" id="bet-amount" placeholder="Nhập số gtlm cược" value="10000"
-                                class="w-full px-4 py-2 border rounded mb-3 text-black font-bold text-lg" required min="1" max="<?= $soDu ?>">
-                            <input type="hidden" name="action" value="start">
-                            <button type="submit"
-                                class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 w-full font-bold text-lg">BẮT ĐẦU VÁN MỚI</button>
-                        </form>
+            <div id="game-container">
+                <!-- Form bắt đầu ván mới -->
+                <div id="start-form-container" class="<?= (!isset($_SESSION['player_cards']) || $gameOver) ? '' : 'hidden' ?>">
+                    <div id="start-form" class="max-w-md mx-auto mb-6">
+                        <div class="chip-selector">
+                            <div class="chip active" data-value="10000">10K</div>
+                            <div class="chip" data-value="50000">50K</div>
+                            <div class="chip" data-value="100000">100K</div>
+                            <div class="chip" data-value="500000">500K</div>
+                            <div class="chip" data-value="1000000">1M</div>
+                            <div class="chip" data-value="5000000">5M</div>
+                            <div class="chip" data-value="allin">MAX</div>
+                        </div>
+                        <input type="number" id="bet-amount" placeholder="Nhập số gtlm cược" value="10000"
+                            class="w-full px-4 py-2 border rounded mb-3 text-black font-bold text-lg" min="1" max="<?= $soDu ?>">
+                        <button type="button" id="btn-start"
+                            class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 w-full font-bold text-lg"
+                            onclick="sendAction('start')">BẮT ĐẦU VÁN MỚI</button>
                     </div>
+                </div>
 
-                    <!-- Thông báo kết quả -->
-                    <div id="result-container" class="mb-6 <?= !empty($ketQuaDisplay) ? '' : 'hidden' ?>">
-                        <div id="result-message-box" class="p-6 rounded-lg text-white <?= $ketQuaClass ?>"
-                            style="animation: messageAppear 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);">
-                            <p id="result-text" class="text-2xl font-bold mb-2 text-center">
-                                <?= htmlspecialchars($ketQuaDisplay, ENT_QUOTES, 'UTF-8') ?>
-                            </p>
+                <!-- Thông báo kết quả -->
+                <div id="result-container" class="mb-6 <?= !empty($ketQuaDisplay) ? '' : 'hidden' ?>">
+                    <div id="result-message-box" class="p-6 rounded-lg text-white <?= $ketQuaClass ?>"
+                        style="animation: messageAppear 0.6s cubic-bezier(0.68,-0.55,0.265,1.55);">
+                        <p id="result-text" class="text-2xl font-bold mb-2 text-center">
+                            <?= htmlspecialchars($ketQuaDisplay, ENT_QUOTES, 'UTF-8') ?>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Khu vực chơi bài -->
+                <div id="play-area" class="<?= isset($_SESSION['player_cards']) ? '' : 'hidden' ?>">
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold mb-3">🃏 Bài của bạn (<span id="player-score"><?= $playerTotal ?></span> điểm):</h3>
+                        <div id="player-cards" class="flex flex-wrap justify-center gap-2">
+                            <?php foreach ($playerCards as $index => $card): ?>
+                                <div class="card <?= ($index >= count($playerCards) - 1 && !$gameOver) ? 'new-card' : '' ?>">
+                                    <?= $card == 1 ? 'A' : ($card == 10 ? '10' : $card) ?>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
-
-                    <!-- Khu vực chơi bài -->
-                    <div id="play-area" class="<?= isset($_SESSION['player_cards']) ? '' : 'hidden' ?>">
-                        <!-- Bài người chơi -->
-                        <div class="mb-6">
-                            <h3 class="text-lg font-semibold mb-3">🃏 Bài của bạn (<span
-                                    id="player-score"><?= $playerTotal ?></span> điểm):</h3>
-                            <div id="player-cards" class="flex flex-wrap justify-center gap-2">
-                                <?php foreach ($playerCards as $index => $card): ?>
-                                    <div
-                                        class="card <?= ($index >= count($playerCards) - 1 && !$gameOver) ? 'new-card' : '' ?>">
-                                        <?= $card == 1 ? 'A' : ($card == 10 ? '10' : $card) ?>
-                                    </div>
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold mb-3">🎰 Bài Queen GTLM (<span id="dealer-score"><?= $gameOver ? $dealerTotal : '?' ?></span> điểm):</h3>
+                        <div id="dealer-cards" class="flex flex-wrap justify-center gap-2">
+                            <?php if (!$gameOver && isset($dealerCards[0])): ?>
+                                <div class="card"><?= $dealerCards[0] == 1 ? 'A' : ($dealerCards[0] == 10 ? '10' : $dealerCards[0]) ?></div>
+                                <div class="card hidden"></div>
+                            <?php else: ?>
+                                <?php foreach ($dealerCards as $card): ?>
+                                    <div class="card"><?= $card == 1 ? 'A' : ($card == 10 ? '10' : $card) ?></div>
                                 <?php endforeach; ?>
-                            </div>
-                        </div>
-
-                        <!-- Bài Queen GTLM -->
-                        <div class="mb-6">
-                            <h3 class="text-lg font-semibold mb-3">🎰 Bài Queen GTLM (<span
-                                    id="dealer-score"><?= $gameOver ? $dealerTotal : '?' ?></span> điểm):</h3>
-                            <div id="dealer-cards" class="flex flex-wrap justify-center gap-2">
-                                <?php if (!$gameOver && isset($dealerCards[0])): ?>
-                                    <div class="card">
-                                        <?= $dealerCards[0] == 1 ? 'A' : ($dealerCards[0] == 10 ? '10' : $dealerCards[0]) ?>
-                                    </div>
-                                    <div class="card hidden"></div>
-                                <?php else: ?>
-                                    <?php foreach ($dealerCards as $card): ?>
-                                        <div class="card">
-                                            <?= $card == 1 ? 'A' : ($card == 10 ? '10' : $card) ?>
-                                        </div>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-
-                        <!-- Các nút hành động -->
-                        <div id="action-buttons" class="flex justify-center gap-3 <?= $gameOver ? 'hidden' : '' ?>">
-                            <form class="game-action-form" method="POST">
-                                <input type="hidden" name="action" value="hit">
-                                <button type="submit"
-                                    class="bg-green-600 text-white px-5 py-2 rounded hover:bg-green-700">Hit (Rút
-                                    thêm)</button>
-                            </form>
-                            <form class="game-action-form" method="POST">
-                                <input type="hidden" name="action" value="stand">
-                                <button type="submit"
-                                    class="bg-red-600 text-white px-5 py-2 rounded hover:bg-red-700">Stand
-                                    (Dừng)</button>
-                            </form>
+                            <?php endif; ?>
                         </div>
                     </div>
+                    <div id="action-buttons" class="flex justify-center gap-3 <?= $gameOver ? 'hidden' : '' ?>">
+                        <button type="button" id="btn-hit" class="bg-green-600 text-white px-5 py-2 rounded hover:bg-green-700" onclick="sendAction('hit')">Hit (Rút thêm)</button>
+                        <button type="button" id="btn-stand" class="bg-red-600 text-white px-5 py-2 rounded hover:bg-red-700" onclick="sendAction('stand')">Stand (Dừng)</button>
+                    </div>
                 </div>
+            </div>
 
-                <!-- Nút quay lại trang chủ -->
-                <div class="mt-6 text-center">
-                    <a href="../index.php"
-                        class="inline-block bg-gray-700 text-white px-6 py-2 rounded hover:bg-black transition">⬅️ Quay
-                        lại Trang Chủ</a>
-                </div>
+            <div class="mt-6 text-center">
+                <a href="../index.php" class="inline-block bg-gray-700 text-white px-6 py-2 rounded hover:bg-black transition">⬅️ Quay lại Trang Chủ</a>
             </div>
         </div>
     </div>
 
     <script>
-        // Đảm bảo cursor luôn hoạt động
         document.addEventListener('DOMContentLoaded', function () {
             document.body.style.cursor = "url('../chuot.png'), auto";
-
-            const interactiveElements = document.querySelectorAll('button, a, input, label, select');
-            interactiveElements.forEach(el => {
+            document.querySelectorAll('button, a, input, label, select').forEach(el => {
                 el.style.cursor = "url('../img/tay.png'), pointer";
             });
-
-            // Thêm animation cho card mới khi rút bài
-            const cards = document.querySelectorAll('.card.new-card');
-            cards.forEach((card, index) => {
-                setTimeout(() => {
-                    card.style.animationDelay = (index * 0.1) + 's';
-                }, 100);
-            });
-
-            // Chip logic
-            document.querySelectorAll('.chip').forEach(chip => {
+            document.querySelectorAll('.chip[data-value]').forEach(chip => {
                 chip.addEventListener('click', function() {
                     document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
                     this.classList.add('active');
                     const val = this.getAttribute('data-value');
-                    if (val === 'allin') {
-                        document.getElementById('bet-amount').value = <?= $soDu ?>;
-                    } else {
-                        document.getElementById('bet-amount').value = val;
-                    }
+                    const betEl = document.getElementById('bet-amount');
+                    if (betEl) betEl.value = (val === 'allin') ? <?= $soDu ?> : val;
                 });
             });
+            document.querySelectorAll('.card.new-card').forEach((card, index) => {
+                setTimeout(() => { card.style.animationDelay = (index * 0.1) + 's'; }, 100);
+            });
+        });
 
-            // Trigger GameEffects if result exists
-            <?php if (!empty($ketQuaDisplay) && $gameOver): ?>
-                const msg = <?= json_encode($ketQuaDisplay) ?>;
-                const msgClass = <?= json_encode($ketQuaClass) ?>;
-                
-                setTimeout(() => {
-                    if (typeof GameEffects !== 'undefined') {
-                        if (msgClass.includes('bg-green')) {
-                            GameEffects.showWin(<?= isset($_SESSION['cuoc']) ? $_SESSION['cuoc'] * 2 : 0 ?>, msg);
-                        } else if (msgClass.includes('bg-red')) {
-                            GameEffects.showLoss('Rất tiếc', msg);
-                        }
+        let _isSending = false;
+
+        function sendAction(action) {
+            if (_isSending) return;
+            _isSending = true;
+            const betInput = document.getElementById('bet-amount');
+            const cuoc = betInput ? parseInt(betInput.value) || 0 : 0;
+            const formData = new FormData();
+            formData.append('action', action);
+            if (action === 'start') formData.append('cuoc', cuoc);
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: formData
+            })
+            .then(r => r.json())
+            .then(res => {
+                _isSending = false;
+                if (!res.success) return;
+                const balEl = document.getElementById('balance-amount');
+                if (balEl) balEl.textContent = res.balance + ' gtlm';
+                const psEl = document.getElementById('player-score');
+                if (psEl) psEl.textContent = res.playerTotal;
+                const pcEl = document.getElementById('player-cards');
+                if (pcEl && res.playerCards) {
+                    pcEl.innerHTML = res.playerCards.map((c, i) =>
+                        `<div class="card${i === res.playerCards.length-1 && !res.gameOver ? ' new-card' : ''}">${c}</div>`
+                    ).join('');
+                }
+                const dcEl = document.getElementById('dealer-cards');
+                const dsEl = document.getElementById('dealer-score');
+                if (dcEl && res.dealerCards) {
+                    if (!res.gameOver) {
+                        dcEl.innerHTML = (res.dealerCards[0] ? `<div class="card">${res.dealerCards[0]}</div>` : '') + `<div class="card hidden"></div>`;
+                        if (dsEl) dsEl.textContent = '?';
+                    } else {
+                        dcEl.innerHTML = res.dealerCards.map(c => `<div class="card">${c}</div>`).join('');
+                        if (dsEl) dsEl.textContent = res.dealerTotal;
                     }
-                }, 500);
-            <?php endif; ?>
+                }
+                const playArea = document.getElementById('play-area');
+                const startContainer = document.getElementById('start-form-container');
+                const actionButtons = document.getElementById('action-buttons');
+                const resultContainer = document.getElementById('result-container');
+                const resultText = document.getElementById('result-text');
+                const resultBox = document.getElementById('result-message-box');
+                if (action === 'start') {
+                    if (playArea) playArea.classList.remove('hidden');
+                    if (startContainer) startContainer.classList.add('hidden');
+                    if (actionButtons) actionButtons.classList.remove('hidden');
+                    if (resultContainer) resultContainer.classList.add('hidden');
+                }
+                if (res.gameOver) {
+                    if (actionButtons) actionButtons.classList.add('hidden');
+                    if (startContainer) startContainer.classList.remove('hidden');
+                    if (resultContainer && resultText && res.message) {
+                        resultText.textContent = res.message;
+                        if (resultBox) resultBox.className = 'p-6 rounded-lg text-white ' + (res.messageClass || '');
+                        resultContainer.classList.remove('hidden');
+                    }
+                    const betInputEl = document.getElementById('bet-amount');
+                    if (betInputEl) betInputEl.max = res.rawBalance;
+                    if (typeof GameEffects !== 'undefined' && res.message) {
+                        setTimeout(() => {
+                            if ((res.messageClass || '').includes('bg-green')) GameEffects.showWin(res.rawBalance, res.message);
+                            else if ((res.messageClass || '').includes('bg-red')) GameEffects.showLoss('Rất tiếc', res.message);
+                        }, 400);
+                    }
+                }
+            })
+            .catch(() => { _isSending = false; });
+        }
 
+        <?php if (!empty($ketQuaDisplay) && $gameOver): ?>
+        (function() {
+            const msg = <?= json_encode($ketQuaDisplay) ?>;
+            const msgClass = <?= json_encode($ketQuaClass) ?>;
+            setTimeout(() => {
+                if (typeof GameEffects !== 'undefined') {
+                    if (msgClass.includes('bg-green')) GameEffects.showWin(0, msg);
+                    else if (msgClass.includes('bg-red')) GameEffects.showLoss('Rất tiếc', msg);
+                }
+            }, 500);
+        })();
+        <?php endif; ?>
 
-        // Initialize Three.js Background
         (function () {
-            // Pass theme config từ PHP sang JavaScript
             window.themeConfig = {
                 particleCount: <?= $particleCount ?>,
                 particleSize: <?= $particleSize ?>,
@@ -843,59 +463,20 @@ $conn->close();
                 shapeOpacity: <?= $shapeOpacity ?>,
                 bgGradient: <?= json_encode($bgGradient) ?>
             };
-
             const prefix = window.location.pathname.includes('/games/') ? '../' : '';
-            const scripts = ['threejs-background.js'];
-
-            scripts.forEach(src => {
+            ['threejs-background.js'].forEach(src => {
                 const s = document.createElement('script');
-                s.src = prefix + src;
-                s.async = false;
+                s.src = prefix + src; s.async = false;
                 document.head.appendChild(s);
             });
         })();
     </script>
-
-
-
-<!-- AUTO-GENERATED BOT SCRIPT -->
+<!-- BOT BLACKJACK THÔNG MINH -->
 <script>
 if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
 if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
-<script>
-    if (typeof BotVirtualCursor !== "undefined") {
-        BotVirtualCursor.init("Bot Streamer");
-        setInterval(() => {
-            const allBtns = Array.from(document.querySelectorAll("button, .btn-bet, .chip, .spin-btn, #btnSpin, .bet-button, .card, .btn-primary, .btn-success, input[type='button'], input[type='submit']"));
-            const btns = allBtns.filter(b => {
-                if(b.offsetParent === null || b.disabled) return false;
-                const txt = (b.innerText || b.value || "").toLowerCase();
-                const cls = (b.className || "").toLowerCase();
-                const id = (b.id || "").toLowerCase();
-                
-                // Exclude common navigation/help buttons
-                if(txt.includes("hướng dẫn") || txt.includes("trang chủ") || txt.includes("nạp") || txt.includes("rút") || txt.includes("lịch sử") || txt.includes("quay lại") || txt.includes("thoát")) return false;
-                if(cls.includes("back") || cls.includes("help") || cls.includes("guide") || cls.includes("close") || cls.includes("swal") || cls.includes("nav")) return false;
-                if(id.includes("guide") || id.includes("back") || id.includes("close") || id.includes("nav")) return false;
-                
-                return true;
-            });
-            
-            if(btns.length > 0) {
-                const btn = btns[Math.floor(Math.random() * btns.length)];
-                BotVirtualCursor.moveToElement($(btn), 1, 0, () => {
-                    setTimeout(() => { 
-                        BotVirtualCursor.simulateClick(() => {
-                            try { btn.click(); } catch(e){}
-                        });
-                    }, 500);
-                });
-            }
-        }, 3000 + Math.random() * 4000);
-    }
-</script>
-
+<script src="../assets/js/bots/bot_bj.js?v=<?= time() ?>"></script>
 </body>
 </html>

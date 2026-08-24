@@ -152,6 +152,10 @@ require_once '../load_theme.php';
     <!-- GAME UI -->
 
     <div class="table-container">
+        <div style="position:fixed; top:20px; right:20px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 8px 15px; font-weight: 800; color: #10b981; font-size: 14px; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.5); backdrop-filter: blur(10px); display: flex; align-items: center; gap: 8px;">
+            <span>💳</span> 
+            <div><span id="balance-amount">0</span> GTLM</div>
+        </div>
         <div class="blackjack-table">
             <!-- Dealer -->
             <div class="dealer-area">

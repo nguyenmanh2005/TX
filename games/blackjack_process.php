@@ -19,7 +19,8 @@ try {
         exit();
     }
 
-    $userId = $_SESSION['Iduser'];
+    // Ưu tiên bot userId nếu đang chạy trong chế độ live streamer
+    $userId = isset($_SESSION['Iduser_temp_bot']) ? (int)$_SESSION['Iduser_temp_bot'] : (int)$_SESSION['Iduser'];
     $input = json_decode(file_get_contents('php://input'), true);
     $action = $input['action'] ?? '';
 

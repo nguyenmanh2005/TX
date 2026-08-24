@@ -9,7 +9,11 @@ if (!isset($_SESSION['Iduser'])) {
     exit;
 }
 
-$userId = (int)$_SESSION['Iduser'];
+if (isset($_GET['is_bot']) && $_GET['is_bot'] == '1' && isset($_SESSION['Iduser_temp_bot'])) {
+    $userId = (int)$_SESSION['Iduser_temp_bot'];
+} else {
+    $userId = (int)$_SESSION['Iduser'];
+}
 $action = $_GET['action'] ?? '';
 
 $tableId = isset($_GET['table_id']) ? (int)$_GET['table_id'] : (isset($_POST['table_id']) ? (int)$_POST['table_id'] : 0);

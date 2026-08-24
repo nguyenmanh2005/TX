@@ -1,3 +1,6 @@
+// Đường dẫn tới API xử lý — có thể được override bởi PHP (xem live_blackjack.php)
+const BJ_API_URL = (typeof window.BJ_PROCESS_URL !== 'undefined') ? window.BJ_PROCESS_URL : 'blackjack_process.php';
+
 const BlackjackLogic = {
     currentBet: 10000,
     isGameRunning: false,
@@ -63,7 +66,7 @@ const BlackjackLogic = {
         document.getElementById('resultAnnounce').style.display = 'none';
         
         try {
-            const response = await fetch('blackjack_process.php', {
+            const response = await fetch(BJ_API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'start', bet: this.currentBet })
@@ -113,7 +116,7 @@ const BlackjackLogic = {
         document.getElementById('doubleBtn').disabled = true;
 
         try {
-            const response = await fetch('blackjack_process.php', {
+            const response = await fetch(BJ_API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'hit' })
@@ -136,7 +139,7 @@ const BlackjackLogic = {
         if (!this.isGameRunning) return;
         
         try {
-            const response = await fetch('blackjack_process.php', {
+            const response = await fetch(BJ_API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'double' })
@@ -163,7 +166,7 @@ const BlackjackLogic = {
         document.getElementById('gameActions').style.display = 'none';
 
         try {
-            const response = await fetch('blackjack_process.php', {
+            const response = await fetch(BJ_API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'stand' })

@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Database ERD - vdkmnuaahosting_taixiu</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --bg2: #0f1628;
+    --surface: #141c2e;
+    --surface2: #1a2440;
+    --border: #1e2d4a;
+    --text: #e2e8f0;
+    --text-muted: #64748b;
+    --accent: #6366f1;
+    --accent2: #8b5cf6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+  header {
+    background: linear-gradient(135deg, #0f1628 0%, #141c2e 50%, #0f1628 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex; align-items: center; gap: 16px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo { width: 44px; height: 44px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 0 20px rgba(99,102,241,0.4); }
+  header h1 { font-size: 18px; font-weight: 700; background: linear-gradient(90deg, #a5b4fc, #c4b5fd); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  header p { font-size: 12px; color: var(--text-muted); }
+  .header-stats { margin-left: auto; display: flex; gap: 24px; }
+  .stat-item { text-align: center; }
+  .stat-item .num { font-size: 22px; font-weight: 700; background: linear-gradient(135deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block; }
+  .stat-item .label { font-size: 11px; color: var(--text-muted); }
+  .legend { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 32px; display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); cursor: pointer; transition: color 0.2s; user-select: none; padding: 3px 6px; border-radius: 5px; }
+  .legend-item:hover { color: var(--text); }
+  .legend-item.active { color: var(--text); background: rgba(99,102,241,0.1); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .toolbar { padding: 12px 32px; display: flex; gap: 12px; align-items: center; background: var(--bg2); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .search-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; color: var(--text); font-size: 13px; font-family: 'JetBrains Mono', monospace; width: 280px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+  .search-box:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+  .search-box::placeholder { color: var(--text-muted); }
+  .btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 8px 14px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+  .btn:hover { background: var(--accent); border-color: var(--accent); color: white; }
+  .main { padding: 24px 32px; }
+  .group-section { margin-bottom: 28px; }
+  .group-section.filtered-out { display: none; }
+  .group-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; cursor: pointer; user-select: none; }
+  .group-icon { width: 8px; height: 28px; border-radius: 4px; flex-shrink: 0; }
+  .group-title { font-size: 14px; font-weight: 600; letter-spacing: 0.5px; }
+  .group-count { font-size: 11px; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 2px 8px; }
+  .group-toggle { margin-left: auto; font-size: 11px; color: var(--text-muted); background: none; border: none; cursor: pointer; padding: 2px 8px; border-radius: 4px; }
+  .tables-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .tables-grid.collapsed { display: none; }
+  .table-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; transition: all 0.25s; cursor: pointer; }
+  .table-card:hover { border-color: var(--card-color, var(--accent)); box-shadow: 0 0 0 1px var(--card-color, var(--accent)), 0 8px 24px rgba(0,0,0,0.3); transform: translateY(-2px); }
+  .table-card.highlighted { border-color: var(--card-color, var(--accent)); box-shadow: 0 0 0 2px var(--card-color, var(--accent)), 0 0 20px rgba(99,102,241,0.2); }
+  .table-card.search-match { border-color: #fbbf24; box-shadow: 0 0 0 1px #fbbf24; }
+  .table-card.search-hidden { display: none; }
+  .card-header { padding: 10px 12px 8px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .card-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--card-color, var(--accent)); box-shadow: 0 0 6px var(--card-color, var(--accent)); flex-shrink: 0; }
+  .card-name { font-size: 12px; font-weight: 600; font-family: 'JetBrains Mono', monospace; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-body { padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 3px; }
+  .field-tag { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--text-muted); background: var(--bg2); border-radius: 3px; padding: 2px 5px; border: 1px solid var(--border); white-space: nowrap; }
+  .field-tag.pk { color: #fbbf24; border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.08); }
+  .field-tag.fk { color: #6ee7b7; border-color: rgba(110,231,183,0.3); background: rgba(110,231,183,0.08); }
+  .relations-panel { position: fixed; right: -380px; top: 0; bottom: 0; width: 360px; background: var(--surface); border-left: 1px solid var(--border); z-index: 200; transition: right 0.35s cubic-bezier(0.16,1,0.3,1); display: flex; flex-direction: column; box-shadow: -20px 0 60px rgba(0,0,0,0.5); }
+  .relations-panel.open { right: 0; }
+  .panel-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  .panel-close { margin-left: auto; background: var(--surface2); border: 1px solid var(--border); color: var(--text-muted); width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .panel-close:hover { color: var(--text); background: var(--accent); border-color: var(--accent); }
+  .panel-body { flex: 1; overflow-y: auto; padding: 16px; }
+  .rel-group { margin-bottom: 16px; }
+  .rel-group-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px; }
+  .rel-item { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; background: var(--bg2); border: 1px solid var(--border); border-radius: 7px; margin-bottom: 5px; font-size: 12px; font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.2s; }
+  .rel-item:hover { border-color: var(--accent); background: rgba(99,102,241,0.1); }
+  .rel-arrow { color: var(--accent); font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+  .rel-table { color: var(--text); font-weight: 500; }
+  .rel-field { color: var(--text-muted); font-size: 10px; }
+  .diagram-section { margin: 0 32px 28px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .diagram-tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 16px; background: var(--bg2); overflow-x: auto; }
+  .dtab { padding: 12px 16px; font-size: 12px; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap; }
+  .dtab:hover { color: var(--text); }
+  .dtab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .diagram-content { padding: 20px; display: none; }
+  .diagram-content.active { display: block; }
+  pre.mermaid-code { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; font-size: 11px; font-family: 'JetBrains Mono', monospace; color: #94a3b8; overflow-x: auto; line-height: 1.6; white-space: pre; }
+  .overview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+  .overview-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; cursor: pointer; transition: all 0.2s; }
+  .overview-card:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px var(--card-color, var(--accent)); }
+  .overview-card .ov-icon { font-size: 24px; margin-bottom: 6px; }
+  .overview-card .ov-title { font-size: 13px; font-weight: 600; }
+  .overview-card .ov-count { font-size: 11px; color: var(--text-muted); }
+  .section-label { padding: 0 32px; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--text-muted); margin-bottom: 16px; display: flex; align-items: center; gap: 12px; }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 150; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+  .overlay.active { opacity: 1; pointer-events: all; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">&#127922;</div>
+  <div>
+    <h1>Database Schema — vdkmnuaahosting_taixiu</h1>
+    <p>Entity Relationship Diagram · Tài Xỉu Gaming Platform</p>
+  </div>
+  <div class="header-stats">
+    <div class="stat-item"><span class="num">270+</span><span class="label">Tables</span></div>
+    <div class="stat-item"><span class="num">19</span><span class="label">Groups</span></div>
+    <div class="stat-item"><span class="num">60+</span><span class="label">Relations</span></div>
+  </div>
+</header>
+<div class="legend" id="legend"></div>
+<div class="toolbar">
+  <input type="text" class="search-box" id="searchBox" placeholder="&#128269; Tìm bảng... (vd: user, guild, history)" />
+  <button class="btn" onclick="expandAll()">&#8595; Mở tất cả</button>
+  <button class="btn" onclick="collapseAll()">&#8593; Thu tất cả</button>
+  <button class="btn" onclick="scrollToSection('users')">&#128100; Users</button>
+  <button class="btn" onclick="scrollToSection('guilds')">&#9876; Guilds</button>
+  <button class="btn" onclick="scrollToSection('history')">&#128220; History</button>
+</div>
+<div class="section-label" style="margin-top:20px">Tổng quan nhóm bảng</div>
+<div style="padding:0 32px;margin-bottom:24px"><div class="overview-grid" id="overviewGrid"></div></div>
+<div style="height:1px;background:var(--border);margin:0 32px 20px"></div>
+<div class="section-label">ERD Sơ đồ quan hệ</div>
+<div class="diagram-section">
+  <div class="diagram-tabs">
+    <div class="dtab active" onclick="switchTab(this,'core')">&#127959; Core ERD</div>
+    <div class="dtab" onclick="switchTab(this,'guild')">&#9876; Guild ERD</div>
+    <div class="dtab" onclick="switchTab(this,'event')">&#127881; Event ERD</div>
+    <div class="dtab" onclick="switchTab(this,'market')">&#128722; Marketplace ERD</div>
+    <div class="dtab" onclick="switchTab(this,'battle')">&#129354; Battle/PvP ERD</div>
+  </div>
+  <div class="diagram-content active" id="tab-core"><pre class="mermaid-code">erDiagram
+    USERS {
+        int id PK
+        string username
+        string email
+        decimal coins
+        decimal vcoin
+        int level
+        int xp
+        datetime created_at
+    }
+    USER_PROFILES { int user_id PK_FK; string avatar; string bio; int total_bet; int total_win }
+    USER_VIP { int user_id PK_FK; int vip_level; datetime expires_at; decimal total_deposited }
+    VIP_LEVELS { int id PK; int level; string name; decimal min_deposit; decimal bonus_percent }
+    BETS { int id PK; int user_id FK; string game_type; decimal amount; decimal win_amount }
+    HISTORY { int id PK; int user_id FK; string game; decimal bet; decimal result }
+    GAME_HISTORY { int id PK; int user_id FK; string game_name; decimal win_amount; bool is_win }
+    REFERRALS { int id PK; int referrer_id FK; int referred_id FK }
+    FRIENDS { int id PK; int user_id FK; int friend_id FK; string status }
+    USERS ||--o{ USER_PROFILES : "has"
+    USERS ||--o| USER_VIP : "has VIP"
+    VIP_LEVELS ||--o{ USER_VIP : "defines"
+    USERS ||--o{ BETS : "places"
+    USERS ||--o{ HISTORY : "played"
+    USERS ||--o{ GAME_HISTORY : "recorded"
+    USERS ||--o{ REFERRALS : "referred"
+    USERS ||--o{ FRIENDS : "friends"</pre></div>
+  <div class="diagram-content" id="tab-guild"><pre class="mermaid-code">erDiagram
+    USERS { int id PK; string username }
+    GUILDS { int id PK; string name; int leader_id FK; int level; int exp }
+    GUILD_MEMBERS { int id PK; int guild_id FK; int user_id FK; string role }
+    GUILD_STATS { int guild_id PK_FK; int total_wins; decimal total_coins }
+    GUILD_CHAT { int id PK; int guild_id FK; int user_id FK; string message }
+    GUILD_ACTIVITIES { int id PK; int guild_id FK; int user_id FK; string activity_type }
+    GUILD_EVENTS { int id PK; int guild_id FK; int created_by FK; string status }
+    GUILD_APPLICATIONS { int id PK; int guild_id FK; int user_id FK; string status }
+    GUILD_SKILLS { int id PK; int guild_id FK; string skill_name; int level }
+    GUILD_RAID_BOSSES { int id PK; string boss_name; int hp; int max_hp }
+    GUILD_RAID_PARTICIPATION { int id PK; int raid_id FK; int user_id FK; int damage }
+    GUILD_WAR_HISTORY { int id PK; int guild1_id; int guild2_id; int winner_id }
+    GUILD_TOURNAMENTS { int id PK; string name; string status }
+    GUILD_TOURNAMENT_SCORES { int id PK; int tournament_id FK; int guild_id FK; int user_id FK }
+    USERS ||--o{ GUILD_MEMBERS : "joins"
+    USERS ||--o{ GUILDS : "leads"
+    GUILDS ||--o{ GUILD_MEMBERS : "has"
+    GUILDS ||--|| GUILD_STATS : "stats"
+    GUILDS ||--o{ GUILD_CHAT : "chat"
+    GUILDS ||--o{ GUILD_ACTIVITIES : "logs"
+    GUILDS ||--o{ GUILD_EVENTS : "hosts"
+    GUILDS ||--o{ GUILD_APPLICATIONS : "receives"
+    GUILDS ||--o{ GUILD_SKILLS : "learns"
+    GUILD_RAID_BOSSES ||--o{ GUILD_RAID_PARTICIPATION : "fought"
+    GUILD_TOURNAMENTS ||--o{ GUILD_TOURNAMENT_SCORES : "scores"</pre></div>
+  <div class="diagram-content" id="tab-event"><pre class="mermaid-code">erDiagram
+    USERS { int id PK; string username }
+    EVENTS { int id PK; string name; string event_type; string status; datetime start_time }
+    EVENT_PARTICIPANTS { int id PK; int event_id FK; int user_id FK; bool is_completed }
+    EVENT_PROGRESS { int id PK; int participant_id FK; string action_type; decimal progress }
+    EVENT_REWARDS { int id PK; int event_id FK; int rank_min; int rank_max; decimal reward }
+    EVENT_MISSIONS { int id PK; int event_id FK; string name; int goal }
+    EVENT_EXCHANGE_SHOP { int id PK; int event_id FK; string item_name; int cost_points }
+    EVENT_SPINS { int id PK; int event_id FK; int user_id FK; string result }
+    SEASONAL_EVENTS { int id PK; string name; string season; datetime start_date }
+    FLASH_EVENTS { int id PK; string name; string status; datetime start_at }
+    EVENTS ||--o{ EVENT_PARTICIPANTS : "has"
+    EVENTS ||--o{ EVENT_REWARDS : "offers"
+    EVENTS ||--o{ EVENT_MISSIONS : "includes"
+    EVENTS ||--o{ EVENT_EXCHANGE_SHOP : "shop"
+    EVENTS ||--o{ EVENT_SPINS : "enables"
+    EVENT_PARTICIPANTS ||--o{ EVENT_PROGRESS : "tracks"
+    USERS ||--o{ EVENT_PARTICIPANTS : "joins"
+    USERS ||--o{ EVENT_SPINS : "spins"</pre></div>
+  <div class="diagram-content" id="tab-market"><pre class="mermaid-code">erDiagram
+    USERS { int id PK; string username; decimal coins }
+    MARKETPLACE_ITEMS { int id PK; int seller_id FK; string item_type; decimal price; string status }
+    MARKETPLACE_LISTINGS { int id PK; string item_name; decimal price; int quantity }
+    MARKETPLACE_TRANSACTIONS { int id PK; int listing_id FK; int buyer_id FK; int seller_id FK; decimal price }
+    MARKETPLACE_WISHLIST { int id PK; int user_id FK; int listing_id FK }
+    MATERIALS { int id PK; string name; string rarity; string category }
+    USER_MATERIALS { int user_id PK_FK; int material_id PK_FK; int quantity }
+    CRAFTING_RECIPES { int id PK; string result_item; string ingredients; int time }
+    CRAFTING_LOGS { int id PK; int user_id FK; int recipe_id FK; string status }
+    AUCTIONS { int id PK; string status; decimal start_price; decimal current_price; datetime ends_at }
+    AUCTION_BIDS { int id PK; int auction_id FK; int bidder_id FK; decimal bid_amount }
+    USERS ||--o{ MARKETPLACE_ITEMS : "sells"
+    USERS ||--o{ MARKETPLACE_TRANSACTIONS : "buys"
+    USERS ||--o{ MARKETPLACE_WISHLIST : "wishlists"
+    MARKETPLACE_LISTINGS ||--o{ MARKETPLACE_TRANSACTIONS : "sold"
+    USERS ||--o{ USER_MATERIALS : "holds"
+    MATERIALS ||--o{ USER_MATERIALS : "owned"
+    USERS ||--o{ CRAFTING_LOGS : "crafts"
+    AUCTIONS ||--o{ AUCTION_BIDS : "bids"
+    USERS ||--o{ AUCTION_BIDS : "places bid"</pre></div>
+  <div class="diagram-content" id="tab-battle"><pre class="mermaid-code">erDiagram
+    USERS { int id PK; string username; int level }
+    PVP_CHALLENGES { int id PK; int challenger_id FK; int challenged_id FK; string status }
+    PVP_MATCH_HISTORY { int id PK; int player1_id FK; int player2_id FK; int winner_id FK }
+    PVP_STATS { int user_id PK_FK; int wins; int losses; int elo_rating }
+    TOURNAMENTS { int id PK; string name; string game_type; string status; decimal prize_pool }
+    TOURNAMENT_PARTICIPANTS { int id PK; int tournament_id FK; int user_id FK; string status }
+    TOURNAMENT_MATCHES { int id PK; int tournament_id FK; int player1_id; int player2_id; int winner_id }
+    TOURNAMENT_SCORES { int id PK; int tournament_id FK; int user_id FK; decimal score; int rank }
+    BATTLE_HISTORY { int id PK; int attacker_id; int defender_id; int winner_id; string type }
+    BATTLE_LEADERBOARD { int id PK; int user_id FK; int season; int wins; int elo }
+    WORLD_BOSS { int id PK; string boss_name; int current_hp; int max_hp; string status }
+    WORLD_BOSS_DAMAGE { int id PK; int boss_id FK; int user_id FK; int damage }
+    USERS ||--o{ PVP_CHALLENGES : "challenges"
+    USERS ||--|| PVP_STATS : "stats"
+    USERS ||--o{ TOURNAMENT_PARTICIPANTS : "joins"
+    TOURNAMENTS ||--o{ TOURNAMENT_PARTICIPANTS : "has"
+    TOURNAMENTS ||--o{ TOURNAMENT_MATCHES : "plays"
+    TOURNAMENTS ||--o{ TOURNAMENT_SCORES : "records"
+    WORLD_BOSS ||--o{ WORLD_BOSS_DAMAGE : "receives"
+    USERS ||--o{ WORLD_BOSS_DAMAGE : "attacks"</pre></div>
+</div>
+<div style="height:1px;background:var(--border);margin:0 32px 20px"></div>
+<div class="section-label">Chi tiết các bảng</div>
+<div class="main" id="mainContent"></div>
+<div class="overlay" id="overlay" onclick="closePanel()"></div>
+<div class="relations-panel" id="relPanel">
+  <div class="panel-header">
+    <span style="font-size:16px">&#128279;</span>
+    <div><div style="font-weight:600;font-size:14px">Chi tiết bảng</div><div style="font-size:11px;color:var(--text-muted)">Fields &amp; Relationships</div></div>
+    <button class="panel-close" onclick="closePanel()">&#10005;</button>
+  </div>
+  <div class="panel-body"><div id="relContent"></div></div>
+</div>
+<script>
+const groups = [
+  { id:'users', name:'Users & Profiles', icon:'&#128100;', color:'#6366f1', tables:[
+    {name:'users',pk:'id',fields:['id','username','email','coins','vcoin','level','xp','password','created_at'],fks:[]},
+    {name:'user_profiles',pk:'user_id',fields:['user_id','avatar','bio','frame','total_bet','total_win'],fks:['user_id->users.id']},
+    {name:'user_vip',pk:'user_id',fields:['user_id','vip_level','expires_at','total_deposited'],fks:['user_id->users.id']},
+    {name:'user_statistics',pk:'user_id',fields:['user_id','total_games','total_wins','total_bets'],fks:['user_id->users.id']},
+    {name:'user_progress',pk:'user_id',fields:['user_id','level','xp','next_level_xp'],fks:['user_id->users.id']},
+    {name:'user_streaks',pk:'user_id',fields:['user_id','current_streak','longest_streak','last_login'],fks:['user_id->users.id']},
+    {name:'user_notifications',pk:'id',fields:['id','user_id','type','message','is_read'],fks:['user_id->users.id']},
+    {name:'user_visits',pk:'user_id',fields:['user_id','last_visit','total_visits'],fks:['user_id->users.id']},
+    {name:'user_mentor_relationships',pk:'id',fields:['id','mentor_id','mentee_id','status'],fks:['mentor_id->users.id','mentee_id->users.id']},
+    {name:'friends',pk:'id',fields:['id','user_id','friend_id','status','requested_by'],fks:['user_id->users.id','friend_id->users.id']},
+    {name:'referrals',pk:'id',fields:['id','referrer_id','referred_id','reward_given'],fks:['referrer_id->users.id','referred_id->users.id']},
+    {name:'referral_codes',pk:'id',fields:['id','user_id','code','uses_count'],fks:['user_id->users.id']},
+    {name:'vip_levels',pk:'id',fields:['id','level','name','min_deposit','cashback_percent','daily_bonus'],fks:[]},
+    {name:'notification_settings',pk:'user_id',fields:['user_id','email_notify','push_notify','sound'],fks:['user_id->users.id']},
+  ]},
+  { id:'game-core', name:'Game Core', icon:'&#127918;', color:'#f59e0b', tables:[
+    {name:'bets',pk:'id',fields:['id','user_id','game_type','amount','win_amount','result','created_at'],fks:['user_id->users.id']},
+    {name:'game_history',pk:'id',fields:['id','user_id','game_name','win_amount','is_win','created_at'],fks:['user_id->users.id']},
+    {name:'history',pk:'id',fields:['id','user_id','game','bet','result','played_at'],fks:['user_id->users.id']},
+    {name:'rounds',pk:'id',fields:['id','game_type','result','created_at'],fks:[]},
+    {name:'global_jackpot',pk:'id',fields:['id','game_type','amount','winner_id','won_at'],fks:[]},
+    {name:'giftcodes',pk:'id',fields:['id','code','reward_json','uses_limit','uses_count','expires_at'],fks:[]},
+  ]},
+  { id:'history', name:'Game History Tables', icon:'&#128220;', color:'#64748b', tables:[
+    {name:'history_baccarat',pk:'Id',fields:['Id','IdUser','bet','result','amount'],fks:[]},
+    {name:'history_roulette',pk:'Id',fields:['Id','IdUser','number','color','amount'],fks:[]},
+    {name:'history_slot',pk:'Id',fields:['Id','IdUser','symbols','win','amount'],fks:[]},
+    {name:'history_bj',pk:'Id',fields:['Id','IdUser','hand','result','amount'],fks:[]},
+    {name:'history_baucua',pk:'Id',fields:['Id','IdUser','symbols','result','amount'],fks:[]},
+    {name:'history_xocdia',pk:'Id',fields:['Id','IdUser','result','amount'],fks:[]},
+    {name:'history_poker',pk:'Id',fields:['Id','IdUser','hand','result','amount'],fks:[]},
+    {name:'history_dice',pk:'Id',fields:['Id','IdUser','dice','result','amount'],fks:[]},
+    {name:'history_crash',pk:'Id',fields:['Id','IdUser','multiplier','cashout','amount'],fks:[]},
+    {name:'history_mines',pk:'Id',fields:['Id','IdUser','mines','result','amount'],fks:[]},
+    {name:'history_limbo',pk:'Id',fields:['Id','IdUser','target','result','amount'],fks:[]},
+    {name:'history_plinko',pk:'Id',fields:['Id','IdUser','path','multiplier','amount'],fks:[]},
+    {name:'history_keno',pk:'Id',fields:['Id','IdUser','picks','result','amount'],fks:[]},
+    {name:'history_hilo',pk:'Id',fields:['Id','IdUser','cards','result','amount'],fks:[]},
+    {name:'history_holdem',pk:'Id',fields:['Id','IdUser','hand','result'],fks:[]},
+    {name:'history_sicbo',pk:'Id',fields:['Id','IdUser','dice','result'],fks:[]},
+    {name:'history_dragontiger',pk:'id',fields:['id','card_d','card_t','result'],fks:[]},
+    {name:'history_rps',pk:'Id',fields:['Id','IdUser','pick','result'],fks:[]},
+    {name:'history_coinflip',pk:'Id',fields:['Id','IdUser','pick','result'],fks:[]},
+    {name:'history_vietlott',pk:'Id',fields:['Id','IdUser','numbers','result'],fks:[]},
+    {name:'history_scratch',pk:'Id',fields:['Id','IdUser','card','prize'],fks:[]},
+    {name:'history_minesweeper',pk:'Id',fields:['Id','IdUser','grid','result'],fks:[]},
+    {name:'history_tower',pk:'Id',fields:['Id','IdUser','floor','result'],fks:[]},
+    {name:'history_yahtzee',pk:'Id',fields:['Id','IdUser','dice','score'],fks:[]},
+    {name:'history_mahjong',pk:'Id',fields:['Id','IdUser','tiles','result'],fks:[]},
+    {name:'history_fantan',pk:'Id',fields:['Id','IdUser','result','amount'],fks:[]},
+    {name:'history_daga',pk:'Id',fields:['Id','IdUser','pick','result'],fks:[]},
+    {name:'history_duangua',pk:'Id',fields:['Id','IdUser','result','amount'],fks:[]},
+    {name:'history_banharc',pk:'id',fields:['id','user_id','result','amount'],fks:[]},
+    {name:'history_paigow',pk:'Id',fields:['Id','IdUser','tiles','result'],fks:[]},
+    {name:'history_caribbean',pk:'Id',fields:['Id','IdUser','hand','result'],fks:[]},
+    {name:'history_reddog',pk:'Id',fields:['Id','IdUser','spread','result'],fks:[]},
+    {name:'history_war',pk:'Id',fields:['Id','IdUser','card','result'],fks:[]},
+    {name:'history_pontoon',pk:'Id',fields:['Id','IdUser','hand','result'],fks:[]},
+    {name:'history_craps',pk:'Id',fields:['Id','IdUser','dice','result'],fks:[]},
+    {name:'history_trivia',pk:'Id',fields:['Id','IdUser','category','score'],fks:[]},
+    {name:'history_ac',pk:'Id',fields:['Id','IdUser','result','amount'],fks:[]},
+    {name:'history_bingo',pk:'Id',fields:['Id','IdUser','numbers','result'],fks:[]},
+    {name:'history_cyber_racing',pk:'id',fields:['id','race_id','result','amount'],fks:[]},
+    {name:'history_number',pk:'Id',fields:['Id','IdUser','number','result'],fks:[]},
+    {name:'history_cs',pk:'Id',fields:['Id','IdUser','result','amount'],fks:[]},
+    {name:'history_vq',pk:'Id',fields:['Id','IdUser','answer','result'],fks:[]},
+    {name:'history_hopmu',pk:'Id',fields:['Id','IdUser','number','result'],fks:[]},
+    {name:'history_ruttham',pk:'Id',fields:['Id','IdUser','result','amount'],fks:[]},
+    {name:'history_letitride',pk:'Id',fields:['Id','IdUser','hand','result'],fks:[]},
+    {name:'history_threecard',pk:'Id',fields:['Id','IdUser','hand','result'],fks:[]},
+    {name:'history_videopoker',pk:'Id',fields:['Id','IdUser','hand','result'],fks:[]},
+    {name:'blackjack_history',pk:'Id',fields:['Id','Iduser','hand','result','amount'],fks:[]},
+    {name:'color_guess_history',pk:'Id',fields:['Id','IdUser','pick','result','amount'],fks:[]},
+    {name:'combo_bets_history',pk:'id',fields:['id','user_id','games','total_bet','total_win'],fks:[]},
+  ]},
+  { id:'guilds', name:'Guilds', icon:'&#9876;', color:'#10b981', tables:[
+    {name:'guilds',pk:'id',fields:['id','name','leader_id','level','exp','description','max_members'],fks:['leader_id->users.id']},
+    {name:'guild_members',pk:'id',fields:['id','guild_id','user_id','role','joined_at'],fks:['guild_id->guilds.id','user_id->users.id']},
+    {name:'guild_stats',pk:'guild_id',fields:['guild_id','total_wins','total_bets','total_coins'],fks:['guild_id->guilds.id']},
+    {name:'guild_chat',pk:'id',fields:['id','guild_id','user_id','message','created_at'],fks:['guild_id->guilds.id','user_id->users.id']},
+    {name:'guild_activities',pk:'id',fields:['id','guild_id','user_id','activity_type','points'],fks:['guild_id->guilds.id','user_id->users.id']},
+    {name:'guild_events',pk:'id',fields:['id','guild_id','created_by','name','status','start_time'],fks:['guild_id->guilds.id','created_by->users.id']},
+    {name:'guild_applications',pk:'id',fields:['id','guild_id','user_id','reviewed_by','status'],fks:['guild_id->guilds.id','user_id->users.id']},
+    {name:'guild_challenges',pk:'id',fields:['id','name','description','reward_type','reward_amount'],fks:[]},
+    {name:'guild_skills',pk:'id',fields:['id','guild_id','skill_name','level','max_level'],fks:['guild_id->guilds.id']},
+    {name:'guild_raid_bosses',pk:'id',fields:['id','boss_name','hp','max_hp','status'],fks:[]},
+    {name:'guild_raid_participation',pk:'id',fields:['id','raid_id','user_id','damage_dealt'],fks:['raid_id->guild_raid_bosses.id']},
+    {name:'guild_war_history',pk:'id',fields:['id','guild1_id','guild2_id','winner_id','war_date'],fks:[]},
+    {name:'guild_tournaments',pk:'id',fields:['id','name','status','prize_pool','start_time'],fks:[]},
+    {name:'guild_tournament_scores',pk:'id',fields:['id','tournament_id','guild_id','user_id','score'],fks:['tournament_id->guild_tournaments.id','guild_id->guilds.id','user_id->users.id']},
+    {name:'guild_trophies',pk:'id',fields:['id','guild_id','trophy_name','earned_at'],fks:['guild_id->guilds.id']},
+    {name:'guild_messages',pk:'id',fields:['id','guild_id','content','type','created_at'],fks:['guild_id->guilds.id']},
+    {name:'guild_shop_items',pk:'id',fields:['id','item_name','cost_coins','stock','is_active'],fks:[]},
+    {name:'guild_territories',pk:'id',fields:['id','guild_id','territory_name','x','y'],fks:['guild_id->guilds.id']},
+    {name:'guild_territory_points',pk:'guild_id',fields:['guild_id','territory_id','points'],fks:['guild_id->guilds.id']},
+    {name:'guild_active_buffs',pk:'id',fields:['id','guild_id','buff_type','value','expires_at'],fks:['guild_id->guilds.id']},
+    {name:'guild_weekly_stats',pk:'id',fields:['id','guild_id','week_start','total_xp','rank'],fks:['guild_id->guilds.id']},
+  ]},
+  { id:'events', name:'Events', icon:'&#127881;', color:'#ef4444', tables:[
+    {name:'events',pk:'id',fields:['id','name','event_type','status','is_active','start_time','end_time'],fks:[]},
+    {name:'event_participants',pk:'id',fields:['id','event_id','user_id','is_completed','is_claimed','score'],fks:['event_id->events.id','user_id->users.id']},
+    {name:'event_progress',pk:'id',fields:['id','participant_id','action_type','progress','created_at'],fks:['participant_id->event_participants.id']},
+    {name:'event_rewards',pk:'id',fields:['id','event_id','rank_min','rank_max','reward_type','reward_amount'],fks:['event_id->events.id']},
+    {name:'event_missions',pk:'id',fields:['id','event_id','name','goal','reward'],fks:['event_id->events.id']},
+    {name:'event_exchange_shop',pk:'id',fields:['id','event_id','item_name','cost_points','stock'],fks:['event_id->events.id']},
+    {name:'event_spins',pk:'id',fields:['id','event_id','user_id','result','spun_at'],fks:['event_id->events.id','user_id->users.id']},
+    {name:'event_voting_options',pk:'id',fields:['id','event_id','option_text','votes'],fks:['event_id->events.id']},
+    {name:'event_vote_results',pk:'id',fields:['id','event_id','winner_option','total_votes'],fks:[]},
+    {name:'event_guild_contributions',pk:'id',fields:['id','event_id','guild_id','user_id','contribution'],fks:['event_id->events.id']},
+    {name:'event_guild_milestone_claimed',pk:'id',fields:['id','event_id','guild_id','milestone'],fks:['event_id->events.id']},
+    {name:'seasonal_events',pk:'id',fields:['id','name','season','start_date','end_date'],fks:[]},
+    {name:'flash_events',pk:'id',fields:['id','name','status','start_at','end_at'],fks:[]},
+    {name:'dynamic_events',pk:'id',fields:['id','name','trigger_type','status'],fks:[]},
+    {name:'random_events',pk:'id',fields:['id','name','type','trigger_chance','is_active'],fks:[]},
+    {name:'random_event_participants',pk:'id',fields:['id','event_id','user_id','joined_at'],fks:[]},
+    {name:'user_event_data',pk:'id',fields:['id','user_id','event_id','data_json'],fks:['user_id->users.id','event_id->events.id']},
+    {name:'user_event_votes',pk:'id',fields:['id','user_id','event_id','option_id','voted_at'],fks:['user_id->users.id','event_id->events.id']},
+  ]},
+  { id:'social', name:'Social & Chat', icon:'&#128172;', color:'#fb7185', tables:[
+    {name:'chat_messages',pk:'id',fields:['id','user_id','channel','message','created_at'],fks:[]},
+    {name:'chat_reactions',pk:'id',fields:['id','message_id','user_id','emoji'],fks:['message_id->chat_messages.id']},
+    {name:'chat_frames',pk:'id',fields:['id','name','image_url','price'],fks:[]},
+    {name:'user_chat_frames',pk:'user_id',fields:['user_id','frame_id','is_active'],fks:['user_id->users.id']},
+    {name:'private_messages',pk:'id',fields:['id','from_id','to_id','message','is_read'],fks:[]},
+    {name:'social_feed',pk:'id',fields:['id','user_id','type','content','created_at'],fks:['user_id->users.id']},
+    {name:'social_feed_comments',pk:'id',fields:['id','feed_id','user_id','comment'],fks:['feed_id->social_feed.id']},
+    {name:'social_feed_likes',pk:'id',fields:['id','feed_id','user_id'],fks:['feed_id->social_feed.id']},
+    {name:'social_feed_reactions',pk:'id',fields:['id','feed_id','user_id','reaction'],fks:['feed_id->social_feed.id']},
+    {name:'notifications',pk:'id',fields:['id','user_id','type','message','is_read'],fks:['user_id->users.id']},
+    {name:'server_notifications',pk:'id',fields:['id','title','message','type'],fks:[]},
+    {name:'lounge_rooms',pk:'user_id',fields:['user_id','name','theme','likes_count'],fks:['user_id->users.id']},
+    {name:'lounge_guestbook',pk:'id',fields:['id','owner_id','visitor_id','message'],fks:['owner_id->users.id']},
+    {name:'lounge_items',pk:'id',fields:['id','user_id','item_type','position_x','position_y'],fks:['user_id->users.id']},
+    {name:'ai_chat_logs',pk:'id',fields:['id','user_id','message','response'],fks:['user_id->users.id']},
+    {name:'live_streams',pk:'id',fields:['id','user_id','title','status','viewers_count'],fks:['user_id->users.id']},
+    {name:'stream_tips',pk:'id',fields:['id','stream_id','tipper_id','amount','message'],fks:['stream_id->live_streams.id']},
+  ]},
+  { id:'items', name:'Items & Gifts', icon:'&#127873;', color:'#06b6d4', tables:[
+    {name:'gifts',pk:'id',fields:['id','from_user_id','to_user_id','item_type','is_claimed'],fks:['from_user_id->users.id','to_user_id->users.id']},
+    {name:'item_gifts',pk:'id',fields:['id','from_user','to_user','item_name','claimed'],fks:[]},
+    {name:'red_envelopes',pk:'id',fields:['id','creator_id','total_amount','packets','status'],fks:['creator_id->users.id']},
+    {name:'red_envelope_claims',pk:'id',fields:['id','envelope_id','user_id','amount'],fks:['envelope_id->red_envelopes.id']},
+    {name:'red_packets',pk:'id',fields:['id','creator_id','amount','message'],fks:[]},
+    {name:'red_packet_claims',pk:'id',fields:['id','packet_id','user_id','amount'],fks:['packet_id->red_packets.id']},
+    {name:'avatar_frames',pk:'id',fields:['id','name','image_url','rarity','price'],fks:[]},
+    {name:'user_avatar_frames',pk:'user_id',fields:['user_id','frame_id','is_active'],fks:['user_id->users.id']},
+    {name:'cursors',pk:'id',fields:['id','name','image_url','price','rarity'],fks:[]},
+    {name:'user_cursors',pk:'user_id',fields:['user_id','cursor_id','is_active'],fks:['user_id->users.id']},
+    {name:'themes',pk:'id',fields:['id','name','colors_json','price'],fks:[]},
+    {name:'user_themes',pk:'user_id',fields:['user_id','theme_id','is_active'],fks:['user_id->users.id']},
+    {name:'pets',pk:'id',fields:['id','name','type','rarity','bonus_type','bonus_value'],fks:[]},
+    {name:'user_pets',pk:'user_id',fields:['user_id','pet_id','is_active','level'],fks:['user_id->users.id','pet_id->pets.id']},
+    {name:'wish_list',pk:'id',fields:['id','user_id','item_type','item_id'],fks:['user_id->users.id']},
+  ]},
+  { id:'economy', name:'Economy & Transactions', icon:'&#128176;', color:'#f97316', tables:[
+    {name:'economy_stats',pk:'id',fields:['id','date','total_bets','total_wins','house_profit'],fks:[]},
+    {name:'economy_transaction_logs',pk:'id',fields:['id','user_id','type','amount','balance_after'],fks:[]},
+    {name:'reward_points',pk:'user_id',fields:['user_id','points','total_earned'],fks:['user_id->users.id']},
+    {name:'reward_point_transactions',pk:'id',fields:['id','user_id','amount','type','description'],fks:['user_id->users.id']},
+    {name:'reward_point_rewards',pk:'id',fields:['id','name','cost','reward_type','reward_value'],fks:[]},
+    {name:'lucky_wheel_rewards',pk:'id',fields:['id','name','type','value','weight'],fks:[]},
+    {name:'lucky_wheel_logs',pk:'id',fields:['id','user_id','reward_id','spun_at'],fks:['user_id->users.id','reward_id->lucky_wheel_rewards.id']},
+    {name:'daily_bonus',pk:'id',fields:['id','user_id','amount','day_streak','claimed_at'],fks:['user_id->users.id']},
+    {name:'daily_checkin',pk:'id',fields:['id','user_id','checkin_date','reward','streak'],fks:['user_id->users.id']},
+    {name:'daily_login_rewards',pk:'id',fields:['id','day','reward_type','reward_value'],fks:[]},
+    {name:'daily_login_stats',pk:'user_id',fields:['user_id','login_count','last_login','streak'],fks:['user_id->users.id']},
+    {name:'user_daily_login',pk:'id',fields:['id','user_id','login_date','reward_claimed'],fks:['user_id->users.id']},
+    {name:'streak_milestone_rewards',pk:'id',fields:['id','streak_days','reward_type','reward_value'],fks:[]},
+    {name:'material_transactions',pk:'id',fields:['id','user_id','material_id','quantity','type'],fks:['user_id->users.id']},
+    {name:'bot_transactions',pk:'id',fields:['id','bot_id','type','amount','balance_after'],fks:[]},
+  ]},
+  { id:'achievements', name:'Achievements & Leaderboard', icon:'&#127942;', color:'#84cc16', tables:[
+    {name:'achievements',pk:'id',fields:['id','name','description','icon','category','points'],fks:[]},
+    {name:'user_achievements',pk:'id',fields:['id','user_id','achievement_id','unlocked_at'],fks:['user_id->users.id','achievement_id->achievements.id']},
+    {name:'achievement_notifications',pk:'id',fields:['id','user_id','achievement_id','is_read'],fks:['user_id->users.id','achievement_id->achievements.id']},
+    {name:'leaderboard_cache',pk:'id',fields:['id','user_id','leaderboard_type','score','rank_position','game_name'],fks:['user_id->users.id']},
+    {name:'leaderboard_history',pk:'id',fields:['id','user_id','leaderboard_type','rank','score'],fks:['user_id->users.id']},
+    {name:'weekly_leaderboard',pk:'id',fields:['id','user_id','game_type','score','rank','week_start'],fks:['user_id->users.id']},
+    {name:'weekly_leaderboard_rewards',pk:'id',fields:['id','leaderboard_id','rank','reward_type'],fks:[]},
+    {name:'weekly_leaderboard_snapshots',pk:'id',fields:['id','user_id','week_start','rank','score'],fks:['user_id->users.id']},
+    {name:'weekly_reward_log',pk:'id',fields:['id','user_id','week_start','rank','reward_json'],fks:['user_id->users.id']},
+    {name:'weekly_title_awards',pk:'id',fields:['id','user_id','title','week_start'],fks:['user_id->users.id']},
+    {name:'daily_tournament_scores',pk:'user_id',fields:['user_id','event_date','score','rank'],fks:['user_id->users.id']},
+    {name:'daily_tournament_records',pk:'id',fields:['id','user_id','date','score','rank'],fks:['user_id->users.id']},
+    {name:'battle_leaderboard',pk:'id',fields:['id','user_id','season','wins','losses','elo'],fks:['user_id->users.id']},
+    {name:'fish_leaderboard',pk:'id',fields:['id','user_id','fish_caught','total_weight','rank'],fks:[]},
+  ]},
+  { id:'missions', name:'Missions & Quests', icon:'&#128203;', color:'#14b8a6', tables:[
+    {name:'quests',pk:'id',fields:['id','name','description','type','goal','reward_json'],fks:[]},
+    {name:'user_quests',pk:'id',fields:['id','user_id','quest_id','progress','is_completed'],fks:['user_id->users.id','quest_id->quests.id']},
+    {name:'daily_challenges',pk:'id',fields:['id','name','description','goal','reward','challenge_date'],fks:[]},
+    {name:'daily_challenge_progress',pk:'id',fields:['id','user_id','challenge_id','progress'],fks:['user_id->users.id','challenge_id->daily_challenges.id']},
+    {name:'daily_mission_templates',pk:'id',fields:['id','name','type','goal','reward','is_active'],fks:[]},
+    {name:'daily_mission_history',pk:'id',fields:['id','user_id','mission_template_id','mission_date','progress'],fks:['user_id->users.id','mission_template_id->daily_mission_templates.id']},
+    {name:'mission_definitions',pk:'id',fields:['id','name','type','category','goal','reward_json'],fks:[]},
+    {name:'mission_history',pk:'id',fields:['id','user_id','mission_id','completed_at'],fks:['user_id->users.id']},
+    {name:'user_daily_missions',pk:'id',fields:['id','user_id','mission_id','date','progress'],fks:['user_id->users.id']},
+    {name:'user_mission_progress',pk:'id',fields:['id','user_id','mission_id','progress'],fks:['user_id->users.id']},
+    {name:'user_mission_stats',pk:'user_id',fields:['user_id','total_completed','daily_completed'],fks:['user_id->users.id']},
+    {name:'weekly_challenges',pk:'id',fields:['id','name','description','goal','reward','week_start'],fks:[]},
+    {name:'weekly_challenge_progress',pk:'id',fields:['id','user_id','challenge_id','progress'],fks:['user_id->users.id']},
+    {name:'daily_game_challenges',pk:'id',fields:['id','game_type','name','goal','reward'],fks:[]},
+    {name:'user_daily_challenge_status',pk:'id',fields:['id','user_id','challenge_date','challenges_json'],fks:['user_id->users.id']},
+  ]},
+  { id:'battle', name:'Battle & PvP', icon:'&#129354;', color:'#dc2626', tables:[
+    {name:'battle_history',pk:'id',fields:['id','attacker_id','defender_id','winner_id','battle_type'],fks:[]},
+    {name:'pvp_challenges',pk:'id',fields:['id','challenger_id','challenged_id','status','game_type','bet_amount'],fks:[]},
+    {name:'pvp_match_history',pk:'id',fields:['id','player1_id','player2_id','winner_id','game_type'],fks:[]},
+    {name:'pvp_stats',pk:'user_id',fields:['user_id','wins','losses','draws','elo_rating'],fks:['user_id->users.id']},
+    {name:'spectator_bets',pk:'id',fields:['id','match_id','user_id','bet_on','amount'],fks:[]},
+    {name:'spectator_chat',pk:'id',fields:['id','match_id','user_id','message'],fks:[]},
+    {name:'spectator_reactions',pk:'id',fields:['id','match_id','user_id','reaction'],fks:[]},
+    {name:'world_boss',pk:'id',fields:['id','boss_name','current_hp','max_hp','status'],fks:[]},
+    {name:'world_boss_damage',pk:'id',fields:['id','boss_id','user_id','damage_dealt'],fks:['boss_id->world_boss.id','user_id->users.id']},
+    {name:'dungeons',pk:'id',fields:['id','name','difficulty','min_level','rewards_json'],fks:[]},
+    {name:'dungeon_completions',pk:'id',fields:['id','user_id','dungeon_id','completed_at','score'],fks:['user_id->users.id']},
+    {name:'dungeon_rewards',pk:'id',fields:['id','dungeon_id','reward_type','reward_value'],fks:['dungeon_id->dungeons.id']},
+    {name:'user_greedy_cave',pk:'user_id',fields:['user_id','floor','health','last_action'],fks:['user_id->users.id']},
+    {name:'user_miners',pk:'user_id',fields:['user_id','miners_count','production_rate'],fks:['user_id->users.id']},
+    {name:'mine_steals_log',pk:'id',fields:['id','attacker_id','victim_id','amount'],fks:[]},
+  ]},
+  { id:'tournaments', name:'Tournaments', icon:'&#127949;', color:'#a855f7', tables:[
+    {name:'tournaments',pk:'id',fields:['id','name','game_type','status','prize_pool','start_time'],fks:[]},
+    {name:'tournament_participants',pk:'id',fields:['id','tournament_id','user_id','status'],fks:['tournament_id->tournaments.id','user_id->users.id']},
+    {name:'tournament_matches',pk:'id',fields:['id','tournament_id','player1_id','player2_id','winner_id'],fks:['tournament_id->tournaments.id']},
+    {name:'tournament_scores',pk:'id',fields:['id','tournament_id','user_id','score','rank'],fks:['tournament_id->tournaments.id','user_id->users.id']},
+    {name:'tournament_brackets',pk:'id',fields:['id','tournament_id','round','bracket_json'],fks:['tournament_id->tournaments.id']},
+    {name:'tournament_bracket_participants',pk:'id',fields:['id','bracket_id','user_id','seed'],fks:['bracket_id->tournament_brackets.id','user_id->users.id']},
+    {name:'tournament_games',pk:'id',fields:['id','tournament_id','game_name','weight'],fks:['tournament_id->tournaments.id']},
+  ]},
+  { id:'marketplace', name:'Marketplace & Crafting', icon:'&#128722;', color:'#4ade80', tables:[
+    {name:'marketplace_items',pk:'id',fields:['id','seller_id','item_type','item_name','price','status'],fks:['seller_id->users.id']},
+    {name:'marketplace_listings',pk:'id',fields:['id','item_name','item_type','price','quantity'],fks:[]},
+    {name:'marketplace_transactions',pk:'id',fields:['id','listing_id','buyer_id','seller_id','price'],fks:['buyer_id->users.id','seller_id->users.id','listing_id->marketplace_listings.id']},
+    {name:'marketplace_wishlist',pk:'id',fields:['id','user_id','listing_id'],fks:['user_id->users.id']},
+    {name:'market_commodities',pk:'id',fields:['id','name','type','base_price','supply','demand'],fks:[]},
+    {name:'user_commodities',pk:'id',fields:['id','user_id','commodity_id','quantity'],fks:['user_id->users.id']},
+    {name:'materials',pk:'id',fields:['id','name','rarity','category','icon','base_value'],fks:[]},
+    {name:'user_materials',pk:'user_id',fields:['user_id','material_id','quantity'],fks:['user_id->users.id']},
+    {name:'material_daily_caps',pk:'user_id',fields:['user_id','material_id','collected_today'],fks:['user_id->users.id']},
+    {name:'material_pity',pk:'id',fields:['id','user_id','pity_count','material_type'],fks:['user_id->users.id']},
+    {name:'crafting_recipes',pk:'id',fields:['id','result_item','ingredients_json','crafting_time'],fks:[]},
+    {name:'crafting_logs',pk:'id',fields:['id','user_id','recipe_id','status'],fks:['user_id->users.id']},
+    {name:'combining_recipes',pk:'id',fields:['id','input_items','output_item','success_rate'],fks:[]},
+    {name:'auctions',pk:'id',fields:['id','seller_id','item_name','start_price','current_price','status','ends_at'],fks:[]},
+    {name:'auction_bids',pk:'id',fields:['id','auction_id','bidder_id','bid_amount'],fks:['auction_id->auctions.id','bidder_id->users.id']},
+  ]},
+  { id:'horse', name:'Horse Racing', icon:'&#127943;', color:'#d97706', tables:[
+    {name:'horse_races',pk:'id',fields:['id','race_name','status','start_time'],fks:[]},
+    {name:'horse_bets',pk:'id',fields:['id','race_id','user_id','horse_number','amount','odds'],fks:['race_id->horse_races.id']},
+    {name:'horse_results',pk:'id',fields:['id','race_id','result_json'],fks:['race_id->horse_races.id']},
+    {name:'horserace_pvp_rooms',pk:'id',fields:['id','room_name','creator_id','status','bet_amount'],fks:[]},
+    {name:'horserace_pvp_bets',pk:'id',fields:['id','room_id','user_id','horse_pick','amount'],fks:['room_id->horserace_pvp_rooms.id']},
+    {name:'race_history',pk:'id',fields:['id','user_id','race_type','bet','result','profit'],fks:['user_id->users.id']},
+    {name:'user_bets_cyber_racing',pk:'id',fields:['id','user_id','race_id','bet_amount'],fks:['user_id->users.id']},
+  ]},
+  { id:'battlepass', name:'Battle Pass', icon:'&#127894;', color:'#c084fc', tables:[
+    {name:'bp_seasons',pk:'id',fields:['id','name','start_date','end_date','is_active'],fks:[]},
+    {name:'bp_missions',pk:'id',fields:['id','season_id','name','goal','xp_reward'],fks:['season_id->bp_seasons.id']},
+    {name:'bp_rewards',pk:'id',fields:['id','season_id','level','reward_type','is_premium'],fks:['season_id->bp_seasons.id']},
+    {name:'bp_stats',pk:'user_id',fields:['user_id','season_id','current_level','total_xp'],fks:['user_id->users.id']},
+    {name:'bp_user_missions',pk:'user_id',fields:['user_id','mission_id','progress','is_completed'],fks:['user_id->users.id']},
+    {name:'bp_claimed_rewards',pk:'id',fields:['id','user_id','season_id','level','reward_id'],fks:['user_id->users.id']},
+    {name:'seasonal_pass_configs',pk:'id',fields:['id','season','free_rewards','premium_rewards'],fks:[]},
+    {name:'seasonal_pass_levels',pk:'id',fields:['id','config_id','level','xp_required'],fks:[]},
+    {name:'user_seasonal_pass_progress',pk:'id',fields:['id','user_id','season','level','xp','is_premium'],fks:['user_id->users.id']},
+    {name:'monthly_pass_types',pk:'id',fields:['id','name','price','duration_days'],fks:[]},
+    {name:'user_monthly_pass',pk:'id',fields:['id','user_id','pass_id','expires_at'],fks:['user_id->users.id']},
+  ]},
+  { id:'lottery', name:'Lottery & Wheel', icon:'&#127922;', color:'#e879f9', tables:[
+    {name:'lottery_draws',pk:'id',fields:['id','draw_type','numbers','jackpot','draw_date'],fks:[]},
+    {name:'lottery_tickets',pk:'id',fields:['id','draw_id','user_id','numbers','is_winner','prize'],fks:['draw_id->lottery_draws.id']},
+    {name:'lottery_history',pk:'id',fields:['id','user_id','type','numbers','win_amount'],fks:['user_id->users.id']},
+    {name:'megaspin_rounds',pk:'id',fields:['id','round_number','results_json','jackpot'],fks:[]},
+    {name:'megaspin_tickets',pk:'id',fields:['id','user_id','round_id','picks','win_amount'],fks:['user_id->users.id','round_id->megaspin_rounds.id']},
+    {name:'draw_logs',pk:'id',fields:['id','user_id','draw_type','result','cost'],fks:['user_id->users.id']},
+    {name:'scratch_log',pk:'id',fields:['id','user_id','card_type','prize'],fks:['user_id->users.id']},
+    {name:'leaf_history',pk:'id',fields:['id','user_id','type','amount','result'],fks:[]},
+  ]},
+  { id:'system', name:'System & Config', icon:'&#9881;', color:'#94a3b8', tables:[
+    {name:'system_config',pk:'id',fields:['id','config_key','config_value','description'],fks:[]},
+    {name:'admin_alerts',pk:'id',fields:['id','type','message','severity','is_resolved'],fks:[]},
+    {name:'error_logs',pk:'id',fields:['id','type','message','stack_trace'],fks:[]},
+    {name:'app_logs',pk:'id',fields:['id','level','message','context'],fks:[]},
+    {name:'chat_errors',pk:'id',fields:['id','user_id','message','error_type'],fks:[]},
+    {name:'site_analytics',pk:'id',fields:['id','date','metric','value','dimension'],fks:[]},
+    {name:'experiments',pk:'id',fields:['id','name','config_json','status'],fks:[]},
+    {name:'server_lore',pk:'id',fields:['id','chapter','title','content'],fks:[]},
+    {name:'territories',pk:'id',fields:['id','name','x','y','controller_guild'],fks:[]},
+    {name:'bot_memory',pk:'id',fields:['id','bot_id','memory_key','memory_value'],fks:[]},
+    {name:'bot_rank_streaks',pk:'bot_id',fields:['bot_id','current_streak','best_streak'],fks:[]},
+    {name:'bot_smart_chat_logs',pk:'id',fields:['id','bot_id','trigger_type','message'],fks:[]},
+    {name:'arena_memory',pk:'id',fields:['id','user_id','arena_type','data_json'],fks:[]},
+  ]},
+  { id:'community', name:'Community & Oracle', icon:'&#127758;', color:'#ec4899', tables:[
+    {name:'community_buffs',pk:'id',fields:['id','buff_type','value','is_active','expires_at'],fks:[]},
+    {name:'community_challenges',pk:'id',fields:['id','name','goal','current_progress','status'],fks:[]},
+    {name:'community_challenge_participation',pk:'id',fields:['id','challenge_id','user_id','contribution'],fks:['challenge_id->community_challenges.id']},
+    {name:'community_goals',pk:'goal_date',fields:['goal_date','goal_type','target','current'],fks:[]},
+    {name:'oracle_prophecies',pk:'id',fields:['id','week_id','prophecy_text','game_type'],fks:[]},
+    {name:'oracle_prophecy_weeks',pk:'id',fields:['id','week_start','week_end','total_witnesses'],fks:[]},
+    {name:'oracle_prophecy_witnesses',pk:'id',fields:['id','prophecy_id','user_id'],fks:[]},
+  ]},
+  { id:'misc', name:'Misc & Other', icon:'&#127919;', color:'#78716c', tables:[
+    {name:'trivia_questions',pk:'id',fields:['id','question','category_id','difficulty','correct_answer'],fks:[]},
+    {name:'trivia_categories',pk:'id',fields:['id','name','icon','description'],fks:[]},
+    {name:'trivia_games',pk:'id',fields:['id','host_id','status','question_count'],fks:[]},
+    {name:'trivia_answers',pk:'id',fields:['id','game_id','user_id','question_id','answer','is_correct'],fks:[]},
+    {name:'blackjack_multi_tables',pk:'id',fields:['id','status','dealer_hand','bet_limit'],fks:[]},
+    {name:'blackjack_multi_players',pk:'id',fields:['id','table_id','user_id','hand','bet'],fks:['table_id->blackjack_multi_tables.id']},
+    {name:'blackjack_multi_chat',pk:'id',fields:['id','table_id','user_id','message'],fks:[]},
+    {name:'samloc_multi_tables',pk:'id',fields:['id','status','cards_json','bet_amount'],fks:[]},
+    {name:'samloc_multi_players',pk:'id',fields:['id','table_id','user_id','cards'],fks:[]},
+    {name:'user_combo_streaks',pk:'id',fields:['id','user_id','streak','last_combo','best_streak'],fks:['user_id->users.id']},
+    {name:'user_session_combos',pk:'id',fields:['id','user_id','session_start','games_played'],fks:['user_id->users.id']},
+    {name:'user_fortunes',pk:'id',fields:['id','user_id','fortune_text','luck_score'],fks:['user_id->users.id']},
+    {name:'user_farm_plots',pk:'id',fields:['id','user_id','plot_index','crop_type','planted_at'],fks:['user_id->users.id']},
+    {name:'storyline_chapters',pk:'id',fields:['id','chapter_number','title','content'],fks:[]},
+    {name:'storyline_events',pk:'id',fields:['id','chapter_id','event_name','trigger_condition'],fks:['chapter_id->storyline_chapters.id']},
+    {name:'user_storyline_progress',pk:'id',fields:['id','user_id','chapter_id','event_id'],fks:['user_id->users.id']},
+  ]},
+];
+
+let filterGroup = null, collapsedGroups = new Set();
+
+function buildLegend() {
+  const el = document.getElementById('legend');
+  el.innerHTML = '<span style="font-size:11px;color:var(--text-muted);margin-right:4px">Groups:</span>';
+  groups.forEach(g => {
+    const d = document.createElement('div');
+    d.className = 'legend-item';
+    d.innerHTML = `<div class="legend-dot" style="background:${g.color};box-shadow:0 0 6px ${g.color}40"></div>${g.icon} ${g.name}`;
+    d.onclick = () => filterByGroup(g.id, d);
+    el.appendChild(d);
+  });
+}
+
+function buildOverview() {
+  const el = document.getElementById('overviewGrid');
+  groups.forEach(g => {
+    const c = document.createElement('div');
+    c.className = 'overview-card';
+    c.style.setProperty('--card-color', g.color);
+    c.style.borderColor = g.color + '44';
+    c.innerHTML = `<div class="ov-icon">${g.icon}</div><div class="ov-title" style="color:${g.color}">${g.name}</div><div class="ov-count">${g.tables.length} tables</div>`;
+    c.onclick = () => scrollToSection(g.id);
+    el.appendChild(c);
+  });
+}
+
+function buildMain() {
+  const main = document.getElementById('mainContent');
+  groups.forEach(g => {
+    const sec = document.createElement('div');
+    sec.className = 'group-section';
+    sec.id = 'section-' + g.id;
+    sec.innerHTML = `
+      <div class="group-header" onclick="toggleGroup('${g.id}')">
+        <div class="group-icon" style="background:${g.color};box-shadow:0 0 8px ${g.color}60"></div>
+        <span class="group-title" style="color:${g.color}">${g.icon} ${g.name}</span>
+        <span class="group-count">${g.tables.length} tables</span>
+        <button class="group-toggle" id="toggle-${g.id}">&#9660;</button>
+      </div>
+      <div class="tables-grid" id="grid-${g.id}"></div>`;
+    main.appendChild(sec);
+    const grid = sec.querySelector('#grid-' + g.id);
+    g.tables.forEach(t => {
+      const card = document.createElement('div');
+      card.className = 'table-card';
+      card.id = 'card-' + t.name;
+      card.style.setProperty('--card-color', g.color);
+      const fkTags = t.fks.map(f => `<span class="field-tag fk" title="${f}">&#128279; ${f.split('->')[0]}</span>`).join('');
+      const fkFields = new Set(t.fks.map(f => f.split('->')[0]));
+      const otherFields = t.fields.filter(f => !fkFields.has(f)).slice(0, 4)
+        .map(f => `<span class="field-tag${f === t.pk ? ' pk' : ''}">${f === t.pk ? '&#128273; ' : ''}${f}</span>`).join('');
+      const extra = t.fields.length > (4 + t.fks.length) ? `<span class="field-tag">+${t.fields.length - 4 - t.fks.length} more</span>` : '';
+      card.innerHTML = `<div class="card-header"><div class="card-dot"></div><span class="card-name" title="${t.name}">${t.name}</span></div><div class="card-body">${otherFields}${fkTags}${extra}</div>`;
+      card.onclick = () => showRelations(t, g);
+      grid.appendChild(card);
+    });
+  });
+}
+
+function scrollToSection(id) {
+  document.getElementById('section-' + id)?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function toggleGroup(id) {
+  const grid = document.getElementById('grid-' + id);
+  const btn = document.getElementById('toggle-' + id);
+  if (collapsedGroups.has(id)) {
+    collapsedGroups.delete(id);
+    grid.classList.remove('collapsed');
+    btn.innerHTML = '&#9660;';
+  } else {
+    collapsedGroups.add(id);
+    grid.classList.add('collapsed');
+    btn.innerHTML = '&#9658;';
+  }
+}
+
+function expandAll() {
+  collapsedGroups.clear();
+  document.querySelectorAll('.tables-grid').forEach(g => g.classList.remove('collapsed'));
+  document.querySelectorAll('.group-toggle').forEach(b => b.innerHTML = '&#9660;');
+}
+
+function collapseAll() {
+  groups.forEach(g => collapsedGroups.add(g.id));
+  document.querySelectorAll('.tables-grid').forEach(g => g.classList.add('collapsed'));
+  document.querySelectorAll('.group-toggle').forEach(b => b.innerHTML = '&#9658;');
+}
+
+function filterByGroup(id, el) {
+  if (filterGroup === id) {
+    filterGroup = null;
+    document.querySelectorAll('.legend-item').forEach(i => i.classList.remove('active'));
+    document.querySelectorAll('.group-section').forEach(s => s.classList.remove('filtered-out'));
+  } else {
+    filterGroup = id;
+    document.querySelectorAll('.legend-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.group-section').forEach(s => {
+      s.id === 'section-' + id ? s.classList.remove('filtered-out') : s.classList.add('filtered-out');
+    });
+    scrollToSection(id);
+  }
+}
+
+document.getElementById('searchBox').addEventListener('input', function() {
+  const q = this.value.toLowerCase().trim();
+  if (!q) {
+    document.querySelectorAll('.table-card').forEach(c => c.classList.remove('search-match','search-hidden'));
+    document.querySelectorAll('.group-section').forEach(s => s.classList.remove('filtered-out'));
+    return;
+  }
+  groups.forEach(g => {
+    let any = false;
+    g.tables.forEach(t => {
+      const card = document.getElementById('card-' + t.name);
+      if (!card) return;
+      const match = t.name.toLowerCase().includes(q) || t.fields.some(f => f.toLowerCase().includes(q)) || t.fks.some(f => f.toLowerCase().includes(q));
+      card.classList.toggle('search-match', match);
+      card.classList.toggle('search-hidden', !match);
+      if (match) any = true;
+    });
+    const sec = document.getElementById('section-' + g.id);
+    sec.classList.toggle('filtered-out', !any);
+    if (any && collapsedGroups.has(g.id)) {
+      document.getElementById('grid-' + g.id).classList.remove('collapsed');
+      document.getElementById('toggle-' + g.id).innerHTML = '&#9660;';
+    }
+  });
+});
+
+function showRelations(table, group) {
+  const referencedBy = [];
+  groups.forEach(g => g.tables.forEach(t => t.fks.forEach(fk => {
+    if (fk.includes('->' + table.name + '.')) referencedBy.push({table: t.name, field: fk.split('->')[0], color: g.color});
+  })));
+
+  const fkFields = new Set(table.fks.map(f => f.split('->')[0]));
+  let html = `<div style="margin-bottom:16px"><div style="font-size:16px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${group.color};word-break:break-all">${table.name}</div><div style="font-size:11px;color:var(--text-muted)">${group.icon} ${group.name}</div></div>`;
+  html += `<div class="rel-group"><div class="rel-group-title">&#128273; Primary Key</div><div class="rel-item"><span class="rel-table" style="color:#fbbf24">${table.pk}</span></div></div>`;
+  html += `<div class="rel-group"><div class="rel-group-title">&#128203; All Fields (${table.fields.length})</div>`;
+  table.fields.forEach(f => {
+    const isPk = f === table.pk, isFk = fkFields.has(f);
+    const style = isPk ? 'border-color:rgba(251,191,36,0.4);background:rgba(251,191,36,0.05)' : isFk ? 'border-color:rgba(110,231,183,0.4);background:rgba(110,231,183,0.05)' : '';
+    html += `<div class="rel-item" style="${style}"><span style="font-size:10px;flex-shrink:0">${isPk ? '&#128273;' : isFk ? '&#128279;' : '&middot;'}</span><span class="rel-table">${f}</span></div>`;
+  });
+  html += '</div>';
+  if (table.fks.length) {
+    html += `<div class="rel-group"><div class="rel-group-title">&#8594; References (Foreign Keys)</div>`;
+    table.fks.forEach(fk => {
+      const [field, ref] = fk.split('->');
+      const [refTable, refField] = ref.split('.');
+      html += `<div class="rel-item" onclick="jumpToCard('${refTable}')"><span class="rel-arrow">&#8594;</span><div><div class="rel-table">${refTable}</div><div class="rel-field">${field} &rarr; ${refField}</div></div></div>`;
+    });
+    html += '</div>';
+  }
+  if (referencedBy.length) {
+    html += `<div class="rel-group"><div class="rel-group-title">&#8592; Referenced By</div>`;
+    referencedBy.forEach(r => {
+      html += `<div class="rel-item" onclick="jumpToCard('${r.table}')"><span class="rel-arrow" style="color:#f59e0b">&#8592;</span><div><div class="rel-table" style="color:${r.color}">${r.table}</div><div class="rel-field">via ${r.field}</div></div></div>`;
+    });
+    html += '</div>';
+  }
+  document.getElementById('relContent').innerHTML = html;
+  document.getElementById('relPanel').classList.add('open');
+  document.getElementById('overlay').classList.add('active');
+  document.querySelectorAll('.table-card').forEach(c => c.classList.remove('highlighted'));
+  const thisCard = document.getElementById('card-' + table.name);
+  if (thisCard) thisCard.classList.add('highlighted');
+}
+
+function jumpToCard(name) {
+  const card = document.getElementById('card-' + name);
+  if (!card) return;
+  card.scrollIntoView({behavior:'smooth',block:'center'});
+  card.style.boxShadow = '0 0 0 3px #fbbf24, 0 0 20px rgba(251,191,36,0.3)';
+  setTimeout(() => card.style.boxShadow = '', 1500);
+}
+
+function closePanel() {
+  document.getElementById('relPanel').classList.remove('open');
+  document.getElementById('overlay').classList.remove('active');
+  document.querySelectorAll('.table-card').forEach(c => c.classList.remove('highlighted'));
+}
+
+function switchTab(el, id) {
+  document.querySelectorAll('.dtab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.diagram-content').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-' + id).classList.add('active');
+}
+
+buildLegend(); buildOverview(); buildMain();
+</script>
+</body>
+</html>

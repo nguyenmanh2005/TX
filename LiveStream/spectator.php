@@ -448,7 +448,7 @@ $userAvatar = !empty($userData['ImageURL']) ? $userData['ImageURL'] : '../img/av
                 <i class="fa fa-wallet" style="color: var(--emerald);"></i>
                 <span><?= number_format($userMoney) ?> GTLM</span>
             </div>
-            <a href="../index.php" class="btn-back-lobby">
+            <a href="/1/index.php" class="btn-back-lobby">
                 <i class="fa fa-arrow-left"></i> <span>Sảnh Chính</span>
             </a>
         </div>

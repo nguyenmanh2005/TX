@@ -59,6 +59,10 @@ class BlackjackMulti {
         // Render Dealer
         this.renderCards('dealer-cards', JSON.parse(table.dealer_cards || '[]'));
 
+        window.currentMoney = data.current_user_money;
+        const balEl = document.getElementById('balance-amount');
+        if (balEl) balEl.innerText = Number(window.currentMoney).toLocaleString();
+
         const myPlayer = players.find(p => p.user_id == this.userId);
 
         // Render Players
@@ -235,7 +239,8 @@ class BlackjackMulti {
                     else if (typeof Swal !== 'undefined') Swal.fire('Thắng!', 'Bạn thắng ' + Number(amt).toLocaleString() + ' GTLM', 'success');
                 } else if (myPlayer.status.startsWith('lose:') || myPlayer.status.startsWith('bust:')) {
                     const amt = myPlayer.status.split(':')[1];
-                    if (typeof Swal !== 'undefined') Swal.fire('Thua!', 'Bạn mất ' + Number(amt).toLocaleString() + ' GTLM', 'error');
+                    if (typeof GameEffects !== 'undefined') GameEffects.showLoss(amt);
+                    else if (typeof Swal !== 'undefined') Swal.fire('Thua!', 'Bạn mất ' + Number(amt).toLocaleString() + ' GTLM', 'error');
                 } else if (myPlayer.status.startsWith('draw:')) {
                     const amt = myPlayer.status.split(':')[1];
                     if (typeof Swal !== 'undefined') Swal.fire('Hòa!', 'Bạn được hoàn lại ' + Number(amt).toLocaleString() + ' GTLM', 'info');
