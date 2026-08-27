@@ -11,71 +11,78 @@ if (!isset($_SESSION['Iduser'])) {
     exit();
 }
 require_once __DIR__ . '/../db_connect.php';
-require_once __DIR__ . '/../load_theme.php';
+require_once __DIR__ . '/bot_streamer_helper.php';
 
 $userId = (int)$_SESSION['Iduser'];
 $tableId = isset($_GET['id']) ? (int)$_GET['id'] : 1;
 if ($tableId < 1 || $tableId > 58) $tableId = 1;
 
+// Lấy thông tin Bot Streamer để nạp Theme của Streamer thay vì người xem
+$botUser = getOrCreateBotStreamerUser($conn, 'bot_' . $tableId, 50000000);
+$botUserId = $botUser['Iduser'];
+$useBotTheme = $botUserId;
+
+require_once __DIR__ . '/../load_theme.php';
+
 $gameFilesMap = [
-    1 => ['file' => 'live_baucua.php', 'real_game' => '../games/baucua.php', 'name' => 'Thế Giới Linh Thú', 'icon' => '🐾'],
-    2 => ['file' => 'live_xocdia.php', 'real_game' => '../games/xocdia.php', 'name' => 'Trận Địa Trắng Đỏ', 'icon' => '🎲'],
-    3 => ['file' => 'live_crash.php', 'real_game' => '../games/crash.php', 'name' => 'Tiên Tri Vũ Trụ', 'icon' => '🚀'],
-    4 => ['file' => 'live_daga.php', 'real_game' => '../games/daga.php', 'name' => 'Đại Chiến Thần Kê', 'icon' => '🐓'],
-    5 => ['file' => 'live_dragontiger.php', 'real_game' => '../games/dragontiger.php', 'name' => 'Chiến Trường Rồng Hổ', 'icon' => '🐉'],
+    1 => ['file' => 'live_1.php', 'real_game' => '../games/baucua.php', 'name' => 'Thế Giới Linh Thú', 'icon' => '🐾'],
+    2 => ['file' => 'live_2.php', 'real_game' => '../games/xocdia.php', 'name' => 'Trận Địa Trắng Đỏ', 'icon' => '🎲'],
+    3 => ['file' => 'live_3.php', 'real_game' => '../games/crash.php', 'name' => 'Tiên Tri Vũ Trụ', 'icon' => '🚀'],
+    4 => ['file' => 'live_4.php', 'real_game' => '../games/daga.php', 'name' => 'Đại Chiến Thần Kê', 'icon' => '🐓'],
+    5 => ['file' => 'live_5.php', 'real_game' => '../games/dragontiger.php', 'name' => 'Chiến Trường Rồng Hổ', 'icon' => '🐉'],
     6 => ['file' => '../games/cyber_racing.php?live=1', 'real_game' => '../games/cyber_racing.php', 'name' => 'Đua Thú Cyberpunk', 'icon' => '🏎️'],
-    7 => ['file' => 'live_plinko.php', 'real_game' => '../games/plinko.php', 'name' => 'Plinko Royale', 'icon' => '🎱'],
-    8 => ['file' => 'live_slot.php', 'real_game' => '../games/slot.php', 'name' => 'Slot Machine Premium', 'icon' => '🎰'],
-    9 => ['file' => 'live_baccarat.php', 'real_game' => '../games/baccarat.php', 'name' => 'Baccarat', 'icon' => '🎪'],
-    10 => ['file' => 'live_banharc.php', 'real_game' => '../games/banharc.php', 'name' => 'Banharc', 'icon' => '🕹️'],
-    11 => ['file' => 'live_battleroyale.php', 'real_game' => '../games/battleroyale.php', 'name' => 'Battleroyale', 'icon' => '🎮'],
-    12 => ['file' => 'live_bingo.php', 'real_game' => '../games/bingo.php', 'name' => 'Bingo', 'icon' => '🕹️'],
-    13 => ['file' => 'live_bj.php', 'real_game' => '../games/bj.php', 'name' => 'Bj', 'icon' => '🎮'],
-    14 => ['file' => 'live_bjo.php', 'real_game' => '../games/bjo.php', 'name' => 'Bjo', 'icon' => '🎴'],
-    15 => ['file' => 'live_blackjack.php', 'real_game' => '../games/blackjack.php', 'name' => 'Blackjack', 'icon' => '🎯'],
-    16 => ['file' => 'live_blackjack_multi.php', 'real_game' => '../games/blackjack_multi.php', 'name' => 'Blackjack Multi', 'icon' => '🎲'],
-    17 => ['file' => 'live_caribbean.php', 'real_game' => '../games/caribbean.php', 'name' => 'Caribbean', 'icon' => '🕹️'],
-    18 => ['file' => 'live_coinflip.php', 'real_game' => '../games/coinflip.php', 'name' => 'Coinflip', 'icon' => '🎴'],
-    19 => ['file' => 'live_community_lottery.php', 'real_game' => '../games/community_lottery.php', 'name' => 'Community Lottery', 'icon' => '🎮'],
-    20 => ['file' => 'live_craps.php', 'real_game' => '../games/craps.php', 'name' => 'Craps', 'icon' => '🎯'],
-    21 => ['file' => 'live_dice.php', 'real_game' => '../games/dice.php', 'name' => 'Dice', 'icon' => '🎯'],
-    22 => ['file' => 'live_duangua.php', 'real_game' => '../games/duangua.php', 'name' => 'Duangua', 'icon' => '🎲'],
-    23 => ['file' => 'live_fantan.php', 'real_game' => '../games/fantan.php', 'name' => 'Fantan', 'icon' => '🎴'],
-    24 => ['file' => 'live_farm.php', 'real_game' => '../games/farm.php', 'name' => 'Farm', 'icon' => '🃏'],
-    25 => ['file' => 'live_gacha_cards.php', 'real_game' => '../games/gacha_cards.php', 'name' => 'Gacha Cards', 'icon' => '🎲'],
-    26 => ['file' => 'live_greedy_cave.php', 'real_game' => '../games/greedy_cave.php', 'name' => 'Greedy Cave', 'icon' => '🃏'],
-    27 => ['file' => 'live_hilo.php', 'real_game' => '../games/hilo.php', 'name' => 'Hilo', 'icon' => '🎮'],
-    28 => ['file' => 'live_holdem.php', 'real_game' => '../games/holdem.php', 'name' => 'Holdem', 'icon' => '🎪'],
-    29 => ['file' => 'live_hopmu.php', 'real_game' => '../games/hopmu.php', 'name' => 'Hopmu', 'icon' => '🎴'],
-    30 => ['file' => 'live_horserace.php', 'real_game' => '../games/horserace.php', 'name' => 'Horserace', 'icon' => '🕹️'],
-    31 => ['file' => 'live_horserace_pvp.php', 'real_game' => '../games/horserace_pvp.php', 'name' => 'Horserace Pvp', 'icon' => '🎮'],
-    32 => ['file' => 'live_jojo_battle.php', 'real_game' => '../games/jojo_battle.php', 'name' => 'Jojo Battle', 'icon' => '🎮'],
-    33 => ['file' => 'live_keno.php', 'real_game' => '../games/keno.php', 'name' => 'Keno', 'icon' => '🕹️'],
-    34 => ['file' => 'live_letitride.php', 'real_game' => '../games/letitride.php', 'name' => 'Letitride', 'icon' => '🎴'],
-    35 => ['file' => 'live_limbo.php', 'real_game' => '../games/limbo.php', 'name' => 'Limbo', 'icon' => '🎮'],
-    36 => ['file' => 'live_lottery.php', 'real_game' => '../games/lottery.php', 'name' => 'Lottery', 'icon' => '🎴'],
-    37 => ['file' => 'live_mahjong.php', 'real_game' => '../games/mahjong.php', 'name' => 'Mahjong', 'icon' => '🎴'],
-    38 => ['file' => 'live_megaspin.php', 'real_game' => '../games/megaspin.php', 'name' => 'Megaspin', 'icon' => '🎮'],
-    39 => ['file' => 'live_mines.php', 'real_game' => '../games/mines.php', 'name' => 'Mines', 'icon' => '🎯'],
-    40 => ['file' => 'live_minesweeper.php', 'real_game' => '../games/minesweeper.php', 'name' => 'Minesweeper', 'icon' => '🎪'],
-    41 => ['file' => 'live_number.php', 'real_game' => '../games/number.php', 'name' => 'Number', 'icon' => '🎴'],
-    42 => ['file' => 'live_paigow.php', 'real_game' => '../games/paigow.php', 'name' => 'Paigow', 'icon' => '🕹️'],
-    43 => ['file' => 'live_poker.php', 'real_game' => '../games/poker.php', 'name' => 'Poker', 'icon' => '🃏'],
-    44 => ['file' => 'live_pontoon.php', 'real_game' => '../games/pontoon.php', 'name' => 'Pontoon', 'icon' => '🕹️'],
-    45 => ['file' => 'live_reddog.php', 'real_game' => '../games/reddog.php', 'name' => 'Reddog', 'icon' => '🎴'],
-    46 => ['file' => 'live_roulette.php', 'real_game' => '../games/roulette.php', 'name' => 'Roulette', 'icon' => '🎲'],
-    47 => ['file' => 'live_rps.php', 'real_game' => '../games/rps.php', 'name' => 'Rps', 'icon' => '🎲'],
-    48 => ['file' => 'live_ruttham.php', 'real_game' => '../games/ruttham.php', 'name' => 'Ruttham', 'icon' => '🎮'],
-    49 => ['file' => 'live_samloc.php', 'real_game' => '../games/samloc.php', 'name' => 'Samloc', 'icon' => '🃏'],
-    50 => ['file' => 'live_scratch.php', 'real_game' => '../games/scratch.php', 'name' => 'Scratch', 'icon' => '🃏'],
-    51 => ['file' => 'live_sicbo.php', 'real_game' => '../games/sicbo.php', 'name' => 'Sicbo', 'icon' => '🎮'],
-    52 => ['file' => 'live_threecard.php', 'real_game' => '../games/threecard.php', 'name' => 'Threecard', 'icon' => '🎯'],
-    53 => ['file' => 'live_tower.php', 'real_game' => '../games/tower.php', 'name' => 'Tower', 'icon' => '🕹️'],
-    54 => ['file' => 'live_tusac.php', 'real_game' => '../games/tusac.php', 'name' => 'Tusac', 'icon' => '🎴'],
-    55 => ['file' => 'live_videopoker.php', 'real_game' => '../games/videopoker.php', 'name' => 'Videopoker', 'icon' => '🎯'],
-    56 => ['file' => 'live_vietlott.php', 'real_game' => '../games/vietlott.php', 'name' => 'Vietlott', 'icon' => '🎯'],
-    57 => ['file' => 'live_war.php', 'real_game' => '../games/war.php', 'name' => 'War', 'icon' => '🎪'],
-    58 => ['file' => 'live_yahtzee.php', 'real_game' => '../games/yahtzee.php', 'name' => 'Yahtzee', 'icon' => '🎯']
+    7 => ['file' => 'live_7.php', 'real_game' => '../games/plinko.php', 'name' => 'Plinko Royale', 'icon' => '🎱'],
+    8 => ['file' => 'live_8.php', 'real_game' => '../games/slot.php', 'name' => 'Slot Machine Premium', 'icon' => '🎰'],
+    9 => ['file' => 'live_9.php', 'real_game' => '../games/baccarat.php', 'name' => 'Baccarat', 'icon' => '🎪'],
+    10 => ['file' => 'live_10.php', 'real_game' => '../games/banharc.php', 'name' => 'Banharc', 'icon' => '🕹️'],
+    11 => ['file' => 'live_11.php', 'real_game' => '../games/battleroyale.php', 'name' => 'Battleroyale', 'icon' => '🎮'],
+    12 => ['file' => 'live_12.php', 'real_game' => '../games/bingo.php', 'name' => 'Bingo', 'icon' => '🕹️'],
+    13 => ['file' => 'live_13.php', 'real_game' => '../games/bj.php', 'name' => 'Bj', 'icon' => '🎮'],
+    14 => ['file' => 'live_14.php', 'real_game' => '../games/bjo.php', 'name' => 'Bjo', 'icon' => '🎴'],
+    15 => ['file' => 'live_15.php', 'real_game' => '../games/blackjack.php', 'name' => 'Blackjack', 'icon' => '🎯'],
+    16 => ['file' => 'live_16.php', 'real_game' => '../games/blackjack_multi.php', 'name' => 'Blackjack Multi', 'icon' => '🎲'],
+    17 => ['file' => 'live_17.php', 'real_game' => '../games/caribbean.php', 'name' => 'Caribbean', 'icon' => '🕹️'],
+    18 => ['file' => 'live_18.php', 'real_game' => '../games/coinflip.php', 'name' => 'Coinflip', 'icon' => '🎴'],
+    19 => ['file' => 'live_19.php', 'real_game' => '../games/community_lottery.php', 'name' => 'Community Lottery', 'icon' => '🎮'],
+    20 => ['file' => 'live_20.php', 'real_game' => '../games/craps.php', 'name' => 'Craps', 'icon' => '🎯'],
+    21 => ['file' => 'live_21.php', 'real_game' => '../games/dice.php', 'name' => 'Dice', 'icon' => '🎯'],
+    22 => ['file' => 'live_22.php', 'real_game' => '../games/duangua.php', 'name' => 'Duangua', 'icon' => '🎲'],
+    23 => ['file' => 'live_23.php', 'real_game' => '../games/fantan.php', 'name' => 'Fantan', 'icon' => '🎴'],
+    24 => ['file' => 'live_24.php', 'real_game' => '../games/farm.php', 'name' => 'Farm', 'icon' => '🃏'],
+    25 => ['file' => 'live_25.php', 'real_game' => '../games/gacha_cards.php', 'name' => 'Gacha Cards', 'icon' => '🎲'],
+    26 => ['file' => 'live_26.php', 'real_game' => '../games/greedy_cave.php', 'name' => 'Greedy Cave', 'icon' => '🃏'],
+    27 => ['file' => 'live_27.php', 'real_game' => '../games/hilo.php', 'name' => 'Hilo', 'icon' => '🎮'],
+    28 => ['file' => 'live_28.php', 'real_game' => '../games/holdem.php', 'name' => 'Holdem', 'icon' => '🎪'],
+    29 => ['file' => 'live_29.php', 'real_game' => '../games/hopmu.php', 'name' => 'Hopmu', 'icon' => '🎴'],
+    30 => ['file' => 'live_30.php', 'real_game' => '../games/horserace.php', 'name' => 'Horserace', 'icon' => '🕹️'],
+    31 => ['file' => 'live_31.php', 'real_game' => '../games/horserace_pvp.php', 'name' => 'Horserace Pvp', 'icon' => '🎮'],
+    32 => ['file' => 'live_32.php', 'real_game' => '../games/jojo_battle.php', 'name' => 'Jojo Battle', 'icon' => '🎮'],
+    33 => ['file' => 'live_33.php', 'real_game' => '../games/keno.php', 'name' => 'Keno', 'icon' => '🕹️'],
+    34 => ['file' => 'live_34.php', 'real_game' => '../games/letitride.php', 'name' => 'Letitride', 'icon' => '🎴'],
+    35 => ['file' => 'live_35.php', 'real_game' => '../games/limbo.php', 'name' => 'Limbo', 'icon' => '🎮'],
+    36 => ['file' => 'live_36.php', 'real_game' => '../games/lottery.php', 'name' => 'Lottery', 'icon' => '🎴'],
+    37 => ['file' => 'live_37.php', 'real_game' => '../games/mahjong.php', 'name' => 'Mahjong', 'icon' => '🎴'],
+    38 => ['file' => 'live_38.php', 'real_game' => '../games/megaspin.php', 'name' => 'Megaspin', 'icon' => '🎮'],
+    39 => ['file' => 'live_39.php', 'real_game' => '../games/mines.php', 'name' => 'Mines', 'icon' => '🎯'],
+    40 => ['file' => 'live_40.php', 'real_game' => '../games/minesweeper.php', 'name' => 'Minesweeper', 'icon' => '🎪'],
+    41 => ['file' => 'live_41.php', 'real_game' => '../games/number.php', 'name' => 'Number', 'icon' => '🎴'],
+    42 => ['file' => 'live_42.php', 'real_game' => '../games/paigow.php', 'name' => 'Paigow', 'icon' => '🕹️'],
+    43 => ['file' => 'live_43.php', 'real_game' => '../games/poker.php', 'name' => 'Poker', 'icon' => '🃏'],
+    44 => ['file' => 'live_44.php', 'real_game' => '../games/pontoon.php', 'name' => 'Pontoon', 'icon' => '🕹️'],
+    45 => ['file' => 'live_45.php', 'real_game' => '../games/reddog.php', 'name' => 'Reddog', 'icon' => '🎴'],
+    46 => ['file' => 'live_46.php', 'real_game' => '../games/roulette.php', 'name' => 'Roulette', 'icon' => '🎲'],
+    47 => ['file' => 'live_47.php', 'real_game' => '../games/rps.php', 'name' => 'Rps', 'icon' => '🎲'],
+    48 => ['file' => 'live_48.php', 'real_game' => '../games/ruttham.php', 'name' => 'Ruttham', 'icon' => '🎮'],
+    49 => ['file' => 'live_49.php', 'real_game' => '../games/samloc.php', 'name' => 'Samloc', 'icon' => '🃏'],
+    50 => ['file' => 'live_50.php', 'real_game' => '../games/scratch.php', 'name' => 'Scratch', 'icon' => '🃏'],
+    51 => ['file' => 'live_51.php', 'real_game' => '../games/sicbo.php', 'name' => 'Sicbo', 'icon' => '🎮'],
+    52 => ['file' => 'live_52.php', 'real_game' => '../games/threecard.php', 'name' => 'Threecard', 'icon' => '🎯'],
+    53 => ['file' => 'live_53.php', 'real_game' => '../games/tower.php', 'name' => 'Tower', 'icon' => '🕹️'],
+    54 => ['file' => 'live_54.php', 'real_game' => '../games/tusac.php', 'name' => 'Tusac', 'icon' => '🎴'],
+    55 => ['file' => 'live_55.php', 'real_game' => '../games/videopoker.php', 'name' => 'Videopoker', 'icon' => '🎯'],
+    56 => ['file' => 'live_56.php', 'real_game' => '../games/vietlott.php', 'name' => 'Vietlott', 'icon' => '🎯'],
+    57 => ['file' => 'live_57.php', 'real_game' => '../games/war.php', 'name' => 'War', 'icon' => '🎪'],
+    58 => ['file' => 'live_58.php', 'real_game' => '../games/yahtzee.php', 'name' => 'Yahtzee', 'icon' => '🎯']
 ];
 
 $botThemesMap = [
@@ -140,7 +147,20 @@ $botThemesMap = [
 ];
 
 $currentGame = $gameFilesMap[$tableId];
-$currentBotTheme = $botThemesMap[$tableId];
+$currentBotTheme = $botThemesMap[$tableId] ?? null;
+
+// Áp dụng Theme riêng biệt của Streamer/Bàn Live
+if (!empty($currentBotTheme)) {
+    if (!empty($currentBotTheme['particleColor'])) $particleColor = $currentBotTheme['particleColor'];
+    if (!empty($currentBotTheme['shapeColors'])) $shapeColors = $currentBotTheme['shapeColors'];
+    if (!empty($currentBotTheme['bgGradient'])) {
+        $bgGradient = $currentBotTheme['bgGradient'];
+        $bgGradientCSS = 'linear-gradient(135deg, ' . 
+            htmlspecialchars($bgGradient[0]) . ' 0%, ' . 
+            htmlspecialchars($bgGradient[1]) . ' 50%, ' . 
+            htmlspecialchars($bgGradient[2] ?? $bgGradient[1]) . ' 100%)';
+    }
+}
 
 // Lấy số dư người dùng
 $stmtUser = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
@@ -247,11 +267,23 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
             display: flex; align-items: center; gap: 6px;
         }
 
+        /* Ẩn hoàn toàn thanh cuộn (scrollbar) trên mọi trình duyệt */
+        html, body, .player-section, .video-viewport, iframe, .sidebar-chat, .chat-body {
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+        }
+        ::-webkit-scrollbar {
+            display: none !important;
+            width: 0px !important;
+            height: 0px !important;
+        }
+
         /* Layout Grid */
         .watch-layout {
             display: grid;
             grid-template-columns: 1fr 340px;
             height: calc(100vh - 60px);
+            overflow: hidden;
         }
 
         /* Player Section */
@@ -260,7 +292,7 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
             flex-direction: column;
             background: #000;
             position: relative;
-            overflow-y: auto;
+            overflow: hidden;
         }
 
         /* 🎮 Real Game Embedded Viewport (Spectator Only) */
@@ -553,7 +585,7 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
 
         <div class="user-balance-chip">
             <i class="fa fa-wallet"></i>
-            <span><?= number_format($userMoney) ?> GTLM</span>
+            <span id="userMoneyDisplay"><?= number_format($userMoney) ?></span> GTLM
         </div>
     </header>
 
@@ -680,6 +712,9 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
                     $('#tableSelect').val(currentTableId);
                     if (res.table && res.table.viewers) {
                         $('#viewersCount').text(res.table.viewers);
+                    }
+                    if (res.user_money !== undefined) {
+                        $('#userMoneyDisplay').text(res.user_money);
                     }
 
                     // Feed cược bot nổi

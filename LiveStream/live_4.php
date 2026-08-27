@@ -1,21 +1,38 @@
 <?php
 session_start();
+
+require_once '../game_history_helper.php';
+require_once 'bot_streamer_helper.php';
+$botUser = getOrCreateBotStreamerUser($conn, 'bot_4', 50000000);
+$botUserId = $botUser['Iduser'];
+$_SESSION['Iduser_temp_bot'] = $botUserId;
+
 require '../db_connect.php';
 require_once '../include_css.php';
+$useBotTheme = $botUserId;
 require_once '../load_theme.php';
 
-if (!isset($_SESSION['Iduser'])) {
-    header("Location: ../login.php");
-    exit();
-}
 
-$userId = $_SESSION['Iduser'];
+
+$userId = $botUserId;
 $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
 $money = $user['Money'];
 $stmt->close();
+
+if (isset($_GET['action']) && $_GET['action'] === 'get_balance') {
+    header('Content-Type: application/json');
+    $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $bRow = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    $bMoney = (float)($bRow['Money'] ?? 0);
+    echo json_encode(['success' => true, 'newMoney' => number_format($bMoney, 0, ',', '.'), 'rawMoney' => $bMoney]);
+    exit;
+}
 
 if (isset($_GET['action']) && $_GET['action'] === 'bet') {
     header('Content-Type: application/json');
@@ -90,13 +107,20 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
             color: white;
             font-family: 'Exo 2', sans-serif;
             text-align: center;
-            overflow-x: hidden;
+            overflow: hidden;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        ::-webkit-scrollbar {
+            display: none !important;
+            width: 0px !important;
+            height: 0px !important;
         }
         .arena {
             width: 95%;
             max-width: 900px;
-            height: 450px;
-            margin: 2rem auto;
+            height: 420px;
+            margin: 0.8rem auto 1.2rem auto;
             background: radial-gradient(circle, rgba(44, 62, 80, 0.5) 0%, rgba(26, 26, 26, 0.8) 100%);
             position: relative;
             border: 2px solid rgba(255, 255, 255, 0.1);
@@ -258,7 +282,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
             $('#rooster-meron').animate({ left: '300px' }, 2000);
             $('#rooster-wala').animate({ right: '300px' }, 2000);
 
-            $.post('daga.php?action=bet', { side: side, amount: amount }, function(data) {
+            $.post('?action=bet', { side: side, amount: amount }, function(data) {
                 if (!data.success) {
                     Swal.fire('Lỗi', data.message, 'error');
                     resetArena();
@@ -302,16 +326,27 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
             $('#rooster-wala').show().css('right', '100px');
         }
 
+        // Tự động đồng bộ số dư Bot khi nhận Tip / Quà từ người xem
+        setInterval(() => {
+            if (!isPlaying) {
+                $.get('?action=get_balance', function(res) {
+                    if (res && res.success && res.newMoney) {
+                        $('#money-display').text(res.newMoney);
+                    }
+                });
+            }
+        }, 2000);
+
         (function () {
             window.themeConfig = {
-                particleCount: 200,
-                particleSize: 0.05,
-                particleColor: '#00f2fe',
-                particleOpacity: 0.4,
-                shapeCount: 15,
-                shapeColors: ["#00f2fe", "#4facfe", "#ffffff"],
-                shapeOpacity: 0.15,
-                bgGradient: ["#000000", "#000510", "#001020"]
+                particleCount: <?= (int)$particleCount ?>,
+                particleSize: <?= (float)$particleSize ?>,
+                particleColor: "<?= htmlspecialchars($particleColor) ?>",
+                particleOpacity: <?= (float)$particleOpacity ?>,
+                shapeCount: <?= (int)$shapeCount ?>,
+                shapeColors: <?= json_encode($shapeColors) ?>,
+                shapeOpacity: <?= (float)$shapeOpacity ?>,
+                bgGradient: <?= json_encode($bgGradient) ?>
             };
             const prefix = '../';
             ['threejs-background.js', 'assets/js/game-effects.js'].forEach(src => {
@@ -322,5 +357,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
         })();
     </script>
     <canvas id="threejs-background"></canvas>
+
+<!-- AUTO-GENERATED BOT SCRIPT -->
+<script>
+if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
+if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
+</script>
+<script src="../assets/js/bot_virtual_cursor.js"></script>
+<script src="bots/bot_4.js"></script>
+
 </body>
 </html>
+

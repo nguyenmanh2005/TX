@@ -2,6 +2,7 @@
 // Tự động bypass các script hiển thị nếu là request AJAX (JSON)
 if (isset($_GET['action']) || isset($_POST['action']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
     $bypassThemeScripts = true;
+    return;
 }
 
 /**
@@ -27,8 +28,17 @@ $shapeOpacity = 0.3;
 $themeName = 'Default';
 
 // Nếu có user session, load theme của user
-if (isset($_SESSION['Iduser'])) {
+if (isset($useBotTheme)) {
+    $userId = $useBotTheme;
+} elseif (isset($_SESSION['Iduser_temp_bot']) && (basename(dirname($_SERVER['SCRIPT_FILENAME'] ?? '')) === 'LiveStream' || strpos($_SERVER['REQUEST_URI'] ?? '', 'LiveStream') !== false)) {
+    $userId = $_SESSION['Iduser_temp_bot'];
+} elseif (isset($_SESSION['Iduser'])) {
     $userId = $_SESSION['Iduser'];
+} else {
+    $userId = null;
+}
+
+if ($userId !== null) {
     
     // Kiểm tra bảng users tồn tại trước
     $checkUsersTable = $conn->query("SHOW TABLES LIKE 'users'");

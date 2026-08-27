@@ -214,12 +214,20 @@ switch ($action) {
         while ($r = $reactRes->fetch_assoc()) $reactions[] = $r;
         $stmt->close();
 
+        $stmtU = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
+        $stmtU->bind_param("i", $userId);
+        $stmtU->execute();
+        $userMoneyRow = $stmtU->get_result()->fetch_assoc();
+        $stmtU->close();
+        $userMoneyVal = (float)($userMoneyRow['Money'] ?? 0);
+
         echo json_encode([
             'success' => true,
             'state' => $state,
             'table' => array_merge($tData, ['viewers' => $viewers]),
             'outcome' => $outcome,
             'my_bet' => $myBet,
+            'user_money' => number_format($userMoneyVal),
             'chats' => array_reverse($chats),
             'reactions' => $reactions,
             'history' => getTableHistory($tId, $state['cycle_id'])
@@ -326,68 +334,8 @@ switch ($action) {
             $stmt->close();
 
             // 2. Lấy Bot Streamer tương ứng với bàn và CỘNG GTLM VÀO TÀI KHOẢN BOT STREAMER
-            $botNameMap = [
-                1 => 'bot_baucua',
-                2 => 'bot_xocdia',
-                3 => 'bot_crash',
-                4 => 'bot_daga',
-                5 => 'bot_dragontiger',
-                6 => 'bot_cyber_racing',
-                7 => 'bot_plinko_royale',
-                8 => 'bot_slot_machine',
-                9 => 'bot_baccarat',
-                10 => 'bot_banharc',
-                11 => 'bot_battleroyale',
-                12 => 'bot_bingo',
-                13 => 'bot_bj',
-                14 => 'bot_bjo',
-                15 => 'bot_blackjack',
-                16 => 'bot_blackjack_multi',
-                17 => 'bot_caribbean',
-                18 => 'bot_coinflip',
-                19 => 'bot_community_lottery',
-                20 => 'bot_craps',
-                21 => 'bot_dice',
-                22 => 'bot_duangua',
-                23 => 'bot_fantan',
-                24 => 'bot_farm',
-                25 => 'bot_gacha_cards',
-                26 => 'bot_greedy_cave',
-                27 => 'bot_hilo',
-                28 => 'bot_holdem',
-                29 => 'bot_hopmu',
-                30 => 'bot_horserace',
-                31 => 'bot_horserace_pvp',
-                32 => 'bot_jojo_battle',
-                33 => 'bot_keno',
-                34 => 'bot_letitride',
-                35 => 'bot_limbo',
-                36 => 'bot_lottery',
-                37 => 'bot_mahjong',
-                38 => 'bot_megaspin',
-                39 => 'bot_mines',
-                40 => 'bot_minesweeper',
-                41 => 'bot_number',
-                42 => 'bot_paigow',
-                43 => 'bot_poker',
-                44 => 'bot_pontoon',
-                45 => 'bot_reddog',
-                46 => 'bot_roulette',
-                47 => 'bot_rps',
-                48 => 'bot_ruttham',
-                49 => 'bot_samloc',
-                50 => 'bot_scratch',
-                51 => 'bot_sicbo',
-                52 => 'bot_threecard',
-                53 => 'bot_tower',
-                54 => 'bot_tusac',
-                55 => 'bot_videopoker',
-                56 => 'bot_vietlott',
-                57 => 'bot_war',
-                58 => 'bot_yahtzee'
-            ];
-            $targetBotName = $botNameMap[$tId] ?? 'bot_baucua';
-            $botUser = getOrCreateBotStreamerUser($conn, $targetBotName);
+            $targetBotName = 'bot_' . $tId;
+            $botUser = getOrCreateBotStreamerUser($conn, $targetBotName, 50000000);
             $botId = $botUser['Iduser'];
 
             $stmtBot = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
@@ -494,68 +442,8 @@ switch ($action) {
             $stmt->close();
 
             // 2. Cộng GTLM cho Bot Streamer
-            $botNameMap = [
-                1 => 'bot_baucua',
-                2 => 'bot_xocdia',
-                3 => 'bot_crash',
-                4 => 'bot_daga',
-                5 => 'bot_dragontiger',
-                6 => 'bot_cyber_racing',
-                7 => 'bot_plinko_royale',
-                8 => 'bot_slot_machine',
-                9 => 'bot_baccarat',
-                10 => 'bot_banharc',
-                11 => 'bot_battleroyale',
-                12 => 'bot_bingo',
-                13 => 'bot_bj',
-                14 => 'bot_bjo',
-                15 => 'bot_blackjack',
-                16 => 'bot_blackjack_multi',
-                17 => 'bot_caribbean',
-                18 => 'bot_coinflip',
-                19 => 'bot_community_lottery',
-                20 => 'bot_craps',
-                21 => 'bot_dice',
-                22 => 'bot_duangua',
-                23 => 'bot_fantan',
-                24 => 'bot_farm',
-                25 => 'bot_gacha_cards',
-                26 => 'bot_greedy_cave',
-                27 => 'bot_hilo',
-                28 => 'bot_holdem',
-                29 => 'bot_hopmu',
-                30 => 'bot_horserace',
-                31 => 'bot_horserace_pvp',
-                32 => 'bot_jojo_battle',
-                33 => 'bot_keno',
-                34 => 'bot_letitride',
-                35 => 'bot_limbo',
-                36 => 'bot_lottery',
-                37 => 'bot_mahjong',
-                38 => 'bot_megaspin',
-                39 => 'bot_mines',
-                40 => 'bot_minesweeper',
-                41 => 'bot_number',
-                42 => 'bot_paigow',
-                43 => 'bot_poker',
-                44 => 'bot_pontoon',
-                45 => 'bot_reddog',
-                46 => 'bot_roulette',
-                47 => 'bot_rps',
-                48 => 'bot_ruttham',
-                49 => 'bot_samloc',
-                50 => 'bot_scratch',
-                51 => 'bot_sicbo',
-                52 => 'bot_threecard',
-                53 => 'bot_tower',
-                54 => 'bot_tusac',
-                55 => 'bot_videopoker',
-                56 => 'bot_vietlott',
-                57 => 'bot_war',
-                58 => 'bot_yahtzee'
-            ];
-            $targetBotName = $botNameMap[$tId] ?? 'bot_baucua';
-            $botUser = getOrCreateBotStreamerUser($conn, $targetBotName);
+            $targetBotName = 'bot_' . $tId;
+            $botUser = getOrCreateBotStreamerUser($conn, $targetBotName, 50000000);
             $botId = $botUser['Iduser'];
 
             $stmtBot = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
