@@ -364,6 +364,17 @@ const GameEffects = {
         setTimeout(() => this._shockwaveAt(cx, cy, 'shockwave-gold'), 200);
     },
 
+    floatingText: function (text, x, y, color) {
+        const txt = document.createElement('div');
+        txt.className = 'float-text';
+        txt.textContent = text;
+        const posX = x !== undefined ? x : window.innerWidth / 2;
+        const posY = y !== undefined ? y : window.innerHeight / 2;
+        txt.style.cssText = `left:${posX - 80}px;top:${posY - 40}px;color:${color || '#f1c40f'};`;
+        document.body.appendChild(txt);
+        setTimeout(() => txt.remove(), 1850);
+    },
+
     showWin: function (amount, x, y) {
         const cx = x || window.innerWidth / 2, cy = y || window.innerHeight / 2;
         this.flash('win');
