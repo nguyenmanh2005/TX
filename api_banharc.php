@@ -4,7 +4,7 @@ require_once 'db_connect.php';
 
 header('Content-Type: application/json');
 
-$userId = $_SESSION['Iduser'] ?? 0;
+$userId = $_SESSION['Iduser_temp_bot'] ?? $_SESSION['Iduser'] ?? 0;
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 

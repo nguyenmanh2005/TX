@@ -8,42 +8,13 @@ if (!isset($_SESSION['Iduser'])) { header("Location: ../login.php"); exit(); }
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bảo Trì Game | Bắn Cá Arcade Premium</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { margin: 0; padding: 0; background: #020617; color: #f8fafc; font-family: 'Outfit', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; flex-direction: column; text-align: center; }
-        .maintenance-box { background: rgba(15, 23, 42, 0.8); border: 2px solid #0ea5e9; padding: 50px; border-radius: 20px; box-shadow: 0 0 30px rgba(14, 165, 233, 0.3); max-width: 600px; }
-        .maintenance-icon { font-size: 80px; color: #ef4444; margin-bottom: 20px; animation: pulse 2s infinite; }
-        h1 { margin: 0 0 15px; font-size: 32px; color: #fbbf24; }
-        p { font-size: 18px; color: #cbd5e1; line-height: 1.6; }
-        .back-btn { display: inline-block; margin-top: 30px; padding: 12px 30px; background: #0ea5e9; color: white; text-decoration: none; border-radius: 30px; font-weight: 600; transition: all 0.3s ease; }
-        .back-btn:hover { background: #0284c7; transform: scale(1.05); }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-    </style>
-</head>
-<body>
-    <div class="maintenance-box">
-        <div class="maintenance-icon"><i class="fas fa-tools"></i></div>
-        <h1>ĐANG BẢO TRÌ</h1>
-        <p>Game <b>Bắn Cá Arcade Premium</b> hiện đang được bảo trì để nâng cấp hệ thống và khắc phục lỗi.<br>Xin vui lòng quay lại sau!</p>
-        <a href="javascript:history.back()" class="back-btn">Quay lại</a>
-    </div>
-</body>
-</html>
-<?php if(false): ?>
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bắn Cá Arcade Premium | HTML5 Canvas</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --bg: #020617;
-            --panel: rgba(15, 23, 42, 0.8);
+            --panel: rgba(15, 23, 42, 0.85);
             --primary: #0ea5e9;
             --secondary: #22d3ee;
             --gold: #fbbf24;
@@ -57,7 +28,7 @@ if (!isset($_SESSION['Iduser'])) { header("Location: ../login.php"); exit(); }
             background: var(--bg);
             color: var(--text);
             font-family: 'Outfit', sans-serif;
-            overflow: hidden; /* Không cho scroll trang */
+            overflow: hidden;
             display: flex;
             flex-direction: column;
             height: 100vh;
@@ -67,7 +38,7 @@ if (!isset($_SESSION['Iduser'])) { header("Location: ../login.php"); exit(); }
         #ui-layer {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; /* Cho phép click xuyên qua vào Canvas */
+            pointer-events: none;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -87,13 +58,13 @@ if (!isset($_SESSION['Iduser'])) { header("Location: ../login.php"); exit(); }
             background: var(--panel);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.1);
-            padding: 15px 25px;
+            padding: 12px 22px;
             border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
         .stat-label { font-size: 10px; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; }
-        .stat-value { font-size: 20px; font-weight: 800; color: var(--gold); }
+        .stat-value { font-size: 20px; font-weight: 800; color: var(--gold); font-family: 'Orbitron', sans-serif; }
 
         .bottom-bar {
             display: flex;
@@ -170,6 +141,7 @@ if (!isset($_SESSION['Iduser'])) { header("Location: ../login.php"); exit(); }
             color: var(--gold);
             font-weight: 900;
             font-size: 24px;
+            font-family: 'Orbitron', sans-serif;
             pointer-events: none;
             animation: floatUp 1s ease-out forwards;
             text-shadow: 0 0 10px rgba(0,0,0,1);
@@ -247,9 +219,7 @@ if (!isset($_SESSION['Iduser'])) { header("Location: ../login.php"); exit(); }
             }, 'json');
         }
 
-        // Triggered by game when a fish is caught
         function onFishCaught(fishType, reward, fishName) {
-            // Hiển thị text bay lên
             loadHistory();
             updateBalance();
         }
@@ -262,5 +232,3 @@ if (!isset($_SESSION['Iduser'])) { header("Location: ../login.php"); exit(); }
     </script>
 </body>
 </html>
-< ? p h p   e n d i f ;   ? >  
- 

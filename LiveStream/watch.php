@@ -34,7 +34,7 @@ $gameFilesMap = [
     7 => ['file' => 'live_7.php', 'real_game' => '../games/plinko.php', 'name' => 'Plinko Royale', 'icon' => '🎱'],
     8 => ['file' => 'live_8.php', 'real_game' => '../games/slot.php', 'name' => 'Slot Machine Premium', 'icon' => '🎰'],
     9 => ['file' => 'live_9.php', 'real_game' => '../games/baccarat.php', 'name' => 'Baccarat', 'icon' => '🎪'],
-    10 => ['file' => 'live_10.php', 'real_game' => '../games/banharc.php', 'name' => 'Banharc', 'icon' => '🕹️'],
+    10 => ['file' => 'live_10.php', 'real_game' => '../games/banharc.php', 'name' => 'Bắn Cá Arcade', 'icon' => '🐟'],
     11 => ['file' => 'live_11.php', 'real_game' => '../games/battleroyale.php', 'name' => 'Battleroyale', 'icon' => '🎮'],
     12 => ['file' => 'live_12.php', 'real_game' => '../games/bingo.php', 'name' => 'Bingo', 'icon' => '🕹️'],
     13 => ['file' => 'live_13.php', 'real_game' => '../games/bj.php', 'name' => 'Bj', 'icon' => '🎮'],

@@ -238,7 +238,7 @@ if (isset($_GET['action'])) {
                     <span>NĂNG LƯỢNG KHẢ DỤNG</span>
                     <div style="display:flex; align-items:baseline; justify-content:center; gap:5px;">
                         <b id="userMoney"><?= number_format($money, 0, ',', '.') ?></b>
-                        <small style="opacity:0.5; font-weight:900; font-size:0.6rem;">UNIT</small>
+                        <small style="opacity:0.5; font-weight:900; font-size:0.6rem;">GTLM</small>
                     </div>
                 </div>
 
@@ -379,7 +379,7 @@ if (isset($_GET['action'])) {
                             updateStream(res.state);
                             if (res.win) {
                                 if (window.GameEffects) window.GameEffects.showWin(parseInt(res.rewardAmount.replace(/\./g,'')));
-                                Swal.fire({ title: 'ĐỒNG BỘ THÀNH CÔNG!', html: `Năng lượng thu hồi: <b style="color:#00f2fe">${res.rewardAmount} UNIT</b>`, icon: 'success', background: '#1a1a1a', color: '#fff', timer: 2000, showConfirmButton: false });
+                                Swal.fire({ title: 'ĐỒNG BỘ THÀNH CÔNG!', html: `Năng lượng thu hồi: <b style="color:#00f2fe">${res.rewardAmount} GTLM</b>`, icon: 'success', background: '#1a1a1a', color: '#fff', timer: 2000, showConfirmButton: false });
                             } else {
                                 if (window.GameEffects) window.GameEffects.showLoss(0);
                             }

@@ -78,9 +78,113 @@ function khoiTaoGame($cuoc)
 }
 
 // Xử lý action
-$action = $_POST['action'] ?? '';
+$action = $_POST['action'] ?? $_GET['action'] ?? '';
 $cuoc = (int) ($_POST['cuoc'] ?? 0);
 $ketQuaClass = "";
+
+// ── AJAX JSON ENDPOINT cho Bot Streamer ──
+if (!empty($_SERVER['HTTP_X_BOT']) || isset($_GET['bot_action'])) {
+    header('Content-Type: application/json; charset=utf-8');
+    $botAction = $_GET['bot_action'] ?? $_POST['action'] ?? '';
+    $botCuoc   = (int)($_POST['cuoc'] ?? 0);
+    require_once '../db_connect.php';
+
+    // Lấy số dư thực từ DB
+    $stmtM = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
+    $stmtM->bind_param("i", $userId);
+    $stmtM->execute();
+    $stmtM->bind_result($moneyNow);
+    $stmtM->fetch();
+    $stmtM->close();
+
+    if ($botAction === 'get_state') {
+        $playerC = $_SESSION['player_cards'] ?? [];
+        $dealerC = $_SESSION['dealer_cards'] ?? [];
+        $gOver   = $_SESSION['game_over'] ?? true;
+        echo json_encode([
+            'success'      => true,
+            'game_over'    => $gOver,
+            'player_score' => tinhDiem($playerC),
+            'dealer_score' => tinhDiem($dealerC),
+            'ketqua'       => $_SESSION['ketqua'] ?? '',
+            'money'        => $moneyNow,
+        ]);
+        exit;
+    }
+
+    if ($botAction === 'start') {
+        if ($botCuoc <= 0 || $botCuoc > $moneyNow) {
+            $botCuoc = max(10000, min(50000, (int)($moneyNow * 0.01)));
+        }
+        khoiTaoGame($botCuoc);
+        $playerC = $_SESSION['player_cards'];
+        echo json_encode([
+            'success'      => true,
+            'player_score' => tinhDiem($playerC),
+            'cuoc'         => $botCuoc,
+        ]);
+        exit;
+    }
+
+    if ($botAction === 'hit' && !($_SESSION['game_over'] ?? true)) {
+        $_SESSION['player_cards'][] = rutBai();
+        $playerTotal2 = tinhDiem($_SESSION['player_cards']);
+        $bust = $playerTotal2 > 21;
+        if ($bust) {
+            $cuocSes = $_SESSION['cuoc'];
+            $newMoney = $moneyNow - $cuocSes;
+            $stmt2 = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
+            $stmt2->bind_param("ii", $newMoney, $userId);
+            $stmt2->execute(); $stmt2->close();
+            $dealerT = tinhDiem($_SESSION['dealer_cards'] ?? []);
+            $stmtH = $conn->prepare("INSERT INTO blackjack_history (Iduser, Result, Bet, PlayerScore, DealerScore, MoneyBefore, MoneyAfter, PlayedAt) VALUES (?, 'Thua', ?, ?, ?, ?, ?, NOW())");
+            $stmtH->bind_param("iiiiii", $userId, $cuocSes, $playerTotal2, $dealerT, $moneyNow, $newMoney);
+            $stmtH->execute(); $stmtH->close();
+            $_SESSION['game_over'] = true;
+            echo json_encode(['success' => true, 'player_score' => $playerTotal2, 'bust' => true, 'game_over' => true, 'money' => $newMoney]);
+        } else {
+            echo json_encode(['success' => true, 'player_score' => $playerTotal2, 'bust' => false, 'game_over' => false]);
+        }
+        exit;
+    }
+
+    if ($botAction === 'stand' && !($_SESSION['game_over'] ?? true)) {
+        $dealerCards2 = $_SESSION['dealer_cards'] ?? [];
+        $playerCards2 = $_SESSION['player_cards'] ?? [];
+        $dealerTotal2 = tinhDiem($dealerCards2);
+        $playerTotal2 = tinhDiem($playerCards2);
+        while ($dealerTotal2 < 17) {
+            $dealerCards2[] = rutBai();
+            $dealerTotal2 = tinhDiem($dealerCards2);
+        }
+        $_SESSION['dealer_cards'] = $dealerCards2;
+        $_SESSION['game_over'] = true;
+        $cuocSes = $_SESSION['cuoc'];
+        if ($dealerTotal2 > 21 || $playerTotal2 > $dealerTotal2) {
+            $newMoney = $moneyNow + $cuocSes;
+            $result = 'Thắng';
+        } elseif ($playerTotal2 == $dealerTotal2) {
+            $newMoney = $moneyNow;
+            $result = 'Hòa';
+        } else {
+            $newMoney = $moneyNow - $cuocSes;
+            $result = 'Thua';
+        }
+        $stmt2 = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
+        $stmt2->bind_param("ii", $newMoney, $userId);
+        $stmt2->execute(); $stmt2->close();
+        $stmtH = $conn->prepare("INSERT INTO blackjack_history (Iduser, Result, Bet, PlayerScore, DealerScore, MoneyBefore, MoneyAfter, PlayedAt) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
+        $stmtH->bind_param("isiiiii", $userId, $result, $cuocSes, $playerTotal2, $dealerTotal2, $moneyNow, $newMoney);
+        $stmtH->execute(); $stmtH->close();
+        echo json_encode(['success' => true, 'result' => $result, 'player_score' => $playerTotal2, 'dealer_score' => $dealerTotal2, 'game_over' => true, 'money' => $newMoney]);
+        exit;
+    }
+
+    echo json_encode(['success' => false, 'message' => 'Không hiểu lệnh']);
+    exit;
+}
+
+
 
 if ($action === 'start') {
     if ($cuoc <= 0 || $cuoc > $soDu) {
@@ -765,7 +869,7 @@ if (typeof jQuery === "undefined") document.write('<script src="https://code.jqu
 if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
-<script src="../assets/js/bots/bot_bj.js?v=<?= time() ?>"></script>
+<script src="bots/bot_14.js?v=<?= time() ?>"></script>
 
 </body>
 

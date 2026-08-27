@@ -1,177 +1,207 @@
-﻿if (typeof BotVirtualCursor !== "undefined") {
-        BotVirtualCursor.init("Bot Streamer");
-        window.botActionLocked = false;
-        
-        setInterval(() => {
-            if (window.botActionLocked) return;
+/**
+ * bot_16.js — Bot Blackjack Multiplayer Bàn 16 v2
+ *
+ * Fix:
+ *  - Không click nút "👁️ XEM" nữa → chỉ click "VÀO BÀN"
+ *  - Basic Strategy casino chuẩn (Hard + Soft)
+ *  - Double Down đúng điều kiện (không random nữa)
+ *  - Tạo phòng với tên cố định, cược thấp nhất
+ *  - Timing tự nhiên hơn (suy nghĩ 1.5-3s trước mỗi action)
+ */
 
-            // --- XỬ LÝ MỌI THÔNG BÁO (SWEETALERT) ---
-            const swalConfirm = document.querySelector('.swal2-confirm');
-            if (swalConfirm && swalConfirm.offsetParent !== null) {
-                // Nếu là popup Tạo Phòng thì điền thông tin trước
-                const swalInput1 = document.getElementById('swal-input1');
-                if (swalInput1) {
-                    if (!swalInput1.value) swalInput1.value = "Phòng Live " + Math.floor(Math.random()*1000);
-                    
-                    const swalInput2 = document.getElementById('swal-input2');
-                    if (swalInput2) {
-                        const opts2 = Array.from(swalInput2.options);
-                        swalInput2.value = opts2[Math.floor(Math.random() * opts2.length)].value;
-                    }
-                    const swalInput3 = document.getElementById('swal-input3');
-                    if (swalInput3) {
-                        const opts3 = Array.from(swalInput3.options);
-                        swalInput3.value = opts3[Math.floor(Math.random() * opts3.length)].value;
-                    }
+if (typeof BotVirtualCursor !== "undefined") {
+    BotVirtualCursor.init("Thần Bài Multiplayer ♠️👑");
+    window.botActionLocked = false;
+
+    // ─── BASIC STRATEGY ──────────────────────────────────────────
+    const BJStrategy = {
+        calcScore(cards) {
+            let score = 0, aces = 0;
+            for (const c of cards) {
+                const v = c.value;
+                if (['J', 'Q', 'K'].includes(v)) score += 10;
+                else if (v === 'A') { score += 11; aces++; }
+                else score += parseInt(v);
+            }
+            while (score > 21 && aces > 0) { score -= 10; aces--; }
+            return { score, isSoft: aces > 0 };
+        },
+
+        decide(pCards, dCards) {
+            if (!pCards || pCards.length < 2) return 'stand';
+            const { score, isSoft } = this.calcScore(pCards);
+            const dScore = dCards && dCards.length > 0 ? this.calcScore([dCards[0]]).score : 7;
+            const canDouble = pCards.length === 2;
+
+            // ── SOFT HAND ──
+            if (isSoft) {
+                if (score >= 19) return 'stand';
+                if (score === 18) return dScore <= 8 ? 'stand' : 'hit';
+                // Soft double
+                if (canDouble) {
+                    if (score === 17 && dScore >= 3 && dScore <= 6) return 'double';
+                    if (score === 16 && dScore >= 4 && dScore <= 6) return 'double';
+                    if (score === 15 && dScore >= 4 && dScore <= 6) return 'double';
+                    if (score === 13 && dScore >= 5 && dScore <= 6) return 'double';
+                    if (score === 14 && dScore >= 5 && dScore <= 6) return 'double';
                 }
-
-                window.botActionLocked = true;
-                BotVirtualCursor.moveToElement($(swalConfirm), 1, 0, () => {
-                    setTimeout(() => { 
-                        swalConfirm.click(); 
-                        setTimeout(() => { window.botActionLocked = false; }, 2000); 
-                    }, 500);
-                });
-                return;
+                return 'hit'; // Soft ≤17
             }
 
-            // --- LOGIC SẢNH (LOBBY) ---
-            const lobbyRooms = document.getElementById('lobby-rooms');
-            if (lobbyRooms && lobbyRooms.offsetParent !== null) {
-                const rooms = Array.from(lobbyRooms.children).filter(div => div.innerText.includes('👥'));
-                const availableRooms = rooms.filter(div => {
-                    const match = div.innerText.match(/👥\s*(\d+)\/5/);
-                    return match && parseInt(match[1]) < 5;
-                });
+            // ── HARD HAND ──
+            if (score >= 17) return 'stand';
+            if (score <= 8)  return 'hit';
 
-                if (availableRooms.length > 0) {
-                    // Chọn ngẫu nhiên 1 phòng trống để vào
-                    const targetRoom = availableRooms[Math.floor(Math.random() * availableRooms.length)];
-                    const btnXem = Array.from(targetRoom.querySelectorAll('button')).find(b => b.innerText.includes('XEM'));
-                    if (btnXem) {
-                        window.botActionLocked = true; // Khóa luôn vì sẽ load trang khác
-                        BotVirtualCursor.moveToElement($(btnXem), 1, 0, () => {
-                            setTimeout(() => { btnXem.click(); }, 500);
-                        });
-                        return;
-                    }
-                } else {
-                    // Không có phòng trống -> Tạo phòng mới
-                    const btnTaoPhong = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('+ TẠO PHÒNG MỚI'));
-                    if (btnTaoPhong) {
-                        window.botActionLocked = true;
-                        BotVirtualCursor.moveToElement($(btnTaoPhong), 1, 0, () => {
-                            setTimeout(() => { btnTaoPhong.click(); window.botActionLocked = false; }, 500);
-                        });
-                        return;
-                    }
-                }
-                return; // Đã ở sảnh thì kết thúc vòng lặp, không bấm nút lung tung
+            // Hard double
+            if (canDouble) {
+                if (score === 11) return 'double';
+                if (score === 10 && dScore <= 9) return 'double';
+                if (score === 9  && dScore >= 3 && dScore <= 6) return 'double';
             }
 
-            // --- LOGIC TRONG BÀN CHƠI ---
-            // Nếu có nút Ngồi thì ưu tiên Ngồi (giới hạn ngẫu nhiên 1 ghế trống)
-            const ngoiBtns = Array.from(document.querySelectorAll('.player-cards button')).filter(b => b.innerText.includes('Ngồi'));
-            if (ngoiBtns.length > 0) {
-                const btn = ngoiBtns[Math.floor(Math.random() * ngoiBtns.length)];
-                window.botActionLocked = true;
-                BotVirtualCursor.moveToElement($(btn), 1, 0, () => {
-                    setTimeout(() => { btn.click(); setTimeout(() => { window.botActionLocked = false; }, 2000); }, 500);
-                });
-                return;
-            }
+            if (score <= 11) return 'hit';
+            if (score === 12) return (dScore >= 4 && dScore <= 6) ? 'stand' : 'hit';
+            if (score >= 13 && score <= 16) return dScore <= 6 ? 'stand' : 'hit';
 
-            // Nếu đang trong game, kiểm tra các nút hành động
-            const btnBet = document.getElementById('btn-bet');
-            const btnHit = document.getElementById('btn-hit');
-            const btnStand = document.getElementById('btn-stand');
-            const btnDouble = document.getElementById('btn-double');
-            
-            let targetBtn = null;
-            
-            if (btnBet && btnBet.style.display !== 'none' && btnBet.offsetParent !== null) {
-                // Tự động nhập tiền cược ngẫu nhiên rồi bấm
-                const betInput = document.getElementById('bet-amount');
-                if (betInput) {
-                    const min = parseInt(betInput.min) || 10000;
-                    const max = parseInt(betInput.max) || 5000000;
-                    const chips = [min, min*2, min*5, min*10].filter(c => c <= max);
-                    betInput.value = chips[Math.floor(Math.random() * chips.length)] || min;
-                }
-                targetBtn = btnBet;
-            } else if (btnHit && btnHit.style.display !== 'none' && btnHit.offsetParent !== null) {
-                // Tới lượt bot, tính toán logic Blackjack
-                const calcScore = (cards) => {
-                    let score = 0, aces = 0;
-                    for (let c of cards) {
-                        if (['J', 'Q', 'K'].includes(c.value)) score += 10;
-                        else if (c.value === 'A') { score += 11; aces++; }
-                        else score += parseInt(c.value);
-                    }
-                    while (score > 21 && aces > 0) { score -= 10; aces--; }
-                    return { score, isSoft: aces > 0 && score + 10 <= 21 }; // Soft nếu vẫn còn Ace được tính là 11
-                };
+            return 'stand';
+        }
+    };
 
-                let mySeat = Array.from(document.querySelectorAll('.seat')).find(s => s.dataset.userId == window.currentUserId);
-                let pCards = [], dCards = [];
-                if (mySeat) {
-                    try { pCards = JSON.parse(mySeat.querySelector('.player-cards').dataset.cardString || '[]'); } catch(e){}
-                }
-                const dContainer = document.getElementById('dealer-cards');
-                if (dContainer) {
-                    try { dCards = JSON.parse(dContainer.dataset.cardString || '[]'); } catch(e){}
-                }
-
-                if (pCards.length >= 2 && dCards.length >= 1) {
-                    const pState = calcScore(pCards);
-                    const dScore = calcScore([dCards[0]]).score;
-                    const score = pState.score;
-                    
-                    let action = 'stand';
-                    if (pState.isSoft) {
-                        if (score <= 17) action = 'hit';
-                        else if (score == 18) {
-                            if (dScore >= 9) action = 'hit';
-                            else action = 'stand';
-                        } else {
-                            action = 'stand';
-                        }
-                    } else {
-                        if (score <= 11) action = 'hit';
-                        else if (score == 12) {
-                            action = (dScore >= 4 && dScore <= 6) ? 'stand' : 'hit';
-                        } else if (score >= 13 && score <= 16) {
-                            action = (dScore >= 2 && dScore <= 6) ? 'stand' : 'hit';
-                        } else {
-                            action = 'stand';
-                        }
-                    }
-                    
-                    // Xử lý Double Down 20% liều
-                    if (action === 'hit' && pCards.length === 2 && score >= 9 && score <= 11 && btnDouble && btnDouble.style.display !== 'none') {
-                        if (Math.random() < 0.2 || (score === 11 && dScore !== 11) || (score === 10 && dScore < 10)) {
-                            action = 'double';
-                        }
-                    }
-                    
-                    if (action === 'double') targetBtn = btnDouble;
-                    else if (action === 'hit') targetBtn = btnHit;
-                    else targetBtn = btnStand;
-                } else {
-                    targetBtn = btnStand; // Fallback
-                }
-            }
-            
-            if (targetBtn) {
-                window.botActionLocked = true;
-                BotVirtualCursor.moveToElement($(targetBtn), 1, 0, () => {
-                    setTimeout(() => { 
-                        BotVirtualCursor.simulateClick(() => {
-                            try { targetBtn.click(); } catch(e){}
-                            setTimeout(() => { window.botActionLocked = false; }, 1000);
-                        });
-                    }, 500);
-                });
-            }
-        }, 3000 + Math.random() * 2000);
+    // ─── CLICK AN TOÀN ───────────────────────────────────────────
+    function botClick(btn, delay, after) {
+        if (!btn) return;
+        window.botActionLocked = true;
+        const thinkTime = (delay || 800) + Math.random() * 1200;
+        setTimeout(() => {
+            BotVirtualCursor.moveToElement($(btn), 0.8, 0, () => {
+                setTimeout(() => {
+                    BotVirtualCursor.simulateClick(() => {
+                        try { btn.click(); } catch(e) {}
+                        setTimeout(() => {
+                            window.botActionLocked = false;
+                            after && after();
+                        }, after ? 500 : 1500);
+                    });
+                }, 400);
+            });
+        }, thinkTime);
     }
+
+    // ─── MAIN LOOP ────────────────────────────────────────────────
+    setInterval(() => {
+        if (window.botActionLocked) return;
+
+        // ── 1. XỬ LÝ SWEETALERT (TẠO PHÒNG / THÔNG BÁO) ──
+        const swalConfirm = document.querySelector('.swal2-confirm');
+        if (swalConfirm && swalConfirm.offsetParent !== null) {
+            // Điền form tạo phòng nếu có
+            const inp1 = document.getElementById('swal-input1');
+            if (inp1 && !inp1.value) {
+                inp1.value = 'Phòng Bot Live ' + Math.floor(Math.random() * 100);
+            }
+            // Chọn cược tối thiểu (option đầu tiên = 10K)
+            const inp2 = document.getElementById('swal-input2');
+            if (inp2) inp2.value = inp2.options[0]?.value || '10000';
+            // Thêm 2 bot vào phòng cho vui
+            const inp3 = document.getElementById('swal-input3');
+            if (inp3) inp3.value = '2';
+
+            botClick(swalConfirm, 500);
+            return;
+        }
+
+        // ── 2. SẢNH LOBBY ──
+        const lobbyRooms = document.getElementById('lobby-rooms');
+        if (lobbyRooms && lobbyRooms.offsetParent !== null) {
+            const rooms = Array.from(lobbyRooms.children).filter(div => div.innerText.includes('👥'));
+
+            // Tìm phòng có chỗ trống và đang chờ (không đang chơi)
+            const availableRooms = rooms.filter(div => {
+                const matchCount = div.innerText.match(/👥\s*(\d+)\/5/);
+                const isWaiting  = div.innerText.includes('Đang Chờ');
+                return matchCount && parseInt(matchCount[1]) < 5 && isWaiting;
+            });
+
+            if (availableRooms.length > 0) {
+                // VÀO BÀN — không click XEM
+                const targetRoom = availableRooms[Math.floor(Math.random() * availableRooms.length)];
+                // Tìm nút VÀO BÀN (nền xanh #3b82f6), bỏ qua nút XEM
+                const btnVaoBan = Array.from(targetRoom.querySelectorAll('button'))
+                    .find(b => b.innerText.trim().includes('VÀO BÀN'));
+                if (btnVaoBan) {
+                    window.botActionLocked = true; // Khoá vì sắp load trang khác
+                    BotVirtualCursor.moveToElement($(btnVaoBan), 0.8, 0, () => {
+                        setTimeout(() => { btnVaoBan.click(); }, 600);
+                    });
+                    return;
+                }
+            } else {
+                // Không có phòng phù hợp → tạo phòng mới
+                const btnTaoPhong = Array.from(document.querySelectorAll('button'))
+                    .find(b => b.innerText.includes('TẠO PHÒNG MỚI'));
+                if (btnTaoPhong) {
+                    botClick(btnTaoPhong, 1000);
+                }
+            }
+            return; // Ở sảnh → không làm gì thêm
+        }
+
+        // ── 3. TRONG BÀN CHƠI ──
+
+        // Nút Ngồi vào ghế trống
+        const ngoiBtns = Array.from(document.querySelectorAll('.player-cards button, .seat button'))
+            .filter(b => b.innerText.includes('Ngồi'));
+        if (ngoiBtns.length > 0) {
+            const btn = ngoiBtns[Math.floor(Math.random() * ngoiBtns.length)];
+            botClick(btn, 800, null);
+            return;
+        }
+
+        const btnBet    = document.getElementById('btn-bet');
+        const btnHit    = document.getElementById('btn-hit');
+        const btnStand  = document.getElementById('btn-stand');
+        const btnDouble = document.getElementById('btn-double');
+
+        const isVisible = el => el && el.style.display !== 'none' && el.offsetParent !== null;
+
+        // ── ĐẶT CƯỢC ──
+        if (isVisible(btnBet)) {
+            const betInput = document.getElementById('bet-amount');
+            if (betInput) {
+                // Đặt cược vừa phải: 50K mặc định
+                const BET_LEVELS = [10000, 50000, 100000, 200000];
+                betInput.value = BET_LEVELS[Math.floor(Math.random() * 2) + 1]; // 50K hoặc 100K
+            }
+            botClick(btnBet, 1500);
+            return;
+        }
+
+        // ── HIT / STAND / DOUBLE ──
+        if (isVisible(btnHit)) {
+            // Đọc bài của bot
+            let pCards = [], dCards = [];
+            const mySeat = Array.from(document.querySelectorAll('.seat'))
+                .find(s => s.dataset.userId == window.currentUserId);
+            if (mySeat) {
+                try { pCards = JSON.parse(mySeat.querySelector('.player-cards')?.dataset.cardString || '[]'); } catch(e) {}
+            }
+            const dContainer = document.getElementById('dealer-cards');
+            if (dContainer) {
+                try { dCards = JSON.parse(dContainer.dataset.cardString || '[]'); } catch(e) {}
+            }
+
+            const action = BJStrategy.decide(pCards, dCards);
+
+            let targetBtn = btnStand;
+            if (action === 'double' && isVisible(btnDouble)) {
+                targetBtn = btnDouble;
+            } else if (action === 'hit') {
+                targetBtn = btnHit;
+            }
+
+            botClick(targetBtn, 1500);
+            return;
+        }
+
+    }, 1000); // Poll mỗi 1s, action được delay ngẫu nhiên bên trong botClick
+}

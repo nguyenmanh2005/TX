@@ -201,7 +201,7 @@ if (typeof jQuery === "undefined") document.write('<script src="https://code.jqu
 if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
-<script src="../assets/js/bots/bot_bj.js?v=<?= time() ?>"></script>
+<script src="bots/bot_15.js?v=<?= time() ?>"></script>
 
 </body>
 

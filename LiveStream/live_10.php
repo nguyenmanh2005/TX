@@ -1,65 +1,43 @@
-﻿<?php
+<?php
 session_start();
 
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
+require_once '../db_connect.php';
+
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_10', 50000000);
 $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
+$userId = $botUserId;
 
-require_once '../db_connect.php';
+if (isset($_GET['action']) && $_GET['action'] === 'get_balance') {
+    header('Content-Type: application/json');
+    $stmtB = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
+    $stmtB->bind_param("i", $userId);
+    $stmtB->execute();
+    $resB = $stmtB->get_result()->fetch_assoc();
+    $stmtB->close();
+    echo json_encode(['success' => true, 'money' => number_format($resB['Money'] ?? 0, 0, ',', '.')]);
+    exit;
+}
 
+$stmt = $conn->prepare("SELECT * FROM users WHERE Iduser = ?");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$user = $stmt->get_result()->fetch_assoc();
 ?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bảo Trì Game | Bắn Cá Arcade Premium</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { margin: 0; padding: 0; background: #020617; color: #f8fafc; font-family: 'Outfit', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; flex-direction: column; text-align: center; }
-        .maintenance-box { background: rgba(15, 23, 42, 0.8); border: 2px solid #0ea5e9; padding: 50px; border-radius: 20px; box-shadow: 0 0 30px rgba(14, 165, 233, 0.3); max-width: 600px; }
-        .maintenance-icon { font-size: 80px; color: #ef4444; margin-bottom: 20px; animation: pulse 2s infinite; }
-        h1 { margin: 0 0 15px; font-size: 32px; color: #fbbf24; }
-        p { font-size: 18px; color: #cbd5e1; line-height: 1.6; }
-        .back-btn { display: inline-block; margin-top: 30px; padding: 12px 30px; background: #0ea5e9; color: white; text-decoration: none; border-radius: 30px; font-weight: 600; transition: all 0.3s ease; }
-        .back-btn:hover { background: #0284c7; transform: scale(1.05); }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-    </style>
-</head>
-<body>
-    <div class="maintenance-box">
-        <div class="maintenance-icon"><i class="fas fa-tools"></i></div>
-        <h1>ĐANG BẢO TRÌ</h1>
-        <p>Game <b>Bắn Cá Arcade Premium</b> hiện đang được bảo trì để nâng cấp hệ thống và khắc phục lỗi.<br>Xin vui lòng quay lại sau!</p>
-        <a href="javascript:history.back()" class="back-btn">Quay lại</a>
-    </div>
-
-<!-- AUTO-GENERATED BOT SCRIPT -->
-<script>
-if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
-if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
-</script>
-<script src="../assets/js/bot_virtual_cursor.js"></script>
-<script src="bots/bot_10.js"></script>
-
-</body>
-</html>
-<?php if(false): ?>
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bắn Cá Arcade Premium | HTML5 Canvas</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <title>Bắn Cá Arcade LiveStream | Bàn 10</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --bg: #020617;
-            --panel: rgba(15, 23, 42, 0.8);
+            --panel: rgba(15, 23, 42, 0.85);
             --primary: #0ea5e9;
             --secondary: #22d3ee;
             --gold: #fbbf24;
@@ -73,21 +51,30 @@ if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.clou
             background: var(--bg);
             color: var(--text);
             font-family: 'Outfit', sans-serif;
-            overflow: hidden; /* Không cho scroll trang */
+            overflow: hidden;
             display: flex;
             flex-direction: column;
             height: 100vh;
+            user-select: none;
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle at 50% 50%, #0c4a6e 0%, #020617 100%);
+            cursor: crosshair;
         }
 
         /* 🖼️ Game UI Overlays */
         #ui-layer {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; /* Cho phép click xuyên qua vào Canvas */
+            pointer-events: none;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 20px;
+            padding: 15px 25px;
             box-sizing: border-box;
         }
 
@@ -96,104 +83,109 @@ if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.clou
         .top-bar {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            align-items: center;
         }
 
         .stat-box {
             background: var(--panel);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.1);
-            padding: 15px 25px;
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(14, 165, 233, 0.3);
+            padding: 8px 20px;
             border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
-        .stat-label { font-size: 10px; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; }
-        .stat-value { font-size: 20px; font-weight: 800; color: var(--gold); }
+        .stat-label { font-size: 11px; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; font-weight: 700; }
+        .stat-value { font-size: 20px; font-weight: 900; color: var(--gold); font-family: 'Orbitron', sans-serif; }
 
         .bottom-bar {
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 20px;
-            padding-bottom: 20px;
+            padding-bottom: 10px;
         }
 
         /* 🔫 Cannon & Bullet Select */
         .cannon-controls {
             display: flex;
             background: var(--panel);
-            padding: 10px;
+            backdrop-filter: blur(12px);
+            padding: 6px 12px;
             border-radius: 25px;
-            border: 1px solid rgba(255,255,255,0.1);
-            gap: 10px;
+            border: 1px solid rgba(14, 165, 233, 0.3);
+            gap: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
         }
 
         .bullet-btn {
-            padding: 10px 20px;
-            border-radius: 15px;
+            padding: 8px 16px;
+            border-radius: 16px;
             border: 1px solid transparent;
             background: rgba(255,255,255,0.05);
             color: #94a3b8;
             cursor: pointer;
-            transition: 0.3s;
-            font-weight: 700;
+            transition: 0.25s;
+            font-weight: 800;
+            font-size: 13px;
         }
 
         .bullet-btn.active {
-            background: var(--primary);
+            background: linear-gradient(135deg, #0ea5e9, #0284c7);
             color: white;
-            box-shadow: 0 0 20px rgba(14, 165, 233, 0.4);
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.6);
+            border-color: #38bdf8;
         }
 
-        .bullet-btn:hover:not(.active) { background: rgba(255,255,255,0.1); }
+        .bullet-btn:hover:not(.active) { background: rgba(255,255,255,0.1); color: white; }
 
         /* 📜 History Side */
         #history-box {
             position: absolute;
             right: 20px;
-            top: 100px;
+            top: 70px;
             width: 200px;
-            max-height: 300px;
-            background: rgba(15, 23, 42, 0.5);
-            border-radius: 20px;
-            padding: 15px;
+            max-height: 240px;
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(8px);
+            border-radius: 16px;
+            padding: 12px;
             font-size: 11px;
             overflow-y: hidden;
-            border: 1px solid rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
         }
 
         .history-item {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
-            padding-bottom: 5px;
-            border-bottom: 1px solid rgba(255,255,255,0.03);
-            animation: fadeIn 0.5s ease;
+            margin-bottom: 6px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            animation: fadeIn 0.4s ease;
         }
 
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        canvas {
-            display: block;
-            background: radial-gradient(circle at 50% 50%, #0c4a6e 0%, #020617 100%);
-            cursor: crosshair;
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
         /* 💥 Floating Text for Score */
         .score-popup {
             position: absolute;
             color: var(--gold);
             font-weight: 900;
-            font-size: 24px;
+            font-size: 22px;
+            font-family: 'Orbitron', sans-serif;
             pointer-events: none;
             animation: floatUp 1s ease-out forwards;
-            text-shadow: 0 0 10px rgba(0,0,0,1);
+            text-shadow: 0 0 12px rgba(0,0,0,1), 0 0 8px rgba(251,191,36,0.6);
+            z-index: 100;
         }
 
         @keyframes floatUp {
-            from { transform: translateY(0); opacity: 1; }
-            to { transform: translateY(-100px); opacity: 0; }
+            from { transform: translateY(0) scale(0.8); opacity: 1; }
+            to { transform: translateY(-80px) scale(1.2); opacity: 0; }
         }
     </style>
 </head>
@@ -204,16 +196,19 @@ if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.clou
     <div id="ui-layer">
         <div class="top-bar">
             <div class="stat-box">
-                <div class="stat-label">Số dư GTLM</div>
-                <div class="stat-value" id="userBalance">--</div>
+                <span style="font-size: 20px;">🐟</span>
+                <div>
+                    <div class="stat-label">NGÂN KHỐ STREAMER</div>
+                    <div class="stat-value" id="userBalance"><?= number_format($user['Money'] ?? 0, 0, ',', '.') ?></div>
+                </div>
             </div>
-            <a href="../index.php" class="stat-box" style="text-decoration: none; color: white; display: flex; align-items: center; gap: 10px;">
-                <i class="fa fa-times"></i> THOÁT
-            </a>
+            <div class="stat-box" style="border-color: rgba(251,191,36,0.4);">
+                <span style="color: #fbbf24; font-weight: 800; font-size: 13px;">🔱 BẮN CÁ ARCADE 3D</span>
+            </div>
         </div>
 
         <div id="history-box">
-            <div class="stat-label" style="margin-bottom: 10px;">LỊCH SỬ HÚP</div>
+            <div class="stat-label" style="margin-bottom: 8px; color: #38bdf8;">🏆 LỊCH SỬ HÚP CÁ</div>
             <div id="historyList"></div>
         </div>
 
@@ -228,7 +223,8 @@ if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.clou
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="banharc.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="../games/banharc.js"></script>
     <script>
         let currentBulletPrice = 500;
 
@@ -239,22 +235,22 @@ if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.clou
         }
 
         function updateBalance() {
-            $.get('../api_profile.php', function(res) {
-                if (res.Money !== undefined) {
-                    $('#userBalance').text(Number(res.Money).toLocaleString());
+            $.get('?action=get_balance', function(res) {
+                if (res && res.success && res.money) {
+                    $('#userBalance').text(res.money);
                 }
             }, 'json');
         }
 
         function loadHistory() {
             $.get('../api_banharc.php', { action: 'get_history' }, function(res) {
-                if (res.success) {
+                if (res && res.success && res.history) {
                     let html = '';
-                    res.history.forEach(h => {
+                    res.history.slice(0, 6).forEach(h => {
                         html += `
                             <div class="history-item">
-                                <span>🐟 ${h.fish_name}</span>
-                                <span style="color: #4ade80;">+${Number(h.reward).toLocaleString()}</span>
+                                <span>🐟 ${h.fish_name || 'Cá'}</span>
+                                <span style="color: #4ade80; font-weight: 800;">+${Number(h.reward).toLocaleString()}</span>
                             </div>
                         `;
                     });
@@ -263,9 +259,7 @@ if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.clou
             }, 'json');
         }
 
-        // Triggered by game when a fish is caught
         function onFishCaught(fishType, reward, fishName) {
-            // Hiển thị text bay lên
             loadHistory();
             updateBalance();
         }
@@ -273,19 +267,12 @@ if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.clou
         $(document).ready(function() {
             updateBalance();
             loadHistory();
-            setInterval(loadHistory, 5000);
+            setInterval(loadHistory, 3000);
+            setInterval(updateBalance, 2000);
         });
     </script>
 
-<!-- AUTO-GENERATED BOT SCRIPT -->
-<script>
-if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
-if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
-</script>
-<script src="../assets/js/bot_virtual_cursor.js"></script>
-<script src="bots/bot_10.js"></script>
-
+    <script src="../assets/js/bot_virtual_cursor.js"></script>
+    <script src="bots/bot_10.js"></script>
 </body>
 </html>
-< ? p h p   e n d i f ;   ? >  
- 

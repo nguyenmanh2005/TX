@@ -22,6 +22,17 @@ $money = $user['Money'];
 $userName = $user['Name'];
 $stmt->close();
 
+if (isset($_GET['action']) && $_GET['action'] === 'get_balance') {
+    header('Content-Type: application/json');
+    $stmtB = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
+    $stmtB->bind_param("i", $userId);
+    $stmtB->execute();
+    $resB = $stmtB->get_result()->fetch_assoc();
+    $stmtB->close();
+    echo json_encode(['success' => true, 'money' => number_format($resB['Money'] ?? 0, 0, ',', '.')]);
+    exit;
+}
+
 if (isset($_GET['action']) && $_GET['action'] === 'play') {
     header('Content-Type: application/json');
     $bet = (int)$_POST['bet'];
@@ -133,30 +144,34 @@ if (isset($_GET['action']) && $_GET['action'] === 'play') {
             color: #00f2fe;
             font-family: 'Exo 2', sans-serif;
             text-transform: uppercase;
-            overflow-x: hidden;
+            overflow: hidden;
+            scrollbar-width: none;
+            margin: 0;
+            padding: 0;
         }
         body::before {
             content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle, transparent 0%, rgba(0,0,0,0.8) 100%); z-index: -1;
         }
         .br-container { 
-            max-width: 1400px; 
-            margin: 2rem auto; 
-            padding: 2rem; 
-            background: rgba(10, 10, 20, 0.8); 
+            max-width: 1200px; 
+            margin: 0.5rem auto; 
+            padding: 1rem 1.5rem; 
+            background: rgba(10, 10, 20, 0.85); 
             backdrop-filter: blur(20px);
             border: 1px solid rgba(0, 242, 254, 0.3); 
-            border-radius: 2rem; 
-            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 242, 254, 0.1); 
+            border-radius: 1.5rem; 
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 242, 254, 0.1); 
             display: grid;
-            grid-template-columns: 350px 1fr;
-            gap: 2rem;
+            grid-template-columns: 320px 1fr;
+            gap: 1.2rem;
             align-items: start;
+            max-height: 94vh;
         }
         .sidebar {
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            gap: 0.8rem;
         }
         .main-area {
             display: flex;
@@ -461,6 +476,15 @@ if (typeof jQuery === "undefined") document.write('<script src="https://code.jqu
 if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
-<script src="../assets/js/bots/bot_11.js?v=<?= time() ?>"></script>
+<script src="bots/bot_11.js?v=<?= time() ?>"></script>
+<script>
+setInterval(() => {
+    $.get('?action=get_balance', function(res) {
+        if (res && res.success && res.money) {
+            $('#balance').text(res.money);
+        }
+    });
+}, 2000);
+</script>
 </body>
 </html>

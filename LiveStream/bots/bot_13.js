@@ -1,356 +1,208 @@
 /**
- * bot_bj.js — Bot Blackjack thông minh v2
- *
- * Cải tiến:
- *  - State Machine thực thụ: không click loạn, không double-action
- *  - isBusy flag chặn mọi hành động song song
- *  - Timing tự nhiên: suy nghĩ 1–3s trước mỗi quyết định
- *  - Basic Strategy chuẩn casino (Hard + Soft totals)
- *  - Martingale nhẹ: tăng cược sau thua, giảm sau thắng dài
+ * bot_13.js — Bot Blackjack Xì Dách Thông Minh v3
+ * Khớp chính xác với live_13.php (PHP-based BJ):
+ *   - #btn-start      → BẮT ĐẦU VÁN MỚI
+ *   - #bet-amount     → input tiền cược
+ *   - .chip[data-value] → chọn chip
+ *   - #action-buttons → vùng Hit/Stand (visible khi đang chơi)
+ *   - #btn-hit        → Rút thêm
+ *   - #btn-stand      → Dừng
+ *   - #start-form-container → visible khi game_over
+ *   - #player-score   → điểm người chơi
  */
 
-(function waitJQ() {
+(function waitDeps() {
     if (typeof jQuery === "undefined" || typeof BotVirtualCursor === "undefined" || typeof gsap === "undefined") {
-        setTimeout(waitJQ, 300);
+        setTimeout(waitDeps, 300);
         return;
     }
-    startBJBot();
+    startBJBot13();
 })();
 
-function startBJBot() {
-    BotVirtualCursor.init("Bot Streamer");
+function startBJBot13() {
+    BotVirtualCursor.init("Thần Bài Xì Dách ♠️🃏");
 
-    // ─── STATE MACHINE ──────────────────────────────────────────
-    // Phases: 'idle' → 'betting' → 'dealing' → 'playing' → 'result' → 'idle'
-    let phase        = 'idle';    // trạng thái hiện tại
-    let isBusy       = false;     // khóa chặn mọi hành động song song
-    let actionTaken  = false;     // đã thực hiện action trong turn này chưa
-
-    // ─── CHIP / BET STATE ───────────────────────────────────────
-    const CHIP_LEVELS  = [10000, 50000, 100000, 500000, 1000000, 5000000, 10000000, 50000000, 100000000, 500000000];
-    let chipIndex      = 1;       // 50K mặc định
+    // ─── CHIP LEVELS ─────────────────────────────────────────────
+    const CHIP_VALUES  = [10000, 50000, 100000, 500000, 1000000, 5000000];
+    let chipIndex      = 1;   // Mặc định 50K
     let winStreak      = 0;
     let loseStreak     = 0;
-    let lastResultSeen = '';
+    let lastBalance    = null;
 
-    // ─── TIMING ─────────────────────────────────────────────────
-    const T_THINK_MIN  = 1200;    // ms suy nghĩ tối thiểu
-    const T_THINK_MAX  = 2800;    // ms suy nghĩ tối đa
-    const T_BETWEEN    = 3000;    // ms nghỉ giữa các ván
-    const T_POLL       = 800;     // ms polling
+    // ─── STATE ───────────────────────────────────────────────────
+    let isBusy      = false;
+    let actionTaken = false;
+    const T_THINK   = () => 1200 + Math.random() * 1600;
+    const T_POLL    = 800;
+    const T_BETWEEN = 3500 + Math.random() * 2000;
 
-    function think() {
-        return T_THINK_MIN + Math.random() * (T_THINK_MAX - T_THINK_MIN);
-    }
-
-    // ─── HELPERS ────────────────────────────────────────────────
-    function log(msg) {
-        // console.debug('[BJBot]', msg); // bật khi debug
-    }
-
+    // ─── HELPERS ─────────────────────────────────────────────────
     function isVisible(el) {
         if (!el) return false;
-        const style = window.getComputedStyle(el);
-        return style.display !== 'none' && style.visibility !== 'hidden' && el.offsetParent !== null;
+        if (el.classList && el.classList.contains('hidden')) return false;
+        const s = window.getComputedStyle(el);
+        return s.display !== 'none' && s.visibility !== 'hidden' && el.offsetParent !== null;
     }
 
-    // ─── ĐỌC DỮ LIỆU GAME ──────────────────────────────────────
+    function readBalance() {
+        const el = document.getElementById('balance-display')
+                || document.querySelector('[id*="balance"]');
+        if (!el) return null;
+        return parseInt(el.textContent.replace(/[^0-9]/g, '')) || null;
+    }
+
     function getPlayerScore() {
-        if (typeof BlackjackLogic !== 'undefined' && BlackjackLogic.playerCards && BlackjackLogic.playerCards.length > 0) {
-            return BlackjackLogic.calculateScore(BlackjackLogic.playerCards);
-        }
-        const el = document.getElementById('playerScore') || document.getElementById('player-score');
-        if (el) {
-            const v = parseInt(el.textContent.trim());
-            if (!isNaN(v) && v > 0) return v;
-        }
+        const el = document.getElementById('player-score');
+        if (el) return parseInt(el.textContent.trim()) || null;
         return null;
     }
 
-    function getDealerUpcard() {
-        if (typeof BlackjackLogic !== 'undefined' && BlackjackLogic.kingCards && BlackjackLogic.kingCards.length > 0) {
-            const v = BlackjackLogic.kingCards[0].value;
-            if (v === 1) return 11;
-            return v >= 10 ? 10 : v;
-        }
-        return null;
+    function isGameOver() {
+        // game_over khi start-form-container hiện (không có class "hidden")
+        const sf = document.getElementById('start-form-container');
+        return sf && !sf.classList.contains('hidden');
     }
 
-    function getPlayerCards() {
-        if (typeof BlackjackLogic !== 'undefined' && BlackjackLogic.playerCards && BlackjackLogic.playerCards.length > 0) {
-            return BlackjackLogic.playerCards.map(c => {
-                if (c.value === 1) return 11;
-                if (c.value >= 10) return 10;
-                return c.value;
-            });
-        }
-        return [];
+    function isPlaying() {
+        // đang chơi khi action-buttons hiện
+        const ab = document.getElementById('action-buttons');
+        return ab && !ab.classList.contains('hidden') && isVisible(ab);
     }
 
-    function isSoftTotal(cards) {
-        let sum = 0, aces = 0;
-        for (const c of cards) {
-            if (c === 11) { aces++; sum += 11; }
-            else sum += c;
+    // ─── CHIẾN LƯỢC CƯỢC ─────────────────────────────────────────
+    function updateBettingStrategy() {
+        const cur = readBalance();
+        if (lastBalance !== null && cur !== null) {
+            if (cur > lastBalance) {
+                winStreak++; loseStreak = 0;
+                if (winStreak >= 3) chipIndex = Math.min(chipIndex + 1, CHIP_VALUES.length - 1);
+                if (winStreak >= 6) { chipIndex = 1; winStreak = 0; }
+            } else if (cur < lastBalance) {
+                loseStreak++; winStreak = 0;
+                if (loseStreak === 2) chipIndex = Math.min(chipIndex + 1, Math.floor(CHIP_VALUES.length * 0.6));
+                if (loseStreak >= 4) { chipIndex = Math.max(chipIndex - 1, 0); loseStreak = 0; }
+            }
         }
-        while (sum > 21 && aces > 0) { sum -= 10; aces--; }
-        return aces > 0; // còn ace đang tính là 11
+        lastBalance = cur;
     }
 
-    // ─── BASIC STRATEGY CHUẨN CASINO ───────────────────────────
-    function shouldDouble(playerScore, dealerUp, playerCards) {
-        if (playerCards.length !== 2) return false;
-        
-        // Tỷ lệ random 20% tự động gấp đôi khi điểm từ 9-11 (Mô phỏng máu liều)
-        if (playerScore >= 9 && playerScore <= 11 && Math.random() < 0.20) return true;
-        
-        // Basic Strategy Double
-        if (playerScore === 11) return true;
-        if (playerScore === 10 && dealerUp <= 9) return true;
-        if (playerScore === 9 && dealerUp >= 3 && dealerUp <= 6) return true;
-        
-        const soft = isSoftTotal(playerCards);
-        if (soft && playerScore >= 13 && playerScore <= 18 && dealerUp >= 4 && dealerUp <= 6) return true;
-        
+    // ─── BASIC STRATEGY ──────────────────────────────────────────
+    function shouldHit(score) {
+        if (score === null) return true;
+        if (score >= 17) return false;
+        if (score <= 11) return true;
+        // 12-16: hit nhẹ theo random (mô phỏng người thật)
+        if (score === 16) return Math.random() < 0.6;
+        if (score === 15) return Math.random() < 0.55;
+        if (score === 14) return Math.random() < 0.50;
+        if (score === 13) return Math.random() < 0.40;
+        if (score === 12) return Math.random() < 0.30;
         return false;
     }
 
-    function shouldHit(playerScore, dealerUp, playerCards) {
-        if (playerScore === null) return true;
-        if (dealerUp === null)   return playerScore < 17;
-
-        const soft = isSoftTotal(playerCards);
-
-        if (soft) {
-            if (playerScore >= 19) return false;          // A,8+ → Stand
-            if (playerScore === 18) return dealerUp >= 9; // A,7 → Hit vs 9,10,A
-            return true;                                  // A,2–A,6 → luôn Hit
-        } else {
-            if (playerScore >= 17) return false;          // Hard 17+ → Stand
-            if (playerScore <= 11) return true;           // Hard ≤11 → Hit
-            if (playerScore === 12) return !(dealerUp >= 4 && dealerUp <= 6); // Stand vs 4-6
-            return dealerUp >= 7;                         // Hard 13-16: Hit vs 7+
-        }
-    }
-
-    // ─── CẬP NHẬT CHIẾN LƯỢC CƯỢC ──────────────────────────────
-    function updateBettingStrategy() {
-        let txt = '';
-
-        if (typeof BlackjackLogic !== 'undefined') {
-            const box = document.getElementById('resultAnnounce');
-            if (box && isVisible(box)) txt = box.textContent || '';
-        }
-        if (!txt) {
-            const box = document.getElementById('result-text');
-            if (box) txt = box.textContent || '';
-        }
-
-        if (!txt || txt.trim() === lastResultSeen) return;
-        lastResultSeen = txt.trim();
-
-        const low = txt.toLowerCase();
-        const isWin  = low.includes('win') || low.includes('royale') || low.includes('blackjack') || low.includes('draw');
-        const isLose = low.includes('bust') || low.includes('king win') || low.includes('busted');
-
-        if (isWin && !low.includes('draw')) {
-            loseStreak = 0;
-            winStreak++;
-            if (winStreak >= 3) chipIndex = Math.min(chipIndex + 1, Math.floor(CHIP_LEVELS.length * 0.7)); // Tăng dần theo % mảng
-            if (winStreak >= 6) { chipIndex = 1; winStreak = 0; }        // chốt lời
-        } else if (isLose) {
-            winStreak = 0;
-            loseStreak++;
-            if (loseStreak === 2) chipIndex = Math.min(chipIndex + 1, Math.floor(CHIP_LEVELS.length * 0.5)); // Martingale nhẹ
-            if (loseStreak >= 4) { chipIndex = Math.max(chipIndex - 1, 1); loseStreak = 0; } // bảo vệ
-        }
-        // Hòa → giữ nguyên
-        log(`Result: "${txt}" | chips[${chipIndex}]=${CHIP_LEVELS[chipIndex]} | W${winStreak} L${loseStreak}`);
-    }
-
-    // ─── CLICK AN TOÀN ──────────────────────────────────────────
-    function safeClick(el, callback) {
-        if (!el) { callback && callback(); return; }
+    // ─── CLICK AN TOÀN ───────────────────────────────────────────
+    function safeClick(el, cb) {
+        if (!el) { cb && cb(); return; }
         try {
-            BotVirtualCursor.moveToElement($(el), 0.5, 0, () => {
+            BotVirtualCursor.moveToElement($(el), 0.4, 0, () => {
                 BotVirtualCursor.simulateClick(() => {
                     try { el.click(); } catch(e) {}
-                    setTimeout(callback || function(){}, 300);
+                    setTimeout(cb || function(){}, 350);
                 });
             });
         } catch(e) {
             try { el.click(); } catch(e2) {}
-            setTimeout(callback || function(){}, 300);
+            setTimeout(cb || function(){}, 350);
         }
     }
 
-    // ─── PHASE: IDLE — Chọn chip & đặt cược ────────────────────
-    function phaseIdle() {
+    // ─── PHASE: ĐẶT CƯỢC & BẮT ĐẦU VÁN ─────────────────────────
+    function phaseStart() {
         if (isBusy) return;
-
-        // Kiểm tra dealBtn có hiện không
-        const dealBtn = document.getElementById('dealBtn');
-        if (!dealBtn || !isVisible(dealBtn)) return; // không phải lúc bắt đầu
-        if (typeof BlackjackLogic !== 'undefined' && BlackjackLogic.isGameRunning) return;
+        if (!isGameOver()) return;    // chỉ bắt đầu khi game_over = true
 
         isBusy = true;
-        phase  = 'betting';
-        log('Phase: IDLE → BETTING');
-
-        // Đọc kết quả ván trước
         updateBettingStrategy();
 
-        // Chờ tự nhiên 1.5–4s trước khi đặt cược
-        const waitTime = 1500 + Math.random() * 2500;
+        // Chờ suy nghĩ tự nhiên 2-5s
         setTimeout(() => {
-            // Chọn chip
-            const chips      = Array.from(document.querySelectorAll('.chip[data-value]'));
-            const targetVal  = CHIP_LEVELS[chipIndex] || 50000;
+            // 1. Chọn chip
+            const chips = Array.from(document.querySelectorAll('.chip[data-value]'));
+            const targetVal  = CHIP_VALUES[chipIndex] || 50000;
             const targetChip = chips.find(c => parseInt(c.dataset.value) === targetVal)
-                            || chips[1]
-                            || chips[0];
+                             || chips[1]
+                             || chips[0];
 
             safeClick(targetChip, () => {
                 setTimeout(() => {
-                    // Nhấn KHAI CUỘC
-                    const btn = document.getElementById('dealBtn');
-                    if (btn && isVisible(btn) && typeof BlackjackLogic !== 'undefined' && !BlackjackLogic.isGameRunning) {
-                        phase = 'dealing';
-                        log('Phase: BETTING → DEALING (clicking dealBtn)');
-                        safeClick(btn, () => {
-                            phase   = 'playing';
-                            actionTaken = false;
-                            isBusy  = false;
-                            log('Phase: DEALING → PLAYING');
-                        });
-                    } else {
-                        // Không click được → reset
+                    // 2. Nhấn BẮT ĐẦU VÁN MỚI
+                    const startBtn = document.getElementById('btn-start');
+                    if (!startBtn || !isGameOver()) {
                         isBusy = false;
-                        phase  = 'idle';
+                        return;
                     }
-                }, 400 + Math.random() * 300);
+                    safeClick(startBtn, () => {
+                        actionTaken = false;
+                        isBusy = false;
+                    });
+                }, 600 + Math.random() * 400);
             });
-        }, waitTime);
+        }, 2000 + Math.random() * 3000);
     }
 
-    // ─── PHASE: PLAYING — Hit / Stand ───────────────────────────
-    function phasePlaying() {
+    // ─── PHASE: HIT / STAND ──────────────────────────────────────
+    function phasePlay() {
         if (isBusy) return;
-
-        // Kiểm tra gameActions có hiện không
-        const gameActions = document.getElementById('gameActions');
-        if (!gameActions || !isVisible(gameActions)) return;
-
-        // Chỉ hành động 1 lần mỗi lượt
+        if (!isPlaying()) return;
         if (actionTaken) return;
 
-        // Kiểm tra BlackjackLogic đang chạy
-        if (typeof BlackjackLogic !== 'undefined' && !BlackjackLogic.isGameRunning) return;
-
-        isBusy      = true;
+        isBusy = true;
         actionTaken = true;
-        log('Phase: PLAYING — thinking...');
 
         setTimeout(() => {
-            // Đọc lại state sau khi "suy nghĩ"
-            const playerScore = getPlayerScore();
-            const dealerUp    = getDealerUpcard();
-            const playerCards = getPlayerCards();
-            
-            let action = 'STAND';
-            if (shouldDouble(playerScore, dealerUp, playerCards)) {
-                action = 'DOUBLE';
-            } else if (shouldHit(playerScore, dealerUp, playerCards)) {
-                action = 'HIT';
-            }
+            const score = getPlayerScore();
+            const doHit = shouldHit(score);
 
-            log(`Score=${playerScore} DealerUp=${dealerUp} → ${action}`);
-
-            if (action === 'DOUBLE') {
-                const btn = document.getElementById('doubleBtn')
-                         || document.getElementById('btn-double')
-                         || document.querySelector('form input[name="action"][value="double"] ~ button')
-                         || document.getElementById('hitBtn'); // fallback
-                
-                safeClick(btn, () => {
-                    if (btn && (btn.id === 'doubleBtn' || btn.id === 'btn-double')) {
-                        phase = 'result'; // Xong turn ngay sau khi double
-                    }
-                    actionTaken = false; 
-                    isBusy      = false;
-                });
-            } else if (action === 'HIT') {
-                const btn = document.getElementById('hitBtn')
-                         || document.getElementById('btn-hit')
-                         || document.querySelector('form input[name="action"][value="hit"] ~ button');
-                safeClick(btn, () => {
-                    actionTaken = false; // cho phép hành động tiếp sau khi rút bài
-                    isBusy      = false;
+            if (doHit) {
+                const hitBtn = document.getElementById('btn-hit');
+                safeClick(hitBtn, () => {
+                    // Sau khi hit, có thể cần hit lại → reset actionTaken
+                    setTimeout(() => {
+                        actionTaken = false;
+                        isBusy = false;
+                    }, 800);
                 });
             } else {
-                const btn = document.getElementById('standBtn')
-                         || document.getElementById('btn-stand')
-                         || document.querySelector('form input[name="action"][value="stand"] ~ button');
-                safeClick(btn, () => {
-                    phase       = 'result';
+                const standBtn = document.getElementById('btn-stand');
+                safeClick(standBtn, () => {
                     actionTaken = false;
-                    isBusy      = false;
-                    log('Phase: PLAYING → RESULT');
+                    isBusy = false;
                 });
             }
-        }, think());
+        }, T_THINK());
     }
 
-    // ─── PHASE: RESULT — Chờ animation xong ─────────────────────
-    function phaseResult() {
-        // Khi gameActions ẩn và dealBtn hiện lại → ván kết thúc
-        const gameActions = document.getElementById('gameActions');
-        const dealBtn     = document.getElementById('dealBtn');
-
-        const gameOver = (!gameActions || !isVisible(gameActions))
-                      && dealBtn && isVisible(dealBtn);
-
-        if (gameOver) {
-            phase = 'idle';
-            log('Phase: RESULT → IDLE (ván kết thúc)');
-        }
-    }
-
-    // ─── VÒNG LẶP CHÍNH ─────────────────────────────────────────
+    // ─── VÒNG LẶP CHÍNH ──────────────────────────────────────────
     function gameLoop() {
         try {
-            // Xác định blackjack 3D mode
-            const is3D = typeof BlackjackLogic !== 'undefined';
-
-            if (!is3D) {
-                // Chế độ fallback (không có BlackjackLogic) — không làm gì
-                setTimeout(gameLoop, T_POLL * 2);
-                return;
+            if (isGameOver()) {
+                // Trạng thái: ván kết thúc → bắt đầu ván mới
+                actionTaken = false;
+                phaseStart();
+            } else if (isPlaying()) {
+                // Trạng thái: đang chơi → Hit/Stand
+                phasePlay();
             }
-
-            switch (phase) {
-                case 'idle':
-                    phaseIdle();
-                    break;
-                case 'playing':
-                    phasePlaying();
-                    break;
-                case 'result':
-                    phaseResult();
-                    break;
-                // 'betting' và 'dealing' → đang xử lý async, không làm gì thêm
-            }
-
+            // Nếu đang animation hoặc chờ server → đợi poll sau
         } catch(e) {
-            // Recovery: reset về idle nếu có exception không lường
-            isBusy      = false;
+            isBusy = false;
             actionTaken = false;
-            phase       = 'idle';
         }
 
         setTimeout(gameLoop, T_POLL);
     }
 
     // Khởi động sau 2s để page load xong
+    lastBalance = readBalance();
     setTimeout(gameLoop, 2000);
 }

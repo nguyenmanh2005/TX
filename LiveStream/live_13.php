@@ -26,6 +26,18 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) &&
     exit;
 }
 
+if (isset($_GET['action']) && $_GET['action'] === 'get_balance') {
+    header('Content-Type: application/json');
+    require_once '../db_connect.php';
+    $stmtB = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
+    $stmtB->bind_param("i", $botUserId);
+    $stmtB->execute();
+    $resB = $stmtB->get_result()->fetch_assoc();
+    $stmtB->close();
+    echo json_encode(['success' => true, 'money' => number_format($resB['Money'] ?? 0, 0, ',', '.')]);
+    exit;
+}
+
 // Load theme
 require_once '../load_theme.php';
 
@@ -477,6 +489,16 @@ if (typeof jQuery === "undefined") document.write('<script src="https://code.jqu
 if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
-<script src="../assets/js/bots/bot_13.js?v=<?= time() ?>"></script>
+<script src="bots/bot_13.js?v=<?= time() ?>"></script>
+<script>
+setInterval(() => {
+    fetch('?action=get_balance').then(r => r.json()).then(res => {
+        if (res && res.success && res.money) {
+            const el = document.getElementById('balance-display');
+            if (el) el.textContent = res.money;
+        }
+    }).catch(() => {});
+}, 2000);
+</script>
 </body>
 </html>

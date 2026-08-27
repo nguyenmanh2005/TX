@@ -171,6 +171,10 @@ $gameTitle = "Xì Dách Royale";
     </div>
 
     <script src="../assets/js/blackjack-3d.js?v=<?= time() ?>"></script>
+    <script>
+        // API path khi chơi trong /games/ (không phải LiveStream iframe)
+        window.BJ_PROCESS_URL = '../games/blackjack_process.php';
+    </script>
     <script src="../assets/js/blackjack-logic.js?v=<?= time() ?>"></script>
 
     <!-- Premium Effects Loader -->

@@ -14,7 +14,8 @@ function logError($message)
 }
 
 try {
-    if (!isset($_SESSION['Iduser'])) {
+    // Chấp nhận cả user thật lẫn bot streamer
+    if (!isset($_SESSION['Iduser']) && !isset($_SESSION['Iduser_temp_bot'])) {
         echo json_encode(['error' => 'Chưa đăng nhập']);
         exit();
     }

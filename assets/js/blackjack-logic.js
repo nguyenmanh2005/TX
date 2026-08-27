@@ -106,8 +106,10 @@ const BlackjackLogic = {
             }
 
         } catch (e) {
-            console.error(e);
+            console.error('[BJ] startGame error:', e);
             this.isGameRunning = false;
+            document.getElementById('dealBtn').style.display = 'block';
+            document.getElementById('gameActions').style.display = 'none';
         }
     },
 
@@ -132,7 +134,15 @@ const BlackjackLogic = {
             if (this.calculateScore(this.playerCards) >= 21) {
                 this.playerStand();
             }
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error('[BJ] playerHit error:', e);
+            // Recovery: nếu API lỗi, vẫn cho stand để thoát ván
+            try { this.playerStand(); } catch(e2) {
+                this.isGameRunning = false;
+                document.getElementById('dealBtn').style.display = 'block';
+                document.getElementById('gameActions').style.display = 'none';
+            }
+        }
     },
 
     async playerDouble() {
@@ -158,7 +168,12 @@ const BlackjackLogic = {
             
             // In Double, player gets exactly one more card then stands
             setTimeout(() => this.playerStand(), 600);
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error('[BJ] playerDouble error:', e);
+            this.isGameRunning = false;
+            document.getElementById('dealBtn').style.display = 'block';
+            document.getElementById('gameActions').style.display = 'none';
+        }
     },
 
     async playerStand() {
@@ -190,7 +205,18 @@ const BlackjackLogic = {
             await this.delay(800);
             this.showResult(data);
 
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error('[BJ] playerStand error:', e);
+            // Recovery: luôn reset về idle dù API lỗi
+            document.getElementById('resultAnnounce').innerText = '⚠️ Lỗi kết nối, thử lại!';
+            document.getElementById('resultAnnounce').style.display = 'block';
+            document.getElementById('resultAnnounce').style.color = '#fbbf24';
+            setTimeout(() => {
+                document.getElementById('dealBtn').style.display = 'block';
+                document.getElementById('gameActions').style.display = 'none';
+                this.isGameRunning = false;
+            }, 2000);
+        }
     },
 
     showResult(data) {
