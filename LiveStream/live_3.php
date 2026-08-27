@@ -152,6 +152,13 @@ if (isset($_GET['action'])) {
             unset($_SESSION['crash_game']);
             $response = ['success' => true];
         }
+    } elseif ($action === 'get_balance') {
+        $stmtB = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
+        $stmtB->bind_param("i", $userId);
+        $stmtB->execute();
+        $resB = $stmtB->get_result()->fetch_assoc();
+        $stmtB->close();
+        $response = ['success' => true, 'money' => number_format($resB['Money'] ?? 0, 0, ',', '.')];
     }
     echo json_encode($response);
     exit;
@@ -173,18 +180,21 @@ if (isset($_GET['action'])) {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;500;700&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/main.css">
     <link rel="stylesheet" href="../assets/css/components.css">
-    <link rel="stylesheet" href="../assets/css/animations.css">
-    <link rel="stylesheet" href="../assets/css/game-effects.css">
     <style>
         :root {
             --primary: #ff4757;
             --accent: #f1c40f;
             --glass: rgba(255, 255, 255, 0.08);
+        }
+        * {
+            box-sizing: border-box;
+            scrollbar-width: none !important;
+        }
+        ::-webkit-scrollbar {
+            display: none !important;
         }
         body {
             margin: 0;
@@ -194,42 +204,45 @@ if (isset($_GET['action'])) {
             font-family: 'Inter', sans-serif;
             overflow: hidden;
             cursor: url('../img/chuot.png'), auto !important;
+            height: 100vh;
+            width: 100vw;
         }
         .main-container {
             height: 100vh;
+            width: 100vw;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 10px 15px;
             box-sizing: border-box;
+            overflow: hidden;
         }
         .glass-card {
             background: var(--glass);
             backdrop-filter: blur(30px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 2.5rem;
-            padding: 2rem;
-            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
-            width: 95%;
-            max-width: 1100px;
+            border-radius: 1.5rem;
+            padding: 1rem 1.2rem;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+            width: 100%;
+            max-width: 1020px;
             display: grid;
-            grid-template-columns: 300px 1fr;
-            gap: 1.5rem;
-            max-height: 92vh;
+            grid-template-columns: 260px 1fr;
+            gap: 1rem;
+            max-height: 94vh;
             align-self: center;
         }
         .crash-area {
             position: relative;
             width: 100%;
-            min-height: 500px;
+            min-height: 380px;
             background: radial-gradient(circle at center, #0a0a1a 0%, #05050a 100%);
-            border-radius: 2rem;
+            border-radius: 1.2rem;
             border: 1px solid rgba(255, 255, 255, 0.05);
             overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.9);
         }
         #crash-3d-container {
             position: absolute;
@@ -246,7 +259,7 @@ if (isset($_GET['action'])) {
         /* HUD Multiplier - Moved to Top */
         .mult-wrapper {
             position: absolute;
-            top: 40px;
+            top: 25px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 10;
@@ -256,10 +269,10 @@ if (isset($_GET['action'])) {
             justify-content: center;
             pointer-events: none;
             background: radial-gradient(circle, rgba(0,242,254,0.05) 0%, transparent 70%);
-            padding: 20px;
+            padding: 10px;
         }
         .multiplier-display {
-            font-size: 5rem;
+            font-size: 4rem;
             font-weight: 900;
             font-family: 'Orbitron', sans-serif;
             position: relative;
@@ -272,12 +285,12 @@ if (isset($_GET['action'])) {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
             color: #fff;
-            padding: 8px;
-            border-radius: 8px;
+            padding: 5px 2px;
+            border-radius: 6px;
             cursor: url('../img/tay.png'), pointer !important;
             font-weight: 600;
             transition: 0.3s;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
         }
         .btn-quick-bet:hover {
             background: var(--primary);
@@ -286,11 +299,11 @@ if (isset($_GET['action'])) {
         }
         .multiplier-glow {
             position: absolute;
-            font-size: 5.5rem;
+            font-size: 4.2rem;
             font-weight: 900;
             font-family: 'Orbitron', sans-serif;
             z-index: 10;
-            filter: blur(30px);
+            filter: blur(25px);
             opacity: 0.4;
             color: var(--primary);
             pointer-events: none;
@@ -299,21 +312,22 @@ if (isset($_GET['action'])) {
         .sidebar {
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            gap: 0.3rem;
             position: relative;
-            z-index: 100
+            z-index: 100;
+            justify-content: space-between;
         }
         .btn-action {
-            padding: 1.2rem;
-            border-radius: 1.5rem;
+            padding: 0.75rem 1rem;
+            border-radius: 1rem;
             border: none;
             font-weight: 900;
-            font-size: 1.4rem;
+            font-size: 1.15rem;
             cursor: url('../img/tay.png'), pointer !important;
             transition: 0.3s;
             text-transform: uppercase;
             position: relative;
-            overflow: hidden
+            overflow: hidden;
         }
         .btn-action::after {
             content: '';
@@ -321,245 +335,127 @@ if (isset($_GET['action'])) {
             inset: 0;
             background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
             transform: translateX(-100%);
-            transition: 0.5s
+            transition: 0.5s;
         }
         .btn-action:hover::after {
-            transform: translateX(100%)
+            transform: translateX(100%);
         }
         #startBtn {
             background: linear-gradient(135deg, var(--primary), #ff6b81);
             color: #fff;
-            box-shadow: 0 10px 30px rgba(255, 71, 87, 0.4)
+            box-shadow: 0 10px 25px rgba(255, 71, 87, 0.4);
         }
         #cashoutBtn {
             background: linear-gradient(135deg, #2ecc71, #27ae60);
             color: #fff;
             display: none;
-            box-shadow: 0 10px 30px rgba(46, 204, 113, 0.4)
+            box-shadow: 0 10px 25px rgba(46, 204, 113, 0.4);
         }
         .input-group {
             background: rgba(0, 0, 0, 0.3);
-            padding: 0.8rem 1.2rem;
-            border-radius: 1.2rem;
+            padding: 0.5rem 0.8rem;
+            border-radius: 0.8rem;
             border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: 0.3s
+            transition: 0.3s;
         }
         .input-group:focus-within {
             border-color: var(--primary);
-            background: rgba(255, 71, 87, 0.05)
-        }
-        /* Premium Back Home Button */
-        .back-home-btn {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            z-index: 999;
-            padding: 12px 20px;
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            color: #fff;
-            text-decoration: none;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 0.8rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .back-home-btn:hover {
-            background: rgba(255, 71, 87, 0.1);
-            border-color: #ff4757;
-            color: #ff4757;
-            box-shadow: 0 0 20px rgba(255, 71, 87, 0.4);
-            transform: translateX(5px);
-        }
-        .back-home-btn i {
-            font-size: 1.1rem;
+            background: rgba(255, 71, 87, 0.05);
         }
         .input-group label {
             display: block;
-            font-size: 0.65rem;
-            text-transform: uppercase;
-            color: rgba(255, 255, 255, 0.4);
-            margin-bottom: 4px;
+            font-size: 0.7rem;
             font-weight: 700;
-            letter-spacing: 1px
+            opacity: 0.6;
+            margin-bottom: 3px;
+            text-transform: uppercase;
         }
         .input-group input {
-            background: none;
+            width: 100%;
+            background: transparent;
             border: none;
             color: #fff;
-            font-size: 1.2rem;
-            font-weight: 900;
-            width: 100%;
+            font-size: 1.1rem;
+            font-weight: 800;
+            font-family: 'Orbitron', sans-serif;
             outline: none;
-            font-family: 'Orbitron'
         }
-        #userMoney {
-            word-break: break-all;
-            line-height: 1.2;
-            display: inline-block;
-            max-width: 100%;
-            color: var(--accent)
+        .switch input:checked+.slider {
+            background-color: var(--primary);
         }
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
         }
-        input[type=number] {
-            -moz-appearance: textfield;
-            appearance: textfield;
+        .switch input:checked+.slider:before {
+            transform: translateX(14px);
         }
-        @media(max-width:1000px) {
-            .glass-card {
-                grid-template-columns: 1fr;
-                height: auto;
-                display: block;
-                padding: 1.5rem
-            }
-            .sidebar {
-                margin-bottom: 2rem
-            }
-            .crash-area {
-                min-height: 400px
-            }
-            .multiplier-display,
-            .multiplier-glow {
-                font-size: 5rem;
-            }
-        }
-        .btn-howto {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            color: rgba(255, 255, 255, 0.75);
-            font-size: 0.8rem;
-            font-weight: 700;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            padding: 0.65rem 1rem;
-            border-radius: 1rem;
-            cursor: url('../img/tay.png'), pointer !important;
-            transition: all 0.3s;
-            width: 100%;
-            margin-top: 0.75rem
-        }
-        .btn-howto:hover {
-            background: rgba(255, 71, 87, 0.15);
-            border-color: var(--primary);
-            color: #fff
+        #autoCashout:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
         }
     </style>
 </head>
 <body>
-    <a href="../index.php" class="back-home-btn">
-        <i class="fas fa-th-large"></i> Dashboard
-    </a>
     <div class="main-container">
         <div class="glass-card">
             <div class="sidebar">
-                <h1
-                    style="margin:0; font-size: 2.5rem; font-weight: 900; color: var(--primary); font-family: 'Orbitron'; text-shadow: 0 0 20px rgba(255,71,87,0.3);">
-                    CRASH</h1>
-                <p style="margin:0; opacity:0.4; font-size: 0.8rem; letter-spacing: 2px;">Vegas Royale Premium 3D</p>
-                <form id="gameForm" onsubmit="return false;" style="margin-top: 1rem;">
+                <div>
+                    <h1 style="margin:0; font-size: 1.8rem; font-weight: 900; color: var(--primary); font-family: 'Orbitron'; text-shadow: 0 0 15px rgba(255,71,87,0.3);">
+                        CRASH</h1>
+                    <p style="margin:0; opacity:0.4; font-size: 0.7rem; letter-spacing: 2px;">Vegas Royale Premium 3D</p>
+                </div>
+                <form id="gameForm" onsubmit="return false;" style="margin-top: 0.2rem;">
                     <div class="input-group">
-                        <label>Gtlm cược (gtlm)</label>
+                        <label>GTLM cược (GTLM)</label>
                         <input type="number" id="betAmount" value="10000" min="1000">
-                        <div class="quick-bets" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 10px;">
+                        <div class="quick-bets" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 6px;">
                             <button class="btn-quick-bet" type="button" onclick="setBet(10000)">10K</button>
                             <button class="btn-quick-bet" type="button" onclick="setBet(50000)">50K</button>
                             <button class="btn-quick-bet" type="button" onclick="setBet(100000)">100K</button>
                             <button class="btn-quick-bet" type="button" onclick="setBet(500000)">500K</button>
                             <button class="btn-quick-bet" type="button" onclick="setBet(1000000)">1M</button>
                             <button class="btn-quick-bet" type="button" onclick="setBet(5000000)">5M</button>
-                            <button class="btn-quick-bet" type="button" onclick="setBet('ALLIN')" style="grid-column: span 3; background: var(--primary); color:#fff; border:none; font-weight:800;">ALL IN</button>
+                            <button class="btn-quick-bet" type="button" onclick="setBet('ALLIN')" style="grid-column: span 3; background: var(--primary); color:#fff; border:none; font-weight:800; padding: 4px;">ALL IN</button>
                         </div>
                     </div>
-                    <div class="input-group" style="margin-top: 1rem;">
-                        <div
-                            style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <div class="input-group" style="margin-top: 0.5rem;">
+                        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
                             <label style="margin:0">Tự động rút (x)</label>
-                            <label class="switch"
-                                style="position:relative; display:inline-block; width:34px; height:20px;">
+                            <label class="switch" style="position:relative; display:inline-block; width:34px; height:20px;">
                                 <input type="checkbox" id="enableAuto" checked style="opacity:0; width:0; height:0;">
-                                <span class="slider"
-                                    style="position:absolute; cursor:pointer; inset:0; background-color:#333; transition:.4s; border-radius:34px;"></span>
+                                <span class="slider" style="position:absolute; cursor:pointer; inset:0; background-color:#333; transition:.4s; border-radius:34px;"></span>
                             </label>
                         </div>
                         <input type="number" id="autoCashout" value="2.00" min="1.01" step="any">
-                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-top: 8px;">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; margin-top: 5px;">
                             <button type="button" onclick="$('#autoCashout').val(2.00); updatePotential();"
-                                style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px; padding:4px; font-size:0.7rem; cursor:pointer;">x2</button>
+                                style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:3px; font-size:0.7rem; cursor:pointer;">x2</button>
                             <button type="button" onclick="$('#autoCashout').val(5.00); updatePotential();"
-                                style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px; padding:4px; font-size:0.7rem; cursor:pointer;">x5</button>
+                                style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:3px; font-size:0.7rem; cursor:pointer;">x5</button>
                             <button type="button" onclick="$('#autoCashout').val(10.00); updatePotential();"
-                                style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px; padding:4px; font-size:0.7rem; cursor:pointer;">x10</button>
+                                style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:3px; font-size:0.7rem; cursor:pointer;">x10</button>
                         </div>
                     </div>
-                    <style>
-                        .switch input:checked+.slider {
-                            background-color: var(--primary);
-                        }
-                        .slider:before {
-                            position: absolute;
-                            content: "";
-                            height: 14px;
-                            width: 14px;
-                            left: 3px;
-                            bottom: 3px;
-                            background-color: white;
-                            transition: .4s;
-                            border-radius: 50%;
-                        }
-                        .switch input:checked+.slider:before {
-                            transform: translateX(14px);
-                        }
-                        #autoCashout:disabled {
-                            opacity: 0.3;
-                            cursor: not-allowed;
-                        }
-                    </style>
-                    <div class="stat-box"
-                        style="margin-top: 1.5rem; background:rgba(0,0,0,0.2); padding: 1.2rem; border-radius:1.2rem; border: 1px dashed rgba(255,255,255,0.1);">
-                        <span style="opacity:0.5; font-size:0.7rem; font-weight:700;">LỢI NHUẬN DỰ KIẾN</span>
-                        <div id="potentialWin"
-                            style="font-size:1.8rem; font-weight:900; color:var(--accent); font-family: 'Orbitron';">0
-                        </div>
+                    <div class="stat-box" style="margin-top: 0.5rem; background:rgba(0,0,0,0.2); padding: 0.6rem 0.8rem; border-radius:0.8rem; border: 1px dashed rgba(255,255,255,0.1);">
+                        <span style="opacity:0.5; font-size:0.65rem; font-weight:700;">LỢI NHUẬN DỰ KIẾN</span>
+                        <div id="potentialWin" style="font-size:1.3rem; font-weight:900; color:var(--accent); font-family: 'Orbitron';">0</div>
                     </div>
-                    <button id="startBtn" type="submit" class="btn-action" style="width: 100%; margin-top: 1rem;"
-                        onclick="startGame()">CẤT CÁNH</button>
-                    <button id="cashoutBtn" type="button" class="btn-action" style="width: 100%; margin-top: 1rem;"
-                        onclick="cashout()">RÚT Gtlm</button>
+                    <button id="startBtn" type="submit" class="btn-action" style="width: 100%; margin-top: 0.5rem;" onclick="startGame()">CẤT CÁNH</button>
+                    <button id="cashoutBtn" type="button" class="btn-action" style="width: 100%; margin-top: 0.5rem;" onclick="cashout()">RÚT GTLM</button>
                 </form>
-                <div style="margin-top: auto; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                <div style="margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid rgba(255,255,255,0.1);">
                     <div style="display:flex; justify-content: space-between; align-items: center;">
-                        <span style="opacity:0.5">Số Gtlm:</span>
-                        <span id="userMoney"
-                            style="font-weight:900; font-size:1.4rem; font-family: 'Orbitron';"><?php echo number_format($money, 0, ',', '.'); ?></span>
+                        <span style="opacity:0.5; font-size:0.8rem;">Số GTLM:</span>
+                        <span id="userMoney" style="font-weight:900; font-size:1.2rem; font-family: 'Orbitron'; color:#38bdf8;"><?php echo number_format($money, 0, ',', '.'); ?></span>
                     </div>
-                    <div style="text-align: center; margin-top: 1.5rem;">
-                        <a href="../index.php"
-                            style="color: #fff; text-decoration: none; font-size: 0.8rem; opacity: 0.3; transition: 0.3s;"
-                            onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.3">← Quay về
-                            Dashboard</a>
-                    </div>
-                    <button class="btn-howto" onclick="crTutOpen()">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10" />
-                            <path d="M12 16v-4m0-4h.01" />
-                        </svg>
-                        Hướng dẫn chơi
-                    </button>
                 </div>
             </div>
             <div class="crash-area" id="crashArea">
@@ -618,7 +514,7 @@ if (isset($_GET['action'])) {
                     // Poll server for crash status every 500ms
                     let checkInterval = setInterval(() => {
                         if (!gameActive) { clearInterval(checkInterval); return; }
-                        $.get('crash.php?action=check', function(cres) {
+                        $.get('?action=check', function(cres) {
                             if (cres.crashed) {
                                 crashPoint = cres.crashPoint;
                                 crashed();
@@ -705,7 +601,15 @@ if (isset($_GET['action'])) {
             }
             updatePotential();
         }
-        }
+
+        setInterval(() => {
+            $.get('live_3.php?action=get_balance', function(res) {
+                if (res && res.success && res.money) {
+                    $('#userMoney').text(res.money);
+                }
+            });
+        }, 2000);
+
         let checkCrash3D = setInterval(() => {
             if (typeof Crash3D !== 'undefined' && typeof THREE !== 'undefined' && typeof THREE.EffectComposer !== 'undefined') {
                 try {

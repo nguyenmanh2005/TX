@@ -1,176 +1,128 @@
-if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
-if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
+/**
+ * 🤖 BOT STREAMER PRO V3 - THẦN BÀI BACCARAT (BACCARAT ROYALE)
+ * - Tự động nhận diện trạng thái: Chờ ván -> Chọn chip cược -> Đặt cửa KING/QUEEN/DRAW -> KHAI CUỘC.
+ * - Quản lý vốn thông minh: Đa dạng hóa phỉnh cược (50K, 100K, 500K, 1M, 5M), NGĂN CHẶN bấm nút XÓA.
+ * - Chuột ảo GSAP di chuyển mượt mà 0.25s - 0.3s với hiệu ứng click nảy rõ nét trên từng ô cược.
+ */
+if (typeof BotVirtualCursor !== "undefined") {
+    BotVirtualCursor.init("Thần Bài Baccarat 👑👸");
+    let botBusy = false;
 
-// Đảm bảo bot_virtual_cursor.js đã được tải trước
-function startBaccaratBot() {
-    if (typeof BotVirtualCursor === "undefined") {
-        setTimeout(startBaccaratBot, 500);
-        return;
+    function getBotBalance() {
+        const balanceEl = document.getElementById('userBalance');
+        if (!balanceEl) return 50000000;
+        return parseInt(balanceEl.innerText.replace(/\D/g, '')) || 0;
     }
 
-    BotVirtualCursor.init("Bot Streamer");
-    
-    // Logic bot baccarat thông minh hơn
-    const playRound = () => {
-        const chips = Array.from(document.querySelectorAll(".chip:not([data-value='0'])")).filter(b => b.offsetParent !== null);
-        const options = Array.from(document.querySelectorAll(".bet-option")).filter(b => b.offsetParent !== null);
-        const dealBtn = document.getElementById("dealBtn");
-        
-        if (chips.length > 0 && options.length > 0 && dealBtn && dealBtn.offsetParent !== null && !dealBtn.disabled) {
-            
-            // 1. Chọn chip ngẫu nhiên (thiên về các chip nhỏ/vừa để cược nhiều lần)
-            // Trọng số để hay chọn 10K, 50K, 100K hơn là 5M
-            const chipWeights = [1, 2, 5, 5, 3, 2, 1, 1]; 
-            let totalWeight = chipWeights.reduce((a, b) => a + b, 0);
-            let randomNum = Math.random() * totalWeight;
-            let chipIndex = 0;
-            for (let i = 0; i < chipWeights.length; i++) {
-                randomNum -= chipWeights[i];
-                if (randomNum <= 0) {
-                    chipIndex = Math.min(i, chips.length - 1);
-                    break;
-                }
-            }
-            const randChip = chips[chipIndex];
-            
-            // 2. Phân tích Lịch Sử (Roadmap) để Chọn cửa cược thông minh
-            // Đọc beadPlate để xem kết quả trước đó
-            const beads = document.querySelectorAll('#beadPlate .bead');
-            let lastWinner = null;
-            let streak = 0;
-            if (beads.length > 0) {
-                const history = Array.from(beads).map(b => b.classList.contains('bead-player') ? 'player' : (b.classList.contains('bead-banker') ? 'banker' : 'tie'));
-                
-                // Lấy kết quả không phải Hòa gần nhất
-                for (let i = history.length - 1; i >= 0; i--) {
-                    if (history[i] !== 'tie') {
-                        lastWinner = history[i];
-                        streak = 1;
-                        // Đếm chuỗi
-                        for (let j = i - 1; j >= 0; j--) {
-                            if (history[j] === 'tie') continue;
-                            if (history[j] === lastWinner) streak++;
-                            else break;
-                        }
-                        break;
-                    }
-                }
-            }
+    function runBaccaratStreamerBot() {
+        if (botBusy) return;
 
-            // Mặc định: Player: 45%, Tie: 10%, Banker: 45%
-            let optionWeights = [45, 10, 45]; 
-            
-            if (lastWinner === 'player') {
-                if (streak >= 4) {
-                    // Chuỗi Player quá dài (4+) -> Bẻ cầu sang Banker (Banker 70%)
-                    optionWeights = [20, 10, 70];
-                    console.log("[Bot Baccarat] Bẻ cầu Banker! (Player đã win " + streak + " lần)");
-                } else {
-                    // Đu cầu Player (Player 65%)
-                    optionWeights = [65, 10, 25];
-                    console.log("[Bot Baccarat] Đu cầu Player! (Streak: " + streak + ")");
-                }
-            } else if (lastWinner === 'banker') {
-                if (streak >= 4) {
-                    // Chuỗi Banker quá dài (4+) -> Bẻ cầu sang Player (Player 70%)
-                    optionWeights = [70, 10, 20];
-                    console.log("[Bot Baccarat] Bẻ cầu Player! (Banker đã win " + streak + " lần)");
-                } else {
-                    // Đu cầu Banker (Banker 65%)
-                    optionWeights = [25, 10, 65];
-                    console.log("[Bot Baccarat] Đu cầu Banker! (Streak: " + streak + ")");
-                }
+        const dealBtn = document.getElementById('dealBtn');
+        if (!dealBtn) {
+            setTimeout(runBaccaratStreamerBot, 500);
+            return;
+        }
+
+        // ── 1. NẾU VÁN BÀI ĐANG CHIA: BOT CHỜ VÀ THEO DÕI LẬT BÀI ──
+        if ($(dealBtn).hasClass('disabled') || (typeof BaccaratLogic !== 'undefined' && BaccaratLogic.isGameRunning)) {
+            setTimeout(runBaccaratStreamerBot, 400);
+            return;
+        }
+
+        // ── 2. NẾU BÀN ĐANG CHỜ CƯỢC: CHUẨN BỊ VÁN MỚI ──
+        botBusy = true;
+        const balance = getBotBalance();
+
+        // Lấy danh sách chip an toàn (LOẠI BỎ NÚT XÓA)
+        const chips = Array.from(document.querySelectorAll('#chipSelector .chip')).filter(c => {
+            const val = parseInt(c.getAttribute('data-value')) || 0;
+            return val > 0;
+        });
+
+        // Phân loại phỉnh cược linh hoạt
+        let targetChip = null;
+        if (chips.length > 0) {
+            const chipMap = {};
+            chips.forEach(c => {
+                const txt = c.innerText.trim();
+                chipMap[txt] = c;
+            });
+
+            const rand = Math.random();
+            if (rand < 0.25 && chipMap['50K']) {
+                targetChip = chipMap['50K'];   // 25% cược thăm dò 50K
+            } else if (rand < 0.55 && chipMap['100K']) {
+                targetChip = chipMap['100K'];  // 30% cược nhẹ 100K
+            } else if (rand < 0.80 && chipMap['500K']) {
+                targetChip = chipMap['500K'];  // 25% cược tiêu chuẩn 500K
+            } else if (rand < 0.95 && chipMap['1M']) {
+                targetChip = chipMap['1M'];    // 15% cược to 1M
+            } else if (chipMap['5M'] && balance >= 10000000) {
+                targetChip = chipMap['5M'];    // 5% cược khủng 5M
             } else {
-                console.log("[Bot Baccarat] Cược ngẫu nhiên");
+                targetChip = chips[Math.floor(Math.random() * chips.length)];
             }
+        }
 
-            totalWeight = optionWeights.reduce((a, b) => a + b, 0);
-            randomNum = Math.random() * totalWeight;
-            let optionIndex = 0;
-            for (let i = 0; i < optionWeights.length; i++) {
-                randomNum -= optionWeights[i];
-                if (randomNum <= 0) {
-                    optionIndex = Math.min(i, options.length - 1);
-                    break;
-                }
-            }
-            const randOption = options[optionIndex];
-            
-            // Số lần nhấp vào cửa cược (để tăng tiền cược)
-            const clicksCount = Math.floor(Math.random() * 3) + 1; // 1 đến 3 lần click
+        // Chọn cửa cược Baccarat (KING: 48%, QUEEN: 44%, DRAW: 8%)
+        const boxPlayer = document.getElementById('box-player');
+        const boxBanker = document.getElementById('box-banker');
+        const boxTie = document.getElementById('box-tie');
 
-            // Bắt đầu chuỗi hành động
-            BotVirtualCursor.moveToElement($(randChip), 0.6, 0, () => {
-                BotVirtualCursor.simulateClick(() => {
-                    try { randChip.click(); } catch(e){}
-                    
-                    // Di chuyển đến cửa cược
-                    setTimeout(() => {
-                        BotVirtualCursor.moveToElement($(randOption), 0.6, 0, () => {
-                            
-                            // Hàm click đệ quy để click nhiều lần vào cửa cược
-                            let clicksDone = 0;
-                            const doClickOption = () => {
-                                BotVirtualCursor.simulateClick(() => {
-                                    try { randOption.click(); } catch(e){}
-                                    clicksDone++;
-                                    
-                                    if (clicksDone < clicksCount) {
-                                        setTimeout(doClickOption, 300 + Math.random() * 200); // Click nhanh liên tiếp
-                                    } else {
-                                        // Hoàn thành click cửa cược, đôi khi cược thêm cửa TIE lót tay (15% cơ hội)
-                                        if (Math.random() < 0.15 && randOption.dataset.type !== 'tie') {
-                                            const tieOption = options.find(o => o.dataset.type === 'tie');
-                                            if (tieOption) {
-                                                setTimeout(() => {
-                                                    // Chọn chip nhỏ nhất để lót hòa
-                                                    BotVirtualCursor.moveToElement($(chips[0]), 0.4, 0, () => {
-                                                        BotVirtualCursor.simulateClick(() => {
-                                                            try { chips[0].click(); } catch(e){}
-                                                            setTimeout(() => {
-                                                                BotVirtualCursor.moveToElement($(tieOption), 0.4, 0, () => {
-                                                                    BotVirtualCursor.simulateClick(() => {
-                                                                        try { tieOption.click(); } catch(e){}
-                                                                        finalizeDeal();
-                                                                    });
-                                                                });
-                                                            }, 300);
-                                                        });
-                                                    });
-                                                }, 400);
-                                                return; // Dừng luồng hiện tại để lót hòa xử lý tiếp
-                                            }
-                                        }
-                                        
-                                        finalizeDeal();
-                                    }
-                                });
-                            };
-                            
-                            const finalizeDeal = () => {
-                                setTimeout(() => {
-                                    BotVirtualCursor.moveToElement($(dealBtn), 0.5, 0, () => {
-                                        BotVirtualCursor.simulateClick(() => {
-                                            try { dealBtn.click(); } catch(e){}
-                                        });
+        let targetBox = boxBanker;
+        const randBox = Math.random();
+        if (randBox < 0.48) {
+            targetBox = boxBanker; // 👑 KING (Nhà Cái)
+        } else if (randBox < 0.92) {
+            targetBox = boxPlayer; // 👸 QUEEN (Người Chơi)
+        } else {
+            targetBox = boxTie || boxBanker; // 🤝 DRAW (Hòa 1:8)
+        }
+
+        // BƯỚC 1: Nghỉ 0.8s - 1.2s trước ván mới
+        setTimeout(() => {
+            if (targetChip) {
+                BotVirtualCursor.moveToElement($(targetChip), 0.25, 0, () => {
+                    BotVirtualCursor.simulateClick(() => {
+                        try { targetChip.click(); } catch(e){}
+
+                        // BƯỚC 2: Rê chuột đặt vào ô cược đã chọn
+                        if (targetBox) {
+                            setTimeout(() => {
+                                BotVirtualCursor.moveToElement($(targetBox), 0.25, 0, () => {
+                                    BotVirtualCursor.simulateClick(() => {
+                                        try { targetBox.click(); } catch(e){}
+
+                                        // BƯỚC 3: Rê chuột bấm "KHAI CUỘC"
+                                        executeDeal(dealBtn);
                                     });
-                                }, 800 + Math.random() * 1000); // Giả vờ chần chừ trước khi chốt
-                            };
-                            
-                            doClickOption();
-                        });
-                    }, 500);
+                                });
+                            }, 150);
+                        } else {
+                            executeDeal(dealBtn);
+                        }
+                    });
+                });
+            } else {
+                executeDeal(dealBtn);
+            }
+        }, 900 + Math.random() * 400);
+    }
+
+    function executeDeal(dealBtn) {
+        setTimeout(() => {
+            BotVirtualCursor.moveToElement($(dealBtn), 0.25, 0, () => {
+                BotVirtualCursor.simulateClick(() => {
+                    try { dealBtn.click(); } catch(e){}
+                    botBusy = false;
+                    setTimeout(runBaccaratStreamerBot, 800);
                 });
             });
-        }
-        
-        // Random thời gian cho ván tiếp theo (sau khi ván hiện tại kết thúc)
-        // Vì baccarat cần thời gian lật bài, nên delay đủ lâu để nút KHAI CUỘC hiện lại
-        setTimeout(playRound, 8000 + Math.random() * 6000);
-    };
+        }, 180);
+    }
 
-    // Khởi chạy vòng đầu tiên sau một khoảng delay nhỏ
-    setTimeout(playRound, 3000);
+    // Khởi động bot streamer
+    $(document).ready(function() {
+        setTimeout(runBaccaratStreamerBot, 1000);
+    });
 }
-
-startBaccaratBot();

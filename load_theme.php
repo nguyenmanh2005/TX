@@ -215,9 +215,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let lastSeenSeasonalId = sessionStorage.getItem('last_seen_seasonal') || 0;
     let lastSeenRandomId = sessionStorage.getItem('last_seen_random') || 0;
+    const apiPrefix = window.location.pathname.includes('/games/') || window.location.pathname.includes('/LiveStream/') || window.location.pathname.includes('/bot/') ? '../' : '';
 
     function pollEvents() {
-        fetch('/api_sse_events.php')
+        fetch(apiPrefix + 'api_sse_events.php')
             .then(res => res.json())
             .then(data => {
                 if (!data.success) return;
@@ -239,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             color: '#f8fafc'
                         }).then((res) => {
                             if (res.isConfirmed) {
-                                window.location.href = 'event_center.php';
+                                window.location.href = apiPrefix + 'event_center.php';
                             }
                         });
                     }
@@ -287,7 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     let missionList = data.completed_missions.map(m => `<li><b>${m.title}</b></li>`).join('');
                     Swal.fire({
                         title: '🎯 HOÀN THÀNH NHIỆM VỤ!',
-                        html: `Bạn vừa hoàn thành:<br><ul style="text-align:left; font-size:14px; margin: 10px 0;">${missionList}</ul><a href="event_center.php" style="color:#4ade80; font-weight:bold; display:inline-block; margin-top:5px; text-decoration:none;">👉 Bấm vào đây để nhận thưởng</a>`,
+                        html: `Bạn vừa hoàn thành:<br><ul style="text-align:left; font-size:14px; margin: 10px 0;">${missionList}</ul><a href="${apiPrefix}event_center.php" style="color:#4ade80; font-weight:bold; display:inline-block; margin-top:5px; text-decoration:none;">👉 Bấm vào đây để nhận thưởng</a>`,
                         icon: 'success',
                         toast: true,
                         position: 'top-end',
@@ -310,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let _pvpShownAccepted = new Set();
     async function checkPvPChallenges() {
         try {
-            const res = await fetch('api_pvp_check.php');
+            const res = await fetch(apiPrefix + 'api_pvp_check.php');
             const data = await res.json();
 
             // --- Người bị thách (Player 2): có lời thách mới ---

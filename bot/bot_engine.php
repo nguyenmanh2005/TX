@@ -366,12 +366,19 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
             $cFile = $cookieDir . $botMd5 . ".txt";
             $currentCookieFile = $cFile;
             $sFile = $cookieDir . $botMd5 . ".state.json";
-            $state = file_exists($sFile) ? json_decode(file_get_contents($sFile), true) : [];
+            $state = file_exists($sFile) ? (json_decode(file_get_contents($sFile), true) ?: []) : [];
             
-            // --- EVOLUTION: Khởi tạo Cấp độ & Trải nghiệm ---
+            // --- EVOLUTION: Khởi tạo Cấp độ & Trải nghiệm & Thống kê an toàn ---
             if (!isset($state['xp'])) $state['xp'] = 0;
             if (!isset($state['level'])) $state['level'] = 1;
-            if (!isset($state['titles'])) $state['titles'] = [];
+            if (!isset($state['titles']) || !is_array($state['titles'])) $state['titles'] = [];
+            if (!isset($state['wins'])) $state['wins'] = 0;
+            if (!isset($state['losses'])) $state['losses'] = 0;
+            if (!isset($state['win_streak'])) $state['win_streak'] = 0;
+            if (!isset($state['lose_streak'])) $state['lose_streak'] = 0;
+            if (!isset($state['history']) || !is_array($state['history'])) $state['history'] = [];
+            if (!isset($state['mood'])) $state['mood'] = 'chill';
+            if (!isset($state['fail_count'])) $state['fail_count'] = 0;
             
             $socialRole = $state['social_role'] ?? 'commoner';
             $botInfo = $botNameMap[$email] ?? ['name' => 'Unknown Bot', 'id' => 0];
@@ -1156,6 +1163,7 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
                 file_put_contents($syncFile, json_encode($syncData), LOCK_EX);
 
                 // Cập nhật history cho bot state
+                if (!isset($state['history']) || !is_array($state['history'])) $state['history'] = [];
                 array_unshift($state['history'], [
                     'game' => $chosenGame,
                     'bet' => $realBet,
@@ -1370,6 +1378,7 @@ function executeBotCycle(mysqli $conn, array $config, string $cookieDir, string 
                 }
 
                 // Cập nhật history vào state (tối đa 10 ván)
+                if (!isset($state['history']) || !is_array($state['history'])) $state['history'] = [];
                 array_unshift($state['history'], [
                     'game' => $chosenGame,
                     'bet' => $bet,

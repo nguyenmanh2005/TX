@@ -56,6 +56,12 @@ const GameEffects = {
                 100% { opacity:0; transform: translateY(-140px) scale(0.8); }
             }
 
+            /* Button ripple */
+            @keyframes ripple-effect {
+                0%   { transform: scale(0); opacity: 0.8; }
+                100% { transform: scale(4); opacity: 0; }
+            }
+
             /* Balance bump */
             .balance-bump { animation: balanceBump 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
             @keyframes balanceBump {
@@ -252,6 +258,30 @@ const GameEffects = {
             { transform: 'translate(-3px,0)' },
             { transform: 'translate(0,0)' }
         ], { duration: 380 });
+    },
+
+    addRipple: function (e) {
+        const btn = e.currentTarget || e.target;
+        if (!btn) return;
+        const rect = btn.getBoundingClientRect();
+        const ripple = document.createElement('span');
+        const diameter = Math.max(rect.width, rect.height);
+        const radius = diameter / 2;
+        ripple.style.width = ripple.style.height = `${diameter}px`;
+        ripple.style.left = `${e.clientX - rect.left - radius}px`;
+        ripple.style.top = `${e.clientY - rect.top - radius}px`;
+        ripple.style.position = 'absolute';
+        ripple.style.borderRadius = '50%';
+        ripple.style.transform = 'scale(0)';
+        ripple.style.animation = 'ripple-effect 0.6s linear';
+        ripple.style.background = 'rgba(255, 255, 255, 0.35)';
+        ripple.style.pointerEvents = 'none';
+        
+        const existing = btn.getElementsByClassName('ripple-circle')[0];
+        if (existing) existing.remove();
+        ripple.className = 'ripple-circle';
+        btn.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 600);
     },
 
     floatingText: function (text, x, y, color) {

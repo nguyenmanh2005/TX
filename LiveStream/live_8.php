@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 
 require_once '../game_history_helper.php';
@@ -139,6 +139,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin') {
         'message' => $isWin ? "🎉 CHÚC MỪNG! Bạn thắng " . number_format($winAmount) . " gtlm!" : "💀 Rất tiếc! Chúc bạn may mắn lần sau."
     ]);
     exit;
+} elseif (isset($_GET['action']) && $_GET['action'] === 'get_balance') {
+    header('Content-Type: application/json');
+    $stmtB = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
+    $stmtB->bind_param("i", $userId);
+    $stmtB->execute();
+    $resB = $stmtB->get_result()->fetch_assoc();
+    $stmtB->close();
+    echo json_encode(['success' => true, 'money' => number_format($resB['Money'] ?? 0) . ' gtlm']);
+    exit;
 }
 ?>
 <!DOCTYPE html>
@@ -147,7 +156,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin') {
 <head>
     <meta charset="UTF-8">
     <title>Slot Machine Premium - Neon Fortune</title>
-    <script src="slot-sounds.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="../games/slot-sounds.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <link rel="stylesheet" href="../assets/css/main.css">
@@ -170,11 +181,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin') {
                 <?= $bgGradientCSS ?>
             ;
             min-height: 100vh;
+            max-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             color: white;
-            overflow-x: hidden;
+            overflow: hidden;
+            scrollbar-width: none;
         }
 
         #threejs-background {
@@ -188,7 +201,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin') {
 
         .header-nav {
             width: 100%;
-            padding: 20px 40px;
+            padding: 10px 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -200,26 +213,27 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin') {
 
         .game-logo {
             font-family: 'Cinzel', serif;
-            font-size: 28px;
+            font-size: 22px;
             color: var(--neon-gold);
-            letter-spacing: 5px;
+            letter-spacing: 3px;
             text-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
         }
 
         .user-balance {
             background: rgba(0, 0, 0, 0.4);
-            padding: 10px 30px;
-            border-radius: 40px;
+            padding: 6px 20px;
+            border-radius: 30px;
             border: 2px solid var(--neon-gold);
             font-weight: 800;
+            font-size: 15px;
             color: var(--neon-gold);
             box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
         }
 
         .main-stage {
-            margin-top: 60px;
+            margin-top: 15px;
             text-align: center;
-            max-width: 800px;
+            max-width: 700px;
             width: 100%;
             display: flex;
             flex-direction: column;
@@ -228,24 +242,24 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin') {
 
         /* Slot Cabinet */
         .slot-cabinet {
-            background: rgba(20, 20, 20, 0.8);
+            background: rgba(20, 20, 20, 0.85);
             backdrop-filter: blur(20px);
-            border: 4px solid #333;
-            border-radius: 50px;
-            padding: 40px;
-            box-shadow: 0 50px 100px rgba(0, 0, 0, 0.8), inset 0 0 50px rgba(255, 215, 0, 0.1);
+            border: 3px solid #333;
+            border-radius: 30px;
+            padding: 20px 30px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8), inset 0 0 30px rgba(255, 215, 0, 0.1);
             border-color: var(--neon-gold);
             position: relative;
-            margin-bottom: 40px;
+            margin-bottom: 15px;
             width: 100%;
-            max-width: 600px;
+            max-width: 520px;
         }
 
         .slot-cabinet::after {
             content: '';
             position: absolute;
-            inset: -10px;
-            border-radius: 60px;
+            inset: -6px;
+            border-radius: 36px;
             border: 2px solid var(--neon-purple);
             opacity: 0.3;
             pointer-events: none;
@@ -254,28 +268,28 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin') {
         .reels-container {
             display: flex;
             justify-content: center;
-            gap: 20px;
+            gap: 15px;
             background: #111;
-            padding: 20px;
-            border-radius: 20px;
+            padding: 12px;
+            border-radius: 16px;
             border: 2px solid #444;
             overflow: hidden;
-            height: 180px;
+            height: 130px;
         }
 
         .reel-window {
-            width: 140px;
-            height: 140px;
+            width: 105px;
+            height: 105px;
             background: white;
-            border-radius: 15px;
+            border-radius: 12px;
             display: flex;
-            align-items: center;
             justify-content: center;
-            font-size: 80px;
-            position: relative;
-            overflow: hidden;
-            background: linear-gradient(180deg, #fff 0%, #eee 100%);
-            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2);
+            align-items: center;
+            font-size: 55px;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.4), 0 10px 20px rgba(0, 0, 0, 0.5);
+            border: 3px solid var(--neon-gold);
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            user-select: none;
         }
 
         .reel-strip {
@@ -578,8 +592,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin') {
                 <button class="spin-btn" id="spin-trigger">🎰 QUAY NGAY</button>
             </div>
         </div>
-
-        <a href="../index.php" class="back-link">🏠 QUAY LẠI SẢNH CHỜ</a>
     </div>
 
     <div class="status-marquee" id="status-bar">CHÚC BẠN MAY MẮN! HÃY CHỌN MỨC CƯỢC VÀ BẤM QUAY.</div>
@@ -646,7 +658,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin') {
             });
 
             try {
-                const res = await fetch(`slot.php?action=spin&bet=${bet}`);
+                const res = await fetch(`?action=spin&bet=${bet}`);
                 const data = await res.json();
 
                 if (data.success) {
@@ -883,6 +895,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin') {
                     }
                 });
             }
+
+            // Sync streamer balance every 2s
+            setInterval(() => {
+                $.get('?action=get_balance', function(res) {
+                    if (res && res.success && res.money) {
+                        $('#balance-txt').text(res.money);
+                    }
+                });
+            }, 2000);
         });
     </script>
 

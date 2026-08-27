@@ -14,6 +14,18 @@ require_once '../include_css.php';
 
 
 $userId = $botUserId;
+
+if (isset($_GET['action']) && $_GET['action'] === 'get_balance') {
+    header('Content-Type: application/json');
+    $stmtB = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
+    $stmtB->bind_param("i", $userId);
+    $stmtB->execute();
+    $resB = $stmtB->get_result()->fetch_assoc();
+    $stmtB->close();
+    echo json_encode(['success' => true, 'money' => number_format($resB['Money'] ?? 0, 0, ',', '.')]);
+    exit;
+}
+
 $sql = "SELECT * FROM users WHERE Iduser = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $userId);
@@ -40,16 +52,14 @@ $gameId = "baccarat";
 <body class="game-page baccarat-theme">
     <div class="game-container">
         <!-- Header -->
-        <div class="game-header">
-            <a href="../index.php" class="back-btn">← Trang chủ</a>
-            <div class="game-info">
-                <h1><?= $gameTitle ?></h1>
-                <div class="balance-box">
+        <div class="game-header" style="padding: 8px 25px;">
+            <div class="game-info" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <h1 style="font-size: 1.3rem; margin: 0;"><?= $gameTitle ?></h1>
+                <div class="balance-box" style="font-size: 1rem;">
                     <span>Ngân khố:</span>
-                    <strong id="userBalance"><?= number_format($user['Money'], 0, ',', '.') ?></strong> GTLM
+                    <strong id="userBalance" style="color: var(--baccarat-gold); font-weight: 800; font-size: 1.2rem;"><?= number_format($user['Money'], 0, ',', '.') ?></strong> GTLM
                 </div>
             </div>
-            <button id="guideBtn" class="help-btn" title="Hướng dẫn cách chơi">?</button>
         </div>
 
         <!-- Main Game Area -->
@@ -203,6 +213,15 @@ if (typeof jQuery === "undefined") document.write('<script src="https://code.jqu
 if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
-<script src="../assets/js/bots/bot_9.js?v=<?= time() ?>"></script>
+<script src="bots/bot_9.js?v=<?= time() ?>"></script>
+<script>
+setInterval(() => {
+    $.get('?action=get_balance', function(res) {
+        if (res && res.success && res.money) {
+            $('#userBalance').text(res.money);
+        }
+    });
+}, 2000);
+</script>
 </body>
 </html>

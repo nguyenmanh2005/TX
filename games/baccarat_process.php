@@ -19,12 +19,11 @@ function logError(string $message) {
 }
 
 try {
-    if (!isset($_SESSION['Iduser'])) {
+    $userId = $_SESSION['Iduser_temp_bot'] ?? $_SESSION['Iduser'] ?? null;
+    if (!$userId) {
         echo json_encode(['error' => 'Chưa đăng nhập']);
         exit();
     }
-
-    $userId = $_SESSION['Iduser'];
     $data = json_decode(file_get_contents('php://input'), true);
 
     if (!$data) {

@@ -697,7 +697,7 @@ if (isset($_GET['action'])) {
             }
             updatePotential();
         }
-        }
+
         window.onload = () => {
             // Load 3D Engine
             if (typeof Crash3D !== 'undefined') {
