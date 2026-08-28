@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 
 require_once '../game_history_helper.php';
@@ -264,7 +264,7 @@ if (isset($_GET['action'])) {
 </head>
 
 <body>
-    <div class="game-wrapper" style="max-width:800px; margin:2rem auto; position:relative; z-index:1; padding: 0 15px; width: 100%;">
+    <div class="game-wrapper" style="max-width:800px; margin:0 auto; position:relative; z-index:1; padding: 0 15px; width: 100%; transform: scale(0.8); transform-origin: top center; margin-top: 1rem;">
         <div class="glass" style="padding: 2.5rem; text-align: center; border-radius: 2rem; width: 100%;">
             <h1 style="margin: 0 0 1rem; font-size: 2.5rem; font-weight: 900; color: #00d2ff; text-transform: uppercase; letter-spacing: 2px;">CARIBBEAN STUD</h1>
             <div style="background: rgba(0,0,0,0.3); padding: 10px 25px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.2); display: inline-block; margin-bottom: 2rem; max-width: 100%;">
@@ -338,7 +338,9 @@ if (isset($_GET['action'])) {
                 shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>,
                 bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>
             };
-            const prefix = window.location.pathname.includes('/games/') ? '../' : '';
+            const pathParts = window.location.pathname.split('/');
+            const appRoot = '/' + pathParts[1] + '/'; 
+            const prefix = window.location.origin + appRoot;
             const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
             
             scripts.forEach(src => {
@@ -357,9 +359,9 @@ if (isset($_GET['action'])) {
                 $(this).addClass('active');
                 const val = $(this).data('value');
                 if (val === 'allin') {
-                    $('#betAmount').val(<?= $money ?>);
+                    document.getElementById('betAmount').value = <?= $money ?>;
                 } else {
-                    $('#betAmount').val(val);
+                    document.getElementById('betAmount').value = val;
                 }
             });
         });
@@ -393,21 +395,31 @@ if (isset($_GET['action'])) {
                 
                 res.player.forEach((c, i) => renderCard('#playerHand', i, c));
                 renderCard('#dealerHand', 0, res.dealer_up); // Dealer only shows first card
-                
                 $('#userMoney').text(res.money + ' gtlm');
                 
                 $('#dealBtn').hide();
                 $('#chipSelector').css('opacity', '0.5').css('pointer-events', 'none');
                 $('#betAmount').prop('disabled', true);
                 
+                // Lưu state cho bot đọc
+                window.currentHand = res.player;
+                window.dealerUp = res.dealer_up;
+
                 $('#callBtn').show();
                 $('#foldBtn').show();
             });
         }
 
         function call() {
-            $.get('caribbean.php?action=call', function(res) {
-                if (!res.success) return;
+            $.get('?action=call', function(res) {
+                if (!res.success) {
+                    Swal.fire('Lỗi', res.message, 'error');
+                    // Tự động chuyển qua Fold nếu lỗi (vd không đủ tiền) để bot không bị kẹt
+                    if (window.isBotStreamer || true) {
+                        setTimeout(() => { fold(); }, 1500);
+                    }
+                    return;
+                }
                 
                 res.dealer.forEach((c, i) => renderCard('#dealerHand', i, c));
                 
@@ -430,7 +442,7 @@ if (isset($_GET['action'])) {
         }
 
         function fold() {
-            $.get('caribbean.php?action=fold', function(res) {
+            $.get('?action=fold', function(res) {
                 if (res.success) {
                     if (typeof GameEffects !== 'undefined') GameEffects.showLoss('Folded', 'Bạn đã bỏ bài.');
                     else Swal.fire('Folded', 'Bạn đã bỏ bài.', 'info');
