@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 
 require_once '../game_history_helper.php';
@@ -34,6 +34,7 @@ $stmt->close();
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body { margin: 0; padding: 0; font-family: 'Outfit', sans-serif; background: transparent; color: #fff; }
         .game-container { max-width: 600px; margin: 40px auto; padding: 30px; background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(20px); border-radius: 30px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5); text-align: center; }
@@ -72,6 +73,42 @@ $stmt->close();
 
         .back-home { display: inline-block; margin-top: 30px; color: #94a3b8; text-decoration: none; font-weight: 600; transition: color 0.2s; }
         .back-home:hover { color: #fff; }
+        
+        .floating-win {
+            position: absolute;
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #4ade80;
+            text-shadow: 0 0 20px #4ade80, 0 5px 10px rgba(0,0,0,0.8);
+            pointer-events: none;
+            z-index: 100;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .floating-loss {
+            position: absolute;
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #ef4444;
+            text-shadow: 0 0 20px #ef4444, 0 5px 10px rgba(0,0,0,0.8);
+            pointer-events: none;
+            z-index: 100;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        #threejs-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -119,10 +156,11 @@ $stmt->close();
     </div>
 
     <script>
-        function setBet(amount) {
-            $('#bet-amount').val(amount);
+        function setBet(amount, btn) {
+            document.getElementById('bet-amount').value = amount;
             $('.quick-btn').removeClass('active');
-            event.target.classList.add('active');
+            if (btn) btn.classList.add('active');
+            else if (window.event && window.event.target) window.event.target.classList.add('active');
         }
 
         function formatMoney(n) {
@@ -170,21 +208,22 @@ $stmt->close();
                     $('#current-balance').text(formatMoney(data.new_balance));
                     
                     if (data.is_win) {
-                        Swal.fire({
-                            title: 'THẮNG LỚN!',
-                            html: `Đồng xu ra <b>${data.result_choice.toUpperCase()}</b><br>Bạn nhận được <b style="color:#4ade80;">+${formatMoney(data.win_amount)}đ</b>`,
-                            icon: 'success',
-                            background: '#1e293b',
-                            color: '#fff'
-                        });
+                        if (typeof window.GameEffects !== 'undefined') {
+                            window.GameEffects.showWin(data.win_amount);
+                        }
+                        
+                        // Hiệu ứng chữ nổi lên giống Bàn 1
+                        const float = $('<div class="floating-win">+' + formatMoney(data.win_amount) + '</div>').appendTo('.coin-wrapper');
+                        gsap.to(float, { y: -100, opacity: 0, duration: 2, onComplete: () => float.remove() });
+                        
                     } else {
-                        Swal.fire({
-                            title: 'THUA RỒI!',
-                            html: `Đồng xu ra <b>${data.result_choice.toUpperCase()}</b><br>Bạn bị mất <b style="color:#ef4444;">-${formatMoney(betAmount)}đ</b>`,
-                            icon: 'error',
-                            background: '#1e293b',
-                            color: '#fff'
-                        });
+                        if (typeof window.GameEffects !== 'undefined') {
+                            window.GameEffects.showLoss();
+                        }
+                        
+                        // Hiệu ứng chữ trừ tiền nổi lên
+                        const float = $('<div class="floating-loss">-' + formatMoney(betAmount) + '</div>').appendTo('.coin-wrapper');
+                        gsap.to(float, { y: 50, opacity: 0, duration: 2, onComplete: () => float.remove() });
                     }
                     $('.action-btn').prop('disabled', false);
                 }, 3000); // Đợi 3s khớp với animation
@@ -193,6 +232,34 @@ $stmt->close();
                 $('.action-btn').prop('disabled', false);
             });
         }
+    </script>
+
+    <!-- Premium Effects System -->
+    <canvas id="threejs-background"></canvas>
+    <script>
+        (function() {
+            window.themeConfig = {
+                particleCount: 800,
+                particleSize: 0.05,
+                particleColor: '#ffffff',
+                particleOpacity: 0.6,
+                shapeCount: 10,
+                shapeColors: ["#f59e0b", "#d97706", "#64748b", "#cbd5e1"],
+                shapeOpacity: 0.3,
+                bgGradient: ["#1e293b", "#0f172a", "#334155"]
+            };
+            const pathParts = window.location.pathname.split('/');
+            const appRoot = '/' + pathParts[1] + '/'; 
+            const prefix = window.location.origin + appRoot;
+            const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
+            
+            scripts.forEach(src => {
+                const s = document.createElement('script');
+                s.src = prefix + src;
+                s.async = false;
+                document.head.appendChild(s);
+            });
+        })();
     </script>
 
 <!-- AUTO-GENERATED BOT SCRIPT -->
