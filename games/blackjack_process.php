@@ -156,6 +156,7 @@ try {
             $payout = $game['bet'];
         }
 
+        // ── BƯỚC 1: Xử lý tiền (transaction riêng) ──
         $conn->begin_transaction();
         try {
             if ($payout > 0) {
@@ -164,36 +165,46 @@ try {
                 $updateStmt->bind_param("di", $payout, $userId);
                 $updateStmt->execute();
             }
-
-            // Ghi log lịch sử game_history_helper nếu có
-            if (file_exists('../game_history_helper.php')) {
-                require_once '../game_history_helper.php';
-                logGameHistoryWithAll($conn, $userId, 'Blackjack Royale', $game['bet'], $payout, $payout > $game['bet']);
-            }
-
             $conn->commit();
-
-            $sql = "SELECT Money FROM users WHERE Iduser = ?";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("i", $userId);
-            $stmt->execute();
-            $newBalance = $stmt->get_result()->fetch_assoc()['Money'];
-
-            $kingFinalCards = $game['king'];
-            unset($_SESSION['bj_game']);
-
-            echo json_encode([
-                'success' => true,
-                'winStatus' => $winStatus,
-                'payout' => $payout,
-                'newBalance' => $newBalance,
-                'kingFinalCards' => $kingFinalCards
-            ]);
         } catch (Exception $e) {
             $conn->rollback();
-            echo json_encode(['error' => 'Lỗi quyết toán!']);
+            echo json_encode(['error' => 'Lỗi quyết toán tiền: ' . $e->getMessage()]);
+            exit;
         }
+
+        // ── BƯỚC 2: Lấy số dư mới ──
+        $sql = "SELECT Money FROM users WHERE Iduser = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $newBalance = (float)($stmt->get_result()->fetch_assoc()['Money'] ?? 0);
+
+        $kingFinalCards = $game['king'];
+        $gameBet = $game['bet'];
+        unset($_SESSION['bj_game']); // Xoá session trước khi log
+
+        // ── BƯỚC 3: Ghi log (riêng biệt, lỗi không ảnh hưởng response) ──
+        try {
+            if (file_exists('../game_history_helper.php')) {
+                require_once '../game_history_helper.php';
+                $isWin = ($winStatus === 'win' || $winStatus === 'blackjack' || $winStatus === 'push');
+                logGameHistoryWithAll($conn, $userId, 'Blackjack Royale', $gameBet, $payout, $isWin);
+            }
+        } catch (\Throwable $logErr) {
+            // Lỗi log không ảnh hưởng kết quả game
+            error_log('[BJ] logGameHistoryWithAll error: ' . $logErr->getMessage());
+        }
+
+        // ── BƯỚC 4: Trả kết quả ──
+        echo json_encode([
+            'success'       => true,
+            'winStatus'     => $winStatus,
+            'payout'        => $payout,
+            'newBalance'    => $newBalance,
+            'kingFinalCards'=> $kingFinalCards
+        ]);
         exit;
+
     }
 
 } catch (Exception $e) {

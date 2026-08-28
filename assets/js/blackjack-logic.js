@@ -221,29 +221,40 @@ const BlackjackLogic = {
 
     showResult(data) {
         const announce = document.getElementById('resultAnnounce');
-        const balance = document.getElementById('userBalance');
-        
-        let text = "";
+        const balance  = document.getElementById('userBalance');
+
+        // ── Xử lý khi API trả về lỗi (dự phòng) ──
+        if (data && data.error) {
+            console.warn('[BJ] showResult received error:', data.error);
+            // Vẫn hiện kết quả dựa vào điểm số trên màn hình
+            const pScore = parseInt(document.getElementById('playerScore')?.innerText || '0');
+            data = {
+                winStatus: pScore > 21 ? 'bust' : 'lose',
+                newBalance: null,
+                payout: 0,
+                kingFinalCards: []
+            };
+        }
+
+        let text  = "";
         let color = "#fff";
 
-        if (data.winStatus === 'blackjack') { 
-            text = "ROYALE 21!"; color = "var(--blackjack-gold)"; 
-            if (typeof GameEffects !== 'undefined') GameEffects.showWin(data.payout);
-        }
-        else if (data.winStatus === 'win') { 
-            text = "CHALLENGER WIN!"; color = "var(--challenger-blue)"; 
-            if (typeof GameEffects !== 'undefined') GameEffects.showWin(data.payout);
-        }
-        else if (data.winStatus === 'lose') { 
-            text = "KING WIN!"; color = "var(--king-red)"; 
-            if (typeof GameEffects !== 'undefined') GameEffects.showLose();
-        }
-        else if (data.winStatus === 'bust') { 
-            text = "BUSTED!"; color = "var(--king-red)"; 
-            if (typeof GameEffects !== 'undefined') GameEffects.showLose();
-        }
-        else if (data.winStatus === 'push') { 
-            text = "DRAW!"; color = "#aaa"; 
+        if (data.winStatus === 'blackjack') {
+            text = "ROYALE 21! 🎉"; color = "var(--blackjack-gold)";
+            if (typeof GameEffects !== 'undefined' && typeof GameEffects.showWin === 'function') GameEffects.showWin(data.payout);
+        } else if (data.winStatus === 'win') {
+            text = "CHALLENGER WIN! 🏆"; color = "var(--challenger-blue)";
+            if (typeof GameEffects !== 'undefined' && typeof GameEffects.showWin === 'function') GameEffects.showWin(data.payout);
+        } else if (data.winStatus === 'lose') {
+            text = "KING WIN! 👑"; color = "var(--king-red)";
+            if (typeof GameEffects !== 'undefined' && typeof GameEffects.showLoss === 'function') GameEffects.showLoss();
+        } else if (data.winStatus === 'bust') {
+            text = "BUSTED! 💀"; color = "var(--king-red)";
+            if (typeof GameEffects !== 'undefined' && typeof GameEffects.showLoss === 'function') GameEffects.showLoss();
+        } else if (data.winStatus === 'push') {
+            text = "DRAW! 🤝"; color = "#aaa";
+        } else {
+            text = "VÁN KẾT THÚC"; color = "#aaa";
         }
 
         announce.innerText = text;
@@ -251,8 +262,11 @@ const BlackjackLogic = {
         announce.style.display = 'block';
         announce.style.animation = 'announce 0.6s ease-out forwards';
 
-        balance.innerText = this.formatNumber(data.newBalance);
-        
+        // Cập nhật số dư an toàn — tránh crash nếu newBalance undefined
+        if (data.newBalance != null && balance) {
+            balance.innerText = this.formatNumber(Math.round(data.newBalance));
+        }
+
         setTimeout(() => {
             document.getElementById('dealBtn').style.display = 'block';
             this.isGameRunning = false;
