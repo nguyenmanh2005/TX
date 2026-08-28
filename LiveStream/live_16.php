@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 
 require_once '../game_history_helper.php';
@@ -81,10 +81,10 @@ require_once '../load_theme.php';
                                 <span style="color: ${t.status === 'playing' ? '#ef4444' : '#10b981'}">${t.status === 'playing' ? 'Đang Chơi' : 'Đang Chờ'}</span>
                                 | 👥 ${t.player_count}/5
                             </div>
-                            <button onclick="window.location.href='watch.php?id=16&table_id=${t.id}'" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px;" class="btn-xem">
+                            <button onclick="window.location.href='?table_id=${t.id}'" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px;" class="btn-xem">
                                 👁️ XEM
                             </button>
-                            <button onclick="window.location.href='../games/blackjack_multi.php?id=${t.id}'" style="background: #3b82f6; color: white; border: none; padding: 8px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                            <button onclick="window.location.href='?table_id=${t.id}'" style="background: #3b82f6; color: white; border: none; padding: 8px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;">
                                 VÀO BÀN
                             </button>
                         </div>
@@ -145,7 +145,7 @@ require_once '../load_theme.php';
                 const res = await fetch('../api_blackjack_lobby.php?action=create', { method: 'POST', body: fd });
                 const data = await res.json();
                 if(data.success) {
-                    window.location.href = 'watch.php?id=16&table_id=' + data.table_id;
+                    window.location.href = '?table_id=' + data.table_id;
                 } else {
                     Swal.fire('Lỗi', data.message, 'error');
                 }
@@ -185,7 +185,7 @@ require_once '../load_theme.php';
         </div>
         
         <div style="text-align:center; margin-top: 10px;">
-            <button onclick="window.location.href='blackjack_multi.php'" style="background: rgba(0,0,0,0.5); color: white; border: 1px solid #fff; padding: 8px 15px; border-radius: 10px; cursor: pointer;">⬅ QUAY LẠI SẢNH</button>
+            <button onclick="window.location.href='live_16.php'" style="background: rgba(0,0,0,0.5); color: white; border: 1px solid #fff; padding: 8px 15px; border-radius: 10px; cursor: pointer;">⬅ QUAY LẠI SẢNH</button>
             <button id="btn-add-bot" onclick="window.game.addBot()" style="background: #8b5cf6; color: white; border: 1px solid #fff; padding: 8px 15px; border-radius: 10px; cursor: pointer; display: none;">🤖 THÊM BOT</button>
         </div>
 

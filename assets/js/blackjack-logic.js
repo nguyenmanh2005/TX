@@ -125,6 +125,14 @@ const BlackjackLogic = {
             });
             const data = await response.json();
 
+            // Kiểm tra lỗi API trước khi dùng data
+            if (!data || data.error || !data.card) {
+                console.warn('[BJ] hit: invalid response', data);
+                // Không có bài → stand để thoát ván
+                this.playerStand();
+                return;
+            }
+
             const newCard = data.card;
             this.playerCards.push(newCard);
             blackjack3D.dealCard('player', this.playerCards.length - 1, newCard.value, newCard.suit);
@@ -136,7 +144,7 @@ const BlackjackLogic = {
             }
         } catch (e) {
             console.error('[BJ] playerHit error:', e);
-            // Recovery: nếu API lỗi, vẫn cho stand để thoát ván
+            // Recovery: cho stand để thoát ván
             try { this.playerStand(); } catch(e2) {
                 this.isGameRunning = false;
                 document.getElementById('dealBtn').style.display = 'block';
@@ -188,15 +196,24 @@ const BlackjackLogic = {
             });
             const data = await response.json();
 
+            // Kiểm tra lỗi API trước khi xử lý
+            if (!data || data.error) {
+                console.warn('[BJ] stand: API error', data?.error);
+                this.showResult(data || { error: 'unknown' });
+                return;
+            }
+
             // Reveal King's card
             blackjack3D.flipCard(this.kingHiddenMesh);
             this.kingCards.push(this.kingHiddenCard);
             this.updateScores(true);
 
             // Deal King's additional cards if any
-            for (let i = 2; i < data.kingFinalCards.length; i++) {
+            const kingFinal = Array.isArray(data.kingFinalCards) ? data.kingFinalCards : [];
+            for (let i = 2; i < kingFinal.length; i++) {
                 await this.delay(600);
-                const c = data.kingFinalCards[i];
+                const c = kingFinal[i];
+                if (!c) continue; // bảo vệ khỏi undefined card
                 this.kingCards.push(c);
                 blackjack3D.dealCard('king', i, c.value, c.suit);
                 this.updateScores(true);

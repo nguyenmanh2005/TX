@@ -184,11 +184,16 @@ $gameTitle = "Xì Dách Royale";
     <!-- Premium Effects Loader -->
     <script>
         (function () {
-            const prefix = '../';
+            // Dùng đường dẫn tuyệt đối để tránh lỗi khi load qua iframe
+            const origin = window.location.origin;
+            const pathParts = window.location.pathname.split('/');
+            const appRoot = '/' + (pathParts[1] && !pathParts[1].includes('.') ? pathParts[1] + '/' : '');
+            const base = origin + appRoot; // VD: http://localhost/1/
+
             const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
             scripts.forEach(src => {
                 const s = document.createElement('script');
-                s.src = prefix + src;
+                s.src = base + src;
                 s.async = false;
                 document.head.appendChild(s);
             });

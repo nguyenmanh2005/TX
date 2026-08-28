@@ -1182,10 +1182,16 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
                 shapeOpacity: <?= (float)$shapeOpacity ?>,
                 bgGradient: <?= json_encode($bgGradient) ?>
             };
-            const prefix = '../';
+            
+            // Dùng đường dẫn tuyệt đối để tự động mapping folder gốc
+            const origin = window.location.origin;
+            const pathParts = window.location.pathname.split('/');
+            const appRoot = '/' + (pathParts[1] && !pathParts[1].includes('.') ? pathParts[1] + '/' : '');
+            const base = origin + appRoot;
+
             ['threejs-background.js', 'assets/js/game-effects.js'].forEach(src => {
                 const s = document.createElement('script');
-                s.src = prefix + src; s.async = false;
+                s.src = base + src; s.async = false;
                 document.head.appendChild(s);
             });
         })();

@@ -71,6 +71,7 @@ try {
                 'deck' => $deck,
                 'status' => 'playing'
             ];
+            session_write_close(); // Giải phóng session lock sớm để request tiếp theo (hit) không bị block
 
             echo json_encode([
                 'success' => true,
@@ -89,6 +90,7 @@ try {
 
         $card = array_pop($_SESSION['bj_game']['deck']);
         $_SESSION['bj_game']['player'][] = $card;
+        session_write_close(); // Giải phóng lock để request hit tiếp theo không bị block
 
         echo json_encode(['success' => true, 'card' => $card]);
 

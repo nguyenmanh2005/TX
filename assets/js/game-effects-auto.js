@@ -7,12 +7,18 @@ const GameEffectsAuto = {
         
         // Tự động thêm SoundManager vào tất cả các trang sử dụng script này
 (function() {
-    const prefix = window.location.pathname.includes('/games/') ? '../' : '';
+    // Dùng đường dẫn tuyệt đối để tránh lỗi khi load từ iframe LiveStream
+    // Tự phát hiện root của app (thư mục chứa /assets/)
+    const origin = window.location.origin;
+    const pathParts = window.location.pathname.split('/');
+    // Tìm segment đầu sau domain: /1/ hoặc / nếu là root
+    const appRoot = '/' + (pathParts[1] && !pathParts[1].includes('.') ? pathParts[1] + '/' : '');
+    const assetsBase = origin + appRoot;
     
     // Tự động load SoundManager nếu chưa có
     if (!window.SoundManager) {
         const script = document.createElement('script');
-        script.src = prefix + 'assets/js/sound-manager.js';
+        script.src = assetsBase + 'assets/js/sound-manager.js';
         script.async = false;
         script.onload = () => {
             console.log('🔊 Global SoundManager Loaded');
@@ -22,7 +28,7 @@ const GameEffectsAuto = {
         
         const link = document.createElement('link');
         link.rel = 'stylesheet';
-        link.href = prefix + 'assets/css/sound-ui.css';
+        link.href = assetsBase + 'assets/css/sound-ui.css';
         document.head.appendChild(link);
     } else {
         initGlobalSounds();
