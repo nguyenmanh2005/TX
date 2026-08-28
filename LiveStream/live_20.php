@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 
 require_once '../game_history_helper.php';
@@ -187,6 +187,8 @@ if (isset($_GET['action'])) {
             max-width: 900px;
             margin: 2rem auto;
             text-align: center;
+            transform: scale(0.85); /* Shrink UI to fit without scrolling */
+            transform-origin: top center;
         }
 
         .game-title {
@@ -388,6 +390,28 @@ if (isset($_GET['action'])) {
                 font-size: 1.2rem;
             }
         }
+        
+        .floating-win { 
+            position: absolute; 
+            bottom: 50%; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            color: #f1c40f; 
+            font-weight: 900; 
+            font-size: 2.5rem; 
+            pointer-events: none; 
+            text-shadow: 0 0 15px #000, 0 0 5px #000; 
+            z-index: 100; 
+        }
+        .lose-shake { 
+            animation: lose-shake 0.5s cubic-bezier(.36,.07,.19,.97) both; 
+        }
+        @keyframes lose-shake { 
+            10%, 90% { transform: translate3d(-1px, 0, 0); } 
+            20%, 80% { transform: translate3d(2px, 0, 0); } 
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 
+            40%, 60% { transform: translate3d(4px, 0, 0); } 
+        }
     </style>
 </head>
 
@@ -500,9 +524,15 @@ if (isset($_GET['action'])) {
                             $('#bet-area').show();
 
                             if (res.winAmount > 0) {
-                                Swal.fire({title: 'THẮNG!', text: res.status + ` (+${res.winAmount} gtlm)`, icon: 'success', background: '#1e293b', color: '#fff'});
+                                if (typeof GameEffects !== 'undefined') GameEffects.showWin(res.winAmount);
+                                const float = $('<div class="floating-win">+' + res.winAmount.toLocaleString('vi-VN') + '</div>').appendTo('.glass-card');
+                                gsap.to(float, { y: -150, opacity: 0, duration: 2.5, ease: "power2.out", onComplete: () => float.remove() });
                             } else {
-                                Swal.fire({title: 'THUA!', text: res.status, icon: 'error', background: '#1e293b', color: '#fff'});
+                                $('.glass-card').addClass('lose-shake');
+                                if (typeof GameEffects !== 'undefined') GameEffects.showLoss();
+                                const float = $('<div class="floating-win" style="color: #ff4757;">' + res.status + '</div>').appendTo('.glass-card');
+                                gsap.to(float, { y: -150, opacity: 0, duration: 2.5, ease: "power2.out", onComplete: () => float.remove() });
+                                setTimeout(() => $('.glass-card').removeClass('lose-shake'), 500);
                             }
                         }
                         btn.prop('disabled', false).text('LẮC XÚC XẮC');
@@ -545,7 +575,7 @@ if (isset($_GET['action'])) {
                 shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>,
                 bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>
             };
-            const prefix = window.location.pathname.includes('/games/') ? '../' : '';
+            const prefix = (window.location.pathname.includes('/games/') || window.location.pathname.includes('/LiveStream/')) ? '../' : '';
             const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
 
             scripts.forEach(src => {

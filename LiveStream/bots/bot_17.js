@@ -95,12 +95,23 @@ if (typeof BotVirtualCursor !== "undefined") {
         }
 
         if (isVisible('dealBtn')) {
-            // Chọn chip ngẫu nhiên
-            const chips = document.querySelectorAll('.chip');
+            // Xác suất 30% đổi mức cược ngẫu nhiên (tránh click ALL IN)
+            const chips = Array.from(document.querySelectorAll('.chip')).filter(c => !c.innerText.includes('MAX') && !c.innerText.includes('ALL'));
             if (chips.length > 0 && Math.random() < 0.3) {
-                const randomChip = chips[Math.floor(Math.random() * (chips.length - 1))]; // Bỏ chip All-in
-                try { randomChip.click(); } catch(e){}
+                const randomChip = chips[Math.floor(Math.random() * chips.length)];
+                BotVirtualCursor.moveToElement($(randomChip), 0.8, 0, () => {
+                    setTimeout(() => {
+                        BotVirtualCursor.simulateClick(() => {
+                            try { randomChip.click(); } catch(e){}
+                            // Sau khi đổi chip thì tiếp tục di chuột tới nút Deal
+                            botClick(document.getElementById('dealBtn'), 1000);
+                        });
+                    }, 300);
+                });
+                return;
             }
+            
+            // 70% còn lại giữ nguyên mức cược và chia bài ngay
             botClick(document.getElementById('dealBtn'), 1500);
             return;
         }

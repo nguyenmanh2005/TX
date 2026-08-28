@@ -260,6 +260,28 @@ if (isset($_GET['action'])) {
             transform: scale(1.1);
             box-shadow: 0 5px 15px rgba(0, 210, 255, 0.4);
         }
+        
+        .floating-win { 
+            position: absolute; 
+            bottom: 50%; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            color: #f1c40f; 
+            font-weight: 900; 
+            font-size: 2.5rem; 
+            pointer-events: none; 
+            text-shadow: 0 0 15px #000, 0 0 5px #000; 
+            z-index: 100; 
+        }
+        .lose-shake { 
+            animation: lose-shake 0.5s cubic-bezier(.36,.07,.19,.97) both; 
+        }
+        @keyframes lose-shake { 
+            10%, 90% { transform: translate3d(-1px, 0, 0); } 
+            20%, 80% { transform: translate3d(2px, 0, 0); } 
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 
+            40%, 60% { transform: translate3d(4px, 0, 0); } 
+        }
     </style>
 </head>
 
@@ -428,10 +450,14 @@ if (isset($_GET['action'])) {
                 setTimeout(() => {
                     if (res.win) {
                         if (typeof GameEffects !== 'undefined') GameEffects.showWin(res.winAmount);
-                        Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'success', title: 'Thắng', text: res.message });
+                        const float = $('<div class="floating-win">+' + res.winAmount.toLocaleString('vi-VN') + '</div>').appendTo('.game-wrapper');
+                        gsap.to(float, { y: -150, opacity: 0, duration: 2.5, ease: "power2.out", onComplete: () => float.remove() });
                     } else {
+                        $('.game-wrapper').addClass('lose-shake');
                         if (typeof GameEffects !== 'undefined') GameEffects.showLoss();
-                        Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'error', title: 'Thua', text: res.message });
+                        const float = $('<div class="floating-win" style="color: #ff4757;">' + res.message + '</div>').appendTo('.game-wrapper');
+                        gsap.to(float, { y: -150, opacity: 0, duration: 2.5, ease: "power2.out", onComplete: () => float.remove() });
+                        setTimeout(() => $('.game-wrapper').removeClass('lose-shake'), 500);
                     }
                 }, 500);
                 

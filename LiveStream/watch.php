@@ -244,16 +244,22 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
         }
         .btn-back:hover { color: #fff; }
 
-        .table-selector {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid var(--panel-border);
+        .btn-channel-switch {
+            background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.2));
+            border: 1px solid var(--primary);
             color: #fff;
-            padding: 6px 12px;
-            border-radius: 10px;
+            padding: 6px 14px;
+            border-radius: 20px;
             font-weight: 800;
             font-size: 0.85rem;
             outline: none;
             cursor: pointer;
+            display: flex; align-items: center; gap: 6px;
+            box-shadow: 0 0 10px rgba(99,102,241,0.3);
+            transition: all 0.2s;
+        }
+        .btn-channel-switch:hover {
+            transform: scale(1.05); background: var(--primary);
         }
 
         .user-balance-chip {
@@ -460,7 +466,7 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
         /* Floating Bot Feed Overlay on Video */
         .live-bot-feed-overlay {
             position: absolute;
-            bottom: 20px; left: 20px;
+            top: 20px; left: 20px; /* Moved to top so it doesn't overlap bottom dock on mobile */
             background: rgba(11, 15, 25, 0.85);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.15);
@@ -477,39 +483,45 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
         /* Floating Emoji Overlay */
         .emoji-overlay {
             position: absolute;
-            bottom: 20px; right: 30px;
+            bottom: 80px; right: 20px; /* Adjusted for bottom dock */
             width: 120px; height: 350px;
             pointer-events: none; z-index: 40;
         }
 
         .floating-emoji {
-            position: absolute; bottom: 0; font-size: 28px;
+            position: absolute; bottom: 0; right: 0; font-size: 32px;
             animation: floatUp 2.8s ease-out forwards;
         }
 
         @keyframes floatUp {
             0% { transform: translateY(0) scale(0.6); opacity: 0; }
-            15% { opacity: 1; transform: translateY(-30px) scale(1.3); }
-            100% { transform: translateY(-350px) translateX(calc(Math.random() * 60px - 30px)) scale(0.8); opacity: 0; }
+            15% { opacity: 1; transform: translateY(-40px) scale(1.4); }
+            100% { transform: translateY(-350px) translateX(calc(Math.random() * -60px)) scale(0.9); opacity: 0; }
         }
 
-        /* Action Controls Dock */
+        /* Action Controls Dock (Mobile-First Bottom Bar) */
         .action-dock {
             background: rgba(15, 23, 42, 0.98);
             backdrop-filter: blur(16px);
             border-top: 1px solid var(--panel-border);
             padding: 12px 20px;
             display: flex; align-items: center; justify-content: space-between;
-            gap: 15px; flex-wrap: wrap; z-index: 50;
+            z-index: 50;
         }
 
-        .btn-react {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid var(--panel-border);
-            color: #fff; padding: 6px 12px; border-radius: 20px;
-            cursor: pointer; font-size: 1.2rem; transition: all 0.2s;
+        .dock-btn {
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; cursor: pointer; border: none; transition: 0.2s;
+            color: #fff; background: rgba(255, 255, 255, 0.1);
         }
-        .btn-react:hover { transform: scale(1.2); background: rgba(255, 255, 255, 0.15); }
+        .dock-btn:hover { transform: scale(1.15); }
+        .btn-tip { background: rgba(251, 191, 36, 0.2); color: var(--gold); border: 1px solid var(--gold); }
+        .btn-gift { background: rgba(236, 72, 153, 0.2); color: #f472b6; border: 1px solid #ec4899; box-shadow: 0 0 10px rgba(236,72,153,0.3); }
+        .btn-play { background: linear-gradient(135deg, var(--primary), var(--purple)); color: #fff; }
+        
+        .dock-left, .dock-right { display: flex; gap: 12px; }
 
         /* Sidebar Chat */
         .sidebar-chat {
@@ -517,13 +529,15 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
             backdrop-filter: blur(12px);
             border-left: 1px solid var(--panel-border);
             display: flex; flex-direction: column; height: 100%;
+            position: relative;
         }
 
         .chat-header {
-            padding: 14px 18px; border-bottom: 1px solid var(--panel-border);
+            padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.05);
             font-weight: 900; font-size: 0.9rem;
             display: flex; align-items: center; justify-content: space-between;
             color: var(--purple);
+            background: rgba(0,0,0,0.2);
         }
 
         .chat-body {
@@ -550,14 +564,68 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
             border-radius: 10px; padding: 0 16px; font-weight: 800; cursor: pointer;
         }
 
-        /* RESPONSIVE */
+        /* RESPONSIVE MỚI */
         @media (max-width: 768px) {
-            body { overflow: auto; }
-            .watch-layout { grid-template-columns: 1fr; height: auto; }
-            .sidebar-chat { height: 380px; }
-            .action-dock { padding: 10px 12px; gap: 8px; }
-            .btn-react { font-size: 1rem; padding: 4px 8px; }
-            .spectator-mode-banner { display: none; }
+            body { overflow: hidden; } /* Prevent native scrolling, keep app feel */
+            
+            /* Tách lưới: Nửa trên Video, Nửa dưới Chat nổi */
+            .watch-layout { 
+                grid-template-columns: 1fr; 
+                height: calc(100vh - 60px); 
+                position: relative;
+            }
+
+            .player-section {
+                position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                z-index: 10;
+            }
+            .video-viewport {
+                height: 45vh; /* Nửa trên cho video */
+                min-height: auto;
+            }
+
+            /* Khung chat đè lên nền dạng Glassmorphism ở nửa dưới */
+            .sidebar-chat {
+                position: absolute;
+                bottom: 60px; /* Chừa chỗ cho action-dock */
+                left: 0; width: 100%; height: calc(55vh - 60px);
+                background: linear-gradient(to top, rgba(11,15,25,0.95) 40%, rgba(11,15,25,0) 100%);
+                border: none;
+                z-index: 20;
+                justify-content: flex-end;
+            }
+            .chat-header { display: none; } /* Giấu tiêu đề chat trên mobile cho đỡ chật */
+            
+            .chat-body {
+                flex: none; height: 80%;
+                mask-image: linear-gradient(to bottom, transparent, black 15%);
+                -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%);
+            }
+            .chat-line { text-shadow: 0 1px 2px #000; }
+
+            .chat-input-area {
+                background: transparent; border-top: none;
+                padding: 10px 15px;
+            }
+            .chat-input-area input {
+                background: rgba(255,255,255,0.15); backdrop-filter: blur(10px);
+                border: 1px solid rgba(255,255,255,0.2);
+            }
+
+            /* Đưa thanh action dock ghim chặt dưới đáy màn hình */
+            .action-dock {
+                position: absolute;
+                bottom: 0; left: 0; width: 100%;
+                height: 60px;
+                background: rgba(11, 15, 25, 0.98);
+                padding: 0 15px;
+                z-index: 50;
+            }
+            
+            .dock-btn { width: 38px; height: 38px; font-size: 1.1rem; }
+            .spectator-mode-banner { top: 40px; font-size: 0.7rem; padding: 4px 8px; }
+            .live-hud-badge { font-size: 0.7rem; }
+            .viewers-hud-pill { font-size: 0.7rem; }
         }
     </style>
 </head>
@@ -573,14 +641,9 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
         </a>
 
         <div style="display: flex; align-items: center; gap: 10px;">
-            <span style="font-size: 0.85rem; color: var(--text-sub); font-weight: 700;">Đổi Bàn Live:</span>
-            <select class="table-selector" id="tableSelect" onchange="switchTable(this.value)">
-                <?php foreach ($gameFilesMap as $id => $game): ?>
-                    <option value="<?= $id ?>" <?= ($id == $tableId) ? 'selected' : '' ?>>
-                        <?= $game['icon'] ?> <?= $game['name'] ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
+            <button class="btn-channel-switch" onclick="openChannelSwitcher()">
+                <i class="fa fa-tv"></i> ĐỔI KÊNH
+            </button>
         </div>
 
         <div class="user-balance-chip">
@@ -644,28 +707,23 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
                 <div class="emoji-overlay" id="emojiOverlay"></div>
             </div>
 
-            <!-- Action Controls Dock -->
+            <!-- Action Controls Dock (Bottom Bar) -->
             <div class="action-dock">
-                <div style="display: flex; gap: 8px;">
-                    <button class="btn-react" onclick="sendReaction('❤️')">❤️</button>
-                    <button class="btn-react" onclick="sendReaction('🔥')">🔥</button>
-                    <button class="btn-react" onclick="sendReaction('🤣')">🤣</button>
-                    <button class="btn-react" onclick="sendReaction('💸')">💸</button>
-                    <button class="btn-react" onclick="sendReaction('👏')">👏</button>
-                    <button class="btn-react" onclick="sendReaction('🚀')">🚀</button>
+                <div class="dock-left">
+                    <button class="dock-btn" onclick="sendReaction('❤️')">❤️</button>
+                    <button class="dock-btn" onclick="sendReaction('🔥')">🔥</button>
+                    <button class="dock-btn" onclick="sendReaction('🤣')">🤣</button>
                 </div>
 
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <button style="background: rgba(251, 191, 36, 0.15); border: 1px solid var(--gold); color: var(--gold); border-radius: 12px; padding: 10px 18px; font-weight: 800; cursor: pointer;" onclick="openTipModal()">
-                        <i class="fa fa-coins"></i> TIP GTLM
+                <div class="dock-right">
+                    <button class="dock-btn btn-tip" onclick="openTipModal()" title="Tip Cổ Vũ">
+                        <i class="fa fa-coins"></i>
                     </button>
-
-                    <button style="background: linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(168, 85, 247, 0.2)); border: 1px solid #ec4899; color: #f472b6; border-radius: 12px; padding: 10px 18px; font-weight: 900; cursor: pointer; box-shadow: 0 0 15px rgba(236,72,153,0.3);" onclick="openGiftStoreModal()">
-                        <i class="fa fa-gift"></i> VẬT PHẨM VINH DANH
+                    <button class="dock-btn btn-gift" onclick="openGiftStoreModal()" title="Tặng Quà">
+                        <i class="fa fa-gift"></i>
                     </button>
-
-                    <button onclick="confirmPlayNow('<?= htmlspecialchars($currentGame['real_game']) ?>', '<?= htmlspecialchars($currentGame['name']) ?>')" style="background: linear-gradient(135deg, var(--primary), var(--purple)); color: #fff; border: none; border-radius: 12px; padding: 10px 18px; font-weight: 900; cursor: pointer; font-size: 0.85rem; box-shadow: 0 4px 15px rgba(99,102,241,0.4);">
-                        <i class="fa fa-gamepad"></i> VÀO TỰ CHƠI THẢ THÍNH
+                    <button class="dock-btn btn-play" onclick="confirmPlayNow('<?= htmlspecialchars($currentGame['real_game']) ?>', '<?= htmlspecialchars($currentGame['name']) ?>')" title="Vào Tự Chơi">
+                        <i class="fa fa-gamepad"></i>
                     </button>
                 </div>
             </div>
@@ -702,14 +760,42 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
         let processedReactions = new Set();
         const botNames = ['Thánh Húp Lộc', 'Tu Tiên Cụ', 'Mãnh Hổ 999', 'Lão Tiên Tri', 'Bá Vương Trận Địa', 'Kê Vương 888'];
 
+        const gameFilesMap = <?= json_encode($gameFilesMap) ?>;
+
         function switchTable(newId) {
             window.location.href = 'watch.php?id=' + newId;
+        }
+
+        function openChannelSwitcher() {
+            let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; max-height: 50vh; overflow-y: auto; padding-right: 5px;">';
+            for (let id in gameFilesMap) {
+                const game = gameFilesMap[id];
+                const isActive = (id == currentTableId) ? 'border: 2px solid #6366f1; background: rgba(99,102,241,0.2);' : 'border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05);';
+                html += `
+                    <div onclick="switchTable(${id})" style="cursor: pointer; padding: 12px; border-radius: 12px; transition: 0.2s; ${isActive}" class="channel-card">
+                        <div style="font-size: 2rem; margin-bottom: 5px;">${game.icon}</div>
+                        <div style="font-size: 0.8rem; font-weight: 800; color: #fff;">${game.name}</div>
+                    </div>
+                `;
+            }
+            html += '</div><style>.channel-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }</style>';
+            
+            Swal.fire({
+                title: '📺 CHUYỂN KÊNH LIVE',
+                html: html,
+                showConfirmButton: false,
+                showCancelButton: true,
+                cancelButtonText: 'Đóng',
+                background: '#0f172a',
+                color: '#f8fafc',
+                width: '600px'
+            });
         }
 
         function loadDetails() {
             $.get('api_spectator.php?action=get_table_detail&table_id=' + currentTableId, function(res) {
                 if (res.success) {
-                    $('#tableSelect').val(currentTableId);
+
                     if (res.table && res.table.viewers) {
                         $('#viewersCount').text(res.table.viewers);
                     }
@@ -877,7 +963,7 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
                 title: '💰 TIP GTLM CỔ VŨ',
                 html: `
                     <div style="margin-bottom: 12px; font-size: 0.9rem; color: #94a3b8;">Chọn nhanh số GTLM Tip vinh danh Streamer:</div>
-                    <div class="quick-tip-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px;">
+                    <div class="quick-tip-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 8px; margin-bottom: 15px;">
                         <button type="button" class="btn-quick-tip" onclick="setTipAmount(10000)" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 8px; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 0.85rem;">10K</button>
                         <button type="button" class="btn-quick-tip" onclick="setTipAmount(50000)" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 8px; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 0.85rem;">50K</button>
                         <button type="button" class="btn-quick-tip" onclick="setTipAmount(100000)" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 8px; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 0.85rem;">100K</button>
@@ -934,7 +1020,7 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
                 title: '🎁 CỬA HÀNG VẬT PHẨM VINH DANH STREAMER',
                 html: `
                     <div style="font-size:0.85rem; color:#94a3b8; margin-bottom:12px;">Chọn quà vinh danh gửi trực tiếp cho Streamer Bot:</div>
-                    <div class="tiktok-gift-store-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-height: 400px; overflow-y: auto; padding-right: 4px;">
+                    <div class="tiktok-gift-store-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; max-height: 50vh; overflow-y: auto; padding-right: 4px;">
                         <div class="tiktok-gift-card" onclick="sendTikTokGift('beer')">
                             <div class="gift-icon-wrap">🍺</div>
                             <div class="gift-title">Bia Lạnh</div>

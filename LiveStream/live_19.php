@@ -1,8 +1,12 @@
-﻿<?php
+<?php
 session_start();
 
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
+
+// --- KÊNH ĐANG BẢO TRÌ ---
+die('<div style="color: #fbbf24; text-align: center; font-family: sans-serif; margin-top: 20vh;"><h2><i class="fa fa-wrench"></i> KÊNH LIVE NÀY ĐANG BẢO TRÌ</h2><p>Xin lỗi đạo hữu, kênh này đang được nâng cấp. Vui lòng chọn kênh khác!</p></div>');
+
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_19', 50000000);
 $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;

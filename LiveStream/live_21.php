@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 
 require_once '../game_history_helper.php';
@@ -123,12 +123,13 @@ if (isset($_GET['action'])) {
             font-family: 'Inter', sans-serif;
             overflow: hidden;
         }
-        /* Cố định con trỏ chuột trên mọi phần tử */
+        /* Cố định con trỏ chuột trên mọi phần tử và thiết lập box-sizing */
         * {
             cursor: url('../img/tay.png'), auto !important;
+            box-sizing: border-box;
         }
         .main-container {
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -147,7 +148,6 @@ if (isset($_GET['action'])) {
             display: grid;
             grid-template-columns: 300px 1fr;
             gap: 1.5rem;
-            max-height: 92vh;
             align-self: center;
         }
         .sidebar {

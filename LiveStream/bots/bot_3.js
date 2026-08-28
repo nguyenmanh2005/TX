@@ -30,7 +30,7 @@ if (typeof BotVirtualCursor !== "undefined") {
                 botBusy = true;
                 BotVirtualCursor.moveToElement($(cashoutBtn), 0.2, 0, () => {
                     BotVirtualCursor.simulateClick(() => {
-                        try { cashoutBtn.click(); } catch(e){}
+                        try { cashoutBtn.click(); } catch (e) { }
                         botBusy = false;
                         setTimeout(runCrashStreamerBot, 1000);
                     });
@@ -92,14 +92,14 @@ if (typeof BotVirtualCursor !== "undefined") {
                 if (targetChip) {
                     BotVirtualCursor.moveToElement($(targetChip), 0.25, 0, () => {
                         BotVirtualCursor.simulateClick(() => {
-                            try { targetChip.click(); } catch(e){}
+                            try { targetChip.click(); } catch (e) { }
 
                             // BƯỚC 2: Rê chuột chọn mốc Auto Cashout (nếu có)
                             if (targetAuto) {
                                 setTimeout(() => {
                                     BotVirtualCursor.moveToElement($(targetAuto), 0.22, 0, () => {
                                         BotVirtualCursor.simulateClick(() => {
-                                            try { targetAuto.click(); } catch(e){}
+                                            try { targetAuto.click(); } catch (e) { }
                                             // BƯỚC 3: Rê chuột bấm CẤT CÁNH
                                             executeLaunch(startBtn);
                                         });
@@ -126,7 +126,7 @@ if (typeof BotVirtualCursor !== "undefined") {
         setTimeout(() => {
             BotVirtualCursor.moveToElement($(startBtn), 0.25, 0, () => {
                 BotVirtualCursor.simulateClick(() => {
-                    try { startBtn.click(); } catch(e){}
+                    try { startBtn.click(); } catch (e) { }
                     botBusy = false;
                     setTimeout(runCrashStreamerBot, 500);
                 });
@@ -135,7 +135,7 @@ if (typeof BotVirtualCursor !== "undefined") {
     }
 
     // Khởi động bot streamer sau khi trang load
-    $(document).ready(function() {
+    $(document).ready(function () {
         setTimeout(runCrashStreamerBot, 1000);
     });
 }
