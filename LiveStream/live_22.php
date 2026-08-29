@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 
 require_once '../game_history_helper.php';
@@ -200,7 +200,7 @@ $animalEmojis = ["🐶", "🐱", "🦁", "🐵", "🦓", "🐯", "🦊", "🐰"]
             flex-direction: column;
             align-items: center;
             justify-content: flex-start;
-            padding: 32px 16px 56px;
+            padding: 16px 16px 20px; /* Reduced padding */
             overflow-x: hidden;
         }
 
@@ -332,9 +332,12 @@ $animalEmojis = ["🐶", "🐱", "🦁", "🐵", "🦓", "🐯", "🦊", "🐰"]
             border: 1px solid var(--border);
             border-radius: var(--r-card);
             box-shadow: 0 0 0 1px rgba(255, 255, 255, .04) inset, 0 24px 80px rgba(0, 0, 0, .6), 0 0 80px rgba(245, 200, 66, .04);
-            padding: 38px 36px 34px;
+            padding: 24px 30px 20px; /* Reduced padding */
             text-align: center;
             animation: cardIn .65s cubic-bezier(.16, 1, .3, 1) both;
+            transform: scale(0.65); /* Scale down more for stream view */
+            transform-origin: top center;
+            margin-bottom: -250px; /* Adjust spacing after scaling */
         }
 
         @keyframes cardIn {
@@ -1072,7 +1075,7 @@ $animalEmojis = ["🐶", "🐱", "🦁", "🐵", "🦓", "🐯", "🦊", "🐰"]
                 <div class="form-group">
                     <span class="s-label">Số GTLM muốn Chiến</span>
                     <input type="number" name="amount" id="betInput" class="bet-input" placeholder="Nhập số muốn Chiến…"
-                        min="1" autocomplete="off">
+                        value="10000" min="1" autocomplete="off">
                     <div class="qbets">
                         <button type="button" class="qbtn" onclick="qbet(10000)">10K GTLM</button>
                         <button type="button" class="qbtn" onclick="qbet(50000)">50K GTLM</button>
@@ -1173,7 +1176,7 @@ $animalEmojis = ["🐶", "🐱", "🦁", "🐵", "🦓", "🐯", "🦊", "🐰"]
                 const fd = new FormData();
                 fd.append('animal', animal);
                 fd.append('amount', amount);
-                const res = await fetch('duangua.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
+                const res = await fetch('live_22.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
                 data = await res.json();
             } catch (err) {
                 showBanner('❌ Lỗi kết nối!', 'error');
@@ -1321,6 +1324,13 @@ $animalEmojis = ["🐶", "🐱", "🦁", "🐵", "🦓", "🐯", "🦊", "🐰"]
             // Banner
             showBanner(data.msg, data.isWin ? 'win' : 'lose');
 
+            // Kích hoạt hiệu ứng thắng/thua của GameEffects
+            if (data.isWin) {
+                if (window.GameEffects) window.GameEffects.showWin(data.reward);
+            } else {
+                if (window.GameEffects) window.GameEffects.showLoss(data.betAmount);
+            }
+
             // Play again
             document.getElementById('playAgainBtn').classList.add('show');
 
@@ -1332,6 +1342,15 @@ $animalEmojis = ["🐶", "🐱", "🦁", "🐵", "🦓", "🐯", "🦊", "🐰"]
                 launchFireworks();
                 spawnFloat('+' + data.reward.toLocaleString('vi-VN') + ' gtlm');
             }
+
+            // Highlight win track
+            for (let i = 0; i < 8; i++) {
+                const t = document.getElementById('track' + i);
+                t.classList.remove('win-track', 'lose-track', 'bet-track');
+            }
+            const sel = parseInt(document.getElementById('animalSelect').value) - 1;
+            document.getElementById('track' + sel).classList.add('bet-track');
+            lockForm(false);
         }
 
         /* ── Reset ──────────────────────────────────────── */
@@ -1435,6 +1454,7 @@ $animalEmojis = ["🐶", "🐱", "🦁", "🐵", "🦓", "🐯", "🦊", "🐰"]
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="../threejs-background.js"></script>
+    <script src="../assets/js/game-effects.js"></script>
 
 
 
