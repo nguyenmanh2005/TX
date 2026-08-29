@@ -84,10 +84,10 @@ $(document).ready(function () {
         setTimeout(() => {
             $.post('../api_greedy_cave.php', { action: 'step' }, function (res) {
                 $('#characterIcon').removeClass('walking');
-                $('#btnStep, #btnCashout').prop('disabled', false);
 
                 if (res.success) {
                     if (res.survived) {
+                        $('#btnStep, #btnCashout').prop('disabled', false);
                         updateUI(res.step, res.prize);
                         // Show subtle toast
                         Swal.fire({
@@ -100,20 +100,20 @@ $(document).ready(function () {
                         });
                     } else {
                         // Sập hầm
+                        $('#btnStep, #btnCashout').prop('disabled', true);
+                        if (window.GameEffects) {
+                            let betStr = $('#betAmount').val().replace(/\./g, '');
+                            window.GameEffects.showLoss(parseInt(betStr) || 0);
+                        }
+                        
                         $('#characterIcon').addClass('crashed').html('<i class="fas fa-skull"></i>');
                         $('#txtPrize').text('0 GTLM').removeClass('highlight-money').css('color', '#ef4444');
                         $('#statusTitle').text('BẠN ĐÃ CHẾT!').css('color', '#ef4444');
 
-                        Swal.fire({
-                            title: 'SẬP HẦM!',
-                            text: 'Tham thì thâm! Bạn đã chết và mất trắng toàn bộ GTLM!',
-                            icon: 'error',
-                            confirmButtonColor: '#ef4444'
-                        }).then(() => {
-                            loadStatus();
-                        });
+                        setTimeout(loadStatus, 2500);
                     }
                 } else {
+                    $('#btnStep, #btnCashout').prop('disabled', false);
                     Swal.fire('Lỗi', res.message, 'error');
                 }
             }, 'json');
@@ -131,19 +131,18 @@ $(document).ready(function () {
         $.post('../api_greedy_cave.php', { action: 'cashout' }, function (res) {
             $('#btnStep').html('<i class="fas fa-shoe-prints"></i> BƯỚC TIẾP');
             $('#btnCashout').html('<i class="fas fa-hand-holding-usd"></i> CHẠY TRỐN');
-            $('#btnStep, #btnCashout').prop('disabled', false);
 
             if (res.success) {
+                $('#btnStep, #btnCashout').prop('disabled', true);
                 $('#userMoney').text(parseInt(res.new_money).toLocaleString('vi-VN'));
-                Swal.fire({
-                    title: 'Sống sót!',
-                    text: res.message,
-                    icon: 'success',
-                    confirmButtonColor: '#22c55e'
-                }).then(() => {
-                    loadStatus();
-                });
+                if (window.GameEffects) {
+                    let profit = res.prize - res.bet_amount;
+                    if (profit > 0) window.GameEffects.showWin(profit);
+                }
+                
+                setTimeout(loadStatus, 2500);
             } else {
+                $('#btnStep, #btnCashout').prop('disabled', false);
                 Swal.fire('Lỗi', res.message, 'error');
             }
         }, 'json');

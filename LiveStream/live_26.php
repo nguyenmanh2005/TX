@@ -43,21 +43,21 @@ if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
         }
 
         .game-container {
-            max-width: 1000px;
+            max-width: 800px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 10px;
         }
 
         .game-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px 30px;
+            padding: 15px 25px;
             background: rgba(15, 17, 21, 0.8);
             backdrop-filter: blur(15px);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 16px;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
@@ -107,7 +107,7 @@ if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
             max-width: 800px;
             background: radial-gradient(circle at 50% 100%, #1a1005 0%, #050505 100%);
             border-radius: 20px;
-            padding: 40px;
+            padding: 20px;
             box-shadow: inset 0 0 100px rgba(0,0,0,0.9), 0 20px 50px rgba(0,0,0,0.5);
             position: relative;
             overflow: hidden;
@@ -120,8 +120,8 @@ if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 16px;
-            padding: 25px;
-            margin-bottom: 2rem;
+            padding: 15px;
+            margin-bottom: 1rem;
             position: relative;
             z-index: 2;
         }
@@ -130,7 +130,7 @@ if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
             font-family: 'Space Grotesk', sans-serif;
             color: #eab308;
             margin-top: 0;
-            font-size: 1.8rem;
+            font-size: 1.4rem;
             text-transform: uppercase;
             letter-spacing: 2px;
             text-shadow: 0 0 15px rgba(234, 179, 8, 0.5);
@@ -140,7 +140,7 @@ if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 20px;
-            margin-top: 1.5rem;
+            margin-top: 1rem;
         }
 
         .stat-box {
@@ -161,7 +161,7 @@ if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
 
         .stat-box b {
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.8rem;
+            font-size: 1.4rem;
             color: #fff;
         }
 
@@ -189,8 +189,8 @@ if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
         }
 
         .cave-character {
-            font-size: 6rem;
-            margin: 3rem 0;
+            font-size: 4rem;
+            margin: 1.5rem 0;
             position: relative;
             z-index: 2;
             transition: transform 0.3s;
@@ -225,7 +225,7 @@ if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
             position: relative;
             z-index: 2;
             background: rgba(0,0,0,0.5);
-            padding: 30px;
+            padding: 20px;
             border-radius: 16px;
             border: 1px solid #333;
         }
@@ -234,22 +234,22 @@ if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
             background: #000;
             border: 2px solid #444;
             color: #fbbf24;
-            padding: 15px 25px;
+            padding: 10px 15px;
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             font-weight: bold;
             border-radius: 12px;
-            width: 250px;
+            width: 200px;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             outline: none;
             transition: all 0.3s;
         }
         .input-bet:focus { border-color: #3b82f6; box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
 
         .btn-action {
-            padding: 18px 40px;
-            font-size: 1.2rem;
+            padding: 12px 25px;
+            font-size: 1rem;
             font-family: 'Space Grotesk', sans-serif;
             font-weight: 800;
             border: none;
@@ -321,19 +321,6 @@ if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
             </div>
         </div>
 
-        <!-- Hướng Dẫn -->
-        <div class="guide-box" id="guideBox">
-            <i class="fas fa-info-circle"></i>
-            <div>
-                <h4>Luật Chơi (Push-Your-Luck)</h4>
-                <p>
-                    <b>Bước 1:</b> Nạp GTLM vốn (GTLM) để bắt đầu hành trình đi sâu vào hang động tối.<br>
-                    <b>Bước 2:</b> Ấn <b>BƯỚC TIẾP</b>. Mỗi bước đi tiến tới, số GTLM thưởng sẽ nhân lên cực kỳ lớn (GTLM thưởng = Vốn x Hệ số rủi ro).<br>
-                    <b>Bước 3:</b> Càng vào sâu, xác suất <b>SẬP HẦM</b> càng cao. Nếu sập, bạn <b>mất trắng toàn bộ</b> GTLM.<br>
-                    <b>Mẹo:</b> Đừng quá tham! Nếu thấy số GTLM đã đủ lớn, hãy bấm <b>CHẠY TRỐN</b> để mang GTLM về an toàn.
-                </p>
-            </div>
-        </div>
 
     <div class="cave-wrapper">
         <div class="cave-container" id="caveContainer">
@@ -371,8 +358,8 @@ if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
             </div>
 
             <div class="cave-actions" id="actionPanel" style="display: none;">
-                <button class="btn-action btn-step" id="btnStep"><i class="fas fa-shoe-prints"></i> BƯỚC TIẾP (Tăng GTLM)</button>
-                <button class="btn-action btn-cashout" id="btnCashout"><i class="fas fa-running"></i> CHẠY TRỐN (Rút Lãi)</button>
+                <button class="btn-action btn-step" id="btnStep"><i class="fas fa-shoe-prints"></i> BƯỚC TIẾP</button>
+                <button class="btn-action btn-cashout" id="btnCashout"><i class="fas fa-running"></i> CHẠY TRỐN</button>
             </div>
         </div>
     </div>
@@ -383,46 +370,17 @@ if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
         </a>
     </div>
 
+    <script src="../assets/js/game-effects.js"></script>
+    <script src="../assets/js/game-effects-auto.js"></script>
     <script src="../assets/js/game-greedy-cave.js"></script>
 
-<!-- AUTO-GENERATED BOT SCRIPT -->
+<!-- CUSTOM BOT SCRIPT FOR GREEDY CAVE -->
 <script>
 if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
 if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
-<script>
-    if (typeof BotVirtualCursor !== "undefined") {
-        BotVirtualCursor.init("Bot Streamer");
-        setInterval(() => {
-            const allBtns = Array.from(document.querySelectorAll("button, .btn-bet, .chip, .spin-btn, #btnSpin, .bet-button, .card, .btn-primary, .btn-success, input[type='button'], input[type='submit']"));
-            const btns = allBtns.filter(b => {
-                if(b.offsetParent === null || b.disabled) return false;
-                const txt = (b.innerText || b.value || "").toLowerCase();
-                const cls = (b.className || "").toLowerCase();
-                const id = (b.id || "").toLowerCase();
-                
-                // Exclude common navigation/help buttons
-                if(txt.includes("hướng dẫn") || txt.includes("trang chủ") || txt.includes("nạp") || txt.includes("rút") || txt.includes("lịch sử") || txt.includes("quay lại") || txt.includes("thoát")) return false;
-                if(cls.includes("back") || cls.includes("help") || cls.includes("guide") || cls.includes("close") || cls.includes("swal") || cls.includes("nav")) return false;
-                if(id.includes("guide") || id.includes("back") || id.includes("close") || id.includes("nav")) return false;
-                
-                return true;
-            });
-            
-            if(btns.length > 0) {
-                const btn = btns[Math.floor(Math.random() * btns.length)];
-                BotVirtualCursor.moveToElement($(btn), 1, 0, () => {
-                    setTimeout(() => { 
-                        BotVirtualCursor.simulateClick(() => {
-                            try { btn.click(); } catch(e){}
-                        });
-                    }, 500);
-                });
-            }
-        }, 3000 + Math.random() * 4000);
-    }
-</script>
+<script src="bots/bot_26.js"></script>
 
 </body>
 </html>

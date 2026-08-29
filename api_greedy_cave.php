@@ -202,6 +202,7 @@ switch ($action) {
             echo json_encode([
                 'success' => true, 
                 'prize' => $prize, 
+                'bet_amount' => $cave['bet_amount'],
                 'new_money' => $newMoney,
                 'message' => "Tuyệt vời! Bạn đã rút thành công $prizeFormatted GTLM."
             ]);
