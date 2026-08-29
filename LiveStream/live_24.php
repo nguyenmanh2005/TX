@@ -27,6 +27,33 @@ if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
+    <title>Bảo Trì - Nông Trại AFK</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Outfit', sans-serif; background: #0f1115; color: #fff; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
+        .box { background: rgba(255,255,255,0.05); padding: 50px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); }
+        h1 { color: #ef4444; font-size: 2.5em; margin: 0; text-transform: uppercase; letter-spacing: 2px; }
+        p { color: #94a3b8; font-size: 1.1em; max-width: 500px; margin: 20px auto; line-height: 1.6; }
+        a { display: inline-block; background: linear-gradient(90deg, #3b82f6, #8b5cf6); color: #fff; text-decoration: none; padding: 12px 30px; border-radius: 50px; font-weight: bold; margin-top: 20px; transition: 0.3s; }
+        a:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(59, 130, 246, 0.4); }
+        .icon-spin { font-size: 4em; margin-bottom: 20px; display: inline-block; animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <div class="icon-spin">🚧</div>
+        <h1>ĐANG BẢO TRÌ</h1>
+        <p>Phòng live Nông Trại AFK (ID 24) hiện đang được đóng cửa bảo trì để nâng cấp tính năng tự động trồng trọt và mua bán cho Bot.<br>Xin lỗi sếp vì sự bất tiện này!</p>
+        <a href="../index.php">QUAY LẠI TRANG CHỦ</a>
+    </div>
+</body>
+</html>
+<?php exit; ?>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nông Trại AFK - VIP</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">

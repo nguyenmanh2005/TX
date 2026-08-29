@@ -315,6 +315,42 @@ if (isset($_GET['action'])) {
             border: 1px solid var(--glass-border);
         }
 
+        /* Result banner */
+        .result-banner {
+            position: fixed;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 15px;
+            padding: 18px 26px;
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: .5px;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .result-banner.show {
+            display: block;
+            animation: bannerIn .5s cubic-bezier(.16, 1, .3, 1) forwards;
+        }
+        @keyframes bannerIn {
+            from { opacity: 0; transform: translate(-50%, -20px) scale(.95); }
+            to { opacity: 1; transform: translate(-50%, 20px) scale(1); }
+        }
+        .result-banner.win {
+            background: linear-gradient(135deg, rgba(0, 230, 118, .95), rgba(0, 200, 100, .95));
+            border: 1px solid rgba(0, 230, 118, .4);
+            color: #fff;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+        .result-banner.lose {
+            background: linear-gradient(135deg, rgba(255, 61, 87, .95), rgba(200, 40, 60, .95));
+            border: 1px solid rgba(255, 61, 87, .3);
+            color: #fff;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+
         .history-table {
             width: 100%;
             border-collapse: collapse;
@@ -473,8 +509,10 @@ if (isset($_GET['action'])) {
                         $('#status-text').html(`Kết quả: <span style="color: ${resultColor}; font-size: 2.2rem;">${res.remainder} hạt!</span>`);
 
                         if (res.winAmount > 0) {
+                            showBanner('THẮNG LỚN! +' + new Intl.NumberFormat().format(res.winAmount) + ' GTLM', 'win');
                             if (window.GameEffects) window.GameEffects.showWin(res.winAmount);
                         } else {
+                            showBanner('RẤT TIẾC! BẠN ĐÃ THUA', 'lose');
                             if (window.GameEffects) window.GameEffects.showLoss(Math.abs(res.winAmount));
                         }
                         
@@ -491,6 +529,13 @@ if (isset($_GET['action'])) {
                 btn.prop('disabled', false).text('MỞ BÁT (COUNT)');
             });
         });
+
+        function showBanner(msg, type) {
+            const b = document.getElementById('resultBanner');
+            b.className = 'result-banner ' + type + ' show';
+            b.innerHTML = msg;
+            setTimeout(() => { b.classList.remove('show'); }, 3000);
+        }
 
         function loadHistory() {
             $.getJSON('fantan.php?action=get_history', function(res) {
@@ -559,6 +604,7 @@ if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.clou
 <script src="../assets/js/bot_virtual_cursor.js"></script>
 <script src="bots/bot_23.js"></script>
 
+<div class="result-banner" id="resultBanner"></div>
 </body>
 
 </html>

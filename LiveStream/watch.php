@@ -185,7 +185,7 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://code.responsivevoice.org/responsivevoice.js"></script>
+    <!-- TTS using native browser API instead of responsivevoice to avoid API key warning -->
     <style>
         html, body, div, p, span, section, header, footer, aside, nav, table, tr, td, iframe, canvas {
             cursor: url('img/chuot.png'), default;
@@ -903,16 +903,12 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
             let cleanText = text.replace(/[*#_`~]/g, '').replace(/GTLM/g, 'Gờ Tờ Lờ Mờ').trim();
             if (!cleanText) return;
 
-            if (typeof responsiveVoice !== 'undefined') {
-                // Thử dùng giọng nam tiếng Việt (hoặc nữ nếu nam không khả dụng trên trình duyệt)
-                responsiveVoice.speak(cleanText, "Vietnamese Male", {
-                    pitch: 0.9,
-                    rate: 1.0,
-                    volume: 1,
-                    onend: function() {}
-                });
-            } else {
-                fallbackSpeech(cleanText);
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(cleanText);
+                utterance.lang = 'vi-VN';
+                utterance.rate = 1.1;
+                utterance.volume = 1;
+                window.speechSynthesis.speak(utterance);
             }
         }
 
