@@ -32,6 +32,7 @@ if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700;800&display=swap" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="../assets/css/main.css">
     <style>
@@ -83,19 +84,7 @@ if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
         }
         .user-balance span { font-size: 1.5rem; font-family: 'Space Grotesk'; font-weight: bold; color: #fbbf24; }
 
-        .guide-box {
-            background: rgba(234, 179, 8, 0.05);
-            border: 1px solid rgba(234, 179, 8, 0.2);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 25px;
-            display: flex;
-            align-items: flex-start;
-            gap: 15px;
-        }
-        .guide-box i { font-size: 2rem; color: #eab308; }
-        .guide-box h4 { margin: 0 0 5px 0; color: #fde047; }
-        .guide-box p { margin: 0; color: #cbd5e1; font-size: 0.95rem; line-height: 1.5; }
+
 
         .cave-wrapper {
             display: flex;
@@ -312,7 +301,6 @@ if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
                 <a href="../index.php" class="back-btn"><i class="fas fa-arrow-left"></i> Quay lại</a>
                 <div class="game-title">
                     <h1 class="market-title"><i class="fas fa-dungeon"></i> HANG ĐỘNG THAM LAM</h1>
-                    <span class="game-subtitle">Push-Your-Luck - Đừng chết vì tham!</span>
                 </div>
             </div>
             <div class="user-balance">
@@ -370,6 +358,17 @@ if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
         </a>
     </div>
 
+    <canvas id="threejs-background" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none;"></canvas>
+    
+    <script>
+        (function () {
+            window.themeConfig = {
+                particleCount: <?= $particleCount ?? 50 ?>, particleSize: <?= $particleSize ?? 3 ?>, particleColor: '<?= $particleColor ?? "#ffffff" ?>', particleOpacity: <?= $particleOpacity ?? 0.5 ?>,
+                shapeCount: <?= $shapeCount ?? 10 ?>, shapeColors: <?= json_encode($shapeColors ?? ["#ffffff"]) ?>, shapeOpacity: <?= $shapeOpacity ?? 0.1 ?>, bgGradient: <?= json_encode($bgGradient ?? ["#1a1c29", "#2a2d3e"]) ?>
+            };
+        })();
+    </script>
+    <script src="../threejs-background.js"></script>
     <script src="../assets/js/game-effects.js"></script>
     <script src="../assets/js/game-effects-auto.js"></script>
     <script src="../assets/js/game-greedy-cave.js"></script>

@@ -145,10 +145,49 @@ if (isset($_GET['action'])) {
             font-family: 'Exo 2', sans-serif;
             margin: 0;
         }
+        .footer-container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .result-banner {
+            position: fixed;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: white;
+            z-index: 9999;
+            opacity: 0;
+            transition: 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            pointer-events: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .result-banner.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+        .result-banner.win {
+            background: linear-gradient(135deg, #4ade80, #10b981);
+            border: 2px solid #fff;
+        }
+        .result-banner.lose {
+            background: linear-gradient(135deg, #ef4444, #f43f5e);
+            border: 2px solid #fff;
+        }
+
         .main-container {
             padding: 2rem;
             max-width: 1000px;
             margin: 0 auto;
+        }
+
+        @media (max-width: 768px) {
+            .main-container { padding: 1rem; }
         }
         .glass-card {
             background: var(--glass);
@@ -189,7 +228,7 @@ if (isset($_GET['action'])) {
         <div class="glass-card">
             <div class="game-layout">
                 <div class="card-display" id="playingCard">
-                    <img id="cardImg" src="img/anh-bai/PNG/Cards (large)/card_back.png" style="width: 100%; height: 100%; object-fit: cover; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.4);">
+                    <img src="../games/img/anh-bai/PNG/Cards (large)/card_back.png" alt="Card" id="cardImg" style="width: 100%; height: 100%; object-fit: cover; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.4);">
                 </div>
                 <div class="controls">
                     <input type="number" id="betAmount" value="10000" style="background: rgba(255,255,255,0.1); border: 1px solid var(--primary-color); color: #fff; padding: 1rem; border-radius: 1rem; font-size: 1.5rem; text-align: center; outline: none;">
@@ -243,6 +282,26 @@ if (isset($_GET['action'])) {
                 event.target.classList.add('active');
             }
         }
+        
+        function showBanner(msg, type) {
+            let b = document.getElementById('resultBanner');
+            if (!b) {
+                b = document.createElement('div');
+                b.id = 'resultBanner';
+                document.body.appendChild(b);
+            }
+            b.className = 'result-banner ' + type + ' show';
+            b.innerHTML = msg;
+            setTimeout(() => { b.classList.remove('show'); }, 3000);
+        }
+        
+        function resetGameUI() {
+            $('#btnStart, #betAmount').prop('disabled', false);
+            $('#btnHigher, #btnLower, #btnCollect').prop('disabled', true);
+            $('#multVal').text('x1.00');
+            $('#cardImg').attr('src', '../games/img/anh-bai/PNG/Cards (large)/card_back.png');
+        }
+
         const suits = ['♠', '♣', '♥', '♦'], values = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
         function startGame() {
             const bet = $('#betAmount').val();
@@ -257,14 +316,28 @@ if (isset($_GET['action'])) {
             $.post('?action=guess', { guess: type }, function (res) {
                 if (res.success) {
                     updateCardDisplay(res.card);
-                    if (res.win) { $('#multVal').text('x' + res.mult); }
-                    else { Swal.fire('THUA!', 'Đoán sai rồi.', 'error').then(() => location.reload()); }
+                    if (res.win) { 
+                        $('#multVal').text('x' + res.mult); 
+                    }
+                    else { 
+                        let betStr = $('#betAmount').val().replace(/\./g, '');
+                        showBanner('THUA RỒI! -' + betStr + ' GTLM', 'lose');
+                        if (window.GameEffects) window.GameEffects.showLoss(parseInt(betStr) || 0);
+                        setTimeout(resetGameUI, 2500);
+                    }
                 }
             });
         }
         function collect() {
             $.post('?action=collect', function (res) {
-                if (res.success) Swal.fire('THÀNH CÔNG', 'Nhận: ' + res.winAmount + ' gtlm', 'success').then(() => location.reload());
+                if (res.success) {
+                    let betStr = $('#betAmount').val().replace(/\./g, '');
+                    let profit = parseInt(res.winAmount.replace(/\./g, '')) - parseInt(betStr);
+                    showBanner('THẮNG LỚN! +' + new Intl.NumberFormat().format(profit) + ' GTLM', 'win');
+                    $('#userMoney').text(new Intl.NumberFormat().format(res.money) + ' gtlm');
+                    if (window.GameEffects && profit > 0) window.GameEffects.showWin(profit);
+                    setTimeout(resetGameUI, 2500);
+                }
             });
         }
         function updateCardDisplay(val) {
@@ -273,21 +346,11 @@ if (isset($_GET['action'])) {
             const suitStr = suitMap[suitKey];
             let valStr = values[val];
             if (!isNaN(valStr) && parseInt(valStr) < 10) valStr = '0' + parseInt(valStr);
-            const url = `img/anh-bai/PNG/Cards (large)/card_${suitStr}_${valStr}.png`;
+            const url = `../games/img/anh-bai/PNG/Cards (large)/card_${suitStr}_${valStr}.png`;
             $('#cardImg').attr('src', url);
         }
         async function loadHistory() {
-            const res = await $.getJSON('../api_game_history.php?game=Hi-Lo');
-            if (res.success && res.history) {
-                $('#historyTableBody').html(res.history.slice(0, 10).map(r => `
-                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                        <td style="padding: 8px;">#${r.id}</td>
-                        <td style="padding: 8px; text-align: right;">${parseInt(r.bet_amount).toLocaleString()}</td>
-                        <td style="padding: 8px;"><span style="color: ${r.is_win ? '#4ade80' : '#ff6b6b'}">${r.is_win ? 'THẮNG' : 'THUA'}</span></td>
-                        <td style="padding: 8px; text-align: right;">${parseInt(r.win_amount).toLocaleString()}</td>
-                    </tr>
-                `).join(''));
-            }
+            // History API is currently unavailable
         }
         $(document).ready(() => {
             loadHistory();
@@ -299,52 +362,20 @@ if (isset($_GET['action'])) {
                 particleCount: <?= $particleCount ?>, particleSize: <?= $particleSize ?>, particleColor: '<?= $particleColor ?>', particleOpacity: <?= $particleOpacity ?>,
                 shapeCount: <?= $shapeCount ?>, shapeColors: <?= json_encode($shapeColors) ?>, shapeOpacity: <?= $shapeOpacity ?>, bgGradient: <?= json_encode($bgGradient) ?>
             };
-            const prefix = '../';
-            ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'].forEach(src => {
-                const s = document.createElement('script'); s.src = prefix + src; s.async = false; document.head.appendChild(s);
-            });
         })();
+        window.currentBotId = <?= $botUserId ?? 0 ?>;
     </script>
-    <?php require_once '../casino_help.php'; ?>
+    <script src="../threejs-background.js"></script>
+    <script src="../assets/js/game-effects.js"></script>
+    <script src="../assets/js/game-effects-auto.js"></script>
 
 <!-- AUTO-GENERATED BOT SCRIPT -->
 <script>
-if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
-if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
+if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\\/script>');
+if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\\/script>');
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
-<script>
-    if (typeof BotVirtualCursor !== "undefined") {
-        BotVirtualCursor.init("Bot Streamer");
-        setInterval(() => {
-            const allBtns = Array.from(document.querySelectorAll("button, .btn-bet, .chip, .spin-btn, #btnSpin, .bet-button, .card, .btn-primary, .btn-success, input[type='button'], input[type='submit']"));
-            const btns = allBtns.filter(b => {
-                if(b.offsetParent === null || b.disabled) return false;
-                const txt = (b.innerText || b.value || "").toLowerCase();
-                const cls = (b.className || "").toLowerCase();
-                const id = (b.id || "").toLowerCase();
-                
-                // Exclude common navigation/help buttons
-                if(txt.includes("hướng dẫn") || txt.includes("trang chủ") || txt.includes("nạp") || txt.includes("rút") || txt.includes("lịch sử") || txt.includes("quay lại") || txt.includes("thoát")) return false;
-                if(cls.includes("back") || cls.includes("help") || cls.includes("guide") || cls.includes("close") || cls.includes("swal") || cls.includes("nav")) return false;
-                if(id.includes("guide") || id.includes("back") || id.includes("close") || id.includes("nav")) return false;
-                
-                return true;
-            });
-            
-            if(btns.length > 0) {
-                const btn = btns[Math.floor(Math.random() * btns.length)];
-                BotVirtualCursor.moveToElement($(btn), 1, 0, () => {
-                    setTimeout(() => { 
-                        BotVirtualCursor.simulateClick(() => {
-                            try { btn.click(); } catch(e){}
-                        });
-                    }, 500);
-                });
-            }
-        }, 3000 + Math.random() * 4000);
-    }
-</script>
+<script src="bots/bot_27.js"></script>
 
 </body>
 </html>
