@@ -505,6 +505,30 @@ $message = "";
 </head>
 
 <body>
+    <!-- Premium Effects System -->
+    <canvas id="threejs-background" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;"></canvas>
+    <script>
+        (function() {
+            window.themeConfig = {
+                particleCount: <?= $particleCount ?? 800 ?>,
+                particleSize: <?= $particleSize ?? 0.05 ?>,
+                particleColor: '<?= $particleColor ?? "#ffffff" ?>',
+                particleOpacity: <?= $particleOpacity ?? 0.6 ?>,
+                shapeCount: <?= $shapeCount ?? 10 ?>,
+                shapeColors: <?= json_encode($shapeColors ?? ["#667eea", "#764ba2", "#4facfe", "#00f2fe"]) ?>,
+                shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>,
+                bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>
+            };
+            const prefix = (window.location.pathname.includes('/games/') || window.location.pathname.includes('/LiveStream/')) ? '../' : '';
+            const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
+            scripts.forEach(src => {
+                const s = document.createElement('script');
+                s.src = prefix + src;
+                s.async = false;
+                document.head.appendChild(s);
+            });
+        })();
+    </script>
 
     <div class="game-container">
         <h1>🎁 Bóc Túi Mù</h1>

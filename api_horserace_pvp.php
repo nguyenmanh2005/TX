@@ -4,12 +4,18 @@ header('Content-Type: application/json; charset=utf-8');
 require_once 'db_connect.php';
 require_once 'game_history_helper.php';
 
-if (!isset($_SESSION['Iduser'])) {
-    echo json_encode(['success' => false, 'message' => 'Login required']);
-    exit;
+if (isset($_GET['is_bot']) && $_GET['is_bot'] == '1' && isset($_SESSION['Iduser_temp_bot'])) {
+    $userId = (int)$_SESSION['Iduser_temp_bot'];
+} elseif (isset($_POST['is_bot']) && $_POST['is_bot'] == '1' && isset($_SESSION['Iduser_temp_bot'])) {
+    $userId = (int)$_SESSION['Iduser_temp_bot'];
+} else {
+    if (!isset($_SESSION['Iduser'])) {
+        echo json_encode(['success' => false, 'message' => 'Login required']);
+        exit;
+    }
+    $userId = (int)$_SESSION['Iduser'];
 }
 
-$userId = (int)$_SESSION['Iduser'];
 $action = $_GET['action'] ?? '';
 
 // 1. Duy trì trạng thái phòng (Auto-manage rooms)

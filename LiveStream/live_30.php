@@ -361,13 +361,14 @@ require_once '../db_connect.php';
     let winnerHorse = null;
     let isRacing = false;
     let pollInterval = null;
+    let animationIntervals = [];
 
     function formatMoney(n) {
         return Number(n).toLocaleString();
     }
 
     function updateStatus() {
-        $.get('../api_horse_race.php?action=get_status', function(data) {
+        $.get('../api_horse_race.php?action=get_status&is_bot=1', function(data) {
             if (!data.success) return;
 
             raceId = data.race_id;
@@ -406,7 +407,11 @@ require_once '../db_connect.php';
     }
 
     function resetHorses() {
+        animationIntervals.forEach(clearInterval);
+        animationIntervals = [];
+        $('.horse').css('transition', 'none');
         $('.horse').css('left', '0%');
+        setTimeout(() => $('.horse').css('transition', 'left 0.1s linear'), 50);
     }
 
     function startRaceAnimation(winner) {
@@ -417,19 +422,18 @@ require_once '../db_connect.php';
         // Animate each horse with some randomness
         for (let i = 1; i <= 6; i++) {
             const isWinner = (i == winner);
-            const duration = 12000; // 12s animation
             
             // Simulate progress
             let currentPos = 0;
             const interval = setInterval(() => {
-                if (currentPos >= 100) {
+                if (currentPos >= 100 || !isRacing) {
                     clearInterval(interval);
                     return;
                 }
                 
                 // Winner pulls ahead at the end, others lag slightly
-                let step = Math.random() * 2;
-                if (isWinner && currentPos > 70) step += 1.5;
+                let step = Math.random() * 0.7; // Takes ~28s to reach 100%
+                if (isWinner && currentPos > 70) step += 0.5;
                 if (!isWinner && currentPos > 85) step *= 0.5;
                 
                 currentPos += step;
@@ -438,6 +442,7 @@ require_once '../db_connect.php';
                 
                 $(`#horse-${i}`).css('left', `calc(${currentPos}% - 50px)`);
             }, 100);
+            animationIntervals.push(interval);
         }
     }
 
@@ -458,7 +463,8 @@ require_once '../db_connect.php';
 
         $.post('../api_horse_race.php?action=place_bet', {
             horse_num: horseNum,
-            amount: amount
+            amount: amount,
+            is_bot: 1
         }, function(data) {
             if (data.success) {
                 Swal.fire({
@@ -490,38 +496,7 @@ if (typeof jQuery === "undefined") document.write('<script src="https://code.jqu
 if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
-<script>
-    if (typeof BotVirtualCursor !== "undefined") {
-        BotVirtualCursor.init("Bot Streamer");
-        setInterval(() => {
-            const allBtns = Array.from(document.querySelectorAll("button, .btn-bet, .chip, .spin-btn, #btnSpin, .bet-button, .card, .btn-primary, .btn-success, input[type='button'], input[type='submit']"));
-            const btns = allBtns.filter(b => {
-                if(b.offsetParent === null || b.disabled) return false;
-                const txt = (b.innerText || b.value || "").toLowerCase();
-                const cls = (b.className || "").toLowerCase();
-                const id = (b.id || "").toLowerCase();
-                
-                // Exclude common navigation/help buttons
-                if(txt.includes("hướng dẫn") || txt.includes("trang chủ") || txt.includes("nạp") || txt.includes("rút") || txt.includes("lịch sử") || txt.includes("quay lại") || txt.includes("thoát")) return false;
-                if(cls.includes("back") || cls.includes("help") || cls.includes("guide") || cls.includes("close") || cls.includes("swal") || cls.includes("nav")) return false;
-                if(id.includes("guide") || id.includes("back") || id.includes("close") || id.includes("nav")) return false;
-                
-                return true;
-            });
-            
-            if(btns.length > 0) {
-                const btn = btns[Math.floor(Math.random() * btns.length)];
-                BotVirtualCursor.moveToElement($(btn), 1, 0, () => {
-                    setTimeout(() => { 
-                        BotVirtualCursor.simulateClick(() => {
-                            try { btn.click(); } catch(e){}
-                        });
-                    }, 500);
-                });
-            }
-        }, 3000 + Math.random() * 4000);
-    }
-</script>
+<script src="bots/bot_30.js"></script>
 
 </body>
 </html>

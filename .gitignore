@@ -16,7 +16,7 @@ db_info.json
 *.swp
 .php-cs-fixer.cache
 .phpunit.result.cache
-
+bot/sessions/
 # --- SENSITIVE CONFIGURATION ---
 db_connect.php
 db_connect_backup_local.php

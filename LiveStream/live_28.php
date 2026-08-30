@@ -240,6 +240,17 @@ if (isset($_GET['action'])) {
             transform: scale(1.1);
             box-shadow: 0 5px 15px rgba(240, 147, 251, 0.4);
         }
+
+        @media (max-width: 768px) {
+            .game-wrapper { margin: 1rem auto !important; padding: 0 5px !important; }
+            .glass { padding: 1rem !important; }
+            .card { width: 55px; height: 80px; font-size: 0.9rem; }
+            .hand, .community { min-height: 90px; gap: 5px; padding: 1rem; }
+            .chip { padding: 6px 12px; font-size: 0.85rem; }
+            .btn-premium { padding: 0.8rem 1.5rem; font-size: 0.9rem; width: 100%; }
+            .controls { flex-direction: column; gap: 10px; }
+            h1 { font-size: 1.8rem !important; }
+        }
     </style>
 </head>
 <body>
@@ -293,7 +304,6 @@ if (isset($_GET['action'])) {
             </div>
         </div>
     </div>
-    <?php require_once '../casino_help.php'; ?>
     <!-- Premium Effects System -->
     <canvas id="threejs-background"></canvas>
     <script>
@@ -308,7 +318,7 @@ if (isset($_GET['action'])) {
                 shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>,
                 bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>
             };
-            const prefix = window.location.pathname.includes('/games/') ? '../' : '';
+            const prefix = (window.location.pathname.includes('/games/') || window.location.pathname.includes('/LiveStream/')) ? '../' : '';
             const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
             scripts.forEach(src => {
                 const s = document.createElement('script');
@@ -363,7 +373,7 @@ if (isset($_GET['action'])) {
             });
         }
         function call() {
-            $.get('holdem.php?action=call', function(res) {
+            $.get('?action=call', function(res) {
                 if (!res.success) return;
                 res.dealer.forEach((c, i) => renderCard('#dealerHand', i, c));
                 res.full_comm.forEach((c, i) => renderCard('#commonCards', i, c));
@@ -383,7 +393,7 @@ if (isset($_GET['action'])) {
             });
         }
         function fold() {
-            $.get('holdem.php?action=fold', function(res) {
+            $.get('?action=fold', function(res) {
                 if (res.success) {
                     if (typeof GameEffects !== 'undefined') GameEffects.showLoss('Folded', 'Bạn đã bỏ bài.');
                     else Swal.fire('Folded', 'Bạn đã bỏ bài.', 'info');
@@ -408,38 +418,7 @@ if (typeof jQuery === "undefined") document.write('<script src="https://code.jqu
 if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
-<script>
-    if (typeof BotVirtualCursor !== "undefined") {
-        BotVirtualCursor.init("Bot Streamer");
-        setInterval(() => {
-            const allBtns = Array.from(document.querySelectorAll("button, .btn-bet, .chip, .spin-btn, #btnSpin, .bet-button, .card, .btn-primary, .btn-success, input[type='button'], input[type='submit']"));
-            const btns = allBtns.filter(b => {
-                if(b.offsetParent === null || b.disabled) return false;
-                const txt = (b.innerText || b.value || "").toLowerCase();
-                const cls = (b.className || "").toLowerCase();
-                const id = (b.id || "").toLowerCase();
-                
-                // Exclude common navigation/help buttons
-                if(txt.includes("hướng dẫn") || txt.includes("trang chủ") || txt.includes("nạp") || txt.includes("rút") || txt.includes("lịch sử") || txt.includes("quay lại") || txt.includes("thoát")) return false;
-                if(cls.includes("back") || cls.includes("help") || cls.includes("guide") || cls.includes("close") || cls.includes("swal") || cls.includes("nav")) return false;
-                if(id.includes("guide") || id.includes("back") || id.includes("close") || id.includes("nav")) return false;
-                
-                return true;
-            });
-            
-            if(btns.length > 0) {
-                const btn = btns[Math.floor(Math.random() * btns.length)];
-                BotVirtualCursor.moveToElement($(btn), 1, 0, () => {
-                    setTimeout(() => { 
-                        BotVirtualCursor.simulateClick(() => {
-                            try { btn.click(); } catch(e){}
-                        });
-                    }, 500);
-                });
-            }
-        }, 3000 + Math.random() * 4000);
-    }
-</script>
+<script src="bots/bot_28.js"></script>
 
 </body>
 </html>

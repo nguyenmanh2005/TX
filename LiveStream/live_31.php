@@ -34,6 +34,18 @@ $stmt->close();
     <style>
         /* Background Dynamic */
         canvas#bg { position: fixed; top: 0; left: 0; z-index: -1; }
+        
+        /* Cân đối lại giao diện cho Livestream: Ẩn phần thừa và dàn ngang thẻ ngựa */
+        body { margin: 0; overflow: hidden; } /* Ngăn cuộn trang */
+        .race-container { margin: 0 auto; height: 100vh; display: flex; flex-direction: column; justify-content: center; }
+        header p { display: none; }
+        .betting-grid { grid-template-columns: repeat(6, 1fr) !important; gap: 15px !important; }
+        .horse-bet-card > div:nth-child(3) { display: none !important; } /* Ẩn dòng payout nhỏ (element thứ 3) */
+        
+        /* Hiển thị danh sách cược thật gọn gàng */
+        .player-list { display: none !important; }
+        
+        .race-container > div:last-child { display: none !important; } /* Hide back to home button */
     </style>
 </head>
 <body>
@@ -111,6 +123,7 @@ $stmt->close();
             bgGradient: <?= json_encode($bgGradient) ?> 
         };
         const script = document.createElement('script'); script.src = '../threejs-background.js'; document.head.appendChild(script);
+        const effectScript = document.createElement('script'); effectScript.src = '../assets/js/game-effects.js'; document.head.appendChild(effectScript);
     </script>
     <script src="../assets/js/game-horserace-pvp.js"></script>
 
@@ -120,38 +133,7 @@ if (typeof jQuery === "undefined") document.write('<script src="https://code.jqu
 if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
-<script>
-    if (typeof BotVirtualCursor !== "undefined") {
-        BotVirtualCursor.init("Bot Streamer");
-        setInterval(() => {
-            const allBtns = Array.from(document.querySelectorAll("button, .btn-bet, .chip, .spin-btn, #btnSpin, .bet-button, .card, .btn-primary, .btn-success, input[type='button'], input[type='submit']"));
-            const btns = allBtns.filter(b => {
-                if(b.offsetParent === null || b.disabled) return false;
-                const txt = (b.innerText || b.value || "").toLowerCase();
-                const cls = (b.className || "").toLowerCase();
-                const id = (b.id || "").toLowerCase();
-                
-                // Exclude common navigation/help buttons
-                if(txt.includes("hướng dẫn") || txt.includes("trang chủ") || txt.includes("nạp") || txt.includes("rút") || txt.includes("lịch sử") || txt.includes("quay lại") || txt.includes("thoát")) return false;
-                if(cls.includes("back") || cls.includes("help") || cls.includes("guide") || cls.includes("close") || cls.includes("swal") || cls.includes("nav")) return false;
-                if(id.includes("guide") || id.includes("back") || id.includes("close") || id.includes("nav")) return false;
-                
-                return true;
-            });
-            
-            if(btns.length > 0) {
-                const btn = btns[Math.floor(Math.random() * btns.length)];
-                BotVirtualCursor.moveToElement($(btn), 1, 0, () => {
-                    setTimeout(() => { 
-                        BotVirtualCursor.simulateClick(() => {
-                            try { btn.click(); } catch(e){}
-                        });
-                    }, 500);
-                });
-            }
-        }, 3000 + Math.random() * 4000);
-    }
-</script>
+<script src="bots/bot_31.js"></script>
 
 </body>
 </html>

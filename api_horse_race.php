@@ -5,12 +5,18 @@ require_once 'cron_horse_race.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-if (!isset($_SESSION['Iduser'])) {
-    echo json_encode(['success' => false, 'message' => 'Chưa đăng nhập!']);
-    exit;
+if (isset($_GET['is_bot']) && $_GET['is_bot'] == '1' && isset($_SESSION['Iduser_temp_bot'])) {
+    $userId = (int)$_SESSION['Iduser_temp_bot'];
+} elseif (isset($_POST['is_bot']) && $_POST['is_bot'] == '1' && isset($_SESSION['Iduser_temp_bot'])) {
+    $userId = (int)$_SESSION['Iduser_temp_bot'];
+} else {
+    if (!isset($_SESSION['Iduser'])) {
+        echo json_encode(['success' => false, 'message' => 'Chưa đăng nhập!']);
+        exit;
+    }
+    $userId = (int)$_SESSION['Iduser'];
 }
 
-$userId = $_SESSION['Iduser'];
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
 switch ($action) {
