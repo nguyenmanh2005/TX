@@ -95,14 +95,13 @@ window.BotVirtualCursor = {
             return; // Dừng lại, không di chuyển và không gọi onComplete (hủy click)
         }
         
-        const cursor = $('#' + this.cursorId);
-        gsap.set(cursor, { opacity: 1 });
+        gsap.set('#' + this.cursorId, { opacity: 1 });
         
         const offset = $el.offset();
         const targetX = offset.left + $el.outerWidth() / 2;
         const targetY = offset.top + $el.outerHeight() / 2;
         
-        gsap.to(cursor, {
+        gsap.to('#' + this.cursorId, {
             left: targetX,
             top: targetY,
             duration: duration || 0.8,
@@ -114,8 +113,7 @@ window.BotVirtualCursor = {
     
     // Mô phỏng click (nhấn xuống rồi nhả ra)
     simulateClick: function(onComplete) {
-        const cursor = $('#' + this.cursorId);
-        gsap.to(cursor, { 
+        gsap.to('#' + this.cursorId, { 
             scale: 0.7, 
             duration: 0.12, 
             yoyo: true, 
@@ -126,7 +124,7 @@ window.BotVirtualCursor = {
     
     // Ẩn chuột
     hide: function(delay, duration) {
-        gsap.to($('#' + this.cursorId), { 
+        gsap.to('#' + this.cursorId, { 
             opacity: 0, 
             delay: delay || 0.5, 
             duration: duration || 0.4 

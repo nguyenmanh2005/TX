@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JoJo Skill Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #f5c832;
+    --gold-dark: #7a5200;
+    --blue-jojo: #1a3a6e;
+    --cyan: #00d4ff;
+    --purple: #6600cc;
+    --red: #cc1111;
+    --dark: #080010;
+    --panel-bg: rgba(10,5,25,0.92);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: #04000e;
+    font-family: 'Noto Sans JP', sans-serif;
+    color: #fff;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HALFTONE BG ── */
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image: radial-gradient(circle, rgba(255,200,0,0.04) 1px, transparent 1px);
+    background-size: 28px 28px;
+    pointer-events: none;
+    z-index:0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position:relative; z-index:10;
+    text-align:center;
+    padding: 48px 20px 24px;
+    border-bottom: 2px solid rgba(245,200,50,0.2);
+  }
+  header h1 {
+    font-family:'Bebas Neue', sans-serif;
+    font-size: clamp(42px, 8vw, 90px);
+    letter-spacing: 0.12em;
+    line-height: 1;
+    background: linear-gradient(135deg, #fff 0%, #f5c832 40%, #ff8800 70%, #f5c832 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+  }
+  header p {
+    margin-top:8px;
+    font-size:13px;
+    color: rgba(255,255,255,0.4);
+    letter-spacing:0.25em;
+    text-transform:uppercase;
+  }
+
+  /* ── LAYOUT ── */
+  .arena {
+    position: relative; z-index:5;
+    max-width: 1100px;
+    margin: 40px auto;
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 36px;
+  }
+  @media(max-width:700px){ .arena{ grid-template-columns:1fr; } }
+
+  /* ── CHARACTER PANEL ── */
+  .char-panel {
+    background: var(--panel-bg);
+    border: 1.5px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    overflow: hidden;
+    position:relative;
+  }
+  .char-panel::before {
+    content:'';
+    position:absolute; top:0; left:0; right:0; height:3px;
+  }
+  .jotaro .char-panel::before { background: linear-gradient(90deg,#1a3a6e,#00d4ff,#1a3a6e); }
+  .dio    .char-panel::before { background: linear-gradient(90deg,#7a0000,#f5c832,#7a0000); }
+
+  .char-header {
+    padding: 20px 24px 16px;
+    display:flex; align-items:center; gap:16px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  .char-avatar {
+    width:60px; height:60px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:28px;
+    flex-shrink:0;
+    position:relative;
+  }
+  .jotaro .char-avatar { background: radial-gradient(#1a3a6e,#080f2e); border:2px solid #00d4ff; }
+  .dio    .char-avatar { background: radial-gradient(#3a0000,#180000); border:2px solid #f5c832; }
+
+  .char-info h2 {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:26px; letter-spacing:0.1em;
+  }
+  .jotaro .char-info h2 { color:#00d4ff; }
+  .dio    .char-info h2 { color:#f5c832; }
+  .char-info span {
+    font-size:11px; color:rgba(255,255,255,0.4);
+    letter-spacing:0.2em; text-transform:uppercase;
+  }
+
+  /* ── SKILL LIST ── */
+  .skill-list { padding:16px; display:flex; flex-direction:column; gap:10px; }
+
+  .skill-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius:8px;
+    padding: 14px 18px;
+    cursor:pointer;
+    transition: all 0.2s;
+    text-align:left;
+    position:relative;
+    overflow:hidden;
+    display:flex; align-items:center; gap:14px;
+  }
+  .skill-btn:hover {
+    background: rgba(255,255,255,0.09);
+    border-color: rgba(255,255,255,0.25);
+    transform: translateX(4px);
+  }
+  .skill-btn:active { transform: translateX(2px) scale(0.99); }
+
+  .skill-btn .sk-icon {
+    width:40px; height:40px; border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; flex-shrink:0;
+  }
+  .jotaro .sk-icon { background:rgba(0,212,255,0.12); border:1px solid rgba(0,212,255,0.3); }
+  .dio    .sk-icon { background:rgba(245,200,50,0.1);  border:1px solid rgba(245,200,50,0.3); }
+
+  .skill-btn .sk-text { flex:1; }
+  .skill-btn .sk-name {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:17px; letter-spacing:0.08em;
+    display:block;
+  }
+  .jotaro .sk-name { color:#00d4ff; }
+  .dio    .sk-name { color:#f5c832; }
+  .skill-btn .sk-desc { font-size:11px; color:rgba(255,255,255,0.4); margin-top:2px; }
+
+  .skill-btn .sk-type {
+    font-size:10px; padding:3px 8px; border-radius:20px;
+    text-transform:uppercase; letter-spacing:0.1em; font-weight:700;
+    flex-shrink:0;
+  }
+  .type-main    { background:rgba(0,212,255,0.15); color:#00d4ff; border:1px solid rgba(0,212,255,0.3); }
+  .type-ranged  { background:rgba(100,200,100,0.15); color:#88ee88; border:1px solid rgba(100,200,100,0.3); }
+  .type-time    { background:rgba(160,0,255,0.2); color:#cc88ff; border:1px solid rgba(160,0,255,0.4); }
+  .type-finish  { background:rgba(255,60,60,0.15); color:#ff8888; border:1px solid rgba(255,60,60,0.3); }
+  .type-passive { background:rgba(255,180,0,0.15); color:#ffcc44; border:1px solid rgba(255,180,0,0.3); }
+
+  /* ── EFFECT STAGE ── */
+  #stage {
+    position:fixed; inset:0; z-index:100;
+    pointer-events:none;
+    overflow:hidden;
+  }
+
+  /* ── FLASH OVERLAY ── */
+  .flash {
+    position:absolute; inset:0;
+    opacity:0;
+    pointer-events:none;
+  }
+
+  /* ── ORA ORA / MUDA MUDA ── */
+  .rush-word {
+    position:absolute;
+    font-family:'Bebas Neue',sans-serif;
+    font-size: clamp(40px,8vw,80px);
+    letter-spacing:0.05em;
+    pointer-events:none;
+    opacity:0;
+    animation: rushWord 0.35s ease-out forwards;
+  }
+  @keyframes rushWord {
+    0%  { opacity:1; transform:scale(0.5) rotate(var(--r)); }
+    60% { opacity:1; transform:scale(1.1) rotate(var(--r)); }
+    100%{ opacity:0; transform:scale(1.3) rotate(var(--r)); }
+  }
+
+  /* ── PUNCH IMPACT ── */
+  .impact {
+    position:absolute;
+    width:120px; height:120px;
+    border-radius:50%;
+    transform:translate(-50%,-50%) scale(0);
+    animation: impactPop 0.4s ease-out forwards;
+    pointer-events:none;
+  }
+  @keyframes impactPop {
+    0%  { transform:translate(-50%,-50%) scale(0); opacity:1; }
+    60% { transform:translate(-50%,-50%) scale(1.4); opacity:0.8; }
+    100%{ transform:translate(-50%,-50%) scale(2); opacity:0; }
+  }
+
+  /* ── KNIFE ── */
+  .knife {
+    position:absolute;
+    pointer-events:none;
+    opacity:0;
+    animation: knifeThrow 0.55s cubic-bezier(0.2,0,0.6,1) forwards;
+  }
+  @keyframes knifeThrow {
+    0%  { opacity:1; transform:translate(0,0) rotate(var(--rot)); }
+    100%{ opacity:0.2; transform:translate(var(--tx),var(--ty)) rotate(calc(var(--rot) + 360deg)) scale(0.4); }
+  }
+
+  /* ── STAR FINGER ── */
+  .star-finger-beam {
+    position:absolute;
+    height:6px; border-radius:3px;
+    background:linear-gradient(90deg,transparent,#00d4ff,white);
+    transform-origin:left center;
+    opacity:0;
+    animation: beamShot 0.5s ease-out forwards;
+  }
+  @keyframes beamShot {
+    0%  { opacity:1; width:0; }
+    50% { opacity:1; width:var(--len); }
+    100%{ opacity:0; width:var(--len); transform:scaleY(3); }
+  }
+
+  /* ── TIME STOP ── */
+  .time-stop-overlay {
+    position:absolute; inset:0;
+    background:rgba(80,0,180,0.0);
+    pointer-events:none;
+    opacity:0;
+    animation: timeStopAnim 2.5s ease forwards;
+  }
+  @keyframes timeStopAnim {
+    0%  { opacity:0; filter:invert(0) saturate(1); }
+    10% { opacity:1; background:rgba(80,0,180,0.6); filter:invert(1) saturate(2); }
+    25% { opacity:1; background:rgba(20,0,60,0.85); filter:invert(0) saturate(0) brightness(0.4); }
+    80% { opacity:1; background:rgba(20,0,60,0.85); filter:invert(0) saturate(0) brightness(0.4); }
+    100%{ opacity:0; background:rgba(80,0,180,0); filter:invert(0) saturate(1); }
+  }
+  .time-stop-text {
+    position:absolute;
+    font-family:'Bebas Neue',sans-serif;
+    font-size: clamp(36px,7vw,90px);
+    letter-spacing:0.15em;
+    color:#fff;
+    text-shadow:0 0 40px currentColor;
+    top:50%; left:50%;
+    transform:translate(-50%,-50%) scale(0);
+    opacity:0;
+    animation: timeStopText 2.5s ease forwards;
+    white-space:nowrap;
+  }
+  @keyframes timeStopText {
+    0%  { opacity:0; transform:translate(-50%,-50%) scale(0.3); }
+    15% { opacity:1; transform:translate(-50%,-50%) scale(1.15); }
+    25% { opacity:1; transform:translate(-50%,-50%) scale(1); }
+    80% { opacity:1; transform:translate(-50%,-50%) scale(1); }
+    100%{ opacity:0; transform:translate(-50%,-50%) scale(1.3); }
+  }
+
+  /* ── ROAD ROLLER ── */
+  .road-roller {
+    position:absolute;
+    left:50%; top:-200px;
+    transform:translateX(-50%);
+    opacity:0;
+    animation: rollerDrop 2s cubic-bezier(0.4,0,1,1) forwards;
+  }
+  @keyframes rollerDrop {
+    0%  { top:-200px; opacity:0; }
+    10% { opacity:1; }
+    55% { top:30%; }
+    60% { top:32%; }
+    65% { top:28%; }
+    70% { top:31%; }
+    85% { top:30%; opacity:1; }
+    100%{ top:30%; opacity:0; }
+  }
+  .road-roller svg { filter:drop-shadow(0 0 20px #f5c832); }
+
+  /* ── WRYYY ── */
+  .wryyy-text {
+    position:absolute;
+    font-family:'Bebas Neue',sans-serif;
+    font-size:clamp(50px,12vw,130px);
+    letter-spacing:0.1em;
+    color:#f5c832;
+    text-shadow:0 0 60px #ff4400, 0 0 120px #ff4400;
+    top:50%; left:50%;
+    transform:translate(-50%,-50%) scale(0) rotate(-8deg);
+    opacity:0;
+    animation: wryyyy 2s ease forwards;
+  }
+  @keyframes wryyyy {
+    0%  { opacity:0; transform:translate(-50%,-50%) scale(0) rotate(-8deg); }
+    20% { opacity:1; transform:translate(-50%,-50%) scale(1.3) rotate(-8deg); }
+    35% { opacity:1; transform:translate(-50%,-50%) scale(1) rotate(0deg); }
+    75% { opacity:1; transform:translate(-50%,-50%) scale(1) rotate(0deg); }
+    100%{ opacity:0; transform:translate(-50%,-50%) scale(1.5) rotate(5deg); }
+  }
+  .wryyy-bg {
+    position:absolute; inset:0;
+    background:rgba(80,0,0,0);
+    animation: wryBg 2s ease forwards;
+  }
+  @keyframes wryBg {
+    0%  { background:rgba(80,0,0,0); }
+    20% { background:rgba(80,0,0,0.5); }
+    75% { background:rgba(40,0,0,0.35); }
+    100%{ background:rgba(80,0,0,0); }
+  }
+  .wryyy-particles .p {
+    position:absolute;
+    width:8px; height:8px; border-radius:50%;
+    background:#f5c832;
+    animation: wryPart 1.5s ease-out forwards;
+  }
+  @keyframes wryPart {
+    0%  { transform:translate(0,0) scale(1); opacity:1; }
+    100%{ transform:translate(var(--px),var(--py)) scale(0); opacity:0; }
+  }
+
+  /* ── STAR BREAKER ── */
+  .star-breaker-flash {
+    position:absolute; inset:0;
+    background:white;
+    opacity:0;
+    animation: breaKerFlash 0.8s ease forwards;
+  }
+  @keyframes breaKerFlash {
+    0%  { opacity:0; }
+    5%  { opacity:1; }
+    15% { opacity:0.6; }
+    30% { opacity:0; }
+    35% { opacity:0.8; filter:invert(1); }
+    50% { opacity:0; filter:invert(0); }
+    100%{ opacity:0; }
+  }
+  .star-breaker-text {
+    position:absolute;
+    font-family:'Bebas Neue',sans-serif;
+    font-size:clamp(44px,9vw,110px);
+    letter-spacing:0.1em;
+    color:#fff;
+    text-shadow:0 0 30px #00d4ff, 0 0 80px #00d4ff;
+    top:50%; left:50%;
+    transform:translate(-50%,-50%) scale(0);
+    opacity:0;
+    animation: sbText 1s ease forwards;
+    white-space:nowrap;
+  }
+  @keyframes sbText {
+    0%  { opacity:0; transform:translate(-50%,-50%) scale(3); }
+    20% { opacity:1; transform:translate(-50%,-50%) scale(0.9); }
+    60% { opacity:1; transform:translate(-50%,-50%) scale(1); }
+    100%{ opacity:0; transform:translate(-50%,-50%) scale(1.1); }
+  }
+
+  /* ── SCREEN SHAKE ── */
+  @keyframes shake {
+    0%,100%{ transform:translate(0,0) rotate(0); }
+    10%{ transform:translate(-8px,4px) rotate(-1deg); }
+    20%{ transform:translate(8px,-4px) rotate(1deg); }
+    30%{ transform:translate(-6px,6px) rotate(-0.5deg); }
+    40%{ transform:translate(6px,-3px) rotate(0.5deg); }
+    50%{ transform:translate(-4px,2px) rotate(-0.3deg); }
+    60%{ transform:translate(4px,-2px) rotate(0.3deg); }
+  }
+  .shaking { animation: shake 0.5s ease; }
+
+  /* ── NOTIFICATION ── */
+  #notif {
+    position:fixed; bottom:32px; left:50%;
+    transform:translateX(-50%) translateY(80px);
+    background:rgba(10,5,25,0.95);
+    border:1px solid rgba(255,255,255,0.12);
+    border-radius:40px;
+    padding:12px 28px;
+    font-family:'Bebas Neue',sans-serif;
+    font-size:18px; letter-spacing:0.12em;
+    z-index:200;
+    transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s;
+    opacity:0;
+    white-space:nowrap;
+  }
+  #notif.show { transform:translateX(-50%) translateY(0); opacity:1; }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align:center; padding:40px 20px;
+    color:rgba(255,255,255,0.2);
+    font-size:12px; letter-spacing:0.15em;
+    position:relative; z-index:5;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>JOJO SKILL DEMO</h1>
+  <p>Bấm vào kỹ năng để kích hoạt animation</p>
+</header>
+
+<div class="arena">
+
+  <!-- JOTARO -->
+  <div class="jotaro">
+    <div class="char-panel">
+      <div class="char-header">
+        <div class="char-avatar">
+          <svg width="36" height="36" viewBox="0 0 36 36">
+            <circle cx="18" cy="18" r="16" fill="#0a1a40" stroke="#00d4ff" stroke-width="1.5"/>
+            <polygon points="18,5 21,13 30,13 23,19 26,28 18,22 10,28 13,19 6,13 15,13" fill="none" stroke="#00d4ff" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div class="char-info">
+          <h2>Jotaro Kujo</h2>
+          <span>Star Platinum</span>
+        </div>
+      </div>
+      <div class="skill-list">
+        <button class="skill-btn" onclick="playSkill('ora')">
+          <div class="sk-icon">✊</div>
+          <div class="sk-text">
+            <span class="sk-name">Ora Ora Rush</span>
+            <div class="sk-desc">Màn đấm liên hoàn tốc độ cao</div>
+          </div>
+          <span class="sk-type type-main">Main</span>
+        </button>
+        <button class="skill-btn" onclick="playSkill('starfinger')">
+          <div class="sk-icon">👆</div>
+          <div class="sk-text">
+            <span class="sk-name">Star Finger</span>
+            <div class="sk-desc">Phóng dài ngón tay đâm xuyên đối thủ</div>
+          </div>
+          <span class="sk-type type-ranged">Ranged</span>
+        </button>
+        <button class="skill-btn" onclick="playSkill('jotarotime')">
+          <div class="sk-icon">⏸</div>
+          <div class="sk-text">
+            <span class="sk-name">Star Platinum: The World</span>
+            <div class="sk-desc">Ngưng đọng thời gian — hiệu ứng Negative</div>
+          </div>
+          <span class="sk-type type-time">Time Stop</span>
+        </button>
+        <button class="skill-btn" onclick="playSkill('starbreaker')">
+          <div class="sk-icon">💥</div>
+          <div class="sk-text">
+            <span class="sk-name">Star Breaker</span>
+            <div class="sk-desc">Cú đấm dồn toàn lực kết liễu</div>
+          </div>
+          <span class="sk-type type-finish">Finish</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DIO -->
+  <div class="dio">
+    <div class="char-panel">
+      <div class="char-header">
+        <div class="char-avatar">
+          <svg width="36" height="36" viewBox="0 0 36 36">
+            <circle cx="18" cy="18" r="16" fill="#2a0000" stroke="#f5c832" stroke-width="1.5"/>
+            <polygon points="18,6 20,13 28,13 22,18 24,26 18,21 12,26 14,18 8,13 16,13" fill="#f5c832" opacity="0.85"/>
+          </svg>
+        </div>
+        <div class="char-info">
+          <h2>Dio Brando</h2>
+          <span>The World</span>
+        </div>
+      </div>
+      <div class="skill-list">
+        <button class="skill-btn" onclick="playSkill('muda')">
+          <div class="sk-icon">👊</div>
+          <div class="sk-text">
+            <span class="sk-name">Muda Muda Rush</span>
+            <div class="sk-desc">Màn đấm liên hoàn đối trọng Jotaro</div>
+          </div>
+          <span class="sk-type type-main">Main</span>
+        </button>
+        <button class="skill-btn" onclick="playSkill('knife')">
+          <div class="sk-icon">🗡</div>
+          <div class="sk-text">
+            <span class="sk-name">Knife Throw — Checkmate</span>
+            <div class="sk-desc">Ném hàng loạt dao găm</div>
+          </div>
+          <span class="sk-type type-ranged">Ranged</span>
+        </button>
+        <button class="skill-btn" onclick="playSkill('roadroller')">
+          <div class="sk-icon">🚗</div>
+          <div class="sk-text">
+            <span class="sk-name">Road Roller Da!</span>
+            <div class="sk-desc">Bê xe lu đè bẹp đối thủ</div>
+          </div>
+          <span class="sk-type type-finish">Finish</span>
+        </button>
+        <button class="skill-btn" onclick="playSkill('diotime')">
+          <div class="sk-icon">⌛</div>
+          <div class="sk-text">
+            <span class="sk-name">The World: Toki wo Tomare</span>
+            <div class="sk-desc">Ngưng đọng thời gian của Dio</div>
+          </div>
+          <span class="sk-type type-time">Time Stop</span>
+        </button>
+        <button class="skill-btn" onclick="playSkill('wryyy')">
+          <div class="sk-icon">😤</div>
+          <div class="sk-text">
+            <span class="sk-name">Wryyyyyy Pose</span>
+            <div class="sk-desc">Tư thế gồng người hồi máu / tăng sức</div>
+          </div>
+          <span class="sk-type type-passive">Passive</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="stage"></div>
+<div id="notif"></div>
+
+<footer>JoJo's Bizarre Adventure Fan Demo · Araki Hirohiko</footer>
+
+<script>
+const stage = document.getElementById('stage');
+const notif = document.getElementById('notif');
+let notifTimer;
+
+function showNotif(msg, color='#f5c832'){
+  notif.textContent = msg;
+  notif.style.color = color;
+  notif.style.borderColor = color+'44';
+  notif.classList.add('show');
+  clearTimeout(notifTimer);
+  notifTimer = setTimeout(()=>notif.classList.remove('show'), 2200);
+}
+
+function clearStage(){ stage.innerHTML=''; }
+
+function shake(){
+  document.body.classList.remove('shaking');
+  void document.body.offsetWidth;
+  document.body.classList.add('shaking');
+  setTimeout(()=>document.body.classList.remove('shaking'),500);
+}
+
+function rnd(a,b){ return a+Math.random()*(b-a); }
+
+/* ─── ORA ORA ─── */
+function playOra(){
+  clearStage();
+  const words=['ORA','ORA','ORA','ORA!','ORA!!','ORA!!!'];
+  const colors=['#00d4ff','#ffffff','#88eeff'];
+  let delay=0;
+  for(let i=0;i<18;i++){
+    setTimeout(()=>{
+      const el=document.createElement('div');
+      el.className='rush-word';
+      const x=rnd(10,75), y=rnd(15,80);
+      const r=rnd(-25,25);
+      el.style.cssText=`left:${x}%;top:${y}%;color:${colors[i%3]};--r:${r}deg;text-shadow:0 0 20px ${colors[i%3]};`;
+      el.textContent=words[i%words.length];
+      stage.appendChild(el);
+      const imp=document.createElement('div');
+      imp.className='impact';
+      imp.style.cssText=`left:${x+rnd(5,15)}%;top:${y+rnd(5,15)}%;background:radial-gradient(circle,rgba(0,212,255,0.8),transparent);`;
+      stage.appendChild(imp);
+      setTimeout(()=>{ el.remove(); imp.remove(); },400);
+      if(i%4===0) shake();
+    }, delay);
+    delay+=90+Math.random()*40;
+  }
+  showNotif('ORA ORA ORA ORA!!!','#00d4ff');
+}
+
+/* ─── MUDA MUDA ─── */
+function playMuda(){
+  clearStage();
+  const words=['MUDA','MUDA','MUDA','MUDA!','MUDA!!','無駄'];
+  const colors=['#f5c832','#ff8800','#ffcc44'];
+  let delay=0;
+  for(let i=0;i<18;i++){
+    setTimeout(()=>{
+      const el=document.createElement('div');
+      el.className='rush-word';
+      const x=rnd(10,75), y=rnd(15,80);
+      const r=rnd(-20,20);
+      el.style.cssText=`left:${x}%;top:${y}%;color:${colors[i%3]};--r:${r}deg;text-shadow:0 0 20px ${colors[i%3]};`;
+      el.textContent=words[i%words.length];
+      stage.appendChild(el);
+      const imp=document.createElement('div');
+      imp.className='impact';
+      imp.style.cssText=`left:${x+rnd(5,15)}%;top:${y+rnd(5,15)}%;background:radial-gradient(circle,rgba(245,200,50,0.8),transparent);`;
+      stage.appendChild(imp);
+      setTimeout(()=>{ el.remove(); imp.remove(); },400);
+      if(i%4===0) shake();
+    }, delay);
+    delay+=85+Math.random()*40;
+  }
+  showNotif('MUDA MUDA MUDA MUDA!!!','#f5c832');
+}
+
+/* ─── KNIFE ─── */
+function playKnife(){
+  clearStage();
+  const knifeSVG=(rot)=>`<svg width="80" height="16" viewBox="0 0 120 16" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="kg" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#fff"/>
+        <stop offset="60%" stop-color="#c0ddf0"/>
+        <stop offset="100%" stop-color="#7ab0cc"/>
+      </linearGradient>
+    </defs>
+    <rect x="0" y="5" width="32" height="6" rx="2" fill="#3a1a00"/>
+    <rect x="32" y="3" width="6" height="10" rx="2" fill="#f5c832"/>
+    <ellipse cx="0" cy="8" rx="5" ry="5" fill="#f5c832"/>
+    <path d="M38,3 L118,8 L38,13 Z" fill="url(#kg)"/>
+    <circle cx="119" cy="8" r="2" fill="white" opacity="0.9"/>
+  </svg>`;
+  const count=12;
+  for(let i=0;i<count;i++){
+    setTimeout(()=>{
+      const el=document.createElement('div');
+      el.className='knife';
+      const startX=rnd(30,60), startY=rnd(30,70);
+      const tx=(rnd(-40,40))+'vw';
+      const ty=(rnd(-30,30))+'vh';
+      const rot=rnd(-30,30);
+      el.style.cssText=`left:${startX}%;top:${startY}%;--tx:${tx};--ty:${ty};--rot:${rot}deg;`;
+      el.innerHTML=knifeSVG(rot);
+      stage.appendChild(el);
+      setTimeout(()=>el.remove(),600);
+    }, i*80);
+  }
+  shake();
+  showNotif('KNIFE THROW — CHECKMATE!','#f5c832');
+}
+
+/* ─── STAR FINGER ─── */
+function playStarFinger(){
+  clearStage();
+  for(let i=0;i<4;i++){
+    setTimeout(()=>{
+      const el=document.createElement('div');
+      el.className='star-finger-beam';
+      const y=rnd(30,70);
+      const angle=rnd(-20,20);
+      const len=rnd(40,70)+'vw';
+      el.style.cssText=`left:20%;top:${y}%;--len:${len};transform:rotate(${angle}deg);transform-origin:left center;box-shadow:0 0 12px #00d4ff, 0 0 30px #00d4ff;`;
+      stage.appendChild(el);
+
+      const tip=document.createElement('div');
+      tip.style.cssText=`position:absolute;left:20%;top:${y-2}%;width:20px;height:20px;background:radial-gradient(circle,white,#00d4ff,transparent);border-radius:50%;opacity:0;animation:impactPop 0.5s ease-out 0.4s forwards;`;
+      stage.appendChild(tip);
+      setTimeout(()=>{ el.remove(); tip.remove(); },800);
+    }, i*200);
+  }
+  showNotif('STAR FINGER!','#00d4ff');
+}
+
+/* ─── TIME STOP (JOTARO) ─── */
+function playJotaroTime(){
+  clearStage();
+  const overlay=document.createElement('div');
+  overlay.className='time-stop-overlay';
+  overlay.style.cssText='position:absolute;inset:0;';
+  stage.appendChild(overlay);
+  const txt=document.createElement('div');
+  txt.className='time-stop-text';
+  txt.style.color='#00d4ff';
+  txt.style.textShadow='0 0 40px #00d4ff, 0 0 80px #0044ff';
+  txt.innerHTML='STAR PLATINUM<br>THE WORLD';
+  txt.style.lineHeight='1.1';
+  stage.appendChild(txt);
+  shake();
+  setTimeout(()=>{ overlay.remove(); txt.remove(); }, 2600);
+  showNotif('時よ止まれ — STAR PLATINUM!','#00d4ff');
+}
+
+/* ─── TIME STOP (DIO) ─── */
+function playDioTime(){
+  clearStage();
+  const overlay=document.createElement('div');
+  overlay.className='time-stop-overlay';
+  overlay.style.background='rgba(60,30,0,0)';
+  overlay.style.setProperty('--ts-color','#f5c832');
+  stage.appendChild(overlay);
+  const txt=document.createElement('div');
+  txt.className='time-stop-text';
+  txt.style.color='#f5c832';
+  txt.style.textShadow='0 0 40px #f5c832, 0 0 80px #ff4400';
+  txt.innerHTML='時よ止まれ…<br>THE WORLD';
+  txt.style.lineHeight='1.1';
+  stage.appendChild(txt);
+
+  // crack lines
+  for(let i=0;i<8;i++){
+    setTimeout(()=>{
+      const crack=document.createElement('div');
+      const x=rnd(10,85), y=rnd(10,85);
+      const len=rnd(60,200), angle=rnd(0,360);
+      crack.style.cssText=`position:absolute;left:${x}%;top:${y}%;width:${len}px;height:1px;background:rgba(245,200,50,0.6);transform:rotate(${angle}deg);transform-origin:left center;opacity:0;animation:impactPop 0.6s ease forwards;`;
+      stage.appendChild(crack);
+      setTimeout(()=>crack.remove(),700);
+    }, i*150+300);
+  }
+  shake();
+  setTimeout(()=>{ overlay.remove(); txt.remove(); }, 2600);
+  showNotif('時よ止まれ — THE WORLD!!!','#f5c832');
+}
+
+/* ─── ROAD ROLLER ─── */
+function playRoadRoller(){
+  clearStage();
+  const el=document.createElement('div');
+  el.className='road-roller';
+  el.innerHTML=`<svg width="220" height="130" viewBox="0 0 220 130" xmlns="http://www.w3.org/2000/svg">
+    <rect x="20" y="10" width="180" height="70" rx="10" fill="#cc9900" stroke="#f5c832" stroke-width="2"/>
+    <rect x="30" y="18" width="80" height="35" rx="5" fill="#1a1a00" stroke="#f5c832" stroke-width="1"/>
+    <rect x="120" y="22" width="50" height="25" rx="4" fill="#333300"/>
+    <circle cx="50" cy="105" r="24" fill="#222" stroke="#f5c832" stroke-width="3"/>
+    <circle cx="50" cy="105" r="14" fill="#333" stroke="#888" stroke-width="1"/>
+    <circle cx="170" cy="105" r="24" fill="#222" stroke="#f5c832" stroke-width="3"/>
+    <circle cx="170" cy="105" r="14" fill="#333" stroke="#888" stroke-width="1"/>
+    <text x="80" y="58" font-family="'Bebas Neue',sans-serif" font-size="18" fill="#f5c832" text-anchor="middle">ROAD ROLLER</text>
+    <circle cx="50" cy="105" r="4" fill="#f5c832"/>
+    <circle cx="170" cy="105" r="4" fill="#f5c832"/>
+  </svg>`;
+  stage.appendChild(el);
+
+  const txt=document.createElement('div');
+  txt.className='time-stop-text';
+  txt.style.color='#f5c832';
+  txt.style.textShadow='0 0 40px #f5c832';
+  txt.style.animationDelay='0.4s';
+  txt.style.top='70%';
+  txt.textContent='ROAD ROLLER DA!!!';
+  stage.appendChild(txt);
+
+  setTimeout(shake,400);
+  setTimeout(shake,700);
+  setTimeout(shake,900);
+  setTimeout(()=>{ el.remove(); txt.remove(); },2200);
+  showNotif('ROAD ROLLER DA!!!','#f5c832');
+}
+
+/* ─── STAR BREAKER ─── */
+function playStarBreaker(){
+  clearStage();
+  const flash=document.createElement('div');
+  flash.className='star-breaker-flash';
+  stage.appendChild(flash);
+  const txt=document.createElement('div');
+  txt.className='star-breaker-text';
+  txt.textContent='STAR BREAKER';
+  stage.appendChild(txt);
+  shake();
+  setTimeout(shake,100);
+  setTimeout(shake,250);
+  setTimeout(()=>{ flash.remove(); txt.remove(); }, 1100);
+  showNotif('STAR BREAKER!!!','#ffffff');
+}
+
+/* ─── WRYYY ─── */
+function playWryyy(){
+  clearStage();
+  const bg=document.createElement('div');
+  bg.className='wryyy-bg';
+  stage.appendChild(bg);
+
+  const parts=document.createElement('div');
+  parts.className='wryyy-particles';
+  for(let i=0;i<24;i++){
+    const p=document.createElement('div');
+    p.className='p';
+    const angle=rnd(0,360)*Math.PI/180;
+    const dist=rnd(120,300);
+    p.style.cssText=`left:${48+rnd(-3,3)}%;top:${48+rnd(-3,3)}%;--px:${Math.cos(angle)*dist}px;--py:${Math.sin(angle)*dist}px;width:${rnd(4,10)}px;height:${rnd(4,10)}px;animation-delay:${rnd(0,0.3)}s;`;
+    parts.appendChild(p);
+  }
+  stage.appendChild(parts);
+
+  const txt=document.createElement('div');
+  txt.className='wryyy-text';
+  txt.textContent='WRYYYYYY!!!';
+  stage.appendChild(txt);
+
+  setTimeout(()=>{ bg.remove(); parts.remove(); txt.remove(); },2100);
+  showNotif('WRYYYYYY!!!','#f5c832');
+}
+
+function playSkill(id){
+  const map={
+    'ora':    playOra,
+    'muda':   playMuda,
+    'knife':  playKnife,
+    'starfinger': playStarFinger,
+    'jotarotime': playJotaroTime,
+    'diotime':    playDioTime,
+    'roadroller': playRoadRoller,
+    'starbreaker':playStarBreaker,
+    'wryyy':  playWryyy,
+  };
+  if(map[id]) map[id]();
+}
+</script>
+</body>
+</html> 
