@@ -210,14 +210,14 @@ if (isset($_GET['action'])) {
             display: flex;
             justify-content: center;
             gap: 1rem;
-            min-height: 140px;
+            min-height: 100px;
             perspective: 1000px;
             flex-wrap: wrap;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
         }
 
         .card-slot {
-            width: clamp(80px, 12vw, 100px);
+            width: clamp(60px, 10vw, 85px);
             aspect-ratio: 2/3;
             background: rgba(255, 255, 255, 0.03);
             border: 1px dashed rgba(255, 255, 255, 0.1);
@@ -314,7 +314,8 @@ if (isset($_GET['action'])) {
         }
 
         .btn-premium {
-            padding: 1rem 2.5rem;
+            padding: 0.8rem 1.5rem;
+            font-size: 0.9rem;
             border: none;
             border-radius: 50px;
             font-weight: 900;
@@ -357,9 +358,9 @@ if (isset($_GET['action'])) {
 </head>
 
 <body>
-    <div class="game-wrapper" style="max-width:800px; margin:2rem auto; position:relative; z-index:1; padding: 0 15px; width: 100%;">
-        <div class="glass" style="padding: 2.5rem; text-align: center; border-radius: 2rem; width: 100%;">
-            <h1 style="margin: 0 0 1rem; font-size: 2.5rem; font-weight: 900; color: #00d2ff; text-transform: uppercase; letter-spacing: 2px;">LET IT RIDE POKER</h1>
+    <div class="game-wrapper" style="max-width:800px; margin:0 auto; padding-top:10px; position:relative; z-index:1; width: 100%; transform: scale(0.9); transform-origin: top center;">
+        <div class="glass" style="padding: 1.5rem; text-align: center; border-radius: 2rem; width: 100%;">
+            <h1 style="margin: 0 0 1rem; font-size: 2rem; font-weight: 900; color: #00d2ff; text-transform: uppercase; letter-spacing: 2px;">LET IT RIDE POKER</h1>
             <div style="background: rgba(0,0,0,0.3); padding: 10px 25px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.2); display: inline-block; margin-bottom: 2rem; max-width: 100%;">
                 <span style="opacity: 0.8; font-size: 0.9rem; margin-right: 5px;">SỐ GTLM:</span>
                 <span id="balance-val" style="font-weight: 900; font-size: clamp(14px, 3vw, 1.5rem); color: #f1c40f; word-break: break-all;"><?php echo number_format($money, 0, ',', '.'); ?></span> <span style="font-weight: 900; font-size: clamp(14px, 3vw, 1.5rem); color: #f1c40f;">gtlm</span>
@@ -447,7 +448,7 @@ if (isset($_GET['action'])) {
                 shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>,
                 bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>
             };
-            const prefix = window.location.pathname.includes('/games/') ? '../' : '';
+            const prefix = (window.location.pathname.includes('/games/') || window.location.pathname.includes('/LiveStream/')) ? '../' : '';
             const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
             
             scripts.forEach(src => {
@@ -560,38 +561,7 @@ if (typeof jQuery === "undefined") document.write('<script src="https://code.jqu
 if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
-<script>
-    if (typeof BotVirtualCursor !== "undefined") {
-        BotVirtualCursor.init("Bot Streamer");
-        setInterval(() => {
-            const allBtns = Array.from(document.querySelectorAll("button, .btn-bet, .chip, .spin-btn, #btnSpin, .bet-button, .card, .btn-primary, .btn-success, input[type='button'], input[type='submit']"));
-            const btns = allBtns.filter(b => {
-                if(b.offsetParent === null || b.disabled) return false;
-                const txt = (b.innerText || b.value || "").toLowerCase();
-                const cls = (b.className || "").toLowerCase();
-                const id = (b.id || "").toLowerCase();
-                
-                // Exclude common navigation/help buttons
-                if(txt.includes("hướng dẫn") || txt.includes("trang chủ") || txt.includes("nạp") || txt.includes("rút") || txt.includes("lịch sử") || txt.includes("quay lại") || txt.includes("thoát")) return false;
-                if(cls.includes("back") || cls.includes("help") || cls.includes("guide") || cls.includes("close") || cls.includes("swal") || cls.includes("nav")) return false;
-                if(id.includes("guide") || id.includes("back") || id.includes("close") || id.includes("nav")) return false;
-                
-                return true;
-            });
-            
-            if(btns.length > 0) {
-                const btn = btns[Math.floor(Math.random() * btns.length)];
-                BotVirtualCursor.moveToElement($(btn), 1, 0, () => {
-                    setTimeout(() => { 
-                        BotVirtualCursor.simulateClick(() => {
-                            try { btn.click(); } catch(e){}
-                        });
-                    }, 500);
-                });
-            }
-        }, 3000 + Math.random() * 4000);
-    }
-</script>
+<script src="bots/bot_34.js"></script>
 
 </body>
 </html>

@@ -245,7 +245,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['user_number'])) {
         }
         .stats-section {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 20px;
             margin-top: 40px;
             max-width: 1000px;
@@ -279,6 +279,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['user_number'])) {
     </style>
 </head>
 <body>
+    <canvas id="threejs-background"></canvas>
     <div class="game-card">
         <h1 class="lottery-title">🎲 Xổ số Mini</h1>
         <p>Phí tham gia: 5.000 gtlm / lượt</p>
@@ -287,17 +288,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['user_number'])) {
             💰 Số dư: <span id="balance-val"><?= number_format($money, 0, ',', '.') ?></span> gtlm
         </div>
 
-        <form id="lottery-form">
+        <div id="lottery-form">
             <div class="input-group">
                 <label>Nhập 5 chữ số may mắn của bạn:</label>
                 <input type="text" name="user_number" id="user-number" maxlength="5" placeholder="00000" required>
             </div>
-            <button type="submit" class="btn-spin" id="btn-submit">🎰 Quay số ngay</button>
-        </form>
-
-        <div style="margin-top: 20px;">
-            <a href="../index.php" style="color: #aaa; text-decoration: none; font-size: 14px;">🏠 Quay lại trang chủ</a>
+            <button type="button" class="btn-spin" id="btn-submit">🎰 Quay số ngay</button>
         </div>
+
+
     </div>
 
     <div class="stats-section">
@@ -315,127 +314,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['user_number'])) {
             </div>
             <canvas id="gameChart" style="max-height: 200px;"></canvas>
         </div>
-
-        <div class="glass-box">
-            <h3>📋 Nhật ký tham gia</h3>
-            <table class="history-table">
-                <thead>
-                    <tr>
-                        <th>Kết quả</th>
-                        <th>Thắng</th>
-                        <th>Thời gian</th>
-                    </tr>
-                </thead>
-                <tbody id="history-body">
-                    <!-- Loaded via AJAX -->
-                </tbody>
-            </table>
-        </div>
     </div>
 
-    <script>
-        $(document).ready(function() {
-            let gameChart;
-            const ctx = document.getElementById('gameChart').getContext('2d');
-
-            function initChart(wins, losses) {
-                if (gameChart) gameChart.destroy();
-                gameChart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Thắng', 'Thua'],
-                        datasets: [{
-                            data: [wins, losses],
-                            backgroundColor: ['#2ecc71', '#e74c3c'],
-                            borderColor: 'transparent'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: { legend: { display: false } }
-                    }
-                });
-            }
-
-            function loadHistory() {
-                $.get('lottery.php?action=get_history', function(data) {
-                    if (data.success) {
-                        const tbody = $('#history-body');
-                        tbody.empty();
-                        data.history.forEach(item => {
-                            const isWin = parseInt(item.WinAmount) > 0;
-                            tbody.append(`
-                                <tr>
-                                    <td>${item.Result}</td>
-                                    <td class="${isWin ? 'win-text' : 'lose-text'}">${parseInt(item.WinAmount).toLocaleString()}</td>
-                                    <td style="font-size: 11px; opacity: 0.5;">${item.Time.split(' ')[1]}</td>
-                                </tr>
-                            `);
-                        });
-                    }
-                });
-            }
-
-            $('#lottery-form').on('submit', function(e) {
-                e.preventDefault();
-                const btn = $('#btn-submit');
-                const userNum = $('#user-number').val();
-
-                if (userNum.length !== 5) {
-                    Swal.fire('Lỗi', 'Vui lòng nhập đủ 5 chữ số!', 'error');
-                    return;
-                }
-
-                btn.prop('disabled', true).text('🎰 Đang quay...');
-
-                $.ajax({
-                    url: 'lottery.php',
-                    type: 'POST',
-                    data: { user_number: userNum },
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                    success: function(data) {
-                        if (data.success) {
-                            // Hieu ung quay so gia
-                            let count = 0;
-                            const timer = setInterval(() => {
-                                $('#user-number').val(Math.floor(Math.random() * 90000 + 10000));
-                                count++;
-                                if (count > 20) {
-                                    clearInterval(timer);
-                                    $('#user-number').val(data.winning);
-                                    $('#balance-val').text(data.balance);
-                                    $('#stat-wins').text(data.stats.thang);
-                                    $('#stat-losses').text(data.stats.thua);
-                                    initChart(data.stats.thang, data.stats.thua);
-                                    loadHistory();
-
-                                    Swal.fire({
-                                        title: data.win ? 'CHIẾN THẮNG!' : 'RẤT TIẾC!',
-                                        text: data.message,
-                                        icon: data.win ? 'success' : 'info',
-                                        background: '#1a1a2e',
-                                        color: '#fff'
-                                    });
-
-                                    btn.prop('disabled', false).text('🎰 Quay số ngay');
-                                }
-                            }, 50);
-                        } else {
-                            Swal.fire('Lỗi', data.message, 'error');
-                            btn.prop('disabled', false).text('🎰 Quay số ngay');
-                        }
-                    },
-                    error: function() {
-                        Swal.fire('Lỗi', 'Không thể kết nối máy chủ!', 'error');
-                        btn.prop('disabled', false).text('🎰 Quay số ngay');
-                    }
-                });
-            });
-
-            initChart(<?= $gameThang ?>, <?= $gameThua ?>);
-            loadHistory();
-        });
-    </script>
+    <!-- Game logic moved to end of file to avoid SyntaxError from load_theme scripts -->
 
 <!-- AUTO-GENERATED BOT SCRIPT -->
 <script>
@@ -443,38 +324,163 @@ if (typeof jQuery === "undefined") document.write('<script src="https://code.jqu
 if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
+<script src="bots/bot_36.js?v=<?= time() ?>"></script>
+<!-- Temporarily disabled ThreeJS auto-init to fix syntax error -->
+<!--
 <script>
-    if (typeof BotVirtualCursor !== "undefined") {
-        BotVirtualCursor.init("Bot Streamer");
-        setInterval(() => {
-            const allBtns = Array.from(document.querySelectorAll("button, .btn-bet, .chip, .spin-btn, #btnSpin, .bet-button, .card, .btn-primary, .btn-success, input[type='button'], input[type='submit']"));
-            const btns = allBtns.filter(b => {
-                if(b.offsetParent === null || b.disabled) return false;
-                const txt = (b.innerText || b.value || "").toLowerCase();
-                const cls = (b.className || "").toLowerCase();
-                const id = (b.id || "").toLowerCase();
-                
-                // Exclude common navigation/help buttons
-                if(txt.includes("hướng dẫn") || txt.includes("trang chủ") || txt.includes("nạp") || txt.includes("rút") || txt.includes("lịch sử") || txt.includes("quay lại") || txt.includes("thoát")) return false;
-                if(cls.includes("back") || cls.includes("help") || cls.includes("guide") || cls.includes("close") || cls.includes("swal") || cls.includes("nav")) return false;
-                if(id.includes("guide") || id.includes("back") || id.includes("close") || id.includes("nav")) return false;
-                
-                return true;
-            });
-            
-            if(btns.length > 0) {
-                const btn = btns[Math.floor(Math.random() * btns.length)];
-                BotVirtualCursor.moveToElement($(btn), 1, 0, () => {
-                    setTimeout(() => { 
-                        BotVirtualCursor.simulateClick(() => {
-                            try { btn.click(); } catch(e){}
-                        });
-                    }, 500);
-                });
-            }
-        }, 3000 + Math.random() * 4000);
+    (function () {
+        window.themeConfig = {
+            particleCount: <?= (int)($particleCount ?? 800) ?>,
+            particleColor: '<?= htmlspecialchars($particleColor ?? "#ffffff", ENT_QUOTES) ?>',
+            shapeColors: <?= json_encode($shapeColors ?? ["#667eea", "#764ba2", "#4facfe", "#00f2fe"]) ?: '["#667eea", "#764ba2", "#4facfe", "#00f2fe"]' ?>,
+            bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?: '["#667eea", "#764ba2", "#4facfe"]' ?>
+        };
+        const prefix = '../';
+        ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'].forEach(src => {
+            const s = document.createElement('script');
+            s.src = prefix + src; s.async = false;
+            document.head.appendChild(s);
+        });
+    })();
+</script>
+-->
+
+<!-- GAME LOGIC + ThreeJS: Đặt ngay trước </body> -->
+<script>
+(function() {
+    'use strict';
+    var wins0 = <?= (int)$gameThang ?>;
+    var losses0 = <?= (int)$gameThua ?>;
+    var gameChart = null;
+
+    function initChart(wins, losses) {
+        var ctx = document.getElementById('gameChart');
+        if (!ctx || typeof Chart === 'undefined') return;
+        if (gameChart) gameChart.destroy();
+        gameChart = new Chart(ctx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Th\u1eafng', 'Thua'],
+                datasets: [{ data: [wins, losses], backgroundColor: ['#2ecc71', '#e74c3c'], borderColor: 'transparent' }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
     }
+
+    function loadHistory() {
+        if (typeof jQuery === 'undefined') return;
+        jQuery.get('live_36.php?action=get_history', function(res) {
+            if (!res || !res.success) return;
+            var tbody = jQuery('#history-body');
+            tbody.empty();
+            res.history.forEach(function(item) {
+                var isWin = parseInt(item.WinAmount) > 0;
+                tbody.append('<tr><td>' + item.Result + '</td><td class="' + (isWin ? 'win-text' : 'lose-text') + '">' + parseInt(item.WinAmount).toLocaleString() + '</td><td style="font-size:11px;opacity:0.5">' + item.Time.split(' ')[1] + '</td></tr>');
+            });
+        });
+    }
+
+    function doSpin() {
+        var btn = document.getElementById('btn-submit');
+        var inp = document.getElementById('user-number');
+        if (!btn || !inp) return;
+        var userNum = inp.value;
+        if (userNum.length !== 5) {
+            if (typeof Swal !== 'undefined') Swal.fire('L\u1ed7i', 'Vui l\u00f2ng nh\u1eadp \u0111\u1ee7 5 ch\u1eef s\u1ed1!', 'error');
+            return;
+        }
+        btn.disabled = true;
+        btn.textContent = '\ud83c\udfb0 \u0110ang quay...';
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', 'live_36.php', true);
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.onload = function() {
+            btn.disabled = false;
+            btn.textContent = '\ud83c\udfb0 Quay s\u1ed1 ngay';
+            try {
+                var data = JSON.parse(xhr.responseText);
+                if (data.success) {
+                    var count = 0;
+                    var timer = setInterval(function() {
+                        inp.value = Math.floor(Math.random() * 90000 + 10000);
+                        count++;
+                        if (count > 20) {
+                            clearInterval(timer);
+                            inp.value = data.winning;
+                            var el;
+                            el = document.getElementById('balance-val'); if (el) el.textContent = data.balance;
+                            el = document.getElementById('stat-wins');   if (el) el.textContent = data.stats.thang;
+                            el = document.getElementById('stat-losses'); if (el) el.textContent = data.stats.thua;
+                            initChart(data.stats.thang, data.stats.thua);
+                            loadHistory();
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({ title: data.win ? '\ud83c\udf89 CHI\u1ebeN TH\u1eaeNG!' : '\ud83d\ude22 R\u1ea4T TI\u1ebeC!', text: data.message, icon: data.win ? 'success' : 'info', background: '#1a1a2e', color: '#fff' });
+                            }
+                        }
+                    }, 50);
+                } else {
+                    if (typeof Swal !== 'undefined') Swal.fire('L\u1ed7i', data.message || 'C\u00f3 l\u1ed7i x\u1ea3y ra', 'error');
+                }
+            } catch(e) {
+                console.error('[Live 36] JSON error:', xhr.responseText.substring(0, 300));
+                if (typeof Swal !== 'undefined') Swal.fire('L\u1ed7i', 'Server l\u1ed7i!', 'error');
+            }
+        };
+        xhr.onerror = function() {
+            btn.disabled = false;
+            btn.textContent = '\ud83c\udfb0 Quay s\u1ed1 ngay';
+            if (typeof Swal !== 'undefined') Swal.fire('L\u1ed7i', 'Kh\u00f4ng k\u1ebft n\u1ed1i \u0111\u01b0\u1ee3c server!', 'error');
+        };
+        xhr.send('user_number=' + encodeURIComponent(userNum));
+    }
+
+    // Đăng ký BOTH native và jQuery để bot trigger hoặc click tay đều hoạt động
+    function setupGame() {
+        initChart(wins0, losses0);
+        loadHistory();
+        var btn = document.getElementById('btn-submit');
+        if (!btn) { console.error('[Live 36] ERROR: btn-submit not found!'); return; }
+        console.log('[Live 36] OK: btn-submit found, binding events');
+        // Native addEventListener (tay click)
+        btn.addEventListener('click', function(e) {
+            console.log('[Live 36] native click triggered');
+            doSpin();
+        });
+        // jQuery .on (bot trigger)
+        if (typeof jQuery !== 'undefined') {
+            jQuery(btn).on('click', function(e) {
+                // Chỉ xử lý nếu không phải native click (tránh double-fire)
+                if (!e.originalEvent) {
+                    console.log('[Live 36] jQuery trigger click (bot)');
+                    doSpin();
+                }
+            });
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupGame);
+    } else {
+        setupGame();
+    }
+})();
+</script>
+
+<!-- ThreeJS Background -->
+<script>
+(function() {
+    window.themeConfig = {
+        particleCount: <?= (int)($particleCount ?? 800) ?>,
+        particleColor: '<?= addslashes(htmlspecialchars($particleColor ?? '#ffffff', ENT_QUOTES)) ?>',
+        shapeColors: <?= json_encode(is_array($shapeColors) ? $shapeColors : ['#667eea','#764ba2','#4facfe','#00f2fe']) ?>,
+        bgGradient:   <?= json_encode(is_array($bgGradient)  ? $bgGradient  : ['#667eea','#764ba2','#4facfe']) ?>
+    };
+    ['threejs-background.js','assets/js/game-effects.js','assets/js/game-effects-auto.js'].forEach(function(src) {
+        var s = document.createElement('script'); s.src = '../' + src; s.async = false; document.body.appendChild(s);
+    });
+})();
 </script>
 
 </body>
-</html>
+</html>

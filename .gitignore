@@ -81,3 +81,11 @@ bot/sessions
 bot/logs
 bot/cycle_logs
 bot/tester_session.txt
+
+# --- TEST & DEBUG FILES (LOCAL ONLY) ---
+test_*.html
+test_*.php
+temp_*.txt
+output_*.txt
+render_test.php
+php_errors.log

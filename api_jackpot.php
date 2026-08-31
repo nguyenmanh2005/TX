@@ -22,6 +22,88 @@ switch ($action) {
                                 WHERE j.id = 1")->fetch_assoc();
         echo json_encode(['success' => true, 'amount' => $jackpot['amount'], 'last_winner' => $jackpot['winner_name'], 'last_amount' => $jackpot['last_win_amount']]);
         break;
+
+    case 'admin_withdraw':
+        require_once 'admin_helper.php';
+        $userId = $_SESSION['Iduser'] ?? 0;
+        if (!isAdmin($conn, $userId)) {
+            echo json_encode(['success' => false, 'message' => 'Không đủ quyền Admin!']);
+            exit;
+        }
+
+        $type = $_POST['type'] ?? '';
+        $target = $_POST['target'] ?? '';
+
+        $conn->begin_transaction();
+        try {
+            // Khóa hũ
+            $stmt = $conn->prepare("SELECT amount FROM global_jackpot WHERE id = 1 FOR UPDATE");
+            $stmt->execute();
+            $jackpot = $stmt->get_result()->fetch_assoc();
+            $winAmount = (float)$jackpot['amount'];
+
+            if ($winAmount <= 0) {
+                echo json_encode(['success' => false, 'message' => 'Hũ trống rỗng!']);
+                $conn->rollback();
+                exit;
+            }
+
+            $winners = [];
+
+            if ($type === 'self') {
+                $winners[] = $userId;
+            } else if ($type === 'individual') {
+                $tgt = (int)$target;
+                if ($tgt <= 0) throw new Exception("ID không hợp lệ");
+                $winners[] = $tgt;
+            } else if ($type === 'group') {
+                $ids = explode(',', $target);
+                foreach ($ids as $id) {
+                    $id = (int)trim($id);
+                    if ($id > 0) $winners[] = $id;
+                }
+                if (empty($winners)) throw new Exception("Không có ID hợp lệ");
+            } else if ($type === 'random') {
+                $count = (int)$target;
+                if ($count <= 0) throw new Exception("Số lượng không hợp lệ");
+                $res = $conn->query("SELECT Iduser FROM users ORDER BY RAND() LIMIT $count");
+                while ($r = $res->fetch_assoc()) {
+                    $winners[] = $r['Iduser'];
+                }
+                if (empty($winners)) throw new Exception("Không tìm thấy người chơi nào");
+            } else {
+                throw new Exception("Loại phân phát không hợp lệ");
+            }
+
+            $splitAmount = $winAmount / count($winners);
+
+            // Cập nhật tiền cho người chơi
+            foreach ($winners as $wId) {
+                $upd = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
+                $upd->bind_param("di", $splitAmount, $wId);
+                $upd->execute();
+                
+                // Lưu log bot_transactions
+                $checkTable = $conn->query("SHOW TABLES LIKE 'bot_transactions'");
+                if ($checkTable && $checkTable->num_rows > 0) {
+                    $trans = $conn->prepare("INSERT INTO bot_transactions (user_id, amount, type, reason) VALUES (?, ?, 'receive', 'Admin rải lộc từ Hũ Rồng Thần')");
+                    $trans->bind_param("id", $wId, $splitAmount);
+                    $trans->execute();
+                }
+            }
+
+            // Reset Hũ
+            $reset = $conn->prepare("UPDATE global_jackpot SET amount = 100000000, last_winner_id = ?, last_win_amount = ?, last_win_at = NOW() WHERE id = 1");
+            $reset->bind_param("id", $userId, $winAmount);
+            $reset->execute();
+
+            $conn->commit();
+            echo json_encode(['success' => true, 'message' => "Đã phân phát " . number_format($winAmount) . " GTLM cho " . count($winners) . " người!"]);
+        } catch (Exception $e) {
+            $conn->rollback();
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        break;
 }
 } // End $isDirectCall check
 
@@ -37,35 +119,8 @@ function contributeToJackpot(mysqli $conn, float $betAmount) {
     $stmt->close();
 }
 
-// HÃ m Ä‘á»ƒ kiá»ƒm tra ná»• hÅ© (VÃ­ dá»¥: tá»‰ lá»‡ 1/10,000)
 function checkJackpotWin(mysqli $conn, int $userId) {
-    if (rand(1, 10000) === 777) { // Con sá»‘ may máº¯n
-        $conn->begin_transaction();
-        try {
-            // FIX: KhÃ³a quá»¹ hÅ© Ä‘á»ƒ trÃ¡nh ná»• hÅ© kÃ©p (Double Drain)
-            $stmt = $conn->prepare("SELECT amount FROM global_jackpot WHERE id = 1 FOR UPDATE");
-            $stmt->execute();
-            $jackpot = $stmt->get_result()->fetch_assoc();
-            $winAmount = $jackpot['amount'];
-
-            if ($winAmount < 100000000) $winAmount = 100000000; // SÃ n tá»‘i thiá»ƒu
-            
-            // Cá»™ng  Gtlm cho user (DÃ¹ng prepared statement)
-            $stmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
-            $stmt->bind_param("di", $winAmount, $userId);
-            $stmt->execute();
-            
-            // Reset hÅ© vá» 100tr
-            $stmt = $conn->prepare("UPDATE global_jackpot SET amount = 100000000, last_winner_id = ?, last_win_amount = ?, last_win_at = NOW() WHERE id = 1");
-            $stmt->bind_param("id", $userId, $winAmount);
-            $stmt->execute();
-            
-            $conn->commit();
-            return $winAmount;
-        } catch (Exception $e) {
-            $conn->rollback();
-            return 0;
-        }
-    }
+    // Yêu cầu: Hũ GTLM sẽ được tích dần theo cơ chế cũ nhưng không chia cho bất kỳ ai.
+    // Tắt tính năng nổ hũ.
     return 0;
 }

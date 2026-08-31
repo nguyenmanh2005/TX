@@ -162,9 +162,10 @@ if (!empty($currentBotTheme)) {
     }
 }
 
-// Lấy số dư người dùng
+// Lấy số dư người dùng (Spectator)
+$spectatorId = (int)$_SESSION['Iduser'];
 $stmtUser = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
-$stmtUser->bind_param("i", $userId);
+$stmtUser->bind_param("i", $spectatorId);
 $stmtUser->execute();
 $userRow = $stmtUser->get_result()->fetch_assoc();
 $stmtUser->close();
@@ -903,26 +904,27 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
             let cleanText = text.replace(/[*#_`~]/g, '').replace(/GTLM/g, 'Gờ Tờ Lờ Mờ').trim();
             if (!cleanText) return;
 
-            if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(cleanText);
-                utterance.lang = 'vi-VN';
-                utterance.rate = 1.1;
-                utterance.volume = 1;
-                window.speechSynthesis.speak(utterance);
-            }
+            // Sử dụng Google Translate TTS để đảm bảo đọc tiếng Việt chuẩn xác
+            fallbackSpeech(cleanText);
         }
 
         function fallbackSpeech(cleanText) {
             if ('speechSynthesis' in window) {
                 try {
                     window.speechSynthesis.cancel();
-                    const url = 'https://translate.googleapis.com/translate_tts?ie=UTF-8&q=' + encodeURIComponent(cleanText) + '&tl=vi&client=tw-ob';
-                    const audio = new Audio(url);
-                    audio.play().catch(e => {
-                        const utterance = new SpeechSynthesisUtterance(cleanText);
-                        utterance.lang = 'vi-VN';
-                        window.speechSynthesis.speak(utterance);
-                    });
+                    const utterance = new SpeechSynthesisUtterance(cleanText);
+                    utterance.lang = 'vi-VN';
+                    utterance.rate = 1.1;
+                    
+                    // Cố gắng tìm giọng tiếng Việt cục bộ trên máy
+                    let voices = window.speechSynthesis.getVoices();
+                    let viVoice = voices.find(v => v.lang.toLowerCase().includes('vi') || v.name.toLowerCase().includes('viet'));
+                    
+                    if (viVoice) {
+                        utterance.voice = viVoice;
+                    }
+
+                    window.speechSynthesis.speak(utterance);
                 } catch(e) {
                     console.log("Speech error:", e);
                 }

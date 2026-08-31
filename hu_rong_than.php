@@ -13,6 +13,9 @@ $userStmt->bind_param("i", $userId);
 $userStmt->execute();
 $user = $userStmt->get_result()->fetch_assoc();
 
+require_once 'admin_helper.php';
+$isAdminUser = isAdmin($conn, $userId);
+
 // Fetch jackpot data
 $jackpotStmt = $conn->query("SELECT j.*, u.Name as winner_name FROM global_jackpot j LEFT JOIN users u ON j.last_winner_id = u.Iduser WHERE j.id = 1");
 $jackpot = $jackpotStmt->fetch_assoc();
@@ -329,6 +332,30 @@ $lastWinAt = $jackpot['last_win_at'] ?? 'Chưa rõ';
             transform: translateY(-3px) scale(1.05);
             box-shadow: 0 15px 30px rgba(217, 119, 6, 0.6);
         }
+
+        /* Thêm style cho nút Admin */
+        .admin-btn {
+            background: #1e293b;
+            color: #f8fafc;
+            border: 1px solid #334155;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            justify-content: center;
+            min-width: 140px;
+        }
+        .admin-btn:hover {
+            background: #ef4444;
+            border-color: #ef4444;
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body>
@@ -356,6 +383,20 @@ $lastWinAt = $jackpot['last_win_at'] ?? 'Chưa rõ';
             <div style="margin-top: 15px; color: rgba(255,255,255,0.5); font-size: 0.9rem;">
                 <i class="fa-solid fa-circle-dot fa-fade" style="color: #10b981; font-size: 0.7rem;"></i> Quỹ thưởng đang tăng liên tục theo thời gian thực
             </div>
+            
+            <?php if ($isAdminUser): ?>
+            <div style="margin-top: 25px; background: rgba(0,0,0,0.4); padding: 20px; border-radius: 15px; border: 1px dashed rgba(239, 68, 68, 0.5);">
+                <div style="color: #ef4444; font-weight: 900; margin-bottom: 15px; font-size: 1rem; text-transform: uppercase; letter-spacing: 2px;">
+                    <i class="fa-solid fa-user-shield"></i> Quyền Lực Admin
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+                    <button onclick="adminWithdraw('self')" class="admin-btn"><i class="fa-solid fa-hand-holding-dollar"></i> Húp Trọn</button>
+                    <button onclick="adminWithdraw('individual')" class="admin-btn"><i class="fa-solid fa-user-tag"></i> Cho Cá Nhân</button>
+                    <button onclick="adminWithdraw('group')" class="admin-btn"><i class="fa-solid fa-users"></i> Chia Theo Nhóm</button>
+                    <button onclick="adminWithdraw('random')" class="admin-btn"><i class="fa-solid fa-dice"></i> Rải Ngẫu Nhiên</button>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
 
         <div class="rules-grid">
@@ -426,6 +467,74 @@ $lastWinAt = $jackpot['last_win_at'] ?? 'Chưa rõ';
 
         // Cập nhật mỗi 5 giây
         setInterval(fetchJackpot, 5000);
+
+        <?php if ($isAdminUser): ?>
+        function adminWithdraw(type) {
+            if (type === 'self') {
+                Swal.fire({
+                    title: 'Xác nhận húp Hũ?',
+                    text: 'Toàn bộ GTLM trong Hũ sẽ được cộng vào tài khoản của bạn!',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Húp ngay',
+                    confirmButtonColor: '#ef4444'
+                }).then((res) => {
+                    if (res.isConfirmed) processAdminWithdraw('self', '');
+                });
+            } else if (type === 'individual') {
+                Swal.fire({
+                    title: 'Rải lộc cá nhân',
+                    text: 'Nhập ID người chơi may mắn:',
+                    input: 'number',
+                    showCancelButton: true,
+                    confirmButtonText: 'Chuyển tiền',
+                    confirmButtonColor: '#10b981'
+                }).then((res) => {
+                    if (res.isConfirmed && res.value) processAdminWithdraw('individual', res.value);
+                });
+            } else if (type === 'group') {
+                Swal.fire({
+                    title: 'Chia cho nhóm',
+                    text: 'Nhập danh sách ID, cách nhau bằng dấu phẩy (vd: 1, 5, 20):',
+                    input: 'text',
+                    showCancelButton: true,
+                    confirmButtonText: 'Chia đều',
+                    confirmButtonColor: '#f59e0b'
+                }).then((res) => {
+                    if (res.isConfirmed && res.value) processAdminWithdraw('group', res.value);
+                });
+            } else if (type === 'random') {
+                Swal.fire({
+                    title: 'Mưa tài lộc',
+                    text: 'Nhập số lượng người chơi sẽ được nhận tiền ngẫu nhiên:',
+                    input: 'number',
+                    showCancelButton: true,
+                    confirmButtonText: 'Bốc thăm & Chia đều',
+                    confirmButtonColor: '#8b5cf6'
+                }).then((res) => {
+                    if (res.isConfirmed && res.value) processAdminWithdraw('random', res.value);
+                });
+            }
+        }
+
+        function processAdminWithdraw(type, target) {
+            Swal.fire({
+                title: 'Đang rải lộc...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+            $.post('api_jackpot.php', { action: 'admin_withdraw', type: type, target: target }, function(res) {
+                if (res.success) {
+                    Swal.fire('Thành Công!', res.message, 'success');
+                    fetchJackpot();
+                } else {
+                    Swal.fire('Thất Bại', res.message || 'Lỗi không xác định', 'error');
+                }
+            }, 'json').fail(function() {
+                Swal.fire('Lỗi', 'Mất kết nối máy chủ', 'error');
+            });
+        }
+        <?php endif; ?>
     </script>
 </body>
 </html>

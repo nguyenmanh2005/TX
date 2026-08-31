@@ -293,8 +293,8 @@ class EventHelper {
         $todayEnd = $today . ' 23:59:59';
         $countRes = $conn->query("SELECT COUNT(*) as cnt FROM flash_events WHERE start_time BETWEEN '$todayStart' AND '$todayEnd'");
         $countToday = $countRes ? (int)$countRes->fetch_assoc()['cnt'] : 0;
-        if ($countToday >= 2) {
-            return; // Hôm nay đã chạy đủ 2 lần
+        if ($countToday >= 48) {
+            return; // Hôm nay đã chạy đủ 48 lần
         }
         // 3. Tỉ lệ ngẫu nhiên 3% kích hoạt trên mỗi lượt request tải trang
         if (rand(1, 100) <= 3) {

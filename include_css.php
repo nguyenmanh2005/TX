@@ -26,9 +26,9 @@ function getCSSIncludes($options = [])
 
     $options = array_merge($defaults, $options);
     
-    // Tự động điều chỉnh đường dẫn nếu đang ở trong thư mục games/
+    // Tự động điều chỉnh đường dẫn nếu đang ở trong thư mục con (games, LiveStream, v.v.)
     $currentDir = str_replace('\\', '/', dirname($_SERVER['PHP_SELF']));
-    $prefix = (strpos($currentDir, '/games') !== false) ? '../' : '';
+    $prefix = (strpos($currentDir, '/games') !== false || strpos($currentDir, '/LiveStream') !== false || strpos($currentDir, '/admin') !== false) ? '../' : '';
 
     $cssFiles = [];
 

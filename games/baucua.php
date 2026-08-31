@@ -37,20 +37,21 @@ if (isset($_GET['action'])) {
     $response = ['success' => false];
     if ($action === 'play') {
         $bet = (float) ($_POST['bet'] ?? 0);
-        $betsData = json_decode($_POST['bets'] ?? '[]', true); // Format: [{"animal": "Chó", "amount": 1000}, ...]
-        $totalBet = 0;
+        $betsData = json_decode($_POST['bets'] ?? '[]', true);
+        $totalBet = 0.0;
         foreach ($betsData as $b) {
-            if ($b['amount'] > 0)
-                $totalBet += $b['amount'];
+            $amt = (float)$b['amount'];
+            if ($amt > 0)
+                $totalBet += $amt;
         }
-        if ($totalBet <= 0 || $totalBet > $money) {
+        if ($totalBet <= 0 || $totalBet > (float)$money) {
             $response['message'] = "Yêu cầu không hợp lệ!";
         } else {
             $conn->begin_transaction();
             $stmtLock = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
             $stmtLock->bind_param("i", $userId);
             $stmtLock->execute();
-            $lockedMoney = $stmtLock->get_result()->fetch_assoc()['Money'] ?? 0;
+            $lockedMoney = (float)($stmtLock->get_result()->fetch_assoc()['Money'] ?? 0);
             $stmtLock->close();
             if ($totalBet > $lockedMoney) {
                 $conn->rollback();
@@ -62,11 +63,11 @@ if (isset($_GET['action'])) {
             $results = [];
             for ($i = 0; $i < 3; $i++)
                 $results[] = $animals[rand(0, 5)];
-            $totalWin = 0;
+            $totalWin = 0.0;
             $winAnimals = array_count_values($results);
             foreach ($betsData as $b) {
                 $a = $b['animal'];
-                $amt = $b['amount'];
+                $amt = (float)$b['amount'];
                 if (isset($winAnimals[$a])) {
                     // Standard Baucua: win + return bet. 
                     // 1 matching: 2x, 2 matching: 3x, 3 matching: 4x
@@ -428,7 +429,7 @@ if (isset($_GET['action'])) {
                             <button class="btn-quick-bet" onclick="$('#customBet').val(500000)">500K</button>
                             <button class="btn-quick-bet" onclick="$('#customBet').val(1000000)">1M</button>
                             <button class="btn-quick-bet" onclick="$('#customBet').val(5000000)">5M</button>
-                            <button class="btn-quick-bet" onclick="$('#customBet').val(parseFloat($('#userMoney').text().replace(/\./g, '')))" style="grid-column: span 3; background: var(--primary); color:#000; border:none; font-weight:800;">ALL IN</button>
+                            <button class="btn-quick-bet" onclick="$('#customBet').val($('#userMoney').text().replace(/\./g, ''))" style="grid-column: span 3; background: var(--primary); color:#000; border:none; font-weight:800;">ALL IN</button>
                         </div>
                     </div>
                     <button id="playBtn" class="btn-action" onclick="playGame()">⚡ XÓC NGAY</button>
@@ -511,9 +512,13 @@ if (isset($_GET['action'])) {
         });
         function placeBet(animal) {
             if (isRolling) return;
-            let amt = parseInt($('#customBet').val()) || 0;
-            if (amt <= 0) return;
-            myBets[animal] = (myBets[animal] || 0) + amt;
+            let valStr = $('#customBet').val().replace(/\./g, '');
+            if (!valStr) return;
+            let amt;
+            try { amt = BigInt(valStr); } catch(e) { return; }
+            if (amt <= 0n) return;
+            if (!myBets[animal]) myBets[animal] = 0n;
+            myBets[animal] += amt;
             updateBetUI();
         }
         function clearBets() {
@@ -522,28 +527,28 @@ if (isset($_GET['action'])) {
             updateBetUI();
         }
         function updateBetUI() {
-            let total = 0;
+            let total = 0n;
             $('.animal-tile').removeClass('active');
             $('.bet-amount-badge').hide();
             for (let a in myBets) {
-                if (myBets[a] > 0) {
+                if (myBets[a] > 0n) {
                     total += myBets[a];
                     $(`.animal-tile[data-animal="${a}"]`).addClass('active');
-                    $(`#bet-${a}`).text(myBets[a].toLocaleString('vi-VN')).show();
+                    $(`#bet-${a}`).text(myBets[a].toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")).show();
                 }
             }
-            $('#totalBet').text(total.toLocaleString('vi-VN'));
+            $('#totalBet').text(total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."));
         }
         function playGame() {
-            let total = 0;
+            let total = 0n;
             const betsData = [];
             for (let a in myBets) {
-                if (myBets[a] > 0) {
+                if (myBets[a] > 0n) {
                     total += myBets[a];
-                    betsData.push({ animal: a, amount: myBets[a] });
+                    betsData.push({ animal: a, amount: myBets[a].toString() });
                 }
             }
-            if (total === 0) { Swal.fire('Lỗi', 'Vui lòng đặt cược ít nhất một linh vật!', 'warning'); return; }
+            if (total === 0n) { Swal.fire('Lỗi', 'Vui lòng đặt cược ít nhất một linh vật!', 'warning'); return; }
             if (isRolling) return;
             isRolling = true;
             $('#playBtn').prop('disabled', true).text('ĐANG XÓC...');
@@ -578,20 +583,22 @@ if (isset($_GET['action'])) {
                             gsap.fromTo(die, { scale: 0, rotate: -180 }, { scale: 1, rotate: 0, duration: 0.6, delay: i * 0.2, ease: "back.out(1.7)" });
                             $(`.animal-tile[data-animal="${animal}"]`).addClass('winner');
                         });
+                        const winAnimalsCounts = {};
+                        res.results.forEach(a => winAnimalsCounts[a] = (winAnimalsCounts[a] || 0) + 1);
                         setTimeout(() => {
                             $('#userMoney').text(res.money);
                             if (res.win) {
-                                if (window.GameEffects) window.GameEffects.showWin(parseInt(res.winAmount.replace(/\./g, '')));
+                                if (window.GameEffects) window.GameEffects.showWin(Number(res.winAmount.replace(/\./g, '')));
                                 $('.animal-tile.active.winner').each(function() {
-                                    const betVal = parseInt($(this).find('.bet-amount-badge').text().replace(/\./g, ''));
-                                    const winRatio = res.winAmount ? parseInt(res.winAmount.replace(/\./g, '')) / total : 0;
-                                    const tileWin = Math.round(betVal * winRatio); // Approximate if multiple
-                                    const float = $('<div class="floating-win">+' + tileWin.toLocaleString('vi-VN') + '</div>').appendTo($(this));
+                                    const a = $(this).attr('data-animal');
+                                    const betVal = BigInt($(this).find('.bet-amount-badge').text().replace(/\./g, ''));
+                                    const tileWin = betVal * BigInt(winAnimalsCounts[a] + 1);
+                                    const float = $('<div class="floating-win">+' + tileWin.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + '</div>').appendTo($(this));
                                     gsap.to(float, { y: -100, opacity: 0, duration: 2, onComplete: () => float.remove() });
                                 });
                             } else {
                                 $('.game-area').addClass('lose-shake');
-                                if (window.GameEffects) window.GameEffects.showLoss(total);
+                                if (window.GameEffects) window.GameEffects.showLoss(Number(total));
                                 $('.animal-tile.active:not(.winner)').each(function() {
                                     const float = $('<div class="floating-win" style="color: #ff4757;">-' + $(this).find('.bet-amount-badge').text() + '</div>').appendTo($(this));
                                     gsap.to(float, { y: -100, opacity: 0, duration: 2, onComplete: () => float.remove() });
