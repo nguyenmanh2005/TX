@@ -36,7 +36,7 @@ if (typeof BotVirtualCursor !== "undefined") {
                                 try {
                                     var btn = document.getElementById('btn-submit');
                                     if (btn) {
-                                        btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+                                        btn.click();
                                     }
                                 } catch(e){
                                     console.error("[Bot 36] Error clicking:", e);

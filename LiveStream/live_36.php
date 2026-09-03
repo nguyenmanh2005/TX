@@ -1,6 +1,7 @@
 <?php
 session_start();
 
+require '../db_connect.php';          // ← PHẢI load trước để có $conn
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_36', 50000000);
@@ -11,7 +12,7 @@ $_SESSION['Iduser_temp_bot'] = $botUserId;
 // Kiểm tra đăng nhập
 
 
-require '../db_connect.php';
+// db_connect.php đã được load ở trên
 
 // AJAX history endpoint
 $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
@@ -79,9 +80,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['user_number'])) {
 
     if (!preg_match('/^\d{5}$/', $userInput)) {
         $message = "❌ Vui lòng nhập đúng 5 chữ số (VD: 12345)";
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => $message], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
     } elseif ($money < $betAmount) {
-        $message = "❌ Bạn không đủ 5.000 gtlm để tham gia!";
-    } else {
+        // Tự động nạp thêm tiền cho bot streamer để luồng livestream 24/7 không bị dừng
+        $conn->query("UPDATE users SET Money = 50000000 WHERE Iduser = " . (int)$userId);
+        $money = 50000000;
+    }
+
+    if (preg_match('/^\d{5}$/', $userInput) && $money >= $betAmount) {
         // Sinh chuỗi ngẫu nhiên 5 chữ số
         $winning = "";
         for ($i = 0; $i < 5; $i++) {
@@ -117,16 +127,24 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['user_number'])) {
 
         // Insert vào history_cs table
         $historyStmt = $conn->prepare("INSERT INTO history_cs (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-        $historyStmt->bind_param("iisi", $userId, $betAmount, $winning, $prize);
-        $historyStmt->execute();
-        $historyStmt->close();
+        if ($historyStmt) {
+            $historyStmt->bind_param("iisi", $userId, $betAmount, $winning, $prize);
+            $historyStmt->execute();
+            $historyStmt->close();
+        }
 
         // Track progress
         require_once '../game_history_helper.php';
-        logGameHistoryWithAll($conn, $userId, 'Xổ số Mini', $betAmount, $prize, $isWin);
+        if (function_exists('logGameHistoryWithAll')) {
+            logGameHistoryWithAll($conn, $userId, 'Xổ số Mini', $betAmount, $prize, $isWin);
+        }
 
-        require_once '../user_progress_helper.php';
-        up_add_xp($conn, $userId, 10);
+        if (file_exists('../user_progress_helper.php')) {
+            require_once '../user_progress_helper.php';
+            if (function_exists('up_add_xp')) {
+                up_add_xp($conn, $userId, 10);
+            }
+        }
 
         if ($isAjax) {
             header('Content-Type: application/json; charset=utf-8');
@@ -136,10 +154,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['user_number'])) {
                 'message' => $message,
                 'correct' => $correct,
                 'win' => $isWin,
+                'prize' => $prize,
                 'balance' => number_format($newBalance, 0, ',', '.'),
                 'stats' => [
-                    'thang' => $gameThang + ($isWin ? 1 : 0),
-                    'thua' => $gameThua + (!$isWin ? 1 : 0)
+                    'wins' => $gameThang + ($isWin ? 1 : 0),
+                    'losses' => $gameThua + (!$isWin ? 1 : 0)
                 ]
             ], JSON_UNESCAPED_UNICODE);
             exit;
@@ -157,8 +176,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['user_number'])) {
     <title>Xổ số Mini - Premium Gaming</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert2/11.7.3/sweetalert2.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/sweetalert2.all.min.js"></script>
+    <script src="../assets/js/game-effects.js"></script>
     <link rel="stylesheet" href="../assets/css/main.css">
     <link rel="stylesheet" href="../assets/css/components.css">
     <style>
@@ -170,6 +191,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['user_number'])) {
             padding: 40px 20px;
         }
         .game-card {
+            position: relative;
             max-width: 600px;
             margin: 0 auto;
             background: rgba(255, 255, 255, 0.05);
@@ -178,6 +200,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['user_number'])) {
             border-radius: 24px;
             padding: 40px;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
         }
         .lottery-title {
             font-size: 32px;
@@ -276,6 +300,67 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['user_number'])) {
         }
         .win-text { color: #2ecc71; }
         .lose-text { color: #e74c3c; }
+
+        /* Hiệu ứng thắng/thua chuẩn Thế Giới Linh Thú */
+        .floating-win { 
+            position: absolute; 
+            bottom: 45%; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            font-family: 'Orbitron', 'Inter', sans-serif; 
+            font-weight: 900; 
+            font-size: 2.2rem; 
+            pointer-events: none; 
+            text-shadow: 0 0 15px rgba(0,0,0,0.8), 0 0 30px currentColor; 
+            z-index: 100;
+            white-space: nowrap;
+        }
+        .game-card.lose-shake { 
+            animation: lose-shake 0.5s cubic-bezier(.36,.07,.19,.97) both; 
+        }
+        @keyframes lose-shake { 
+            10%, 90% { transform: translate3d(-3px, 0, 0); } 
+            20%, 80% { transform: translate3d(4px, 0, 0); } 
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); } 
+            40%, 60% { transform: translate3d(6px, 0, 0); } 
+        }
+        .game-card.win-pulse {
+            animation: win-pulse 0.8s ease-out;
+        }
+        @keyframes win-pulse {
+            0% { box-shadow: 0 0 20px rgba(46, 204, 113, 0.3); }
+            50% { box-shadow: 0 0 70px rgba(46, 204, 113, 0.8); }
+            100% { box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3); }
+        }
+        .result-status-badge {
+            margin-top: 20px;
+            padding: 12px 24px;
+            border-radius: 14px;
+            font-weight: 800;
+            font-size: 1.05rem;
+            text-align: center;
+            display: none;
+            backdrop-filter: blur(10px);
+            animation: badgePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes badgePop {
+            0% { transform: scale(0.85); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .result-status-badge.win {
+            background: rgba(46, 204, 113, 0.15);
+            border: 1px solid rgba(46, 204, 113, 0.5);
+            color: #2ecc71;
+            text-shadow: 0 0 10px rgba(46, 204, 113, 0.5);
+            box-shadow: 0 4px 20px rgba(46, 204, 113, 0.2);
+        }
+        .result-status-badge.lose {
+            background: rgba(231, 76, 60, 0.15);
+            border: 1px solid rgba(231, 76, 60, 0.5);
+            color: #ff6b6b;
+            text-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+            box-shadow: 0 4px 20px rgba(231, 76, 60, 0.2);
+        }
     </style>
 </head>
 <body>
@@ -294,6 +379,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['user_number'])) {
                 <input type="text" name="user_number" id="user-number" maxlength="5" placeholder="00000" required>
             </div>
             <button type="button" class="btn-spin" id="btn-submit">🎰 Quay số ngay</button>
+            <div id="result-status-badge" class="result-status-badge"></div>
         </div>
 
 
@@ -410,13 +496,63 @@ if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.clou
                             inp.value = data.winning;
                             var el;
                             el = document.getElementById('balance-val'); if (el) el.textContent = data.balance;
-                            el = document.getElementById('stat-wins');   if (el) el.textContent = data.stats.thang;
-                            el = document.getElementById('stat-losses'); if (el) el.textContent = data.stats.thua;
-                            initChart(data.stats.thang, data.stats.thua);
+                            el = document.getElementById('stat-wins');   if (el) el.textContent = data.stats.wins;
+                            el = document.getElementById('stat-losses'); if (el) el.textContent = data.stats.losses;
+                            initChart(data.stats.wins, data.stats.losses);
                             loadHistory();
-                            if (typeof Swal !== 'undefined') {
-                                Swal.fire({ title: data.win ? '\ud83c\udf89 CHI\u1ebeN TH\u1eaeNG!' : '\ud83d\ude22 R\u1ea4T TI\u1ebeC!', text: data.message, icon: data.win ? 'success' : 'info', background: '#1a1a2e', color: '#fff' });
+
+                            // ── Hiệu ứng thông báo thắng thua chuẩn Thế Giới Linh Thú ──
+                            var prize = parseInt(data.prize || 0);
+                            var card = jQuery('.game-card');
+
+                            if (data.win) {
+                                card.removeClass('lose-shake').addClass('win-pulse');
+                                setTimeout(function() { card.removeClass('win-pulse'); }, 800);
+
+                                if (window.GameEffects) {
+                                    if (prize >= 100000) {
+                                        window.GameEffects.showBigWin(prize);
+                                    } else {
+                                        window.GameEffects.showWin(prize);
+                                    }
+                                }
+
+                                var floatWin = jQuery('<div class="floating-win" style="color:#2ecc71;">+' + prize.toLocaleString('vi-VN') + ' GTLM</div>').appendTo(card);
+                                if (typeof gsap !== 'undefined') {
+                                    gsap.to(floatWin, { y: -90, opacity: 0, duration: 2.2, onComplete: function() { floatWin.remove(); } });
+                                } else {
+                                    setTimeout(function() { floatWin.fadeOut(400, function() { floatWin.remove(); }); }, 1800);
+                                }
+
+                                jQuery('#result-status-badge')
+                                    .removeClass('lose')
+                                    .addClass('win')
+                                    .html('🎉 <b>CHIẾN THẮNG!</b> Trúng ' + data.correct + ' số (+' + prize.toLocaleString('vi-VN') + ' GTLM)')
+                                    .fadeIn(300);
+                            } else {
+                                card.addClass('lose-shake');
+                                if (window.GameEffects) {
+                                    window.GameEffects.showLoss(5000);
+                                }
+
+                                var floatLose = jQuery('<div class="floating-win" style="color:#ff4757;">-5.000 GTLM</div>').appendTo(card);
+                                if (typeof gsap !== 'undefined') {
+                                    gsap.to(floatLose, { y: -90, opacity: 0, duration: 2.2, onComplete: function() { floatLose.remove(); } });
+                                } else {
+                                    setTimeout(function() { floatLose.fadeOut(400, function() { floatLose.remove(); }); }, 1800);
+                                }
+                                setTimeout(function() { card.removeClass('lose-shake'); }, 500);
+
+                                jQuery('#result-status-badge')
+                                    .removeClass('win')
+                                    .addClass('lose')
+                                    .html('😢 <b>RẤT TIẾC!</b> Không trùng khớp (-5.000 GTLM)')
+                                    .fadeIn(300);
                             }
+
+                            setTimeout(function() {
+                                jQuery('#result-status-badge').fadeOut(400);
+                            }, 4000);
                         }
                     }, 50);
                 } else {
@@ -435,28 +571,17 @@ if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.clou
         xhr.send('user_number=' + encodeURIComponent(userNum));
     }
 
-    // Đăng ký BOTH native và jQuery để bot trigger hoặc click tay đều hoạt động
     function setupGame() {
         initChart(wins0, losses0);
         loadHistory();
         var btn = document.getElementById('btn-submit');
         if (!btn) { console.error('[Live 36] ERROR: btn-submit not found!'); return; }
         console.log('[Live 36] OK: btn-submit found, binding events');
-        // Native addEventListener (tay click)
-        btn.addEventListener('click', function(e) {
-            console.log('[Live 36] native click triggered');
+        
+        btn.onclick = function() {
+            console.log('[Live 36] click triggered');
             doSpin();
-        });
-        // jQuery .on (bot trigger)
-        if (typeof jQuery !== 'undefined') {
-            jQuery(btn).on('click', function(e) {
-                // Chỉ xử lý nếu không phải native click (tránh double-fire)
-                if (!e.originalEvent) {
-                    console.log('[Live 36] jQuery trigger click (bot)');
-                    doSpin();
-                }
-            });
-        }
+        };
     }
 
     if (document.readyState === 'loading') {

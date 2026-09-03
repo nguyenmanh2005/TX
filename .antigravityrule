@@ -220,6 +220,9 @@ Khi nhận yêu cầu, **phải xác nhận** các điểm sau nếu chưa rõ:
 
 
 ## 10. ⚡ Không được dùng thông báo local host.
+
+## 11. Tài khoản và mật khẩu cho bot test = chrome 
+- test12345@example.com tài khoản và mật khẩu giống nhau: test12345@example.com
 ---
 
 *Rules này được xây dựng từ codebase thực tế — cập nhật khi có pattern mới.*

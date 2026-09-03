@@ -52,6 +52,38 @@ class VocabularyHelper {
             return mb_strlen($b) - mb_strlen($a);
         });
 
+        // 1. Nếu là chuỗi JSON: chỉ mask giá trị string, giữ nguyên key JSON để tránh làm hỏng API/JS
+        $trimmed = ltrim($buffer);
+        if (($trimmed !== '' && ($trimmed[0] === '{' || $trimmed[0] === '[')) && ($json = json_decode($trimmed, true)) !== null && json_last_error() === JSON_ERROR_NONE) {
+            array_walk_recursive($json, function(&$value) use ($tempMap) {
+                if (is_string($value)) {
+                    foreach ($tempMap as $search => $replaces) {
+                        $pattern = '/' . preg_quote($search, '/') . '/iu';
+                        $value = preg_replace_callback($pattern, function($matches) use ($replaces) {
+                            $replacement = $replaces[array_rand($replaces)];
+                            if (preg_match('/^\p{Lu}/u', $matches[0])) {
+                                return mb_convert_case($replacement, MB_CASE_TITLE, "UTF-8");
+                            }
+                            return $replacement;
+                        }, $value);
+                    }
+                }
+            });
+            return json_encode($json, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+
+        // 2. Nếu là HTML: Bảo vệ toàn bộ nội dung trong thẻ <script> và <style> để không làm gãy code JS/CSS
+        $hasScript = stripos($buffer, '<script') !== false;
+        $hasStyle  = stripos($buffer, '<style') !== false;
+        $placeholders = [];
+        if ($hasScript || $hasStyle) {
+            $buffer = preg_replace_callback('/<(script|style)\b[^>]*>.*?<\/\1>/is', function($m) use (&$placeholders) {
+                $key = '___VOCAB_PROTECT_' . count($placeholders) . '___';
+                $placeholders[$key] = $m[0];
+                return $key;
+            }, $buffer);
+        }
+
         foreach ($tempMap as $search => $replaces) {
             // Sử dụng regex để tìm kiếm (không phân biệt hoa thường, hỗ trợ Unicode)
             $pattern = '/' . preg_quote($search, '/') . '/iu';
@@ -66,6 +98,11 @@ class VocabularyHelper {
                 
                 return $replacement;
             }, $buffer);
+        }
+
+        // Khôi phục lại các thẻ <script> và <style> nguyên vẹn
+        if (!empty($placeholders)) {
+            $buffer = strtr($buffer, $placeholders);
         }
 
         return $buffer;
