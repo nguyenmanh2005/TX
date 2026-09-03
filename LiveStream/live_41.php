@@ -1,20 +1,20 @@
 <?php
 session_start();
 
+require '../db_connect.php'; // DB trước khi gọi helper
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_41', 50000000);
 $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
 
-
 if (false) {
     header("Location: ../login.php");
     exit();
 }
 
-require '../db_connect.php';
 require_once '../load_theme.php';
+
 
 $userId = $botUserId;
 $sql = "SELECT Money, Name FROM users WHERE Iduser = ?";
@@ -134,8 +134,11 @@ if (isset($_GET['action'])) {
 <head>
     <meta charset="UTF-8">
     <title>Con Số May Mắn - Premium AJAX</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.6.0/confetti.browser.min.js"></script>
+    <script src="../assets/js/game-effects.js"></script>
     <link rel="stylesheet" href="../assets/css/main.css">
     <link rel="stylesheet" href="../assets/css/components.css">
     <link rel="stylesheet" href="../assets/css/responsive.css">
@@ -436,10 +439,35 @@ if (isset($_GET['action'])) {
 
         <div id="status-msg" class="status-msg" style="display: none;"></div>
 
+        <!-- Badge thông báo thắng/thua giống game ID 1 -->
+        <div id="result-status-badge" style="
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.5);
+            background: rgba(0,0,0,0.85);
+            border-radius: 20px;
+            padding: 28px 48px;
+            text-align: center;
+            z-index: 10000;
+            pointer-events: none;
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255,255,255,0.15);
+            box-shadow: 0 25px 80px rgba(0,0,0,0.8), 0 0 60px rgba(255,215,0,0.15);
+            font-family: 'Outfit', 'Segoe UI', sans-serif;
+            transition: transform 0.4s cubic-bezier(0.17, 0.89, 0.32, 1.49), opacity 0.4s;
+            opacity: 0;
+        ">
+            <div id="result-badge-icon" style="font-size: 3.5rem; margin-bottom: 8px;"></div>
+            <div id="result-badge-title" style="font-size: 1.8rem; font-weight: 800; letter-spacing: 2px; margin-bottom: 6px;"></div>
+            <div id="result-badge-amount" style="font-size: 1.3rem; font-weight: 700; opacity: 0.9;"></div>
+            <div id="result-badge-msg" style="font-size: 0.85rem; opacity: 0.7; margin-top: 6px;"></div>
+        </div>
+
         <a href="../index.php" class="home-link">🏠 Quay lại trang chủ</a>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         // Three.js Background
         (function () {
@@ -453,10 +481,64 @@ if (isset($_GET['action'])) {
                 shapeOpacity: <?= $shapeOpacity ?>,
                 bgGradient: <?= json_encode($bgGradient) ?>
             };
-            const script = document.createElement('script');
-            script.src = '../threejs-background.js';
-            document.head.appendChild(script);
+            const s = document.createElement('script');
+            s.src = '../threejs-background.js';
+            s.async = false;
+            document.head.appendChild(s);
         })();
+
+        // === Hàm hiển thị badge kết quả giống game ID 1 ===
+        function showResultBadge(isWin, isExact, winAmount, message) {
+            const badge = document.getElementById('result-status-badge');
+            const icon = document.getElementById('result-badge-icon');
+            const title = document.getElementById('result-badge-title');
+            const amountEl = document.getElementById('result-badge-amount');
+            const msgEl = document.getElementById('result-badge-msg');
+
+            if (isExact) {
+                badge.style.borderColor = '#f1c40f';
+                badge.style.boxShadow = '0 25px 80px rgba(0,0,0,0.8), 0 0 80px rgba(241,196,15,0.5)';
+                icon.textContent = '🏆';
+                title.textContent = 'CHÍNH XÁC!';
+                title.style.color = '#f1c40f';
+                amountEl.textContent = '+' + parseInt(winAmount).toLocaleString('vi-VN') + ' GTLM';
+                amountEl.style.color = '#f1c40f';
+            } else if (isWin) {
+                badge.style.borderColor = '#2ecc71';
+                badge.style.boxShadow = '0 25px 80px rgba(0,0,0,0.8), 0 0 60px rgba(46,204,113,0.4)';
+                icon.textContent = '🔥';
+                title.textContent = 'GẦN ĐÚNG!';
+                title.style.color = '#2ecc71';
+                amountEl.textContent = '+' + parseInt(winAmount).toLocaleString('vi-VN') + ' GTLM';
+                amountEl.style.color = '#2ecc71';
+            } else {
+                badge.style.borderColor = '#e74c3c';
+                badge.style.boxShadow = '0 25px 80px rgba(0,0,0,0.8), 0 0 60px rgba(231,76,60,0.4)';
+                icon.textContent = '❌';
+                title.textContent = 'SAI RỒI!';
+                title.style.color = '#e74c3c';
+                amountEl.textContent = '';
+                amountEl.style.color = '#e74c3c';
+            }
+            msgEl.textContent = message || '';
+
+            badge.style.display = 'block';
+            // Animate in
+            requestAnimationFrame(() => {
+                badge.style.transform = 'translate(-50%, -50%) scale(1.05)';
+                badge.style.opacity = '1';
+                setTimeout(() => {
+                    badge.style.transform = 'translate(-50%, -50%) scale(1)';
+                }, 150);
+            });
+
+            // Auto hide sau 3.5s
+            setTimeout(() => {
+                badge.style.transform = 'translate(-50%, -50%) scale(0.8)';
+                badge.style.opacity = '0';
+                setTimeout(() => { badge.style.display = 'none'; }, 400);
+            }, 3500);
+        }
 
         document.addEventListener('DOMContentLoaded', function () {
             const btnGuess = document.getElementById('btn-guess');
@@ -466,13 +548,17 @@ if (isset($_GET['action'])) {
             const statusMsg = document.getElementById('status-msg');
             const balanceVal = document.getElementById('balance-val');
 
+            // Giá trị mặc định cho ô nhập
+            if (!betInput.value) betInput.value = 10000;
+            if (!numInput.value) numInput.value = 50;
+
             // Handle Guess
             btnGuess.addEventListener('click', async () => {
-                const num = numInput.value;
-                const bet = betInput.value;
+                let num = parseInt(numInput.value);
+                let bet = parseInt(betInput.value);
 
-                if (!num || num < 1 || num > 100) return Swal.fire('Lỗi', 'Vui lòng chọn số từ 1 đến 100!', 'error');
-                if (!bet || bet <= 0) return Swal.fire('Lỗi', 'Vui lòng nhập gtlm cược hợp lệ!', 'error');
+                if (!num || num < 1 || num > 100) { num = 50; numInput.value = 50; }
+                if (!bet || bet <= 0) { bet = 10000; betInput.value = 10000; }
 
                 btnGuess.disabled = true;
                 statusMsg.style.display = 'none';
@@ -493,11 +579,33 @@ if (isset($_GET['action'])) {
                         statusMsg.className = 'status-msg ' + (data.isWin ? 'win' : 'lose');
                         statusMsg.style.display = 'flex';
 
-                        if (data.isWin && typeof confetti === 'function') {
-                            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                        const msg = data.message || '';
+                        const isExact = msg.includes('CHÍNH XÁC');
+                        const isNear = msg.includes('RẤT GẦN') || msg.includes('CÁCH');
+
+                        if (data.isWin) {
+                            // Badge thắng
+                            const winAmt = isExact ? bet * 10 : bet * 2;
+                            showResultBadge(true, isExact, winAmt, data.message);
+
+                            if (isExact) {
+                                // Thắng x10 - Hiệu ứng lớn
+                                if (typeof confetti === 'function') confetti({ particleCount: 250, spread: 90, origin: { y: 0.5 } });
+                                if (window.GameEffects) { window.GameEffects.showWin(bet * 10); }
+                            } else {
+                                // Gần đúng - Hiệu ứng vừa
+                                if (typeof confetti === 'function') confetti({ particleCount: 80, spread: 60, origin: { y: 0.5 } });
+                                if (window.GameEffects) { window.GameEffects.showWin(bet * 2); }
+                            }
+                        } else {
+                            // Badge thua
+                            showResultBadge(false, false, 0, data.message);
+                            if (window.GameEffects) { window.GameEffects.showLoss(bet); }
                         }
                     } else {
-                        Swal.fire('Hệ thống', data.message, 'warning');
+                        statusMsg.textContent = data.message;
+                        statusMsg.className = 'status-msg lose';
+                        statusMsg.style.display = 'flex';
                     }
                 } catch (e) {
                     btnGuess.disabled = false;
@@ -511,11 +619,9 @@ if (isset($_GET['action'])) {
                     const res = await fetch('?action=new_game');
                     const data = await res.json();
                     if (data.success) {
-                        numInput.value = '';
-                        statusMsg.style.display = 'flex';
-                        statusMsg.className = 'status-msg';
+                        numInput.value = 50;
+                        statusMsg.style.display = 'none';
                         statusMsg.textContent = data.message;
-                        Swal.fire('Thành công', data.message, 'success');
                     }
                 } catch (e) {
                     console.error(e);
@@ -2028,44 +2134,9 @@ if (isset($_GET['action'])) {
     </div>
 </div>
 
-<!-- AUTO-GENERATED BOT SCRIPT -->
-<script>
-if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
-if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
-</script>
+<!-- Bot AI Script -->
 <script src="../assets/js/bot_virtual_cursor.js"></script>
-<script>
-    if (typeof BotVirtualCursor !== "undefined") {
-        BotVirtualCursor.init("Bot Streamer");
-        setInterval(() => {
-            const allBtns = Array.from(document.querySelectorAll("button, .btn-bet, .chip, .spin-btn, #btnSpin, .bet-button, .card, .btn-primary, .btn-success, input[type='button'], input[type='submit']"));
-            const btns = allBtns.filter(b => {
-                if(b.offsetParent === null || b.disabled) return false;
-                const txt = (b.innerText || b.value || "").toLowerCase();
-                const cls = (b.className || "").toLowerCase();
-                const id = (b.id || "").toLowerCase();
-                
-                // Exclude common navigation/help buttons
-                if(txt.includes("hướng dẫn") || txt.includes("trang chủ") || txt.includes("nạp") || txt.includes("rút") || txt.includes("lịch sử") || txt.includes("quay lại") || txt.includes("thoát")) return false;
-                if(cls.includes("back") || cls.includes("help") || cls.includes("guide") || cls.includes("close") || cls.includes("swal") || cls.includes("nav")) return false;
-                if(id.includes("guide") || id.includes("back") || id.includes("close") || id.includes("nav")) return false;
-                
-                return true;
-            });
-            
-            if(btns.length > 0) {
-                const btn = btns[Math.floor(Math.random() * btns.length)];
-                BotVirtualCursor.moveToElement($(btn), 1, 0, () => {
-                    setTimeout(() => { 
-                        BotVirtualCursor.simulateClick(() => {
-                            try { btn.click(); } catch(e){}
-                        });
-                    }, 500);
-                });
-            }
-        }, 3000 + Math.random() * 4000);
-    }
-</script>
+<script src="bots/bot_41.js?v=<?= time() ?>"></script>
 
 </body>
 </html>

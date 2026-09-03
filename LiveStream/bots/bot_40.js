@@ -28,10 +28,10 @@
         botIsBusy = val;
         if (busyTimer) clearTimeout(busyTimer);
         if (val) {
-            // Watchdog: Tự động giải phóng bot sau 4s nếu animation hoặc mạng bị treo
+            // Watchdog: Tự động giải phóng bot sau 2s nếu animation hoặc mạng bị treo
             busyTimer = setTimeout(() => {
                 botIsBusy = false;
-            }, 4000);
+            }, 2000);
         }
     }
 
@@ -115,17 +115,15 @@
 
             // Bấm chọn chip cược nếu khác mức hiện tại
             if (chipBtn && currentBet !== targetVal && Math.random() < 0.7) {
-                BotVirtualCursor.moveToElement($(chipBtn), 0.7, 0, () => {
+                BotVirtualCursor.moveToElement($(chipBtn), 0.4, 0, () => {
                     setTimeout(() => {
                         BotVirtualCursor.simulateClick(() => {
                             try { chipBtn.click(); } catch (e) { }
-
-                            // Tiếp tục di chuyển tới nút Bắt đầu
                             setTimeout(() => {
                                 clickStart(btnStart);
-                            }, 350);
+                            }, 150);
                         });
-                    }, 200);
+                    }, 80);
                 });
             } else {
                 clickStart(btnStart);
@@ -148,19 +146,16 @@
             // 1. Kiểm tra đã đạt mục tiêu mở ô chưa?
             if (revealedCount >= targetSafePicks) {
                 // 🎉 ĐÃ ĐẠT MỤC TIÊU -> BẤM NÚT RÚT TIỀN
-                BotVirtualCursor.moveToElement($(btnCashout), 0.7, 0, () => {
+                BotVirtualCursor.moveToElement($(btnCashout), 0.5, 0, () => {
                     setTimeout(() => {
                         BotVirtualCursor.simulateClick(() => {
                             try { btnCashout.click(); } catch (e) { }
                             winStreak++;
                             lossStreak = 0;
                             sendBotChat(true, curMult);
-
-                            setTimeout(() => {
-                                setBusy(false);
-                            }, 2000);
+                            setTimeout(() => { setBusy(false); }, 900);
                         });
-                    }, 300);
+                    }, 120);
                 });
                 return;
             }
@@ -184,27 +179,23 @@
             }
 
             if (chosenCell) {
-                BotVirtualCursor.moveToElement($(chosenCell), 0.6, 0, () => {
+                BotVirtualCursor.moveToElement($(chosenCell), 0.45, 0, () => {
                     setTimeout(() => {
                         BotVirtualCursor.simulateClick(() => {
                             try { chosenCell.click(); } catch (e) { }
-
-                            // Chờ kết quả phản hồi từ server
                             setTimeout(() => {
                                 const hitMine = document.querySelectorAll('.mine-cell.mine').length > 0;
                                 if (hitMine) {
                                     lossStreak++;
                                     winStreak = 0;
                                     sendBotChat(false, null);
-                                    setTimeout(() => {
-                                        setBusy(false);
-                                    }, 2000);
+                                    setTimeout(() => { setBusy(false); }, 900);
                                 } else {
                                     setBusy(false);
                                 }
-                            }, 500);
+                            }, 300);
                         });
-                    }, 250);
+                    }, 100);
                 });
             } else {
                 setBusy(false);
@@ -213,22 +204,20 @@
     }
 
     function clickStart(btnStart) {
-        BotVirtualCursor.moveToElement($(btnStart), 0.7, 0, () => {
+        BotVirtualCursor.moveToElement($(btnStart), 0.5, 0, () => {
             setTimeout(() => {
                 BotVirtualCursor.simulateClick(() => {
                     try { btnStart.click(); } catch (e) { }
-                    setTimeout(() => {
-                        setBusy(false);
-                    }, 1000);
+                    setTimeout(() => { setBusy(false); }, 600);
                 });
-            }, 250);
+            }, 100);
         });
     }
 
-    // Khởi động chu trình quét định kỳ mỗi 1.4s
-    setInterval(playTurn, 1400);
+    // Khởi động chu trình quét định kỳ mỗi 700ms
+    setInterval(playTurn, 700);
 
-    // Chạy lượt đầu tiên sau 1.5 giây
-    setTimeout(playTurn, 1500);
+    // Chạy lượt đầu tiên sau 1s
+    setTimeout(playTurn, 1000);
 
 })();
