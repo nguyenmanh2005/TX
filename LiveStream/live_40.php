@@ -1,16 +1,12 @@
 <?php
 session_start();
 
+require '../db_connect.php'; // Đưa kết nối DB lên trước khi gọi bot_streamer_helper
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_40', 50000000);
 $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
-
-
-
-
-require '../db_connect.php';
 
 // AJAX history endpoint
 $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
@@ -108,19 +104,26 @@ if (isset($_GET['action'])) {
     } elseif ($action === 'start') {
         $cuoc = (int) ($_POST['cuoc'] ?? 0);
         if ($cuoc <= 0 || $cuoc > $soDu) {
-            $response['message'] = '⚠️ Số GTLM muốn chiến không hợp lệ hoặc không đủ vốn!';
-        } else {
-            $_SESSION['mines_cuoc'] = $cuoc;
-            $soDu -= $cuoc;
-            $capNhat = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
-            $capNhat->bind_param("di", $soDu, $userId);
-            $capNhat->execute();
-            $response = [
-                'success' => true,
-                'message' => '🎯 Đã ra chiêu ' . number_format($cuoc, 0, ',', '.') . ' GTLM! Chúc may mắn!',
-                'newBalance' => number_format($soDu, 0, ',', '.') . ' gtlm'
-            ];
+            if ($soDu < 10000) {
+                // Tự động nạp tiền cho bot streamer duy trì live 24/7
+                $conn->query("UPDATE users SET Money = 50000000 WHERE Iduser = " . (int)$userId);
+                $soDu = 50000000;
+            } else {
+                $response['message'] = '⚠️ Số GTLM muốn chiến không hợp lệ hoặc không đủ vốn!';
+                echo json_encode($response);
+                exit;
+            }
         }
+        $_SESSION['mines_cuoc'] = $cuoc;
+        $soDu -= $cuoc;
+        $capNhat = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
+        $capNhat->bind_param("di", $soDu, $userId);
+        $capNhat->execute();
+        $response = [
+            'success' => true,
+            'message' => '🎯 Đã ra chiêu ' . number_format($cuoc, 0, ',', '.') . ' GTLM! Chúc may mắn!',
+            'newBalance' => number_format($soDu, 0, ',', '.') . ' gtlm'
+        ];
     } elseif ($action === 'reveal') {
         $cell = (int) ($_POST['cell'] ?? -1);
         if ($_SESSION['mines_cuoc'] <= 0) {
@@ -255,8 +258,11 @@ if (!isset($_SESSION['mines_board'])) {
 <head>
     <meta charset="UTF-8">
     <title>Dò Mìn - AJAX Edition</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.6.0/confetti.browser.min.js"></script>
+    <script src="../assets/js/game-effects.js"></script>
     <link rel="stylesheet" href="../assets/css/main.css">
     <link rel="stylesheet" href="../assets/css/components.css">
     <link rel="stylesheet" href="../assets/css/responsive.css">
@@ -265,16 +271,16 @@ if (!isset($_SESSION['mines_board'])) {
     <link rel="stylesheet" href="../assets/css/game-effects.css">
     <link rel="stylesheet" href="../assets/css/game-ui-enhancements.css">
     <style>
+        html, body {
+            background: transparent !important;
+        }
+
         body {
             position: relative;
             cursor: url('../img/chuot.png'), auto !important;
             font-family: 'Segoe UI', sans-serif;
             text-align: center;
-            background:
-                <?= $bgGradientCSS ?>
-            ;
-            background-attachment: fixed;
-            padding: 50px;
+            padding: 8px 15px;
             min-height: 100vh;
             overflow-x: hidden;
             display: flex;
@@ -283,63 +289,71 @@ if (!isset($_SESSION['mines_board'])) {
         }
 
         #threejs-background {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            pointer-events: none;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 0 !important;
+            pointer-events: none !important;
+            background: radial-gradient(circle at 50% 50%, #0a0025 0%, #000000 100%) !important;
         }
 
         .game-box {
-            background: rgba(40, 44, 52, 0.95);
-            padding: 30px;
-            border-radius: 24px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            position: relative;
+            background: rgba(20, 24, 33, 0.88);
+            padding: 14px 20px;
+            border-radius: 20px;
+            box-shadow: 0 15px 45px rgba(0, 0, 0, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(15px);
-            width: 95%;
-            max-width: 600px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            width: 96%;
+            max-width: 440px;
             color: white;
-            z-index: 1;
+            z-index: 10;
+            margin: auto;
         }
 
         .game-title {
-            font-size: 32px;
-            margin-bottom: 20px;
+            font-size: 1.35rem;
+            margin-bottom: 4px;
             font-weight: 800;
             color: #fff;
+            letter-spacing: 1px;
         }
 
         .balance {
-            font-size: 20px;
+            font-size: 0.95rem;
             color: #ffd700;
-            margin-bottom: 30px;
+            margin-bottom: 10px;
         }
 
         .mines-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
-            margin-bottom: 30px;
+            gap: 6px;
+            margin-bottom: 10px;
+            max-width: 260px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .mine-cell {
             aspect-ratio: 1;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
-            transition: all 0.3s;
+            font-size: 16px;
+            transition: all 0.2s;
             cursor: url('../img/tay.png'), pointer !important;
         }
 
         .mine-cell:hover:not(.revealed):not(.mine) {
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.16);
             transform: translateY(-2px);
         }
 
@@ -392,12 +406,13 @@ if (!isset($_SESSION['mines_board'])) {
         }
 
         .btn-game {
-            padding: 14px 28px;
-            border-radius: 12px;
+            padding: 7px 18px;
+            border-radius: 30px;
+            font-size: 0.88rem;
             font-weight: 700;
             border: none;
             color: white;
-            transition: 0.3s;
+            transition: 0.2s;
             cursor: url('../img/tay.png'), pointer !important;
         }
 
@@ -420,11 +435,12 @@ if (!isset($_SESSION['mines_board'])) {
         }
 
         .thongbao {
-            margin-top: 25px;
-            padding: 15px;
-            border-radius: 12px;
+            margin-top: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
             font-weight: 600;
-            min-height: 54px;
+            min-height: 36px;
+            font-size: 0.85rem;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -443,8 +459,8 @@ if (!isset($_SESSION['mines_board'])) {
         .home-link {
             color: rgba(255, 255, 255, 0.5);
             text-decoration: none;
-            font-size: 14px;
-            margin-top: 20px;
+            font-size: 12px;
+            margin-top: 8px;
             display: inline-block;
         }
     
@@ -501,16 +517,38 @@ if (!isset($_SESSION['mines_board'])) {
             margin-top: 20px;
         }
 
-        .btn-quick-bet {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-            padding: 8px 12px;
+        #bet-amount {
+            padding: 6px 12px;
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+            max-width: 220px;
             border-radius: 8px;
+            text-align: center;
+            font-weight: 700;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            outline: none;
+        }
+
+        .quick-bets {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+            justify-content: center;
+        }
+
+        .btn-quick-bet {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 6px;
             cursor: url('../img/tay.png'), pointer !important;
             font-weight: 600;
-            transition: 0.3s;
-            font-size: 0.75rem;
+            transition: 0.2s;
+            font-size: 0.72rem;
         }
 
         .btn-quick-bet:hover {
@@ -523,6 +561,7 @@ if (!isset($_SESSION['mines_board'])) {
 </head>
 
 <body>
+    <canvas id="threejs-background"></canvas>
 
 
     <div class="game-box">
@@ -536,7 +575,7 @@ if (!isset($_SESSION['mines_board'])) {
         </div>
 
         <div id="bet-section">
-            <input type="number" id="bet-amount" placeholder="GTLM muốn chiến (GTLM)" min="1" max="<?= $soDu ?>">
+            <input type="number" id="bet-amount" value="10000" placeholder="GTLM muốn chiến (GTLM)" min="1" max="<?= $soDu ?>">
             <div class="quick-bets" style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 20px; justify-content: center;">
                 <button class="btn-quick-bet" onclick="setBet(10000)">10K</button>
                 <button class="btn-quick-bet" onclick="setBet(50000)">50K</button>
@@ -573,18 +612,19 @@ if (!isset($_SESSION['mines_board'])) {
         // Three.js Background
         (function () {
             window.themeConfig = {
-                particleCount: <?= $particleCount ?>,
-                particleSize: <?= $particleSize ?>,
-                particleColor: '<?= $particleColor ?>',
-                particleOpacity: <?= $particleOpacity ?>,
-                shapeCount: <?= $shapeCount ?>,
-                shapeColors: <?= json_encode($shapeColors) ?>,
-                shapeOpacity: <?= $shapeOpacity ?>,
-                bgGradient: <?= json_encode($bgGradient) ?>
+                particleCount: 800,
+                particleSize: 0.05,
+                particleColor: '#00f2fe',
+                particleOpacity: 0.75,
+                shapeCount: 14,
+                shapeColors: ["#00f2fe", "#712cf9", "#ff4757", "#00ff88"],
+                shapeOpacity: 0.35,
+                bgGradient: ["#000000", "#050015", "#0a0025"]
             };
-            const script = document.createElement('script');
-            script.src = '../threejs-background.js';
-            document.head.appendChild(script);
+            const s = document.createElement('script');
+            s.src = '../threejs-background.js';
+            s.async = false;
+            document.head.appendChild(s);
         })();
 
         document.addEventListener('DOMContentLoaded', function () {
@@ -615,8 +655,8 @@ if (!isset($_SESSION['mines_board'])) {
 
             // Action Start
             btnStart.addEventListener('click', async () => {
-                const amount = betAmount.value;
-                if (!amount || amount <= 0) return Swal.fire('Lỗi', 'Vui lòng nhập gtlm cược!', 'error');
+                let amount = parseInt(betAmount.value) || 10000;
+                betAmount.value = amount;
 
                 try {
                     const formData = new FormData();
@@ -634,7 +674,8 @@ if (!isset($_SESSION['mines_board'])) {
                         statusBox.textContent = data.message;
                         statusBox.className = 'thongbao';
                     } else {
-                        Swal.fire('Thông báo', data.message, 'warning');
+                        statusBox.textContent = data.message;
+                        statusBox.className = 'thongbao thua';
                     }
                 } catch (e) {
                     console.error(e);
@@ -659,9 +700,11 @@ if (!isset($_SESSION['mines_board'])) {
                         if (typeof confetti === 'function') {
                             confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                         }
-                        Swal.fire('Thắng rồi!', data.message, 'success');
+                        if (window.GameEffects) {
+                            window.GameEffects.showWin(parseInt(betAmount.value) || 10000);
+                        }
                     } else {
-                        Swal.fire('Lỗi', data.message, 'error');
+                        statusBox.textContent = data.message;
                     }
                 } catch(e) {
                     console.error(e);
@@ -711,71 +754,28 @@ if (!isset($_SESSION['mines_board'])) {
                             statusBox.className = 'thongbao ' + (data.isWin ? 'thang' : 'thua');
                             balanceVal.textContent = data.newBalance;
 
-                            if (data.isWin && typeof confetti === 'function') {
-                                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                            if (data.isWin) {
+                                if (typeof confetti === 'function') confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                                if (window.GameEffects) window.GameEffects.showBigWin(parseInt(betAmount.value) * 5 || 50000);
+                            } else {
+                                if (window.GameEffects) window.GameEffects.showLoss(parseInt(betAmount.value) || 10000);
+                                setTimeout(() => btnNew.click(), 800); // Tự động reset ván mới khi nổ mìn
                             }
-
-                            setTimeout(() => {
-                                Swal.fire(data.isWin ? 'Thắng rồi!' : 'Bùm!', data.message, data.isWin ? 'success' : 'error');
-                                if (!data.isWin) btnNew.click(); // Auto reset nếu thua
-                            }, 500);
                         }
                     } else {
-                        Swal.fire('Hệ thống', data.message, 'info');
+                        statusBox.textContent = data.message;
                     }
                 } catch (e) {
                     console.error(e);
                 }
             });
-        });
-    </script>
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- AUTO-GENERATED BOT SCRIPT -->
-<script>
-if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
-if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
-</script>
-<script src="../assets/js/bot_virtual_cursor.js"></script>
-<script>
-    if (typeof BotVirtualCursor !== "undefined") {
-        BotVirtualCursor.init("Bot Streamer");
-        setInterval(() => {
-            const allBtns = Array.from(document.querySelectorAll("button, .btn-bet, .chip, .spin-btn, #btnSpin, .bet-button, .card, .btn-primary, .btn-success, input[type='button'], input[type='submit']"));
-            const btns = allBtns.filter(b => {
-                if(b.offsetParent === null || b.disabled) return false;
-                const txt = (b.innerText || b.value || "").toLowerCase();
-                const cls = (b.className || "").toLowerCase();
-                const id = (b.id || "").toLowerCase();
-                
-                // Exclude common navigation/help buttons
-                if(txt.includes("hướng dẫn") || txt.includes("trang chủ") || txt.includes("nạp") || txt.includes("rút") || txt.includes("lịch sử") || txt.includes("quay lại") || txt.includes("thoát")) return false;
-                if(cls.includes("back") || cls.includes("help") || cls.includes("guide") || cls.includes("close") || cls.includes("swal") || cls.includes("nav")) return false;
-                if(id.includes("guide") || id.includes("back") || id.includes("close") || id.includes("nav")) return false;
-                
-                return true;
+                } catch (e) {
+                    console.error(e);
+                }
             });
-            
-            if(btns.length > 0) {
-                const btn = btns[Math.floor(Math.random() * btns.length)];
-                BotVirtualCursor.moveToElement($(btn), 1, 0, () => {
-                    setTimeout(() => { 
-                        BotVirtualCursor.simulateClick(() => {
-                            try { btn.click(); } catch(e){}
-                        });
-                    }, 500);
-                });
-            }
-        }, 3000 + Math.random() * 4000);
-    }
-</script>
+        });
+<script src="../assets/js/bot_virtual_cursor.js"></script>
+<script src="bots/bot_40.js?v=<?= time() ?>"></script>
+
+</body>
+</html>
