@@ -1,6 +1,7 @@
 <?php
 session_start();
 
+require '../db_connect.php'; // DB trước khi gọi helper
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_43', 50000000);
@@ -8,9 +9,6 @@ $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
 
 
-
-
-require '../db_connect.php';
 
 
 // AJAX history endpoint
@@ -417,8 +415,11 @@ if (isset($_GET['action'])) {
 <head>
     <meta charset="UTF-8">
     <title>Texas Hold'em - Premium UI</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.6.0/confetti.browser.min.js"></script>
+    <script src="../assets/js/game-effects.js"></script>
     <link rel="stylesheet" href="../assets/css/main.css">
     <link rel="stylesheet" href="../assets/css/components.css">
     <link rel="stylesheet" href="../assets/css/game-ui-enhancements.css">
@@ -427,7 +428,7 @@ if (isset($_GET['action'])) {
             margin: 0;
             cursor: url('../img/chuot.png'), auto !important;
             font-family: 'Poppins', sans-serif;
-            background: #072a1a;
+            background: transparent;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -446,6 +447,7 @@ if (isset($_GET['action'])) {
             width: 100%;
             height: 100%;
             z-index: -1;
+            background: #072a1a;
         }
 
         .poker-table {
@@ -824,8 +826,12 @@ if (isset($_GET['action'])) {
                     betInput.value = chip.dataset.value;
                     
                     // Chip click effect
-                    if (window.GameEffects) {
-                        GameEffects.createCoinBlast(event.clientX, event.clientY);
+                    if (window.GameEffects && typeof GameEffects.coinBlast === 'function') {
+                        try {
+                            const cx = (typeof event !== 'undefined' && event && event.clientX) ? event.clientX : window.innerWidth / 2;
+                            const cy = (typeof event !== 'undefined' && event && event.clientY) ? event.clientY : window.innerHeight / 2;
+                            GameEffects.coinBlast(cx, cy, 10);
+                        } catch (e) {}
                     }
                 });
             });
@@ -917,57 +923,19 @@ if (isset($_GET['action'])) {
                 shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>,
                 bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>
             };
-            const prefix = window.location.pathname.includes('/games/') ? '../' : '';
-            const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
-
-            scripts.forEach(src => {
+            // Fix: Load trực tiếp theo đường dẫn chuẩn thay vì prefix detection
+            ['../threejs-background.js', '../assets/js/game-effects-auto.js'].forEach(src => {
                 const s = document.createElement('script');
-                s.src = prefix + src;
+                s.src = src;
                 s.async = false;
                 document.head.appendChild(s);
             });
         })();
     </script>
 
-
-<!-- AUTO-GENERATED BOT SCRIPT -->
-<script>
-if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
-if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
-</script>
+<!-- Bot AI Script -->
 <script src="../assets/js/bot_virtual_cursor.js"></script>
-<script>
-    if (typeof BotVirtualCursor !== "undefined") {
-        BotVirtualCursor.init("Bot Streamer");
-        setInterval(() => {
-            const allBtns = Array.from(document.querySelectorAll("button, .btn-bet, .chip, .spin-btn, #btnSpin, .bet-button, .card, .btn-primary, .btn-success, input[type='button'], input[type='submit']"));
-            const btns = allBtns.filter(b => {
-                if(b.offsetParent === null || b.disabled) return false;
-                const txt = (b.innerText || b.value || "").toLowerCase();
-                const cls = (b.className || "").toLowerCase();
-                const id = (b.id || "").toLowerCase();
-                
-                // Exclude common navigation/help buttons
-                if(txt.includes("hướng dẫn") || txt.includes("trang chủ") || txt.includes("nạp") || txt.includes("rút") || txt.includes("lịch sử") || txt.includes("quay lại") || txt.includes("thoát")) return false;
-                if(cls.includes("back") || cls.includes("help") || cls.includes("guide") || cls.includes("close") || cls.includes("swal") || cls.includes("nav")) return false;
-                if(id.includes("guide") || id.includes("back") || id.includes("close") || id.includes("nav")) return false;
-                
-                return true;
-            });
-            
-            if(btns.length > 0) {
-                const btn = btns[Math.floor(Math.random() * btns.length)];
-                BotVirtualCursor.moveToElement($(btn), 1, 0, () => {
-                    setTimeout(() => { 
-                        BotVirtualCursor.simulateClick(() => {
-                            try { btn.click(); } catch(e){}
-                        });
-                    }, 500);
-                });
-            }
-        }, 3000 + Math.random() * 4000);
-    }
-</script>
+<script src="bots/bot_43.js?v=<?= time() ?>"></script>
 
 </body>
 </html>

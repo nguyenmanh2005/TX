@@ -1,14 +1,15 @@
 <?php
 session_start();
 
+require '../db_connect.php'; // DB trước khi gọi helper
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_45', 50000000);
 $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
 
-require '../db_connect.php';
 require_once '../load_theme.php';
+
 
 $userId = $botUserId;
 $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
@@ -145,12 +146,12 @@ function getCardValue($c)
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.6.0/confetti.browser.min.js"></script>
+    <script src="../assets/js/game-effects.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         body {
-            background:
-                <?= $bgGradientCSS ?>
-            ;
+            background: transparent;
             color: #fff;
             font-family: 'Exo 2', sans-serif;
             min-height: 100vh;
@@ -163,6 +164,7 @@ function getCardValue($c)
             width: 100%;
             height: 100%;
             z-index: -1;
+            background: <?= $bgGradientCSS ?>;
         }
         .glass {
             background: rgba(0, 0, 0, 0.3);
@@ -293,6 +295,32 @@ function getCardValue($c)
         </div>
     </div>
     <?php require_once '../casino_help.php'; ?>
+    <!-- Badge thông báo thắng/thua giống game ID 1 -->
+    <div id="result-status-badge" style="
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.5);
+        background: rgba(0,0,0,0.88);
+        border-radius: 20px;
+        padding: 28px 52px;
+        text-align: center;
+        z-index: 10000;
+        pointer-events: none;
+        backdrop-filter: blur(22px);
+        border: 2px solid rgba(255,255,255,0.15);
+        box-shadow: 0 25px 80px rgba(0,0,0,0.8);
+        font-family: 'Outfit', 'Exo 2', sans-serif;
+        transition: transform 0.4s cubic-bezier(0.17, 0.89, 0.32, 1.49), opacity 0.4s;
+        opacity: 0;
+    ">
+        <div id="result-badge-icon" style="font-size: 3.5rem; margin-bottom: 8px;"></div>
+        <div id="result-badge-title" style="font-size: 1.8rem; font-weight: 800; letter-spacing: 2px; margin-bottom: 6px;"></div>
+        <div id="result-badge-amount" style="font-size: 1.3rem; font-weight: 700; opacity: 0.9;"></div>
+        <div id="result-badge-msg" style="font-size: 0.85rem; opacity: 0.65; margin-top: 6px; max-width: 320px;"></div>
+    </div>
+
     <!-- Premium Effects System -->
     <canvas id="threejs-background"></canvas>
     <script>
@@ -307,15 +335,53 @@ function getCardValue($c)
                 shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>,
                 bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>
             };
-            const prefix = window.location.pathname.includes('/games/') ? '../' : '';
-            const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
-            scripts.forEach(src => {
+            ['../threejs-background.js', '../assets/js/game-effects-auto.js'].forEach(src => {
                 const s = document.createElement('script');
-                s.src = prefix + src;
+                s.src = src;
                 s.async = false;
                 document.head.appendChild(s);
             });
         })();
+
+        // === Badge kết quả giống game ID 1 ===
+        function showResultBadge(isWin, winAmount, statusMsg) {
+            const badge = document.getElementById('result-status-badge');
+            const icon  = document.getElementById('result-badge-icon');
+            const title = document.getElementById('result-badge-title');
+            const amtEl = document.getElementById('result-badge-amount');
+            const msgEl = document.getElementById('result-badge-msg');
+
+            if (isWin) {
+                badge.style.borderColor = '#f1c40f';
+                badge.style.boxShadow   = '0 25px 80px rgba(0,0,0,0.8), 0 0 80px rgba(241,196,15,0.5)';
+                icon.textContent  = '🏆';
+                title.textContent = 'THẮNG!';
+                title.style.color = '#f1c40f';
+                amtEl.textContent = '+' + parseInt(winAmount).toLocaleString('vi-VN') + ' GTLM';
+                amtEl.style.color = '#f1c40f';
+            } else {
+                badge.style.borderColor = '#e74c3c';
+                badge.style.boxShadow   = '0 25px 80px rgba(0,0,0,0.8), 0 0 60px rgba(231,76,60,0.4)';
+                icon.textContent  = '❌';
+                title.textContent = 'THUA!';
+                title.style.color = '#e74c3c';
+                amtEl.textContent = '';
+                amtEl.style.color = '#e74c3c';
+            }
+            msgEl.textContent = statusMsg || '';
+
+            badge.style.display = 'block';
+            requestAnimationFrame(() => {
+                badge.style.transform = 'translate(-50%, -50%) scale(1.05)';
+                badge.style.opacity   = '1';
+                setTimeout(() => { badge.style.transform = 'translate(-50%, -50%) scale(1)'; }, 150);
+            });
+            setTimeout(() => {
+                badge.style.transform = 'translate(-50%, -50%) scale(0.8)';
+                badge.style.opacity   = '0';
+                setTimeout(() => { badge.style.display = 'none'; }, 400);
+            }, 3500);
+        }
         // Red Dog Game Logic
         $(document).ready(function() {
             $('.chip').click(function() {
@@ -372,7 +438,7 @@ function getCardValue($c)
             });
         }
         function ride() {
-            $.get('reddog.php?action=ride', function(res) {
+            $.get('?action=ride', function(res) {
                 if (res.success) {
                     $('#rideBtn').hide();
                     $('#betAmount').val($('#betAmount').val() * 2);
@@ -381,19 +447,21 @@ function getCardValue($c)
             });
         }
         function show() {
-            $.get('reddog.php?action=show', function(res) {
+            $.get('?action=show', function(res) {
                 if (!res.success) return;
                 renderCard('card3', res.third);
                 $('#userMoney').text(res.money + ' gtlm');
+                const winAmount = parseInt(String(res.winAmount).replace(/\D/g, '')) || 0;
                 setTimeout(() => {
                     if (res.win) {
-                        if (typeof GameEffects !== 'undefined') GameEffects.showWin(res.winAmount);
-                        Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'success', title: 'Thắng', text: res.message });
+                        showResultBadge(true, winAmount, res.message);
+                        if (typeof GameEffects !== 'undefined') GameEffects.showWin(winAmount);
+                        if (typeof confetti === 'function') confetti({ particleCount: 150, spread: 80, origin: { y: 0.5 } });
                     } else {
-                        if (typeof GameEffects !== 'undefined') GameEffects.showLoss();
-                        Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'error', title: 'Thua', text: res.message });
+                        showResultBadge(false, 0, res.message);
+                        if (typeof GameEffects !== 'undefined') GameEffects.showLoss(parseInt($('#betAmount').val()) || 10000);
                     }
-                }, 500);
+                }, 400);
                 $('#rideBtn').hide();
                 $('#showBtn').hide();
                 $('#newBtn').show();
@@ -408,44 +476,9 @@ function getCardValue($c)
         }
     </script>
 
-<!-- AUTO-GENERATED BOT SCRIPT -->
-<script>
-if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
-if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
-</script>
+<!-- Bot AI Script -->
 <script src="../assets/js/bot_virtual_cursor.js"></script>
-<script>
-    if (typeof BotVirtualCursor !== "undefined") {
-        BotVirtualCursor.init("Bot Streamer");
-        setInterval(() => {
-            const allBtns = Array.from(document.querySelectorAll("button, .btn-bet, .chip, .spin-btn, #btnSpin, .bet-button, .card, .btn-primary, .btn-success, input[type='button'], input[type='submit']"));
-            const btns = allBtns.filter(b => {
-                if(b.offsetParent === null || b.disabled) return false;
-                const txt = (b.innerText || b.value || "").toLowerCase();
-                const cls = (b.className || "").toLowerCase();
-                const id = (b.id || "").toLowerCase();
-                
-                // Exclude common navigation/help buttons
-                if(txt.includes("hướng dẫn") || txt.includes("trang chủ") || txt.includes("nạp") || txt.includes("rút") || txt.includes("lịch sử") || txt.includes("quay lại") || txt.includes("thoát")) return false;
-                if(cls.includes("back") || cls.includes("help") || cls.includes("guide") || cls.includes("close") || cls.includes("swal") || cls.includes("nav")) return false;
-                if(id.includes("guide") || id.includes("back") || id.includes("close") || id.includes("nav")) return false;
-                
-                return true;
-            });
-            
-            if(btns.length > 0) {
-                const btn = btns[Math.floor(Math.random() * btns.length)];
-                BotVirtualCursor.moveToElement($(btn), 1, 0, () => {
-                    setTimeout(() => { 
-                        BotVirtualCursor.simulateClick(() => {
-                            try { btn.click(); } catch(e){}
-                        });
-                    }, 500);
-                });
-            }
-        }, 3000 + Math.random() * 4000);
-    }
-</script>
+<script src="bots/bot_45.js?v=<?= time() ?>"></script>
 
 </body>
 </html>
