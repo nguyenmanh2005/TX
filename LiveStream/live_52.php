@@ -8,7 +8,16 @@ $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
 
 require '../db_connect.php';
+$useBotTheme = $botUserId;
 require_once '../load_theme.php';
+
+// Fallback theme cho Bàn 52 (Three Card Poker - Tím Neon Vũ Trụ)
+$particleColor = $particleColor ?? '#00f2fe';
+$shapeColors = $shapeColors ?? ['#00f2fe', '#712cf9', '#ff4757', '#ffd700'];
+$bgGradient = $bgGradient ?? ['#000000', '#050015', '#0a0025'];
+if (empty($bgGradientCSS)) {
+    $bgGradientCSS = 'linear-gradient(135deg, ' . $bgGradient[0] . ' 0%, ' . $bgGradient[1] . ' 50%, ' . ($bgGradient[2] ?? $bgGradient[1]) . ' 100%)';
+}
 
 
 
@@ -216,14 +225,19 @@ if (isset($_GET['action'])) {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body {
-            background:
-                <?= $bgGradientCSS ?>
-            ;
+            margin: 0;
+            background: <?= $bgGradientCSS ?>;
             background-attachment: fixed;
             color: #fff;
             font-family: 'Exo 2', sans-serif;
             min-height: 100vh;
             overflow-x: hidden;
+            cursor: url('../img/chuot.png'), auto !important;
+        }
+
+        * { cursor: inherit; }
+        button, a, input, select, .chip, .bet-input-box, .btn-premium {
+            cursor: url('../img/tay.png'), pointer !important;
         }
 
         #threejs-background {
@@ -236,47 +250,99 @@ if (isset($_GET['action'])) {
             pointer-events: none;
         }
 
+        /* 🏆 Badge Thông Báo Thắng / Thua Chuẩn Game ID 1 */
+        #result-status-badge {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.5);
+            background: rgba(10, 12, 24, 0.94);
+            border-radius: 24px;
+            padding: 28px 56px;
+            text-align: center;
+            z-index: 99999;
+            pointer-events: none;
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.85);
+            font-family: 'Orbitron', 'Exo 2', sans-serif;
+            transition: transform 0.4s cubic-bezier(0.17, 0.89, 0.32, 1.49), opacity 0.4s;
+            opacity: 0;
+        }
+        #result-badge-icon {
+            font-size: 3.8rem;
+            margin-bottom: 8px;
+            animation: badgeIconBounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+        }
+        @keyframes badgeIconBounce {
+            0% { transform: scale(0) rotate(-20deg); }
+            70% { transform: scale(1.3) rotate(10deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+        #result-badge-title {
+            font-size: 1.8rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+        #result-badge-amount {
+            font-size: 1.4rem;
+            font-weight: 800;
+            opacity: 0.95;
+            font-family: 'Orbitron', sans-serif;
+        }
+        #result-badge-msg {
+            font-size: 0.85rem;
+            opacity: 0.75;
+            margin-top: 6px;
+            max-width: 320px;
+            font-family: 'Exo 2', sans-serif;
+        }
+
         .glass {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 2rem;
+            border-radius: 1.6rem;
         }
 
         .hand-section {
-            margin-bottom: 2.5rem;
+            margin-bottom: 0.8rem;
         }
 
         .label {
-            font-size: 1.2rem;
+            font-size: 0.95rem;
             font-weight: 800;
             color: #00d2ff;
-            margin-bottom: 1rem;
+            margin-bottom: 0.35rem;
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 1px;
         }
 
         .card-row {
             display: flex;
             justify-content: center;
-            gap: 1rem;
-            min-height: 150px;
+            gap: 0.6rem;
+            min-height: 95px;
             perspective: 1000px;
             flex-wrap: wrap;
         }
 
         .card {
-            width: clamp(80px, 12vw, 100px);
+            width: clamp(55px, 9vw, 68px);
             aspect-ratio: 2/3;
             background: rgba(255, 255, 255, 0.05);
             border: 2px dashed rgba(255, 255, 255, 0.2);
-            border-radius: 0.8rem;
+            border-radius: 0.6rem;
             color: rgba(255, 255, 255, 0.2);
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 900;
-            font-size: 2rem;
+            font-size: 1.5rem;
             transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
         }
@@ -284,7 +350,7 @@ if (isset($_GET['action'])) {
         .card.revealed {
             background: #fff;
             border: none;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
         }
 
         .card.red {
@@ -297,42 +363,42 @@ if (isset($_GET['action'])) {
 
         .card-v {
             position: absolute;
-            top: 0.5rem;
-            left: 0.5rem;
-            font-size: 1.1rem;
+            top: 0.3rem;
+            left: 0.3rem;
+            font-size: 0.85rem;
         }
 
         .card-s {
-            font-size: 3.5rem;
+            font-size: 2.2rem;
         }
 
         .bet-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 1.5rem;
-            margin: 2rem auto;
-            max-width: 500px;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.8rem;
+            margin: 0.8rem auto;
+            max-width: 440px;
         }
 
         .bet-input-box {
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 1.2rem;
-            border-radius: 1.5rem;
+            padding: 0.6rem 0.8rem;
+            border-radius: 1rem;
             cursor: pointer;
             transition: 0.3s;
         }
 
         .bet-input-box.focused {
             border-color: #f1c40f;
-            box-shadow: 0 0 15px rgba(241, 196, 15, 0.3);
+            box-shadow: 0 0 12px rgba(241, 196, 15, 0.3);
         }
 
         .bet-input-box span {
             display: block;
-            font-size: 0.8rem;
-            opacity: 0.6;
-            margin-bottom: 0.5rem;
+            font-size: 0.72rem;
+            opacity: 0.7;
+            margin-bottom: 2px;
         }
 
         .bet-input-box input {
@@ -341,17 +407,18 @@ if (isset($_GET['action'])) {
             border: none;
             color: #fff;
             text-align: center;
-            font-size: 1.4rem;
+            font-size: 1.15rem;
             font-weight: 700;
             outline: none;
-            pointer-events: none; /* Prevent input selection, use chips */
+            pointer-events: none;
         }
 
         .btn-premium {
-            padding: 1rem 2.5rem;
+            padding: 0.75rem 2.2rem;
             border: none;
-            border-radius: 50px;
+            border-radius: 40px;
             font-weight: 900;
+            font-size: 0.95rem;
             cursor: pointer;
             transition: 0.3s;
             text-transform: uppercase;
@@ -363,63 +430,70 @@ if (isset($_GET['action'])) {
         .chip-selector {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 6px;
             justify-content: center;
-            margin-bottom: 15px;
+            margin-bottom: 8px;
             width: 100%;
         }
         .chip {
-            padding: 8px 18px;
+            padding: 5px 12px;
             background: rgba(255,255,255,0.1);
-            border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 25px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 20px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 1rem;
+            font-size: 0.82rem;
             color: #fff;
-            transition: 0.3s;
+            transition: 0.2s;
             user-select: none;
         }
         .chip:hover, .chip.active {
             background: #f1c40f;
             color: #000;
             border-color: #f1c40f;
-            transform: scale(1.1);
-            box-shadow: 0 5px 15px rgba(241, 196, 15, 0.4);
+            transform: scale(1.05);
+            box-shadow: 0 3px 10px rgba(241, 196, 15, 0.4);
         }
     </style>
 </head>
 
 <body>
-    <div class="game-wrapper" style="max-width:800px; margin:2rem auto; position:relative; z-index:1; padding: 0 15px; width: 100%;">
-        <div class="glass" style="padding: 2.5rem; text-align: center; border-radius: 2rem; width: 100%;">
-            <h1 style="margin: 0 0 1rem; font-size: 2.5rem; font-weight: 900; color: #00d2ff; text-transform: uppercase; letter-spacing: 2px;">THREE CARD POKER</h1>
-            <div style="background: rgba(0,0,0,0.3); padding: 10px 25px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.2); display: inline-block; margin-bottom: 2rem; max-width: 100%;">
-                <span style="opacity: 0.8; font-size: 0.9rem; margin-right: 5px;">SỐ GTLM:</span>
-                <span id="balance-val" style="font-weight: 900; font-size: clamp(14px, 3vw, 1.5rem); color: #f1c40f; word-break: break-all;"><?php echo number_format($money, 0, ',', '.'); ?></span> <span style="font-weight: 900; font-size: clamp(14px, 3vw, 1.5rem); color: #f1c40f;">gtlm</span>
+    <!-- 🏆 Badge thông báo thắng/thua giống game ID 1 -->
+    <div id="result-status-badge">
+        <div id="result-badge-icon">🏆</div>
+        <div id="result-badge-title">THẮNG THREE CARD!</div>
+        <div id="result-badge-amount">+100,000 GTLM</div>
+        <div id="result-badge-msg">Bài lớn hơn Dealer!</div>
+    </div>
+    <div class="game-wrapper" style="max-width:720px; margin:0.5rem auto 1rem; position:relative; z-index:1; padding: 0 12px; width: 100%;">
+        <div class="glass" style="padding: 1.1rem 1.4rem; text-align: center; border-radius: 1.5rem; width: 100%;">
+            <h1 style="margin: 0 0 0.4rem; font-size: clamp(1.4rem, 3.2vw, 1.8rem); font-weight: 900; color: #00d2ff; text-transform: uppercase; letter-spacing: 2px;">THREE CARD POKER</h1>
+            <div style="background: rgba(0,0,0,0.3); padding: 5px 18px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.2); display: inline-block; margin-bottom: 0.7rem; max-width: 100%;">
+                <span style="opacity: 0.8; font-size: 0.85rem; margin-right: 5px;">SỐ GTLM:</span>
+                <span id="balance-val" style="font-weight: 900; font-size: clamp(14px, 2.5vw, 1.3rem); color: #f1c40f; word-break: break-all;"><?php echo number_format($money, 0, ',', '.'); ?></span> <span style="font-weight: 900; font-size: clamp(14px, 2.5vw, 1.3rem); color: #f1c40f;">gtlm</span>
             </div>
 
-            <div id="dealer-area" class="hand-section">
-                <div class="label">Nhà Cái (Dealer)</div>
-                <div id="dealer-hand" class="card-row">
-                    <div class="card" id="dc-0"><img src="img/anh-bai/PNG/Cards (large)/card_back.png" style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.8rem; opacity: 0.5;"></div>
-                    <div class="card" id="dc-1"><img src="img/anh-bai/PNG/Cards (large)/card_back.png" style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.8rem; opacity: 0.5;"></div>
-                    <div class="card" id="dc-2"><img src="img/anh-bai/PNG/Cards (large)/card_back.png" style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.8rem; opacity: 0.5;"></div>
+            <div id="dealer-area" class="hand-section" style="margin-bottom: 0.5rem;">
+                <div class="label" style="font-size: 0.85rem; margin-bottom: 0.25rem;">Nhà Cái (Dealer)</div>
+                <div id="dealer-hand" class="card-row" style="min-height: 75px; gap: 0.5rem;">
+                    <div class="card" id="dc-0"><img src="img/anh-bai/PNG/Cards (large)/card_back.png" style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.6rem; opacity: 0.5;"></div>
+                    <div class="card" id="dc-1"><img src="img/anh-bai/PNG/Cards (large)/card_back.png" style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.6rem; opacity: 0.5;"></div>
+                    <div class="card" id="dc-2"><img src="img/anh-bai/PNG/Cards (large)/card_back.png" style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.6rem; opacity: 0.5;"></div>
                 </div>
             </div>
 
-            <div id="player-area" class="hand-section">
-                <div class="label">Bạn (Player)</div>
-                <div id="player-hand" class="card-row">
-                    <div class="card" id="pc-0"><img src="img/anh-bai/PNG/Cards (large)/card_back.png" style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.8rem; opacity: 0.5;"></div>
-                    <div class="card" id="pc-1"><img src="img/anh-bai/PNG/Cards (large)/card_back.png" style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.8rem; opacity: 0.5;"></div>
-                    <div class="card" id="pc-2"><img src="img/anh-bai/PNG/Cards (large)/card_back.png" style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.8rem; opacity: 0.5;"></div>
+            <div id="player-area" class="hand-section" style="margin-bottom: 0.5rem;">
+                <div class="label" style="font-size: 0.85rem; margin-bottom: 0.25rem;">Bạn (Player)</div>
+                <div id="player-hand" class="card-row" style="min-height: 75px; gap: 0.5rem;">
+                    <div class="card" id="pc-0"><img src="img/anh-bai/PNG/Cards (large)/card_back.png" style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.6rem; opacity: 0.5;"></div>
+                    <div class="card" id="pc-1"><img src="img/anh-bai/PNG/Cards (large)/card_back.png" style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.6rem; opacity: 0.5;"></div>
+                    <div class="card" id="pc-2"><img src="img/anh-bai/PNG/Cards (large)/card_back.png" style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.6rem; opacity: 0.5;"></div>
                 </div>
             </div>
 
             <div id="bet-area">
-                <p style="margin-bottom: 10px; opacity: 0.8; font-size: 0.9rem;">CHỌN Ô CƯỢC SAU ĐÓ CHỌN PHỈNH</p>
-                <div class="chip-selector" id="chipSelector">
+                <p style="margin-bottom: 6px; opacity: 0.8; font-size: 0.78rem;">CHỌN Ô CƯỢC SAU ĐÓ CHỌN PHỈNH</p>
+                <div class="chip-selector" id="chipSelector" style="margin-bottom: 6px;">
                     <div class="chip" data-value="10000">10K</div>
                     <div class="chip" data-value="50000">50K</div>
                     <div class="chip" data-value="100000">100K</div>
@@ -429,7 +503,7 @@ if (isset($_GET['action'])) {
                     <div class="chip" data-value="0">XÓA</div>
                 </div>
 
-                <div class="bet-grid">
+                <div class="bet-grid" style="margin: 0.5rem auto; gap: 0.6rem;">
                     <div class="bet-input-box focused" id="box-ante" onclick="selectBetBox('ante')">
                         <span>ANTE (Bắt buộc)</span>
                         <input type="number" id="ante" value="10000">
@@ -439,58 +513,101 @@ if (isset($_GET['action'])) {
                         <input type="number" id="pairplus" value="0">
                     </div>
                 </div>
-                <button id="deal-btn" class="btn-premium btn-deal">CHIA BÀI</button>
+                <button id="deal-btn" class="btn-premium btn-deal" style="padding: 0.65rem 2.5rem; font-size: 0.95rem;">CHIA BÀI</button>
             </div>
 
-            <div id="play-area" style="display: none; margin-top: 2rem;">
-                <p style="margin-bottom: 1.5rem; font-weight: 700; color: #f1c40f; font-size: 1.2rem;">BẠN MUỐN THEO (PLAY) HAY ÚP BÀI (FOLD)?</p>
-                <div style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
-                    <button id="play-btn" class="btn-premium btn-play">PLAY (THEO)</button>
-                    <button id="fold-btn" class="btn-premium btn-fold">FOLD (ÚP BÀI)</button>
+            <div id="play-area" style="display: none; margin-top: 1rem;">
+                <p style="margin-bottom: 0.8rem; font-weight: 700; color: #f1c40f; font-size: 1rem;">BẠN MUỐN THEO (PLAY) HAY ÚP BÀI (FOLD)?</p>
+                <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+                    <button id="play-btn" class="btn-premium btn-play" style="padding: 0.65rem 2rem;">PLAY (THEO)</button>
+                    <button id="fold-btn" class="btn-premium btn-fold" style="padding: 0.65rem 2rem;">FOLD (ÚP BÀI)</button>
                 </div>
             </div>
 
-            <div id="result-area" style="display: none; margin-top: 2rem;">
-                <button id="reset-btn" class="btn-premium btn-deal">VÁN MỚI</button>
+            <div id="result-area" style="display: none; margin-top: 1rem;">
+                <button id="reset-btn" class="btn-premium btn-deal" style="padding: 0.65rem 2.5rem;">VÁN MỚI</button>
             </div>
             
-            <div style="margin-top: 3rem;">
-                <a href="../index.php" style="color:#fff; text-decoration:none; border:1px solid rgba(255,255,255,0.2); padding:0.8rem 2rem; border-radius:50px; font-weight: bold; background: rgba(0,0,0,0.2); transition: 0.3s; display: inline-block;">🏠 THOÁT VỀ SẢNH</a>
+            <div style="margin-top: 1rem; margin-bottom: 0.5rem;">
+                <a href="../index.php" style="color:#fff; text-decoration:none; border:1px solid rgba(255,255,255,0.2); padding:0.5rem 1.6rem; border-radius:50px; font-weight: bold; font-size: 0.85rem; background: rgba(0,0,0,0.2); transition: 0.3s; display: inline-block;">🏠 THOÁT VỀ SẢNH</a>
             </div>
         </div>
     </div>
 
-    <!-- Premium Effects System -->
+    <!-- Premium Three.js Effects System -->
     <canvas id="threejs-background"></canvas>
     <script>
-        (function() {
-            window.themeConfig = {
-                particleCount: <?= $particleCount ?? 800 ?>,
-                particleSize: <?= $particleSize ?? 0.05 ?>,
-                particleColor: '<?= $particleColor ?? "#ffffff" ?>',
-                particleOpacity: <?= $particleOpacity ?? 0.6 ?>,
-                shapeCount: <?= $shapeCount ?? 10 ?>,
-                shapeColors: <?= json_encode($shapeColors ?? ["#667eea", "#764ba2", "#4facfe", "#00f2fe"]) ?>,
-                shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>,
-                bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>
-            };
-            const prefix = window.location.pathname.includes('/games/') ? '../' : '';
-            const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
-            
-            scripts.forEach(src => {
-                const s = document.createElement('script');
-                s.src = prefix + src;
-                s.async = false;
-                document.head.appendChild(s);
-            });
-        })();
+        window.themeConfig = {
+            particleCount: <?= $particleCount ?? 800 ?>,
+            particleSize: <?= $particleSize ?? 0.05 ?>,
+            particleColor: '<?= $particleColor ?? "#00f2fe" ?>',
+            particleOpacity: <?= $particleOpacity ?? 0.6 ?>,
+            shapeCount: <?= $shapeCount ?? 15 ?>,
+            shapeColors: <?= json_encode($shapeColors ?? ["#00f2fe", "#712cf9", "#ff4757", "#ffd700"]) ?>,
+            shapeOpacity: <?= $shapeOpacity ?? 0.35 ?>,
+            bgGradient: <?= json_encode($bgGradient ?? ["#000000", "#050015", "#0a0025"]) ?>
+        };
+    </script>
+    <script src="../threejs-background.js"></script>
+    <script src="../assets/js/game-effects.js"></script>
+    <script src="../assets/js/game-effects-auto.js"></script>
 
+    <script>
         let currentBetBox = 'ante';
 
         function selectBetBox(box) {
             currentBetBox = box;
             $('.bet-input-box').removeClass('focused');
             $('#box-' + box).addClass('focused');
+        }
+
+        function showResultBadge(isWin, winAmount, statusMsg) {
+            const badge = document.getElementById('result-status-badge');
+            const icon  = document.getElementById('result-badge-icon');
+            const title = document.getElementById('result-badge-title');
+            const amtEl = document.getElementById('result-badge-amount');
+            const msgEl = document.getElementById('result-badge-msg');
+
+            if (!badge) return;
+
+            if (isWin === true) {
+                badge.style.borderColor = '#f1c40f';
+                badge.style.boxShadow   = '0 25px 80px rgba(0,0,0,0.85), 0 0 80px rgba(241,196,15,0.6)';
+                icon.textContent  = '🏆';
+                title.textContent = 'THẮNG THREE CARD!';
+                title.style.color = '#f1c40f';
+                amtEl.textContent = '+' + parseInt(winAmount).toLocaleString('vi-VN') + ' GTLM';
+                amtEl.style.color = '#4ade80';
+            } else if (isWin === false) {
+                badge.style.borderColor = '#e74c3c';
+                badge.style.boxShadow   = '0 25px 80px rgba(0,0,0,0.85), 0 0 60px rgba(231,76,60,0.5)';
+                icon.textContent  = '💨';
+                title.textContent = 'BAY MÀU!';
+                title.style.color = '#e74c3c';
+                amtEl.textContent = '-' + parseInt(Math.abs(winAmount)).toLocaleString('vi-VN') + ' GTLM';
+                amtEl.style.color = '#ff4757';
+            } else {
+                badge.style.borderColor = '#38bdf8';
+                badge.style.boxShadow   = '0 25px 80px rgba(0,0,0,0.85), 0 0 60px rgba(56,189,248,0.5)';
+                icon.textContent  = '🤝';
+                title.textContent = 'HÒA TIỀN!';
+                title.style.color = '#38bdf8';
+                amtEl.textContent = '0 GTLM';
+                amtEl.style.color = '#38bdf8';
+            }
+            msgEl.textContent = statusMsg || '';
+
+            badge.style.display = 'block';
+            requestAnimationFrame(() => {
+                badge.style.transform = 'translate(-50%, -50%) scale(1.08)';
+                badge.style.opacity   = '1';
+                setTimeout(() => { badge.style.transform = 'translate(-50%, -50%) scale(1)'; }, 150);
+            });
+            setTimeout(() => {
+                badge.style.transform = 'translate(-50%, -50%) scale(0.8)';
+                badge.style.opacity   = '0';
+                setTimeout(() => { badge.style.display = 'none'; }, 400);
+            }, 3500);
         }
 
         $(document).ready(function() {
@@ -550,13 +667,16 @@ if (isset($_GET['action'])) {
 
                     setTimeout(() => {
                         if (res.winAmount > 0) {
-                            if (typeof GameEffects !== 'undefined') GameEffects.showWin(res.winAmount);
-                            Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'success', title: 'Thắng', text: res.message });
+                            if (typeof GameEffects !== 'undefined') {
+                                if (res.winAmount >= 500000) GameEffects.showBigWin(res.winAmount);
+                                else GameEffects.showWin(res.winAmount);
+                            }
+                            showResultBadge(true, res.winAmount, res.message || 'Bạn thắng Dealer!');
                         } else if (res.winAmount < 0) {
-                            if (typeof GameEffects !== 'undefined') GameEffects.showLoss();
-                            Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'error', title: 'Thua', text: res.message });
+                            if (typeof GameEffects !== 'undefined') GameEffects.showLoss(Math.abs(res.winAmount));
+                            showResultBadge(false, Math.abs(res.winAmount), res.message || 'Dealer thắng bạn.');
                         } else {
-                            Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'info', title: 'Hòa', text: res.message });
+                            showResultBadge('push', 0, 'Hòa tiền (Push) - Hoàn trả tiền cược.');
                         }
                     }, 500);
 
@@ -571,8 +691,9 @@ if (isset($_GET['action'])) {
                     $('#play-area').hide();
                     $('#balance-val').text(res.money);
                     
-                    if (typeof GameEffects !== 'undefined') GameEffects.showLoss();
-                    Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'info', title: 'Úp bài', text: 'Bạn đã bỏ cuộc và mất GTLM cược.' });
+                    const lossAmt = Math.abs(res.winAmount) || 10000;
+                    if (typeof GameEffects !== 'undefined') GameEffects.showLoss(lossAmt);
+                    showResultBadge(false, lossAmt, 'Bạn đã úp bài và cắt lỗ cược Ante.');
                     
                     $('#result-area').show();
                 });
@@ -591,44 +712,12 @@ if (isset($_GET['action'])) {
         });
     </script>
 
-<!-- AUTO-GENERATED BOT SCRIPT -->
-<script>
-if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
-if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
-</script>
-<script src="../assets/js/bot_virtual_cursor.js"></script>
-<script>
-    if (typeof BotVirtualCursor !== "undefined") {
-        BotVirtualCursor.init("Bot Streamer");
-        setInterval(() => {
-            const allBtns = Array.from(document.querySelectorAll("button, .btn-bet, .chip, .spin-btn, #btnSpin, .bet-button, .card, .btn-primary, .btn-success, input[type='button'], input[type='submit']"));
-            const btns = allBtns.filter(b => {
-                if(b.offsetParent === null || b.disabled) return false;
-                const txt = (b.innerText || b.value || "").toLowerCase();
-                const cls = (b.className || "").toLowerCase();
-                const id = (b.id || "").toLowerCase();
-                
-                // Exclude common navigation/help buttons
-                if(txt.includes("hướng dẫn") || txt.includes("trang chủ") || txt.includes("nạp") || txt.includes("rút") || txt.includes("lịch sử") || txt.includes("quay lại") || txt.includes("thoát")) return false;
-                if(cls.includes("back") || cls.includes("help") || cls.includes("guide") || cls.includes("close") || cls.includes("swal") || cls.includes("nav")) return false;
-                if(id.includes("guide") || id.includes("back") || id.includes("close") || id.includes("nav")) return false;
-                
-                return true;
-            });
-            
-            if(btns.length > 0) {
-                const btn = btns[Math.floor(Math.random() * btns.length)];
-                BotVirtualCursor.moveToElement($(btn), 1, 0, () => {
-                    setTimeout(() => { 
-                        BotVirtualCursor.simulateClick(() => {
-                            try { btn.click(); } catch(e){}
-                        });
-                    }, 500);
-                });
-            }
-        }, 3000 + Math.random() * 4000);
-    }
-</script>
-
+    <!-- SMART PRO BOT SCRIPT -->
+    <script>
+    if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
+    if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
+    </script>
+    <script src="../assets/js/bot_virtual_cursor.js"></script>
+    <script src="bots/bot_52.js"></script>
 </body>
 </html>

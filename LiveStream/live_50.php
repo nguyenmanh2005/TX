@@ -9,8 +9,17 @@ $_SESSION['Iduser_temp_bot'] = $botUserId;
 
 include '../db_connect.php';
 require_once '../include_css.php';
+$useBotTheme = $botUserId;
 include '../load_theme.php';
 require_once '../game_history_helper.php';
+
+// Fallback theme cho Bàn 50
+$particleColor = $particleColor ?? '#00f2fe';
+$shapeColors = $shapeColors ?? ['#00f2fe', '#712cf9', '#ff4757', '#c471ed'];
+$bgGradient = $bgGradient ?? ['#000000', '#050015', '#0a0025'];
+if (empty($bgGradientCSS)) {
+    $bgGradientCSS = 'linear-gradient(135deg, ' . $bgGradient[0] . ' 0%, ' . $bgGradient[1] . ' 50%, ' . ($bgGradient[2] ?? $bgGradient[1]) . ' 100%)';
+}
 if (!isset($botUserId)) {
     header('Location: ../login.php');
     exit;
@@ -149,7 +158,60 @@ if (isset($_GET['action'])) {
             left: 0;
             z-index: -1;
             width: 100%;
-            height: 100%
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* 🏆 Badge Thông Báo Thắng / Thua Giống Game ID 1 */
+        #result-status-badge {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.5);
+            background: rgba(10, 12, 24, 0.94);
+            border-radius: 24px;
+            padding: 28px 56px;
+            text-align: center;
+            z-index: 99999;
+            pointer-events: none;
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.85);
+            font-family: 'Orbitron', 'Inter', sans-serif;
+            transition: transform 0.4s cubic-bezier(0.17, 0.89, 0.32, 1.49), opacity 0.4s;
+            opacity: 0;
+        }
+        #result-badge-icon {
+            font-size: 3.8rem;
+            margin-bottom: 8px;
+            animation: badgeIconBounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+        }
+        @keyframes badgeIconBounce {
+            0% { transform: scale(0) rotate(-20deg); }
+            70% { transform: scale(1.3) rotate(10deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+        #result-badge-title {
+            font-size: 1.8rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+        #result-badge-amount {
+            font-size: 1.4rem;
+            font-weight: 800;
+            opacity: 0.95;
+            font-family: 'Orbitron', sans-serif;
+        }
+        #result-badge-msg {
+            font-size: 0.85rem;
+            opacity: 0.75;
+            margin-top: 6px;
+            max-width: 320px;
+            font-family: 'Inter', sans-serif;
         }
         .main-container {
             height: 100vh;
@@ -359,6 +421,13 @@ if (isset($_GET['action'])) {
     </style>
 </head>
 <body>
+    <!-- 🏆 Badge thông báo thắng/thua giống game ID 1 -->
+    <div id="result-status-badge">
+        <div id="result-badge-icon">🏆</div>
+        <div id="result-badge-title">THẮNG CÀO VÉ!</div>
+        <div id="result-badge-amount">+100,000 GTLM</div>
+        <div id="result-badge-msg">Khớp 3 biểu tượng - Nổ thưởng lớn!</div>
+    </div>
     <div class="main-container">
         <div class="glass-card">
             <div class="sidebar">
@@ -485,9 +554,53 @@ if (isset($_GET['action'])) {
             revealedCount++;
             if (revealedCount === 9) setTimeout(finishGame, 600);
         }
+        function showResultBadge(isWin, winAmount, statusMsg) {
+            const badge = document.getElementById('result-status-badge');
+            const icon  = document.getElementById('result-badge-icon');
+            const title = document.getElementById('result-badge-title');
+            const amtEl = document.getElementById('result-badge-amount');
+            const msgEl = document.getElementById('result-badge-msg');
+
+            if (!badge) return;
+
+            if (isWin) {
+                badge.style.borderColor = '#f1c40f';
+                badge.style.boxShadow   = '0 25px 80px rgba(0,0,0,0.85), 0 0 80px rgba(241,196,15,0.6)';
+                icon.textContent  = '🏆';
+                title.textContent = 'THẮNG CÀO VÉ!';
+                title.style.color = '#f1c40f';
+                amtEl.textContent = '+' + parseInt(winAmount).toLocaleString('vi-VN') + ' GTLM';
+                amtEl.style.color = '#4ade80';
+            } else {
+                badge.style.borderColor = '#e74c3c';
+                badge.style.boxShadow   = '0 25px 80px rgba(0,0,0,0.85), 0 0 60px rgba(231,76,60,0.5)';
+                icon.textContent  = '💨';
+                title.textContent = 'BAY MÀU!';
+                title.style.color = '#e74c3c';
+                amtEl.textContent = '-' + parseInt(winAmount).toLocaleString('vi-VN') + ' GTLM';
+                amtEl.style.color = '#ff4757';
+            }
+            msgEl.textContent = statusMsg || '';
+
+            badge.style.display = 'block';
+            requestAnimationFrame(() => {
+                badge.style.transform = 'translate(-50%, -50%) scale(1.08)';
+                badge.style.opacity   = '1';
+                setTimeout(() => { badge.style.transform = 'translate(-50%, -50%) scale(1)'; }, 150);
+            });
+            setTimeout(() => {
+                badge.style.transform = 'translate(-50%, -50%) scale(0.8)';
+                badge.style.opacity   = '0';
+                setTimeout(() => { badge.style.display = 'none'; }, 400);
+            }, 3500);
+        }
+
         function finishGame() {
             if (!lastResult) return;
             const win = lastResult.win;
+            const betAmt = parseInt($('#betAmount').val()) || 10000;
+            const rawWin = parseInt((lastResult.winAmount + '').replace(/[^0-9]/g, '')) || 0;
+
             if (win) {
                 // Highlight matching tiles
                 const counts = {};
@@ -499,14 +612,14 @@ if (isset($_GET['action'])) {
                     });
                     setTimeout(() => $('.match-highlight').removeClass('match-highlight'), 3500);
                 }
-                const rawWin = parseInt((lastResult.winAmount + '').replace(/[^0-9]/g, '')) || 0;
                 if (window.GameEffects) {
-                    if (rawWin >= 50000) window.GameEffects.showBigWin(rawWin);
+                    if (rawWin >= 500000) window.GameEffects.showBigWin(rawWin);
                     else window.GameEffects.showWin(rawWin);
                 }
+                showResultBadge(true, rawWin, 'Khớp 3 biểu tượng - Nổ quà rực rỡ!');
             } else {
-                const betAmt = parseInt($('#betAmount').val());
                 if (window.GameEffects) window.GameEffects.showLoss(betAmt);
+                showResultBadge(false, betAmt, 'Không khớp 3 biểu tượng - Vé sau gom lộc!');
             }
             $('#buyBtn').prop('disabled', false).text('🎫 Mua Vé Tiếp');
             currentGrid = [];
@@ -515,67 +628,31 @@ if (isset($_GET['action'])) {
     </script>
     <?php require_once '../casino_help.php'; ?>
     <script src="../assets/js/scratch-tutorial.js"></script>
-    <!-- Premium Effects System -->
+
+    <!-- Premium Three.js Effects System -->
     <canvas id="threejs-background"></canvas>
     <script>
-        (function () {
-            window.themeConfig = {
-                particleCount: <?= $particleCount ?? 800 ?>,
-                particleSize: <?= $particleSize ?? 0.05 ?>,
-                particleColor: '<?= $particleColor ?? "#ffffff" ?>',
-                particleOpacity: <?= $particleOpacity ?? 0.6 ?>,
-                shapeCount: <?= $shapeCount ?? 10 ?>,
-                shapeColors: <?= json_encode($shapeColors ?? ["#667eea", "#764ba2", "#4facfe", "#00f2fe"]) ?>,
-                shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>,
-                bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>
-            };
-            const prefix = window.location.pathname.includes('/games/') ? '../' : '';
-            ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'].forEach(src => {
-                const s = document.createElement('script');
-                s.src = prefix + src; s.async = false;
-                document.head.appendChild(s);
-            });
-        })();
+        window.themeConfig = {
+            particleCount: <?= $particleCount ?? 800 ?>,
+            particleSize: <?= $particleSize ?? 0.05 ?>,
+            particleColor: '<?= $particleColor ?? "#00f2fe" ?>',
+            particleOpacity: <?= $particleOpacity ?? 0.6 ?>,
+            shapeCount: <?= $shapeCount ?? 15 ?>,
+            shapeColors: <?= json_encode($shapeColors ?? ["#00f2fe", "#712cf9", "#ff4757", "#c471ed"]) ?>,
+            shapeOpacity: <?= $shapeOpacity ?? 0.35 ?>,
+            bgGradient: <?= json_encode($bgGradient ?? ["#000000", "#050015", "#0a0025"]) ?>
+        };
     </script>
+    <script src="../threejs-background.js"></script>
+    <script src="../assets/js/game-effects.js"></script>
+    <script src="../assets/js/game-effects-auto.js"></script>
 
-<!-- AUTO-GENERATED BOT SCRIPT -->
-<script>
-if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
-if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
-</script>
-<script src="../assets/js/bot_virtual_cursor.js"></script>
-<script>
-    if (typeof BotVirtualCursor !== "undefined") {
-        BotVirtualCursor.init("Bot Streamer");
-        setInterval(() => {
-            const allBtns = Array.from(document.querySelectorAll("button, .btn-bet, .chip, .spin-btn, #btnSpin, .bet-button, .card, .btn-primary, .btn-success, input[type='button'], input[type='submit']"));
-            const btns = allBtns.filter(b => {
-                if(b.offsetParent === null || b.disabled) return false;
-                const txt = (b.innerText || b.value || "").toLowerCase();
-                const cls = (b.className || "").toLowerCase();
-                const id = (b.id || "").toLowerCase();
-                
-                // Exclude common navigation/help buttons
-                if(txt.includes("hướng dẫn") || txt.includes("trang chủ") || txt.includes("nạp") || txt.includes("rút") || txt.includes("lịch sử") || txt.includes("quay lại") || txt.includes("thoát")) return false;
-                if(cls.includes("back") || cls.includes("help") || cls.includes("guide") || cls.includes("close") || cls.includes("swal") || cls.includes("nav")) return false;
-                if(id.includes("guide") || id.includes("back") || id.includes("close") || id.includes("nav")) return false;
-                
-                return true;
-            });
-            
-            if(btns.length > 0) {
-                const btn = btns[Math.floor(Math.random() * btns.length)];
-                BotVirtualCursor.moveToElement($(btn), 1, 0, () => {
-                    setTimeout(() => { 
-                        BotVirtualCursor.simulateClick(() => {
-                            try { btn.click(); } catch(e){}
-                        });
-                    }, 500);
-                });
-            }
-        }, 3000 + Math.random() * 4000);
-    }
-</script>
-
+    <!-- SMART PRO BOT SCRIPT -->
+    <script>
+    if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
+    if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
+    </script>
+    <script src="../assets/js/bot_virtual_cursor.js"></script>
+    <script src="bots/bot_50.js"></script>
 </body>
 </html>

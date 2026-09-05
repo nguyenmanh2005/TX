@@ -7,11 +7,7 @@ $botUser = getOrCreateBotStreamerUser($conn, 'bot_56', 50000000);
 $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
 
-
-
-
 require '../db_connect.php';
-
 
 // AJAX history endpoint
 $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
@@ -39,6 +35,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) &&
     exit;
 }
 
+$useBotTheme = $botUserId;
 require_once '../load_theme.php';
 
 $userId = $botUserId;
@@ -48,7 +45,6 @@ $stmt->bind_param("i", $userId);
 $stmt->execute();
 $result = $stmt->get_result();
 $user = $result->fetch_assoc();
-
 
 // Get statistics from database for chart
 $gameThang = 0;
@@ -64,17 +60,16 @@ if ($rowStats = $resultStats->fetch_assoc()) {
 }
 $stmtStats->close();
 
-
 $money = $user['Money'];
 $userName = $user['Name'];
 
 // --- AJAX HANDLER ---
 if (isset($_GET['action']) && $_GET['action'] === 'buy_vietlott') {
     header('Content-Type: application/json');
-    $cost = 500000;
+    $cost = 50000;
 
     if ($money < $cost) {
-        echo json_encode(['success' => false, 'message' => '❌ Không đủ gtlm! Mỗi vé 50.000 gtlm.']);
+        echo json_encode(['success' => false, 'message' => '❌ Không đủ GTLM! Mỗi vé 50.000 GTLM.']);
         exit;
     }
 
@@ -154,20 +149,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'buy_vietlott') {
     $newMoney = $money - $cost + $prize;
     $conn->query("UPDATE users SET Money = $newMoney WHERE Iduser = $userId");
         
-        // Insert vào history_vietlott table
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($botUserId)) {
-            $userId = $botUserId;
-            $betAmount = (int)($_POST['bet'] ?? 0);
-            $resultStr = $_POST['result'] ?? 'Unknown';
-            $winAmount = (int)($reward ?? 0);
-            
-            $historyStmt = $conn->prepare("INSERT INTO history_vietlott (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-            if ($historyStmt) {
-                $historyStmt->bind_param("iisi", $userId, $betAmount, $resultStr, $winAmount);
-                $historyStmt->execute();
-                $historyStmt->close();
-            }
+    // Insert vào history_vietlott table
+    if (isset($botUserId)) {
+        $historyStmt = $conn->prepare("INSERT INTO history_vietlott (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
+        if ($historyStmt) {
+            $resultStr = implode(',', $winningNumbers);
+            $historyStmt->bind_param("iisi", $userId, $cost, $resultStr, $prize);
+            $historyStmt->execute();
+            $historyStmt->close();
         }
+    }
 
     if (file_exists('../game_history_helper.php')) {
         require_once '../game_history_helper.php';
@@ -209,9 +200,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'buy_vietlott') {
             margin: 0;
             cursor: url('../img/chuot.png'), auto !important;
             font-family: 'Poppins', sans-serif;
-            background:
-                <?= $bgGradientCSS ?>
-            ;
+            background: <?= $bgGradientCSS ?>;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -224,14 +213,70 @@ if (isset($_GET['action']) && $_GET['action'] === 'buy_vietlott') {
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+            height: 100vh;
             z-index: -1;
+            pointer-events: none;
+        }
+
+        /* ── RESULT STATUS BADGE (CHÍNH XÁC NHƯ GAME 1) ── */
+        #result-status-badge {
+            position: fixed;
+            top: 22%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            display: none;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 28px;
+            border-radius: 50px;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 255, 255, 0.2);
+            z-index: 9999;
+            pointer-events: none;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0;
+            backdrop-filter: blur(10px);
+        }
+
+        #result-status-badge.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        #result-status-badge.badge-win {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.95));
+            border: 2px solid #34d399;
+            color: #fff;
+            box-shadow: 0 0 35px rgba(16, 185, 129, 0.7);
+        }
+
+        #result-status-badge.badge-jackpot {
+            background: linear-gradient(135deg, rgba(234, 179, 8, 0.95), rgba(217, 119, 6, 0.95));
+            border: 2px solid #fbbf24;
+            color: #fff;
+            box-shadow: 0 0 45px rgba(234, 179, 8, 0.9);
+            animation: pulseGlow 1s infinite alternate;
+        }
+
+        #result-status-badge.badge-lose {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(185, 28, 28, 0.9));
+            border: 2px solid #f87171;
+            color: #fff;
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.6);
+        }
+
+        @keyframes pulseGlow {
+            from { transform: translate(-50%, -50%) scale(1); filter: brightness(1); }
+            to { transform: translate(-50%, -50%) scale(1.06); filter: brightness(1.2); }
         }
 
         .header-bar {
             width: 100%;
-            padding: 20px 40px;
+            padding: 10px 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -243,128 +288,144 @@ if (isset($_GET['action']) && $_GET['action'] === 'buy_vietlott') {
 
         .logo-vietlott {
             font-family: 'Cinzel', serif;
-            font-size: 26px;
+            font-size: 20px;
             color: var(--v-gold);
-            letter-spacing: 3px;
+            letter-spacing: 2px;
             text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
         }
 
         .user-money {
             background: rgba(0, 0, 0, 0.4);
-            padding: 8px 25px;
+            padding: 6px 20px;
             border-radius: 30px;
             border: 1px solid var(--v-gold);
             font-weight: 800;
             color: var(--v-gold);
+            font-size: 15px;
             box-shadow: 0 0 15px rgba(255, 215, 0, 0.1);
         }
 
         .main-container {
-            margin: 50px 0;
-            max-width: 900px;
+            margin: 10px auto;
+            max-width: 820px;
             width: 100%;
-            padding: 0 20px;
+            padding: 0 12px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            box-sizing: border-box;
         }
 
         /* Glass Panel */
         .glass-panel {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(18, 18, 30, 0.7);
             backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 40px;
-            padding: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 16px 22px;
             width: 100%;
-            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
             position: relative;
+            box-sizing: border-box;
         }
 
         .section-title {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 800;
-            color: #aaa;
+            color: var(--v-gold);
             text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 25px;
+            letter-spacing: 1.5px;
+            margin-bottom: 12px;
+            text-align: center;
         }
 
         /* Number Selection Grid */
         .number-grid {
             display: grid;
             grid-template-columns: repeat(9, 1fr);
-            gap: 10px;
-            margin-bottom: 30px;
+            gap: 6px;
+            margin-bottom: 14px;
+            max-width: 740px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .num-box {
             aspect-ratio: 1;
+            width: 100%;
+            max-width: 36px;
+            height: 36px;
+            margin: 0 auto;
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
+            font-size: 13px;
             font-weight: 800;
             cursor: pointer;
-            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            user-select: none;
         }
 
         .num-box:hover {
-            transform: scale(1.1);
-            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.12);
+            background: rgba(255, 255, 255, 0.25);
             border-color: var(--v-gold);
         }
 
         .num-box.selected {
-            background: var(--v-red);
+            background: linear-gradient(135deg, var(--v-red) 0%, #a00 100%);
             border-color: var(--v-gold);
             color: white;
-            box-shadow: 0 0 20px rgba(237, 28, 36, 0.6);
-            transform: scale(1.15);
+            box-shadow: 0 0 16px rgba(237, 28, 36, 0.8);
+            transform: scale(1.14);
         }
 
         /* Drawing Area */
         .drawing-zone {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 30px;
-            border-radius: 30px;
-            margin: 30px 0;
-            min-height: 120px;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 10px 16px;
+            border-radius: 16px;
+            margin: 10px 0;
+            min-height: 65px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            border: 1px dashed rgba(255, 215, 0, 0.3);
         }
 
         .winning-balls {
             display: flex;
-            gap: 15px;
-            margin-top: 15px;
+            gap: 10px;
+            margin-top: 6px;
+            justify-content: center;
+            flex-wrap: wrap;
         }
 
         .ball {
-            width: 50px;
-            height: 50px;
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
+            font-size: 16px;
             font-weight: 900;
             color: black;
             background: radial-gradient(circle at 30% 30%, #fff 0%, #ffd700 80%, #b8860b 100%);
-            box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.5);
-            transform: translateY(-30px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            transform: translateY(-20px);
             opacity: 0;
-            animation: ballDrop 0.5s forwards;
+            animation: ballDrop 0.4s forwards;
         }
 
         .ball.matched {
             background: radial-gradient(circle at 30% 30%, #fff 0%, #ed1c24 80%, #a00 100%);
             color: white;
             box-shadow: 0 0 20px #ed1c24;
+            transform: scale(1.1);
         }
 
         @keyframes ballDrop {
@@ -379,25 +440,25 @@ if (isset($_GET['action']) && $_GET['action'] === 'buy_vietlott') {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 20px;
+            gap: 8px;
         }
 
         .buy-btn {
             background: linear-gradient(135deg, var(--v-red) 0%, #a00 100%);
             color: white;
-            border: none;
-            padding: 18px 60px;
-            border-radius: 50px;
-            font-size: 20px;
+            border: 2px solid var(--v-gold);
+            padding: 10px 45px;
+            border-radius: 40px;
+            font-size: 16px;
             font-weight: 900;
             cursor: pointer;
             transition: 0.3s;
-            box-shadow: 0 10px 30px rgba(237, 28, 36, 0.3);
+            box-shadow: 0 6px 20px rgba(237, 28, 36, 0.4);
         }
 
         .buy-btn:hover:not(:disabled) {
-            transform: translateY(-5px) scale(1.05);
-            box-shadow: 0 15px 40px rgba(237, 28, 36, 0.5);
+            transform: translateY(-2px) scale(1.04);
+            box-shadow: 0 10px 30px rgba(237, 28, 36, 0.6);
         }
 
         .buy-btn:disabled {
@@ -406,69 +467,65 @@ if (isset($_GET['action']) && $_GET['action'] === 'buy_vietlott') {
         }
 
         .status-msg {
-            position: fixed;
-            bottom: 30px;
-            background: rgba(0, 0, 0, 0.8);
-            border: 2px solid var(--v-red);
+            margin-top: 8px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid var(--v-red);
             color: #fff;
-            padding: 12px 40px;
-            border-radius: 30px;
-            font-size: 14px;
+            padding: 6px 24px;
+            border-radius: 20px;
+            font-size: 12px;
             font-weight: 600;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            text-align: center;
         }
 
         .home-link {
-            color: rgba(255, 255, 255, 0.4);
-            text-decoration: none;
-            font-size: 14px;
-            margin-top: 40px;
-        }
-
-        .home-link:hover {
-            color: var(--v-gold);
+            display: none !important;
         }
     
         /* History Box Styles */
         .bottom-section {
-            margin-top: 50px;
+            margin-top: 20px;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            max-width: 1000px;
+            gap: 15px;
+            max-width: 820px;
+            width: 100%;
             margin-left: auto;
             margin-right: auto;
+            box-sizing: border-box;
         }
 
         .history-box, .chart-box {
-            background: rgba(0, 121, 107, 0.9);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: var(--border-radius);
-            padding: 25px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
             color: white;
+            box-sizing: border-box;
         }
 
         .history-box h3, .chart-box h3 {
             margin-top: 0;
-            font-size: 20px;
+            font-size: 15px;
             color: #ffd700;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4);
+            margin-bottom: 10px;
         }
 
         .history-box table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 14px;
+            font-size: 12px;
         }
 
         .history-box table tr {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            animation: slideIn 0.5s ease-out forwards;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .history-box table td, .history-box table th {
-            padding: 10px;
+            padding: 6px 8px;
             text-align: center;
         }
 
@@ -485,51 +542,45 @@ if (isset($_GET['action']) && $_GET['action'] === 'buy_vietlott') {
         @media (max-width: 768px) {
             .bottom-section {
                 grid-template-columns: 1fr;
-                gap: 20px;
+                gap: 15px;
             }
         }
-
     
         /* Statistics Container */
         .stats-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
+            gap: 10px;
+            margin-bottom: 10px;
         }
         
         .stat-item {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 8px;
-            padding: 15px;
+            padding: 10px;
             text-align: center;
             transition: all 0.3s ease;
         }
         
-        .stat-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
-        }
-        
         .stat-item.wins {
-            border-left: 4px solid #4ade80;
+            border-left: 3px solid #4ade80;
         }
         
         .stat-item.losses {
-            border-left: 4px solid #ff6b6b;
+            border-left: 3px solid #ff6b6b;
         }
         
         .stat-item .label {
-            font-size: 12px;
+            font-size: 11px;
             color: rgba(255, 255, 255, 0.6);
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
         
         .stat-item .value {
-            font-size: 28px;
+            font-size: 20px;
             font-weight: 700;
             color: #ffd700;
         }
@@ -540,19 +591,25 @@ if (isset($_GET['action']) && $_GET['action'] === 'buy_vietlott') {
         }
         
         .chart-box canvas {
-            margin-top: 20px;
+            margin-top: 10px;
         }
-
     </style>
 </head>
 
 <body>
-    
+    <!-- ThreeJS 3D Canvas Background -->
+    <canvas id="threejs-background"></canvas>
+
+    <!-- Modal Status Badge (Thắng / Thua Game 1) -->
+    <div id="result-status-badge">
+        <span class="badge-icon">🎉</span>
+        <span class="badge-text">CHIẾN THẮNG</span>
+    </div>
 
     <header class="header-bar">
-        <div class="logo-vietlott">VIETLOTT PREMUM</div>
+        <div class="logo-vietlott">VIETLOTT PREMIUM</div>
         <div class="user-money">💰 <span id="money-val"><?= number_format($money) ?> gtlm</span></div>
-        <div style="font-size: 13px; color: #666;">PLAYER: <b><?= htmlspecialchars($userName) ?></b></div>
+        <div style="font-size: 13px; color: #aaa;">STREAMER: <b style="color: #ffd700;"><?= htmlspecialchars($userName) ?></b></div>
     </header>
 
     <div class="main-container">
@@ -561,12 +618,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'buy_vietlott') {
 
             <div class="number-grid">
                 <?php for ($i = 1; $i <= 45; $i++): ?>
-                    <div class="num-box" onclick="toggleNumber(this, <?= $i ?>)"><?= $i ?></div>
+                    <div class="num-box" data-num="<?= $i ?>" onclick="toggleNumber(this, <?= $i ?>)"><?= $i ?></div>
                 <?php endfor; ?>
             </div>
 
             <div class="drawing-zone">
-                <div class="section-title" id="draw-label">KẾT QUẢ QUAY THƯỞNG</div>
+                <div class="section-title" id="draw-label" style="margin-bottom: 4px;">KẾT QUẢ QUAY THƯỞNG</div>
                 <div class="winning-balls" id="ball-container">
                     <!-- Balls will appear here -->
                 </div>
@@ -574,25 +631,106 @@ if (isset($_GET['action']) && $_GET['action'] === 'buy_vietlott') {
 
             <div class="action-row">
                 <button class="buy-btn" id="buy-trigger">🎫 MUA VÉ - 50.000 gtlm</button>
-                <div style="color: #888; font-size: 12px;">BẠN ĐÃ CHỌN: <span id="selected-list"
+                <div style="color: #aaa; font-size: 12px;">BẠN ĐÃ CHỌN: <span id="selected-list"
                         style="color: var(--v-gold); font-weight: 800;">-</span></div>
+                <div class="status-msg" id="status-bar">CHỌN SỐ VÀ NHẤN "MUA VÉ" ĐỂ THỬ VẬN MAY!</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Theme Config & Effects -->
+    <script>
+        window.themeConfig = {
+            particleCount: <?= $particleCount ?? 800 ?>,
+            particleSize: <?= $particleSize ?? 0.05 ?>,
+            particleColor: '<?= $particleColor ?? "#ff00ff" ?>',
+            particleOpacity: <?= $particleOpacity ?? 0.6 ?>,
+            shapeCount: <?= $shapeCount ?? 10 ?>,
+            shapeColors: <?= json_encode($shapeColors ?? ["#ff00ff", "#00ffff", "#ffff00"]) ?>,
+            shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>,
+            bgGradient: <?= json_encode($bgGradient ?? ["#000000", "#110011", "#220022"]) ?>
+        };
+    </script>
+    <script src="../threejs-background.js"></script>
+    <script src="../assets/js/game-effects.js"></script>
+    <script src="../assets/js/game-effects-auto.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <div class="bottom-section">
+        <div class="history-box">
+            <h3>📋 Lịch sử quay thưởng (10 lần gần nhất)</h3>
+            <div class="table-responsive">
+                <table id="historyTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Cược</th>
+                            <th>Kết quả</th>
+                            <th>Thắng</th>
+                            <th>Thời gian</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: #888; font-style: italic;">Chưa có lượt chơi nào</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <a href="../index.php" class="home-link">🏠 QUAY LẠI TRANG CHỦ</a>
+        <div class="chart-box">
+            <h3>📊 Thống kê Vietlott</h3>
+            <div class="stats-container">
+                <div class="stat-item wins">
+                    <div class="label">Lần Thắng</div>
+                    <div class="value" style="color: #4ade80;" id="stat-wins"><?= $gameThang ?></div>
+                </div>
+                <div class="stat-item losses">
+                    <div class="label">Lần Thua</div>
+                    <div class="value" style="color: #ff6b6b;" id="stat-losses"><?= $gameThua ?></div>
+                </div>
+            </div>
+            <div style="position: relative; height: 160px;">
+                <canvas id="gameChart"></canvas>
+            </div>
+        </div>
     </div>
 
-    <div class="status-msg" id="status-bar">CHỌN SỐ VÀ NHẤN "MUA VÉ" ĐỂ THỬ VẬN MAY!</div>
-
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Game Logic -->
     <script>
-        (function () {
-            window.themeConfig = { particleCount: <?= $particleCount ?>, particleSize: <?= $particleSize ?>, particleColor: '<?= $particleColor ?>', particleOpacity: <?= $particleOpacity ?>, shapeCount: <?= $shapeCount ?>, shapeColors: <?= json_encode($shapeColors) ?>, shapeOpacity: <?= $shapeOpacity ?>, bgGradient: <?= json_encode($bgGradient) ?> };
-            const script = document.createElement('script'); script.src = '../threejs-background.js'; document.head.appendChild(script);
-        })();
-
         let selectedNumbers = [];
         let isSpinning = false;
+
+        function showResultStatus(type, text, icon) {
+            const badge = document.getElementById('result-status-badge');
+            if (!badge) return;
+            badge.className = '';
+            badge.classList.add('badge-' + type);
+            badge.querySelector('.badge-icon').textContent = icon || (type === 'win' ? '🎉' : (type === 'jackpot' ? '👑' : '😢'));
+            badge.querySelector('.badge-text').textContent = text;
+            badge.style.display = 'flex';
+            void badge.offsetWidth;
+            badge.classList.add('show');
+
+            if (type === 'win' || type === 'jackpot') {
+                if (typeof GameEffects !== 'undefined' && GameEffects.win) {
+                    GameEffects.win();
+                }
+            } else {
+                if (typeof GameEffects !== 'undefined' && GameEffects.lose) {
+                    GameEffects.lose();
+                }
+            }
+
+            setTimeout(() => {
+                badge.classList.remove('show');
+                setTimeout(() => {
+                    badge.style.display = 'none';
+                }, 400);
+            }, 3800);
+        }
 
         function toggleNumber(el, num) {
             if (isSpinning) return;
@@ -602,7 +740,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'buy_vietlott') {
                 el.classList.remove('selected');
             } else {
                 if (selectedNumbers.length >= 6) {
-                    Swal.fire({ text: 'Bạn chỉ được chọn tối đa 6 số!', icon: 'warning', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ text: 'Bạn chỉ được chọn tối đa 6 số!', icon: 'warning', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+                    }
                     return;
                 }
                 selectedNumbers.push(num);
@@ -615,7 +755,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'buy_vietlott') {
         async function buyTicket() {
             if (isSpinning) return;
             if (selectedNumbers.length < 1) {
-                Swal.fire('Lỗi', 'Vui lòng chọn ít nhất 1 số!', 'error');
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({ text: 'Vui lòng chọn ít nhất 1 số!', icon: 'warning', toast: true, position: 'top-end', showConfirmButton: false, timer: 2500 });
+                }
                 return;
             }
 
@@ -636,9 +778,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'buy_vietlott') {
                 const data = await res.json();
 
                 if (data.success) {
-                    // Animation quay bóng
+                    // Animation quay bóng (400ms mỗi quả để kịch tính mượt mà)
                     for (let i = 0; i < 6; i++) {
-                        await new Promise(r => setTimeout(r, 600));
+                        await new Promise(r => setTimeout(r, 400));
                         const val = data.winningNumbers[i];
                         const ball = document.createElement('div');
                         ball.className = 'ball';
@@ -653,24 +795,30 @@ if (isset($_GET['action']) && $_GET['action'] === 'buy_vietlott') {
                         document.getElementById('money-val').textContent = data.newBalance;
                         document.getElementById('status-bar').textContent = data.message;
 
+                        const matchCount = data.matchedNumbers ? data.matchedNumbers.length : 0;
                         if (data.prize > 0) {
                             if (typeof confetti === 'function') {
-                                confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 }, colors: ['#ffd700', '#ed1c24'] });
+                                confetti({ particleCount: 160, spread: 80, origin: { y: 0.6 }, colors: ['#ffd700', '#ed1c24', '#00ffff'] });
                             }
-                            Swal.fire({ title: '🎊 CHÚC MỪNG!', text: data.message, icon: 'success', confirmButtonColor: '#ed1c24' });
+                            if (matchCount >= 3 || data.prize >= 200000) {
+                                showResultStatus('jackpot', `👑 TRÚNG ${matchCount} SỐ! +${data.prize.toLocaleString('vi-VN')} GTLM`, '👑');
+                            } else {
+                                showResultStatus('win', `🎉 TRÚNG ${matchCount} SỐ! +${data.prize.toLocaleString('vi-VN')} GTLM`, '🎉');
+                            }
                         } else {
-                            Swal.fire({ title: 'Rất tiếc', text: data.message, icon: 'info', confirmButtonColor: '#0055a4' });
+                            showResultStatus('lose', `😢 BAY MÀU -50.000 GTLM (TRÚNG 0 SỐ)`, '😢');
                         }
 
                         isSpinning = false;
                         document.getElementById('buy-trigger').disabled = false;
-                    }, 500);
+                        loadVietlottHistory();
+                    }, 400);
 
                 } else {
-                    Swal.fire('Lỗi', data.message, 'error');
+                    document.getElementById('status-bar').textContent = data.message;
+                    showResultStatus('lose', data.message, '⚠️');
                     isSpinning = false;
                     document.getElementById('buy-trigger').disabled = false;
-                    document.getElementById('status-bar').textContent = "HÃY THỬ LẠI!";
                 }
             } catch (e) {
                 console.error(e);
@@ -680,86 +828,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'buy_vietlott') {
         }
 
         document.getElementById('buy-trigger').onclick = buyTicket;
-    </script>
 
-    
-    
-
-
-    
-
-
-    
-
-
-    <!-- Premium Effects System -->
-    <canvas id="threejs-background"></canvas>
-    <script>
-        (function() {
-            window.themeConfig = {
-                particleCount: <?= $particleCount ?? 800 ?>,
-                particleSize: <?= $particleSize ?? 0.05 ?>,
-                particleColor: '<?= $particleColor ?? "#ffffff" ?>',
-                particleOpacity: <?= $particleOpacity ?? 0.6 ?>,
-                shapeCount: <?= $shapeCount ?? 10 ?>,
-                shapeColors: <?= json_encode($shapeColors ?? ["#667eea", "#764ba2", "#4facfe", "#00f2fe"]) ?>,
-                shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>,
-                bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>
-            };
-            const prefix = window.location.pathname.includes('/games/') ? '../' : '';
-            const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
-            
-            scripts.forEach(src => {
-                const s = document.createElement('script');
-                s.src = prefix + src;
-                s.async = false;
-                document.head.appendChild(s);
-            });
-        })();
-    </script>
-
-    <div class="bottom-section">
-        <div class="history-box">
-            <h3>📋 Lịch sử quay thưởng (20 lần gần nhất)</h3>
-            <div class="table-responsive">
-                <table class="w-full text-left border-collapse" id="historyTable">
-                    <thead>
-                        <tr class="bg-white/10 text-yellow-400">
-                            <th class="p-3 border border-white/10">ID</th>
-                            <th class="p-3 border border-white/10 text-right">Cược</th>
-                            <th class="p-3 border border-white/10">Kết quả</th>
-                            <th class="p-3 border border-white/10 text-right">Thắng</th>
-                            <th class="p-3 border border-white/10 text-right">Thời gian</th>
-                        </tr>
-                    </thead>
-                    <tbody id="historyBody">
-                        <tr>
-                            <td colspan="5" class="text-center p-6 text-gray-400 italic">Chưa có lượt chơi nào</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="chart-box">
-            <h3>📊 Thống kê Vietlott</h3>
-            <div class="stats-container grid grid-cols-2 gap-4 mb-6">
-                <div class="stat-item wins p-4 rounded-lg bg-green-500/10 border-l-4 border-green-500 text-center">
-                    <div class="label text-xs text-gray-400 uppercase tracking-wider mb-1">Lần Thắng</div>
-                    <div class="value text-2xl font-bold text-green-400"><?= $gameThang ?></div>
-                </div>
-                <div class="stat-item losses p-4 rounded-lg bg-red-500/10 border-l-4 border-red-500 text-center">
-                    <div class="label text-xs text-gray-400 uppercase tracking-wider mb-1">Lần Thua</div>
-                    <div class="value text-2xl font-bold text-red-400"><?= $gameThua ?></div>
-                </div>
-            </div>
-            <div class="relative h-[250px]">
-                <canvas id="gameChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <script>
         async function loadVietlottHistory() {
             try {
                 const response = await fetch('?action=get_history', {
@@ -771,21 +840,27 @@ if (isset($_GET['action']) && $_GET['action'] === 'buy_vietlott') {
                     const tbody = document.getElementById('historyBody');
                     if (tbody) {
                         tbody.innerHTML = '';
-                        data.history.slice(0, 10).forEach((record, index) => {
+                        let wins = 0;
+                        let losses = 0;
+                        data.history.forEach(r => {
+                            if (parseInt(r.WinAmount) > 0) wins++; else losses++;
+                        });
+                        const statWins = document.getElementById('stat-wins');
+                        const statLosses = document.getElementById('stat-losses');
+                        if (statWins) statWins.textContent = wins;
+                        if (statLosses) statLosses.textContent = losses;
+
+                        data.history.slice(0, 10).forEach((record) => {
                             const newRow = document.createElement('tr');
-                            newRow.className = 'border-b border-white/5 hover:bg-white/5 transition-colors';
-                            newRow.style.animation = `slideIn 0.5s ease-out forwards ${index * 0.05}s`;
-                            newRow.style.opacity = '0';
-                            
                             const winVal = parseInt(record.WinAmount);
-                            const winColor = winVal > 0 ? 'text-green-400' : 'text-red-400';
+                            const winColor = winVal > 0 ? '#4ade80' : '#ff6b6b';
                             
                             newRow.innerHTML = `
-                                <td class="p-3 border border-white/10 text-center text-gray-300 font-mono text-sm">${record.Id}</td>
-                                <td class="p-3 border border-white/10 text-right text-gray-200">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
-                                <td class="p-3 border border-white/10 text-gray-200 font-semibold">${record.Result || '-'}</td>
-                                <td class="p-3 border border-white/10 text-right font-bold ${winColor}">${winVal.toLocaleString('vi-VN')}</td>
-                                <td class="p-3 border border-white/10 text-right text-xs text-gray-400">${record.Time}</td>
+                                <td style="text-align: center; color: #ccc; font-family: monospace;">${record.Id}</td>
+                                <td style="text-align: right; color: #eee;">${parseInt(record.Bet).toLocaleString('vi-VN')}</td>
+                                <td style="text-align: center; color: #ffd700; font-weight: 600;">${record.Result || '-'}</td>
+                                <td style="text-align: right; font-weight: bold; color: ${winColor};">${winVal.toLocaleString('vi-VN')}</td>
+                                <td style="text-align: right; font-size: 11px; color: #888;">${record.Time}</td>
                             `;
                             tbody.appendChild(newRow);
                         });
@@ -808,7 +883,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'buy_vietlott') {
                         labels: ['Thắng', 'Thua'],
                         datasets: [{
                             data: [<?= $gameThang ?>, <?= $gameThua ?>],
-                            backgroundColor: ['rgba(74, 222, 128, 0.7)', 'rgba(255, 107, 107, 0.7)'],
+                            backgroundColor: ['rgba(74, 222, 128, 0.8)', 'rgba(255, 107, 107, 0.8)'],
                             borderColor: ['rgba(74, 222, 128, 1)', 'rgba(255, 107, 107, 1)'],
                             borderWidth: 2,
                             borderRadius: 4
@@ -820,7 +895,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'buy_vietlott') {
                         plugins: {
                             legend: {
                                 position: 'bottom',
-                                labels: { color: 'rgba(255, 255, 255, 0.8)', padding: 20, usePointStyle: true }
+                                labels: { color: 'rgba(255, 255, 255, 0.8)', padding: 10, usePointStyle: true, font: { size: 11 } }
                             }
                         }
                     }
@@ -829,44 +904,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'buy_vietlott') {
         });
     </script>
 
-<!-- AUTO-GENERATED BOT SCRIPT -->
-<script>
-if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
-if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
-</script>
-<script src="../assets/js/bot_virtual_cursor.js"></script>
-<script>
-    if (typeof BotVirtualCursor !== "undefined") {
-        BotVirtualCursor.init("Bot Streamer");
-        setInterval(() => {
-            const allBtns = Array.from(document.querySelectorAll("button, .btn-bet, .chip, .spin-btn, #btnSpin, .bet-button, .card, .btn-primary, .btn-success, input[type='button'], input[type='submit']"));
-            const btns = allBtns.filter(b => {
-                if(b.offsetParent === null || b.disabled) return false;
-                const txt = (b.innerText || b.value || "").toLowerCase();
-                const cls = (b.className || "").toLowerCase();
-                const id = (b.id || "").toLowerCase();
-                
-                // Exclude common navigation/help buttons
-                if(txt.includes("hướng dẫn") || txt.includes("trang chủ") || txt.includes("nạp") || txt.includes("rút") || txt.includes("lịch sử") || txt.includes("quay lại") || txt.includes("thoát")) return false;
-                if(cls.includes("back") || cls.includes("help") || cls.includes("guide") || cls.includes("close") || cls.includes("swal") || cls.includes("nav")) return false;
-                if(id.includes("guide") || id.includes("back") || id.includes("close") || id.includes("nav")) return false;
-                
-                return true;
-            });
-            
-            if(btns.length > 0) {
-                const btn = btns[Math.floor(Math.random() * btns.length)];
-                BotVirtualCursor.moveToElement($(btn), 1, 0, () => {
-                    setTimeout(() => { 
-                        BotVirtualCursor.simulateClick(() => {
-                            try { btn.click(); } catch(e){}
-                        });
-                    }, 500);
-                });
-            }
-        }, 3000 + Math.random() * 4000);
-    }
-</script>
-
+    <!-- Nạp Bot AI Chuyên Nghiệp -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="../assets/js/bot_virtual_cursor.js"></script>
+    <script src="bots/bot_56.js"></script>
 </body>
 </html>
