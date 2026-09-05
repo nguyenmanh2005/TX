@@ -15,7 +15,7 @@ require_once __DIR__ . '/bot_streamer_helper.php';
 
 $userId = (int)$_SESSION['Iduser'];
 $tableId = isset($_GET['id']) ? (int)$_GET['id'] : 1;
-if ($tableId < 1 || $tableId > 58) $tableId = 1;
+if ($tableId < 1 || $tableId > 61) $tableId = 1;
 
 // Lấy thông tin Bot Streamer để nạp Theme của Streamer thay vì người xem
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_' . $tableId, 50000000);
@@ -82,7 +82,10 @@ $gameFilesMap = [
     55 => ['file' => 'live_55.php', 'real_game' => '../games/videopoker.php', 'name' => 'Videopoker', 'icon' => '🎯'],
     56 => ['file' => 'live_56.php', 'real_game' => '../games/vietlott.php', 'name' => 'Vietlott', 'icon' => '🎯'],
     57 => ['file' => 'live_57.php', 'real_game' => '../games/war.php', 'name' => 'War', 'icon' => '🎪'],
-    58 => ['file' => 'live_58.php', 'real_game' => '../games/yahtzee.php', 'name' => 'Yahtzee', 'icon' => '🎯']
+    58 => ['file' => 'live_58.php', 'real_game' => '../games/yahtzee.php', 'name' => 'Yahtzee', 'icon' => '🎯'],
+    59 => ['file' => 'live_59.php', 'real_game' => '../games/plinko_v2.php', 'name' => 'Plinko V2 Pro', 'icon' => '🎱'],
+    60 => ['file' => 'live_60.php', 'real_game' => '../plinko_royale_v3.php', 'name' => 'Plinko Royale V3', 'icon' => '👑'],
+    61 => ['file' => 'live_61.php', 'real_game' => '../tower_of_gods.php', 'name' => 'Tháp Thần Bài', 'icon' => '🗼']
 ];
 
 $botThemesMap = [
