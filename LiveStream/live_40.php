@@ -105,7 +105,7 @@ if (isset($_GET['action'])) {
         $cuoc = (int) ($_POST['cuoc'] ?? 0);
         if ($cuoc <= 0 || $cuoc > $soDu) {
             if ($soDu < 10000) {
-                // Tự động nạp tiền cho bot streamer duy trì live 24/7
+                // Tự động nạp GTLM cho bot streamer duy trì live 24/7
                 $conn->query("UPDATE users SET Money = 50000000 WHERE Iduser = " . (int)$userId);
                 $soDu = 50000000;
             } else {

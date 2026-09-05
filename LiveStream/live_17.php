@@ -436,7 +436,7 @@ if (isset($_GET['action'])) {
             $.get('?action=call', function(res) {
                 if (!res.success) {
                     Swal.fire('Lỗi', res.message, 'error');
-                    // Tự động chuyển qua Fold nếu lỗi (vd không đủ tiền) để bot không bị kẹt
+                    // Tự động chuyển qua Fold nếu lỗi (vd không đủ GTLM) để bot không bị kẹt
                     if (window.isBotStreamer || true) {
                         setTimeout(() => { fold(); }, 1500);
                     }

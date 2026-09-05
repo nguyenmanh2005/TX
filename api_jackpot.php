@@ -77,7 +77,7 @@ switch ($action) {
 
             $splitAmount = $winAmount / count($winners);
 
-            // Cập nhật tiền cho người chơi
+            // Cập nhật GTLM cho người chơi
             foreach ($winners as $wId) {
                 $upd = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
                 $upd->bind_param("di", $splitAmount, $wId);

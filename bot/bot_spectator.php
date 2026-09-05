@@ -22,7 +22,7 @@ function handleSpectatorBot($baseUrl, $cFile, $botMoney, $brain, $userId, $userN
                 $rnd = rand(1, 100);
                 
                 // --- TẶNG QUÀ / TIP GTLM ---
-                // Điều kiện: Vừa thắng game, hoặc Tùy hứng (khi có nhiều tiền)
+                // Điều kiện: Vừa thắng game, hoặc Tùy hứng (khi có nhiều GTLM)
                 if ($justWon || ($rnd <= 20 && $botMoney > 500000)) {
                     if (rand(1, 100) > 50 && $botMoney > 1000000) {
                         // Tặng quà Tiktok (Siêu xe, Hoa hồng, Tên lửa...)

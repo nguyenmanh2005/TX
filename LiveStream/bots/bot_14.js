@@ -65,7 +65,7 @@ function startBot14() {
         BotVirtualCursor.moveToElement($(btn), 0.35, 0, () => {
             BotVirtualCursor.simulateClick(() => {
                 setTimeout(() => {
-                    try { btn.click(); } catch(e) {}
+                    try { btn.click(); } catch (e) { }
                     cb && cb();
                 }, 200);
             });
@@ -74,8 +74,8 @@ function startBot14() {
 
     // ─── CHIP / CỠ CƯỢC ──────────────────────────────────────────
     const BET_POOL = [10000, 50000, 100000, 200000, 500000, 1000000];
-    let betIndex   = 1; // 50K mặc định
-    let winStreak  = 0;
+    let betIndex = 1; // 50K mặc định
+    let winStreak = 0;
     let loseStreak = 0;
 
     function adjustBetFromResult() {
@@ -96,7 +96,7 @@ function startBot14() {
 
     // ─── LUỒNG CHƠI CHÍNH ────────────────────────────────────────
     function run() {
-        const hitBtn   = getHitBtn();
+        const hitBtn = getHitBtn();
         const standBtn = getStandBtn();
         const startBtn = getStartBtn();
         const betInput = getBetInput();
@@ -111,11 +111,11 @@ function startBot14() {
                 if (doHit) {
                     clickBtn(hitBtn, () => {
                         // Form submit → iframe reload → bot tự chạy lại
-                        try { hitBtn.closest('form').submit(); } catch(e) {}
+                        try { hitBtn.closest('form').submit(); } catch (e) { }
                     });
                 } else {
                     clickBtn(standBtn, () => {
-                        try { standBtn.closest('form').submit(); } catch(e) {}
+                        try { standBtn.closest('form').submit(); } catch (e) { }
                     });
                 }
             }, thinkTime);
@@ -132,7 +132,7 @@ function startBot14() {
                 // 1. Rê chuột đến ô nhập cược
                 BotVirtualCursor.moveToElement($(betInput), 0.3, 0, () => {
                     BotVirtualCursor.simulateClick(() => {
-                        // 2. Điền số tiền cược
+                        // 2. Điền số GTLM cược
                         const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
                         setter.call(betInput, bet);
                         betInput.dispatchEvent(new Event('input', { bubbles: true }));
@@ -141,7 +141,7 @@ function startBot14() {
                         setTimeout(() => {
                             // 3. Rê chuột đến nút Bắt Đầu và click
                             clickBtn(startBtn, () => {
-                                try { startBtn.closest('form').submit(); } catch(e) {}
+                                try { startBtn.closest('form').submit(); } catch (e) { }
                             });
                         }, 500 + Math.random() * 400);
                     });

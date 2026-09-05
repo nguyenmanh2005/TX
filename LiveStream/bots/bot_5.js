@@ -1,7 +1,7 @@
 /**
  * 🤖 BOT STREAMER PRO V3 - LONG HỔ TRANH BÁ (DRAGON - TIE - TIGER)
  * - Tự động nhận diện và phân tích 3 cửa: Rồng (Dragon), Hòa (Tie), Hổ (Tiger).
- * - Quản lý vốn thông minh: Tự chọn phỉnh cược theo túi tiền, NGĂN CHẶN TUYỆT ĐỐI bấm nút XÓA.
+ * - Quản lý vốn thông minh: Tự chọn phỉnh cược theo túi GTLM, NGĂN CHẶN TUYỆT ĐỐI bấm nút XÓA.
  * - Quy trình người thật: Chọn ô cược -> Chọn phỉnh cược -> Bấm QUYẾT ĐẤU -> Bấm VÁN MỚI.
  */
 if (typeof BotVirtualCursor !== "undefined") {
@@ -20,7 +20,7 @@ if (typeof BotVirtualCursor !== "undefined") {
             setTimeout(() => {
                 BotVirtualCursor.moveToElement($(resetBtn), 0.3, 0, () => {
                     BotVirtualCursor.simulateClick(() => {
-                        try { resetBtn.click(); } catch(e){}
+                        try { resetBtn.click(); } catch (e) { }
                         botRunning = false;
                         setTimeout(runSmartBot5, 400);
                     });
@@ -98,24 +98,24 @@ if (typeof BotVirtualCursor !== "undefined") {
         // BƯỚC 1: Chọn Ô Cược Chính (Dragon / Tiger / Tie)
         BotVirtualCursor.moveToElement($(mainBoxEl), 0.28, 0, () => {
             BotVirtualCursor.simulateClick(() => {
-                try { mainBoxEl.click(); } catch(e){}
+                try { mainBoxEl.click(); } catch (e) { }
 
                 // BƯỚC 2: Chọn Phỉnh Cược Hợp Lệ (Không bao giờ click XÓA)
                 setTimeout(() => {
                     BotVirtualCursor.moveToElement($(selectedChipEl), 0.25, 0, () => {
                         BotVirtualCursor.simulateClick(() => {
-                            try { selectedChipEl.click(); } catch(e){}
+                            try { selectedChipEl.click(); } catch (e) { }
 
                             // BƯỚC 2.5 (Tùy chọn): Lót thêm cửa Hòa (Tie 1 ăn 8)
                             if (alsoBetTie && tieBoxEl && tieChipEl) {
                                 setTimeout(() => {
                                     BotVirtualCursor.moveToElement($(tieBoxEl), 0.25, 0, () => {
                                         BotVirtualCursor.simulateClick(() => {
-                                            try { tieBoxEl.click(); } catch(e){}
+                                            try { tieBoxEl.click(); } catch (e) { }
                                             setTimeout(() => {
                                                 BotVirtualCursor.moveToElement($(tieChipEl), 0.22, 0, () => {
                                                     BotVirtualCursor.simulateClick(() => {
-                                                        try { tieChipEl.click(); } catch(e){}
+                                                        try { tieChipEl.click(); } catch (e) { }
                                                         // Chuyển sang bấm Quyết Đấu
                                                         triggerDeal();
                                                     });
@@ -139,7 +139,7 @@ if (typeof BotVirtualCursor !== "undefined") {
             setTimeout(() => {
                 BotVirtualCursor.moveToElement($(dealBtn), 0.28, 0, () => {
                     BotVirtualCursor.simulateClick(() => {
-                        try { dealBtn.click(); } catch(e){}
+                        try { dealBtn.click(); } catch (e) { }
                         botRunning = false;
                         setTimeout(runSmartBot5, 1200);
                     });

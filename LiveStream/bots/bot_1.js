@@ -105,7 +105,7 @@ if (typeof BotVirtualCursor !== "undefined") {
                 }
                 if (suitableChips.length === 0) suitableChips = safeChips;
 
-                // ALL IN dễ xảy ra hơn khi đang "máu me" gỡ gấp (thua streak dài + ít tiền)
+                // ALL IN dễ xảy ra hơn khi đang "máu me" gỡ gấp (thua streak dài + ít GTLM)
                 const allInChance = loseStreak >= 5 ? 0.03 : 0.01;
                 if (Math.random() < allInChance && balance > 0 && balance < 2000000 && allInChip) {
                     targetBtn = allInChip;

@@ -11,7 +11,7 @@
  *    - Thời gian suy nghĩ tự nhiên theo từng vòng cược (Pre-flop nhanh, River cân nhắc kỹ).
  * 3. BẢO TOÀN LỢI THẾ CƯỢC:
  *    - Luôn Call/Check qua từng vòng để tối đa hóa cơ hội ăn trọn Pot x4 ở Showdown.
- *    - Tuyệt đối không tự Fold bỏ tiền oan uổng.
+ *    - Tuyệt đối không tự Fold bỏ GTLM oan uổng.
  * 4. HỆ THỐNG WATCHDOG & CHỐNG KẸT:
  *    - Tự động đóng popup cản trở, phục hồi trạng thái sau 3s nếu có gián đoạn mạng.
  *    - Tương tác chat chuẩn phong cách Poker sảnh VIP.
@@ -60,13 +60,13 @@
         }
 
         const startCtrl = document.getElementById('start-controls');
-        const playCtrl  = document.getElementById('play-controls');
+        const playCtrl = document.getElementById('play-controls');
 
         const startVisible = startCtrl && window.getComputedStyle(startCtrl).display !== 'none';
-        const playVisible  = playCtrl  && window.getComputedStyle(playCtrl).display  !== 'none';
+        const playVisible = playCtrl && window.getComputedStyle(playCtrl).display !== 'none';
 
         if (startVisible) return STATE.START;
-        if (playVisible)  return STATE.PLAY;
+        if (playVisible) return STATE.PLAY;
         return STATE.NONE;
     }
 

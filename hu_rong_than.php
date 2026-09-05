@@ -403,7 +403,7 @@ $lastWinAt = $jackpot['last_win_at'] ?? 'Chưa rõ';
             <div class="rule-card">
                 <div class="rule-icon"><i class="fa-solid fa-coins"></i></div>
                 <h3>Tích lũy vô hạn</h3>
-                <p>Mỗi khi bất kỳ ai đặt cược tại mọi trò chơi trên server, <strong>0.1%</strong> số tiền cược sẽ được tự động trích và cộng dồn vào quỹ Hũ Rồng Thần.</p>
+                <p>Mỗi khi bất kỳ ai đặt cược tại mọi trò chơi trên server, <strong>0.1%</strong> số GTLM cược sẽ được tự động trích và cộng dồn vào quỹ Hũ Rồng Thần.</p>
             </div>
             <div class="rule-card">
                 <div class="rule-icon"><i class="fa-solid fa-bolt"></i></div>
@@ -487,7 +487,7 @@ $lastWinAt = $jackpot['last_win_at'] ?? 'Chưa rõ';
                     text: 'Nhập ID người chơi may mắn:',
                     input: 'number',
                     showCancelButton: true,
-                    confirmButtonText: 'Chuyển tiền',
+                    confirmButtonText: 'Chuyển GTLM',
                     confirmButtonColor: '#10b981'
                 }).then((res) => {
                     if (res.isConfirmed && res.value) processAdminWithdraw('individual', res.value);
@@ -506,7 +506,7 @@ $lastWinAt = $jackpot['last_win_at'] ?? 'Chưa rõ';
             } else if (type === 'random') {
                 Swal.fire({
                     title: 'Mưa tài lộc',
-                    text: 'Nhập số lượng người chơi sẽ được nhận tiền ngẫu nhiên:',
+                    text: 'Nhập số lượng người chơi sẽ được nhận GTLM ngẫu nhiên:',
                     input: 'number',
                     showCancelButton: true,
                     confirmButtonText: 'Bốc thăm & Chia đều',

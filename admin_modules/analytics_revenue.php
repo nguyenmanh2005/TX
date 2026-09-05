@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once 'db_connect.php';
 require_once 'admin_helper.php';
@@ -7,7 +7,7 @@ if (!isset($_SESSION['Iduser'])) { header('Location: login.php'); exit(); }
 $userId = (int)$_SESSION['Iduser'];
 if (!isAdmin($conn, $userId)) { header("Location: Shared/403/403.php"); exit(); }
 
-// --- 1. Tá»•ng quan Doanh thu (GTLM Sinks) ---
+// --- 1. Tổng quan Doanh thu (GTLM Sinks) ---
 $revenueStats = [
     'total_burned' => 0,
     'marketplace_fees' => 0,
@@ -17,40 +17,42 @@ $revenueStats = [
     'vip_purchases' => 0
 ];
 
-// Marketplace Fees (5% má»—i giao dá»‹ch thành công)
+// Marketplace Fees (5% mỗi giao dịch thành công)
 $res = $conn->query("SELECT SUM(price * 0.05) as fees FROM marketplace_listings WHERE status = 'sold'");
-$revenueStats['marketplace_fees'] = (float)($res->fetch_assoc()['fees'] ?? 0);
+$revenueStats['marketplace_fees'] = (float)($res ? ($res->fetch_assoc()['fees'] ?? 0) : 0);
 
-// Crafting Costs (PhÃ­ từ crafting_logs)
+// Crafting Costs (Phí từ crafting_logs)
 $res = $conn->query("SELECT SUM(gtlm_spent) as spent FROM crafting_logs");
-$revenueStats['crafting_costs'] = (float)($res->fetch_assoc()['spent'] ?? 0);
+$revenueStats['crafting_costs'] = (float)($res ? ($res->fetch_assoc()['spent'] ?? 0) : 0);
 
-// Guild Fees (PhÃ­ táº¡o Guild)
+// Guild Fees (Phí tạo Guild)
 $res = $conn->query("SELECT COUNT(*) * 500000 as fees FROM guilds");
-$revenueStats['guild_fees'] = (float)($res->fetch_assoc()['fees'] ?? 0);
+$revenueStats['guild_fees'] = (float)($res ? ($res->fetch_assoc()['fees'] ?? 0) : 0);
 
 // Battle Pass Premium Purchases
 $res = $conn->query("SELECT COUNT(*) * 1000000 as revenue FROM bp_stats WHERE has_premium = 1");
-$revenueStats['battle_pass'] = (float)($res->fetch_assoc()['revenue'] ?? 0);
+$revenueStats['battle_pass'] = (float)($res ? ($res->fetch_assoc()['revenue'] ?? 0) : 0);
 
 $revenueStats['total_burned'] = $revenueStats['marketplace_fees'] + $revenueStats['crafting_costs'] + $revenueStats['guild_fees'] + $revenueStats['battle_pass'];
 
-// --- 2. PhÃ¢n tÃ­ch Game Revenue ---
+// --- 2. Phân tích Game Revenue ---
 $gameRevenue = [];
 $res = $conn->query("SELECT game_name, SUM(bet_amount - win_amount) as house_profit FROM game_history GROUP BY game_name ORDER BY house_profit DESC");
-while($row = $res->fetch_assoc()) {
-    $gameRevenue[] = $row;
+if ($res) {
+    while($row = $res->fetch_assoc()) {
+        $gameRevenue[] = $row;
+    }
 }
 
 // --- 3. ARPU & Conversion ---
-$totalUsers = $conn->query("SELECT COUNT(*) FROM users")->fetch_row()[0];
+$totalUsers = (int)($conn->query("SELECT COUNT(*) FROM users")->fetch_row()[0] ?? 0);
 $arpu = $totalUsers > 0 ? $revenueStats['total_burned'] / $totalUsers : 0;
 
-$vipUsers = $conn->query("SELECT COUNT(*) FROM user_vip WHERE vip_level > 1")->fetch_row()[0];
+$vipUsers = (int)($conn->query("SELECT COUNT(*) FROM user_vip WHERE vip_level > 1")->fetch_row()[0] ?? 0);
 $conversionRate = $totalUsers > 0 ? ($vipUsers / $totalUsers) * 100 : 0;
 
-// --- 4. Churn Prediction (NgÆ°á»i chơi không hoáº¡t Ä‘á»™ng > 7 ngÃ y) ---
-$churnedUsers = $conn->query("SELECT COUNT(*) FROM users WHERE last_active < DATE_SUB(NOW(), INTERVAL 7 DAY)")->fetch_row()[0];
+// --- 4. Churn Prediction (Người chơi không hoạt động > 7 ngày) ---
+$churnedUsers = (int)($conn->query("SELECT COUNT(*) FROM users WHERE last_active < DATE_SUB(NOW(), INTERVAL 7 DAY)")->fetch_row()[0] ?? 0);
 $churnRate = $totalUsers > 0 ? ($churnedUsers / $totalUsers) * 100 : 0;
 
 ?>
@@ -58,9 +60,14 @@ $churnRate = $totalUsers > 0 ? ($churnedUsers / $totalUsers) * 100 : 0;
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>GTLM Sink & Revenue Analytics</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GTLM Sink & Revenue Analytics — gtlmanh.id.vn</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
     <style>
         :root {
             --bg: #07090f;
@@ -73,43 +80,54 @@ $churnRate = $totalUsers > 0 ? ($churnedUsers / $totalUsers) * 100 : 0;
             --red: #fb7185;
             --green: #34d399;
         }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); padding: 40px; min-height: 100vh; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 40px 24px;
+            min-height: 100vh;
+        }
         .container { max-width: 1200px; margin: 0 auto; position: relative; z-index: 1; }
-        h1 { font-size: 28px; margin-bottom: 30px; display: flex; align-items: center; gap: 15px; letter-spacing: -0.5px; }
+        h1 { font-size: 28px; font-weight: 800; margin-bottom: 30px; display: flex; align-items: center; gap: 15px; letter-spacing: -0.5px; }
         h1 span { color: var(--primary); }
         
         .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 40px; }
+        @media(max-width: 960px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+        @media(max-width: 520px) { .grid { grid-template-columns: 1fr; } }
+
         .card { background: var(--surface); padding: 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); transition: transform 0.2s; }
         .card:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.1); }
-        .card-label { font-size: 11px; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; letter-spacing: 1px; font-weight: 600; }
-        .card-value { font-size: 26px; font-weight: 700; font-family: 'Space Mono', monospace; color: var(--primary); }
+        .card-label { font-size: 11px; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; letter-spacing: 1px; font-weight: 700; }
+        .card-value { font-size: 26px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: var(--primary); }
         
         .main-layout { display: grid; grid-template-columns: 1.5fr 1fr; gap: 25px; }
+        @media(max-width: 960px) { .main-layout { grid-template-columns: 1fr; } }
+
         .box { background: var(--surface); border-radius: 20px; padding: 30px; border: 1px solid rgba(255,255,255,0.05); }
-        h2 { font-size: 16px; margin-bottom: 20px; color: var(--text); display: flex; align-items: center; gap: 10px; }
+        h2 { font-size: 17px; font-weight: 700; margin-bottom: 20px; color: var(--text); display: flex; align-items: center; gap: 10px; }
         
         table { width: 100%; border-collapse: collapse; }
         th { text-align: left; color: var(--muted); font-size: 11px; text-transform: uppercase; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        td { padding: 15px 12px; border-bottom: 1px solid rgba(255,255,255,0.03); font-family: 'Space Mono', monospace; font-size: 14px; }
+        td { padding: 15px 12px; border-bottom: 1px solid rgba(255,255,255,0.03); font-family: 'JetBrains Mono', monospace; font-size: 14px; }
         
         .progress-item { margin-bottom: 25px; }
-        .progress-info { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 10px; color: var(--text); }
-        .progress-info span:last-child { color: var(--primary); font-weight: 700; }
+        .progress-info { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 10px; color: var(--text); font-weight: 600; }
+        .progress-info span:last-child { color: var(--primary); font-weight: 800; font-family: 'JetBrains Mono', monospace; }
         .progress-track { height: 8px; background: var(--surface2); border-radius: 10px; overflow: hidden; }
         .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); border-radius: 10px; }
 
-        .btn-back { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); text-decoration: none; font-size: 13px; margin-bottom: 20px; transition: color 0.2s; }
+        .btn-back { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 600; margin-bottom: 20px; transition: color 0.2s; }
         .btn-back:hover { color: var(--primary); }
     </style>
 </head>
 <body>
     <div class="container">
-        <a href="admin_analytics.php" class="btn-back"><i class="fas fa-arrow-left"></i> Quay lại Analytics chÃ­nh</a>
+        <a href="admin_analytics.php" class="btn-back"><i class="fas fa-arrow-left"></i> Quay lại Analytics chính</a>
         <h1><i class="fas fa-coins" style="color: var(--primary);"></i> Revenue & <span>GTLM Sink</span> Breakdown</h1>
 
         <div class="grid">
             <div class="card">
-                <div class="card-label">Tá»•ng GTLM ÄÃ£ Äá»‘t</div>
+                <div class="card-label">Tổng GTLM Đã Đốt</div>
                 <div class="card-value"><?= number_format($revenueStats['total_burned']) ?></div>
             </div>
             <div class="card">
@@ -117,24 +135,24 @@ $churnRate = $totalUsers > 0 ? ($churnedUsers / $totalUsers) * 100 : 0;
                 <div class="card-value"><?= number_format($arpu, 1) ?></div>
             </div>
             <div class="card">
-                <div class="card-label">Chuyá»ƒn đổi VIP</div>
+                <div class="card-label">Chuyển đổi VIP</div>
                 <div class="card-value"><?= number_format($conversionRate, 1) ?>%</div>
             </div>
             <div class="card">
-                <div class="card-label">Dá»± Ä‘oÃ¡n Churn</div>
+                <div class="card-label">Dự đoán Churn</div>
                 <div class="card-value" style="color: var(--red);"><?= number_format($churnRate, 1) ?>%</div>
             </div>
         </div>
 
         <div class="main-layout">
             <div class="box">
-                <h2><i class="fas fa-chart-line"></i> Lá»£i nhuáº­n Há»‡ thống theo Game</h2>
+                <h2><i class="fas fa-chart-line"></i> Lợi nhuận Hệ thống theo Game</h2>
                 <table>
                     <thead>
                         <tr>
-                            <th>Loáº¡i Game</th>
-                            <th>Lá»£i nhuáº­n rÃ²ng</th>
-                            <th>ÄÃ³ng gÃ³p (%)</th>
+                            <th>Loại Game</th>
+                            <th>Lợi nhuận ròng</th>
+                            <th>Đóng góp (%)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -142,7 +160,7 @@ $churnRate = $totalUsers > 0 ? ($churnedUsers / $totalUsers) * 100 : 0;
                             $percent = $revenueStats['total_burned'] > 0 ? ($gr['house_profit'] / $revenueStats['total_burned']) * 100 : 0;
                         ?>
                         <tr>
-                            <td><?= htmlspecialchars($gr['game_name']) ?></td>
+                            <td style="font-family:'Outfit', sans-serif; font-weight:600;"><?= htmlspecialchars($gr['game_name']) ?></td>
                             <td style="color: var(--green);"><?= number_format($gr['house_profit']) ?></td>
                             <td>
                                 <div style="display:flex; align-items:center; gap:10px;">
@@ -159,21 +177,21 @@ $churnRate = $totalUsers > 0 ? ($churnedUsers / $totalUsers) * 100 : 0;
             </div>
 
             <div class="box">
-                <h2><i class="fas fa-fire"></i> PhÃ¢n bá»• Nguá»“n Äá»‘t GTLM</h2>
+                <h2><i class="fas fa-fire"></i> Phân bổ Nguồn Đốt GTLM</h2>
                 <div class="progress-item">
-                    <div class="progress-info"><span>PhÃ­ Giao Dá»‹ch Chá»£ (5%)</span> <span><?= number_format($revenueStats['marketplace_fees']) ?></span></div>
+                    <div class="progress-info"><span>Phí Giao Dịch Chợ (5%)</span> <span><?= number_format($revenueStats['marketplace_fees']) ?></span></div>
                     <div class="progress-track"><div class="progress-fill" style="width: <?= $revenueStats['total_burned'] > 0 ? ($revenueStats['marketplace_fees']/$revenueStats['total_burned']*100) : 0 ?>%;"></div></div>
                 </div>
                 <div class="progress-item">
-                    <div class="progress-info"><span>Chi phí Cháº¿ TÃ¡c</span> <span><?= number_format($revenueStats['crafting_costs']) ?></span></div>
+                    <div class="progress-info"><span>Chi phí Chế Tác</span> <span><?= number_format($revenueStats['crafting_costs']) ?></span></div>
                     <div class="progress-track"><div class="progress-fill" style="width: <?= $revenueStats['total_burned'] > 0 ? ($revenueStats['crafting_costs']/$revenueStats['total_burned']*100) : 0 ?>%;"></div></div>
                 </div>
                 <div class="progress-item">
-                    <div class="progress-info"><span>PhÃ­ ThÃ nh Láº­p Guild</span> <span><?= number_format($revenueStats['guild_fees']) ?></span></div>
+                    <div class="progress-info"><span>Phí Thành Lập Guild</span> <span><?= number_format($revenueStats['guild_fees']) ?></span></div>
                     <div class="progress-track"><div class="progress-fill" style="width: <?= $revenueStats['total_burned'] > 0 ? ($revenueStats['guild_fees']/$revenueStats['total_burned']*100) : 0 ?>%;"></div></div>
                 </div>
                 <div class="progress-item">
-                    <div class="progress-info"><span>NÃ¢ng Cáº¥p Battle Pass</span> <span><?= number_format($revenueStats['battle_pass']) ?></span></div>
+                    <div class="progress-info"><span>Nâng Cấp Battle Pass</span> <span><?= number_format($revenueStats['battle_pass']) ?></span></div>
                     <div class="progress-track"><div class="progress-fill" style="width: <?= $revenueStats['total_burned'] > 0 ? ($revenueStats['battle_pass']/$revenueStats['total_burned']*100) : 0 ?>%;"></div></div>
                 </div>
             </div>

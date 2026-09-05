@@ -122,8 +122,8 @@
     const winPhrases = [
         'Húp trọn ván Pontoon ngọt ngào! Điểm cao hơn Dealer là lúa về ví! 🃏💰',
         'Chiến thuật đếm nút chuẩn chỉnh, Dealer chỉ biết ngậm ngùi! ✨',
-        'Pontoon 21 nút hoặc 5-Card Trick, húp sạch tiền bàn! 🏆',
-        'Dừng đúng lúc, ăn tiền đúng chỗ! GTLM về như suối! 🚀',
+        'Pontoon 21 nút hoặc 5-Card Trick, húp sạch GTLM bàn! 🏆',
+        'Dừng đúng lúc, ăn GTLM đúng chỗ! GTLM về như suối! 🚀',
         'Thần bài tái xuất, chuỗi thắng lại tiếp tục! 😎'
     ];
 

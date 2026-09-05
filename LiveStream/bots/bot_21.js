@@ -15,20 +15,20 @@ if (typeof BotVirtualCursor !== "undefined") {
                 const targetMode = modeBtns[Math.floor(Math.random() * modeBtns.length)];
                 if (!targetMode.classList.contains('active')) {
                     BotVirtualCursor.moveToElement($(targetMode), 0.3, 0, () => {
-                        BotVirtualCursor.simulateClick(() => { try { targetMode.click(); } catch(e){} });
+                        BotVirtualCursor.simulateClick(() => { try { targetMode.click(); } catch (e) { } });
                         setTimeout(chooseBet, 400);
                     });
                     return;
                 }
             }
         }
-        
+
         // Nếu không đổi chế độ, đi thẳng tới chọn cược
         chooseBet();
     }
 
     function chooseBet() {
-        // 50% cơ hội đổi tiền cược, 50% giữ nguyên và click xúc xắc luôn
+        // 50% cơ hội đổi GTLM cược, 50% giữ nguyên và click xúc xắc luôn
         if (Math.random() < 0.50) {
             clickRoll();
             return;
@@ -39,10 +39,10 @@ if (typeof BotVirtualCursor !== "undefined") {
             // Nghiêng về các mức cược thấp (ưu tiên đầu mảng)
             const maxIdx = Math.min(betBtns.length, 5);
             let targetBet = betBtns[Math.floor(Math.random() * maxIdx)];
-            
+
             BotVirtualCursor.moveToElement($(targetBet), 0.4, 0, () => {
                 setTimeout(() => {
-                    BotVirtualCursor.simulateClick(() => { try { targetBet.click(); } catch(e){} });
+                    BotVirtualCursor.simulateClick(() => { try { targetBet.click(); } catch (e) { } });
                     setTimeout(clickRoll, 400);
                 }, 200);
             });
@@ -56,7 +56,7 @@ if (typeof BotVirtualCursor !== "undefined") {
         if (rollBtn) {
             BotVirtualCursor.moveToElement($(rollBtn), 0.5, 0, () => {
                 setTimeout(() => {
-                    BotVirtualCursor.simulateClick(() => { try { rollBtn.click(); } catch(e){} });
+                    BotVirtualCursor.simulateClick(() => { try { rollBtn.click(); } catch (e) { } });
                     // Đợi xúc xắc lăn xong rồi mới chơi tiếp
                     setTimeout(runBotDice, 3500 + Math.random() * 1500);
                 }, 200);

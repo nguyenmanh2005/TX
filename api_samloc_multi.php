@@ -3,18 +3,24 @@ session_start();
 header('Content-Type: application/json; charset=utf-8');
 require_once 'db_connect.php';
 
-if (!isset($_SESSION['Iduser'])) {
+if (!isset($_SESSION['Iduser']) && !isset($_SESSION['Iduser_temp_bot'])) {
     echo json_encode(['success' => false, 'message' => 'Login required']);
     exit;
 }
 
-$userId = $_SESSION['Iduser'];
+$userId = isset($_SESSION['Iduser_temp_bot']) && (int)$_SESSION['Iduser_temp_bot'] > 0 ? (int)$_SESSION['Iduser_temp_bot'] : (int)$_SESSION['Iduser'];
 $action = $_GET['action'] ?? 'status';
 $tableId = isset($_REQUEST['table_id']) ? (int)$_REQUEST['table_id'] : 0;
 
 if (!$tableId) {
     echo json_encode(['success' => false, 'message' => 'Table ID missing']);
     exit;
+}
+
+// Đảm bảo bảng có cột lưu người thắng ván trước
+$colCheck = $conn->query("SHOW COLUMNS FROM samloc_multi_tables LIKE 'last_winner_seat'");
+if ($colCheck && $colCheck->num_rows === 0) {
+    $conn->query("ALTER TABLE samloc_multi_tables ADD COLUMN last_winner_seat INT DEFAULT NULL");
 }
 
 $stmt = $conn->prepare("SELECT * FROM samloc_multi_tables WHERE id = ?");
@@ -51,14 +57,15 @@ function getNextTurn($currentSeat, $players, $passedList = []) {
     
     $idx = array_search($currentSeat, $seats);
     if ($idx === false) {
-        // If current not in list, find the next one strictly lower (since it's counter-clockwise)
-        $next = $seats[count($seats)-1];
-        foreach (array_reverse($seats) as $s) {
-            if ($s < $currentSeat) { $next = $s; break; }
+        // Nếu ghế hiện tại không có trong danh sách (đã pass), tìm ghế kế tiếp theo chiều kim đồng hồ
+        $next = $seats[0];
+        foreach ($seats as $s) {
+            if ($s > $currentSeat) { $next = $s; break; }
         }
         return $next;
     }
-    $nextIdx = ($idx - 1 + count($seats)) % count($seats);
+    // Lượt quay thuận theo chiều kim đồng hồ
+    $nextIdx = ($idx + 1) % count($seats);
     return $seats[$nextIdx];
 }
 
@@ -127,7 +134,8 @@ function processWin($tableId, $winnerId, &$players, $minBet, $conn, $isAnTrang =
         $penaltyMap['note'] = "Xin làng thành công";
         $penaltyJson = json_encode($penaltyMap);
         $nextExpiry = date('Y-m-d H:i:s', time() + 10);
-        $conn->query("UPDATE samloc_multi_tables SET status = 'ended', turn_expires_at = '$nextExpiry', passed_players = '$penaltyJson' WHERE id = $tableId");
+        $winSeat = $winnerPlayer ? (int)$winnerPlayer['seat_index'] : 'NULL';
+        $conn->query("UPDATE samloc_multi_tables SET status = 'ended', turn_expires_at = '$nextExpiry', passed_players = '$penaltyJson', last_winner_seat = $winSeat WHERE id = $tableId");
         if ($winnerId != -1) $conn->query("UPDATE samloc_multi_players SET status = 'won' WHERE id = $winnerId");
         return;
     }
@@ -259,7 +267,8 @@ function processWin($tableId, $winnerId, &$players, $minBet, $conn, $isAnTrang =
     
     $penaltyJson = json_encode($penaltyMap);
     $nextExpiry = date('Y-m-d H:i:s', time() + 10);
-    $conn->query("UPDATE samloc_multi_tables SET status = 'ended', turn_expires_at = '$nextExpiry', passed_players = '$penaltyJson' WHERE id = $tableId");
+    $winSeat = $winnerPlayer ? (int)$winnerPlayer['seat_index'] : 'NULL';
+    $conn->query("UPDATE samloc_multi_tables SET status = 'ended', turn_expires_at = '$nextExpiry', passed_players = '$penaltyJson', last_winner_seat = $winSeat WHERE id = $tableId");
     if ($winnerId != -1) $conn->query("UPDATE samloc_multi_players SET status = 'won' WHERE id = $winnerId");
 }
 
@@ -481,53 +490,91 @@ function getBotMove($hand, $lastMove, $nextPlayerCardCount = 0) {
     
     if (empty($validMoves)) return null;
     
+    // [1] BẮT HEO: Nếu đối thủ vừa đánh Heo (15), kiểm tra Tứ Quý chặt ngay!
+    if ($lastMove && $lastMove['type'] === 'single' && $lastMove['value'] === 15) {
+        $quadMoves = array_filter($validMoves, function($m) { return $m['move']['type'] === 'quad'; });
+        if (!empty($quadMoves)) {
+            usort($quadMoves, function($a, $b) { return $a['move']['value'] - $b['move']['value']; });
+            return array_values($quadMoves)[0]['cards'];
+        }
+        return null; // Không có tứ quý thì bỏ lượt
+    }
+    
+    // [2] CHẶN CỬA BÁO BÀI: Nếu người kế tiếp chỉ còn 1 lá
     if ($nextPlayerCardCount == 1) {
-        usort($validMoves, function($a, $b) {
-            if ($a['move']['type'] == 'single' && $b['move']['type'] == 'single') return $b['move']['value'] - $a['move']['value']; 
-            return 0;
-        });
-        $safeMoves = array_filter($validMoves, function($m) use ($hand) {
-            if (count($hand) - count($m['cards']) == 0 && $m['move']['value'] == 15 && in_array($m['move']['type'], ['single', 'pair', 'triple', 'quad'])) return false; 
-            return true;
-        });
-        if (!empty($safeMoves)) return array_values($safeMoves)[0]['cards'];
+        if ($lastMove && $lastMove['type'] === 'single') {
+            $singleMoves = array_filter($validMoves, function($m) { return $m['move']['type'] === 'single'; });
+            if (!empty($singleMoves)) {
+                // Đánh lá to nhất có thể để chặn cửa, tránh bị đền làng!
+                usort($singleMoves, function($a, $b) { return $b['move']['value'] - $a['move']['value']; });
+                return array_values($singleMoves)[0]['cards'];
+            }
+        }
         return $validMoves[0]['cards'];
     }
     
+    // Phân tích các lá bài thuộc Tứ Quý và Sảnh để tránh xé bài bừa bãi
+    $valCounts = [];
+    foreach ($hand as $c) {
+        $valCounts[$c['v']] = ($valCounts[$c['v']] ?? 0) + 1;
+    }
+    $quadVals = [];
+    foreach ($valCounts as $v => $cnt) {
+        if ($cnt === 4) $quadVals[] = $v;
+    }
+    
+    // [3] ĐẦU VÒNG (Không có lastMove)
     if (!$lastMove) {
-        usort($hand, function($a, $b) { return $a['v'] - $b['v']; });
-        $smallestVal = $hand[0]['v'];
-        
-        $candidates = [];
-        foreach ($validMoves as $m) {
-            $hasSmallest = false;
-            foreach ($m['cards'] as $c) {
-                if ($c['v'] == $smallestVal) $hasSmallest = true;
-            }
-            if ($hasSmallest) $candidates[] = $m;
+        // 3.1 Chống Thối Heo: Nếu bài còn <= 3 lá và có Heo 15, xả Heo ngay để giành cái
+        $heoMoves = array_filter($validMoves, function($m) { return $m['move']['type'] === 'single' && $m['move']['value'] === 15; });
+        if (count($hand) <= 3 && !empty($heoMoves)) {
+            return array_values($heoMoves)[0]['cards'];
         }
-        if (empty($candidates)) $candidates = $validMoves;
         
-        $safeCandidates = array_filter($candidates, function($m) use ($hand) {
-            if (count($hand) - count($m['cards']) == 0 && $m['move']['value'] == 15) return false;
-            return true;
-        });
-        if (!empty($safeCandidates)) $candidates = array_values($safeCandidates);
-        
-        usort($candidates, function($a, $b) {
-            $prio = ['straight'=>5, 'triple'=>4, 'pair'=>3, 'single'=>2, 'quad'=>1];
-            $pa = $prio[$a['move']['type']] ?? 0;
-            $pb = $prio[$b['move']['type']] ?? 0;
-            if ($pa != $pb) return $pb - $pa;
+        // 3.2 Sắp xếp ứng viên: Ưu tiên Sảnh dài (>= 5 lá), sau đó Bộ ba, Đôi, Sảnh ngắn, Rác nhỏ
+        usort($validMoves, function($a, $b) use ($quadVals) {
+            // Không đánh tứ quý đầu ván (giữ lại bắt Heo)
+            $isAQuad = in_array($a['move']['value'], $quadVals);
+            $isBQuad = in_array($b['move']['value'], $quadVals);
+            if ($isAQuad !== $isBQuad) return $isAQuad ? 1 : -1;
+            
+            $scoreA = 0;
+            $scoreB = 0;
+            if ($a['move']['type'] === 'straight') $scoreA = 50 + ($a['move']['count'] ?? 0);
+            else if ($a['move']['type'] === 'triple') $scoreA = 40;
+            else if ($a['move']['type'] === 'pair') $scoreA = 30;
+            else if ($a['move']['type'] === 'single') $scoreA = 20;
+            
+            if ($b['move']['type'] === 'straight') $scoreB = 50 + ($b['move']['count'] ?? 0);
+            else if ($b['move']['type'] === 'triple') $scoreB = 40;
+            else if ($b['move']['type'] === 'pair') $scoreB = 30;
+            else if ($b['move']['type'] === 'single') $scoreB = 20;
+            
+            if ($scoreA !== $scoreB) return $scoreB - $scoreA;
             return $a['move']['value'] - $b['move']['value'];
         });
         
-        return $candidates[0]['cards'];
+        // Tránh đánh lá 2 cuối cùng (chống thối)
+        $safeCandidates = array_filter($validMoves, function($m) use ($hand) {
+            if (count($hand) - count($m['cards']) == 0 && $m['move']['value'] == 15) return false;
+            return true;
+        });
+        if (!empty($safeCandidates)) return array_values($safeCandidates)[0]['cards'];
+        
+        return $validMoves[0]['cards'];
     }
     
-    usort($validMoves, function($a, $b) { return $a['move']['value'] - $b['move']['value']; });
+    // [4] ĐÈ BÀI ĐỐI THỦ:
+    // Sắp xếp nước đi nhỏ nhất hợp lệ, nhưng phạt nặng việc xé Tứ Quý để đánh lẻ
+    usort($validMoves, function($a, $b) use ($quadVals) {
+        $penaltyA = ($a['move']['type'] === 'single' && in_array($a['move']['value'], $quadVals)) ? 1000 : 0;
+        $penaltyB = ($b['move']['type'] === 'single' && in_array($b['move']['value'], $quadVals)) ? 1000 : 0;
+        if ($penaltyA !== $penaltyB) return $penaltyA - $penaltyB;
+        return $a['move']['value'] - $b['move']['value'];
+    });
     
     $safeMoves = array_filter($validMoves, function($m) use ($hand) {
+        // Tránh để Heo là nước đi cuối cùng
         if (count($hand) - count($m['cards']) == 0 && $m['move']['value'] == 15 && $m['move']['type'] != 'quad') return false; 
         return true;
     });
@@ -550,6 +597,7 @@ if ($action === 'status') {
         
         $nextExpiry = date('Y-m-d H:i:s', time() + 5);
         $conn->query("UPDATE samloc_multi_tables SET status = 'waiting', turn_expires_at = '$nextExpiry' WHERE id = $tableId");
+        $conn->query("UPDATE samloc_multi_players SET cards = '[]', status = 'waiting' WHERE table_id = $tableId");
         
         echo json_encode(['success' => true, 'reload' => true]);
         exit;
@@ -558,36 +606,14 @@ if ($action === 'status') {
     if ($table['status'] === 'waiting' && count($players) > 1 && $table['turn_expires_at']) {
         $timeLeft = strtotime($table['turn_expires_at']) - time();
         if ($timeLeft <= 0) {
-            $nextExpiry = date('Y-m-d H:i:s', time() + 5);
-            $conn->query("UPDATE samloc_multi_tables SET status = 'xin_lang', turn_expires_at = '$nextExpiry' WHERE id = $tableId");
-            echo json_encode(['success' => true, 'reload' => true]);
-            exit;
-        }
-    }
-    
-    if ($table['status'] === 'xin_lang') {
-        // Nếu bot có Heo (hoặc bài ngon), cho nó xin làng ngẫu nhiên
-        $xinLang = false;
-        foreach ($players as $p) {
-            if ($p['is_bot'] && rand(1, 100) <= 2) { 
-                $xinLang = $p; break;
-            }
-        }
-        
-        if ($xinLang || strtotime($table['turn_expires_at']) <= time()) {
+            // 🃏 1. CHIA BÀI NGAY KHI HẾT THỜI GIAN CHỜ VÀO BÀN
             $deck = createDeck(count($players));
-            $startingSeat = -1;
             $anTrangPlayer = null;
             $anTrangType = '';
             
-            $minVal = 99; $minSeat = -1;
             for ($i = 0; $i < count($players); $i++) {
                 $h = array_slice($deck, $i * 10, 10);
                 sortHand($h);
-                foreach ($h as $c) {
-                    if ($c['id'] === '3_s') $startingSeat = $players[$i]['seat_index'];
-                    if ($c['v'] < $minVal) { $minVal = $c['v']; $minSeat = $players[$i]['seat_index']; }
-                }
                 if (!$anTrangPlayer) {
                     $at = checkAnTrang($h);
                     if ($at) { $anTrangPlayer = $players[$i]; $anTrangType = $at; }
@@ -597,20 +623,70 @@ if ($action === 'status') {
                 $conn->query("UPDATE samloc_multi_players SET cards = '$cardsJson', status = 'playing' WHERE id = $pid");
                 $players[$i]['cards'] = $cardsJson;
             }
-            if ($startingSeat === -1) $startingSeat = $minSeat; 
             
+            // 2. Nếu có người Ăn Trắng (Sảnh Rồng, 5 Đôi, Tứ Quý 2...), kết thúc và húp luôn GTLM!
+            if ($anTrangPlayer) {
+                processWin($tableId, $anTrangPlayer['id'], $players, $table['min_bet'], $conn, true, $anTrangType);
+                echo json_encode(['success' => true, 'reload' => true]);
+                exit;
+            }
+            
+            // 3. Đã chia bài xong -> Chuyển sang giai đoạn Hô Sâm / Xin Làng (cho 5 giây để tay chơi ngắm 10 lá bài trên tay)
+            $nextExpiry = date('Y-m-d H:i:s', time() + 5);
+            $conn->query("UPDATE samloc_multi_tables SET status = 'xin_lang', turn_expires_at = '$nextExpiry', passed_players = '[]', last_move = 'null', last_player = null, penalty_log = '[]', xin_lang_player = NULL WHERE id = $tableId");
+            echo json_encode(['success' => true, 'reload' => true]);
+            exit;
+        }
+    }
+    
+    if ($table['status'] === 'xin_lang') {
+        // Kiểm tra Bot có bài khủng (Sảnh dài >= 8 lá hoặc Tứ quý 2) thì Hô Sâm
+        $xinLang = false;
+        foreach ($players as $p) {
+            if ($p['is_bot']) {
+                $botCards = json_decode($p['cards'] ?: '[]', true);
+                if (!empty($botCards) && count($botCards) === 10) {
+                    $vCounts = [];
+                    foreach ($botCards as $c) {
+                        $vCounts[$c['v']] = ($vCounts[$c['v']] ?? 0) + 1;
+                    }
+                    if (in_array(4, $vCounts) && rand(1, 100) <= 20) {
+                        $xinLang = $p; 
+                        break;
+                    }
+                }
+            }
+        }
+        
+        if ($xinLang || strtotime($table['turn_expires_at']) <= time()) {
+            // XÁC ĐỊNH NGƯỜI ĐÁNH ĐẦU:
+            // 1. Ưu tiên người Xin Làng / Hô Sâm (nếu có)
+            // 2. Nếu không ai Xin Làng: Ván trước ai thắng thì đánh trước
+            // 3. Nếu phòng mới tạo (hoặc người thắng trước đã rời bàn): Ngẫu nhiên 1 người đánh trước
+            $startingSeat = -1;
             $xinLangPlayerId = 'NULL';
+            
             if ($xinLang) {
-                $startingSeat = $xinLang['seat_index'];
-                $xinLangPlayerId = $xinLang['seat_index'];
+                $startingSeat = (int)$xinLang['seat_index'];
+                $xinLangPlayerId = (int)$xinLang['seat_index'];
+            } else if (isset($table['last_winner_seat']) && $table['last_winner_seat'] !== null && $table['last_winner_seat'] !== '') {
+                $lastWinnerSeat = (int)$table['last_winner_seat'];
+                foreach ($players as $p) {
+                    if ((int)$p['seat_index'] === $lastWinnerSeat) {
+                        $startingSeat = $lastWinnerSeat;
+                        break;
+                    }
+                }
+            }
+            
+            // Nếu không ai xin làng và (phòng mới hoặc người thắng cũ đã rời phòng) -> Ngẫu nhiên chọn 1 người
+            if ($startingSeat === -1 && !empty($players)) {
+                $randomPlayer = $players[array_rand($players)];
+                $startingSeat = (int)$randomPlayer['seat_index'];
             }
             
             $nextExpiry = date('Y-m-d H:i:s', time() + 15);
             $conn->query("UPDATE samloc_multi_tables SET status = 'playing', current_turn = $startingSeat, passed_players = '[]', last_move = 'null', last_player = null, penalty_log = '[]', xin_lang_player = $xinLangPlayerId, turn_expires_at = '$nextExpiry' WHERE id = $tableId");
-            
-            if ($anTrangPlayer) {
-                processWin($tableId, $anTrangPlayer['id'], $players, $table['min_bet'], $conn, true, $anTrangType);
-            }
             
             echo json_encode(['success' => true, 'reload' => true]);
             exit;
@@ -872,7 +948,7 @@ if ($action === 'join') {
     $stmt->bind_param("iii", $tableId, $userId, $seatIndex);
     $stmt->execute();
     if (count($players) + 1 >= 2) {
-        $nextExpiry = date('Y-m-d H:i:s', time() + 10);
+        $nextExpiry = date('Y-m-d H:i:s', time() + 5);
         $conn->query("UPDATE samloc_multi_tables SET turn_expires_at = '$nextExpiry' WHERE id = $tableId");
     }
     echo json_encode(['success' => true]);
@@ -895,7 +971,7 @@ if ($action === 'add_bot') {
     $stmt->execute();
     
     if (count($players) + 1 >= 2) {
-        $nextExpiry = date('Y-m-d H:i:s', time() + 10);
+        $nextExpiry = date('Y-m-d H:i:s', time() + 5);
         $conn->query("UPDATE samloc_multi_tables SET turn_expires_at = '$nextExpiry' WHERE id = $tableId");
     }
     echo json_encode(['success' => true]);
@@ -913,31 +989,16 @@ if ($action === 'xin_lang') {
     }
     if (!$myPlayer) exit;
     
-    $deck = createDeck(count($players));
-    $startingSeat = $myPlayer['seat_index'];
-    $anTrangPlayer = null;
-    $anTrangType = '';
-    
-    for ($i = 0; $i < count($players); $i++) {
-        $h = array_slice($deck, $i * 10, 10);
-        sortHand($h);
-        if (!$anTrangPlayer) {
-            $at = checkAnTrang($h);
-            if ($at) { $anTrangPlayer = $players[$i]; $anTrangType = $at; }
-        }
-        $cardsJson = json_encode($h);
-        $pid = $players[$i]['id'];
-        $conn->query("UPDATE samloc_multi_players SET cards = '$cardsJson', status = 'playing' WHERE id = $pid");
-        $players[$i]['cards'] = $cardsJson;
-    }
-    
+    // Bài đã chia rồi, người chơi Hô Sâm nhận luôn quyền đánh đầu và vào ván đấu
+    $startingSeat = (int)$myPlayer['seat_index'];
     $nextExpiry = date('Y-m-d H:i:s', time() + 15);
     $conn->query("UPDATE samloc_multi_tables SET status = 'playing', current_turn = $startingSeat, passed_players = '[]', last_move = 'null', last_player = null, penalty_log = '[]', xin_lang_player = $startingSeat, turn_expires_at = '$nextExpiry' WHERE id = $tableId");
     
-    if ($anTrangPlayer) {
-        processWin($tableId, $anTrangPlayer['id'], $players, $table['min_bet'], $conn, true, $anTrangType);
-    }
-    
+    echo json_encode(['success' => true]);
+    exit;
+}
+
+if ($action === 'skip_xin_lang') {
     echo json_encode(['success' => true]);
     exit;
 }

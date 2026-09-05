@@ -447,7 +447,7 @@ if ($action === 'auto_battle') {
         foreach ($mTeam as &$m) $m['hp'] = 0;
         $isWin = true; $skipCombat = true;
     } elseif ($activeBuff === 'hoi_lo') {
-        $combatLog[] = ["speaker" => "player", "msg" => "💰 Quái vật nhận tiền hối lộ và bỏ đi!"];
+        $combatLog[] = ["speaker" => "player", "msg" => "💰 Quái vật nhận GTLM hối lộ và bỏ đi!"];
         foreach ($mTeam as &$m) $m['hp'] = 0;
         $isWin = true; $skipCombat = true;
     } elseif ($activeBuff === 'lat_keo') {
@@ -624,11 +624,11 @@ if ($action === 'auto_battle') {
             // Tuyệt kỹ Leader
             if ($activeBuff === 'trao_phung') {
                 $rewardGtlm *= 2;
-                $combatLog[] = ["speaker" => "system", "msg" => "💰 Tráo Phụng nhân đôi tiền thưởng!"];
+                $combatLog[] = ["speaker" => "system", "msg" => "💰 Tráo Phụng nhân đôi GTLM thưởng!"];
             }
             if ($activeBuff === 'hao_quang') {
                 $rewardGtlm = ($baseReward * 5);
-                $combatLog[] = ["speaker" => "system", "msg" => "🌟 Hào Quang Hoàng Kim! Nhận tiền tương đương tầng Boss!"];
+                $combatLog[] = ["speaker" => "system", "msg" => "🌟 Hào Quang Hoàng Kim! Nhận GTLM tương đương tầng Boss!"];
             }
             if ($activeBuff === 'dong_dau') {
                 $rewardGtlm *= 10;

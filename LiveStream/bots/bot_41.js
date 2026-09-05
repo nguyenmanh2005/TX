@@ -108,7 +108,7 @@
     // ═══════════════════════════════════════════════════════
     const winPhrases = [
         'Thám tử số xuất chiêu! Đoán trúng x10 rồi húp lúa! 🎯',
-        'Binary search ăn tiền thật, anh em ơi! 💰',
+        'Binary search ăn GTLM thật, anh em ơi! 💰',
         'Bot tự học tự đoán, chiến thắng về tay! 🏆',
         'Số bí mật không qua được tay thám tử! 🔍',
         'Ăn to rồi anh em, GTLM về ví! 🚀'
@@ -209,7 +209,7 @@
                     numInput.value = nextGuess;
                     lastGuess = nextGuess;
 
-                    // Điền số tiền cược
+                    // Điền số GTLM cược
                     betInput.value = betAmount;
 
                     // Di chuyển tới nút Đoán và bấm
@@ -217,7 +217,7 @@
                         BotVirtualCursor.moveToElement($(btnGuess), 0.45, 0, () => {
                             setTimeout(() => {
                                 BotVirtualCursor.simulateClick(() => {
-                                    try { btnGuess.click(); } catch (e) {}
+                                    try { btnGuess.click(); } catch (e) { }
                                     // Chờ server phản hồi
                                     setTimeout(() => {
                                         setBusy(false);

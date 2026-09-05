@@ -158,7 +158,7 @@ try {
             $payout = $game['bet'];
         }
 
-        // ── BƯỚC 1: Xử lý tiền (transaction riêng) ──
+        // ── BƯỚC 1: Xử lý GTLM (transaction riêng) ──
         $conn->begin_transaction();
         try {
             if ($payout > 0) {
@@ -170,7 +170,7 @@ try {
             $conn->commit();
         } catch (Exception $e) {
             $conn->rollback();
-            echo json_encode(['error' => 'Lỗi quyết toán tiền: ' . $e->getMessage()]);
+            echo json_encode(['error' => 'Lỗi quyết toán GTLM: ' . $e->getMessage()]);
             exit;
         }
 

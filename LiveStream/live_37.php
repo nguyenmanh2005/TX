@@ -60,7 +60,7 @@ if (isset($_GET['action'])) {
         $bet = (int) ($_POST['bet'] ?? 0);
         if ($bet <= 0 || $bet > $money) {
             if ($money < 10000) {
-                // Tự động nạp tiền cho bot streamer để đảm bảo luồng livestream 24/7 không bị dừng
+                // Tự động nạp GTLM cho bot streamer để đảm bảo luồng livestream 24/7 không bị dừng
                 $conn->query("UPDATE users SET Money = 50000000 WHERE Iduser = " . (int)$userId);
                 $money = 50000000;
             } else {

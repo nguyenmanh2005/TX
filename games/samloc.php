@@ -380,8 +380,9 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
             <button class="btn btn-success" onclick="addBot()" id="btn-add-bot">🤖 THÊM BOT</button>
         </div>
         
-        <div class="controls" id="xinlang-controls" style="display:none; bottom: 150px;">
-            <button class="btn btn-primary" onclick="xinLang()" id="btn-xin-lang" style="background: var(--danger); box-shadow: 0 0 20px red;">🔥 XIN LÀNG</button>
+        <div class="controls" id="xinlang-controls" style="display:none; bottom: 150px; gap: 15px;">
+            <button class="btn btn-primary" onclick="xinLang()" id="btn-xin-lang" style="background: var(--danger); box-shadow: 0 0 20px red;">🔥 HÔ SÂM (XIN LÀNG)</button>
+            <button class="btn btn-secondary" onclick="skipXinLang()" id="btn-skip-xin-lang">⏩ BỎ QUA</button>
         </div>
     </div>
 
@@ -421,6 +422,14 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
         async function xinLang() {
             $('#xinlang-controls').hide();
             await fetch(`../api_samloc_multi.php?action=xin_lang&table_id=${tableId}`);
+        }
+
+        async function skipXinLang() {
+            window.hasSkippedXinLang = true;
+            $('#xinlang-controls').hide();
+            try {
+                await fetch(`../api_samloc_multi.php?action=skip_xin_lang&table_id=${tableId}`);
+            } catch(e) {}
         }
 
         function createCardUI(card, isSmall = false) {
@@ -510,15 +519,16 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
                 
                 if (table.status === 'xin_lang') {
                     window.hasShownResult = false;
-                    $('#game-status').text(`CHỜ XIN LÀNG... (${table.timeLeft}S)`).show();
+                    $('#game-status').text(`HÔ SÂM / XIN LÀNG... (${table.timeLeft}S)`).show();
                     $('#game-controls').hide();
                     $('#waiting-controls').hide();
-                    if (!data.players.find(p => p.user_id == myUserId)?.status) {
+                    if (!window.hasSkippedXinLang) {
                         $('#xinlang-controls').show();
                     } else {
                         $('#xinlang-controls').hide();
                     }
                 } else if (table.status === 'waiting') {
+                    window.hasSkippedXinLang = false;
                     window.hasShownResult = false;
                     let msg = 'ĐANG CHỜ NGƯỜI CHƠI...';
                     if (players.length > 1 && table.timeLeft > 0) {
@@ -616,7 +626,7 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
                 });
                 
                 // My Cards
-                if (mySeat > -1 && table.status === 'playing') {
+                if (mySeat > -1 && (table.status === 'playing' || table.status === 'xin_lang')) {
                     let handHtml = '';
                     data.my_cards.forEach(c => {
                         handHtml += createCardUI(c);

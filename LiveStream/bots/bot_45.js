@@ -90,7 +90,7 @@
     const winPhrases = [
         'Lá thứ 3 lọt thỏm ngay giữa khoảng, húp trọn GTLM! 🃏💰',
         'Khoảng cách rộng quá, Ride gấp đôi ăn to anh em ơi! ✨',
-        'Thần bài Red Dog ra chiêu, tiền về đầy túi! 🏆',
+        'Thần bài Red Dog ra chiêu, GTLM về đầy túi! 🏆',
         'Đọc tỉ lệ toán học chuẩn xác, thắng đẹp mắt! 🚀',
         'Chuỗi thắng lại tiếp diễn, ván sau bung lụa tiếp! 😎'
     ];

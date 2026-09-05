@@ -22,7 +22,7 @@ Cuối cùng, bạn chỉ cung cấp phần code thay đổi (diff) để dễ t
 - **KHÔNG** nhúng lệnh `CREATE TABLE` vào file logic (`.php` chạy hàng ngày).
 - **PHẢI** gửi SQL tạo bảng riêng thành **block SQL độc lập** trong chat, không tạo file PHP riêng để chạy.
 - Mọi lệnh tạo bảng **BẮT BUỘC** dùng `CREATE TABLE IF NOT EXISTS` để tránh lỗi khi bảng đã tồn tại.
-- **Khi sửa game cũ** phát hiện có `CREATE TABLE` hay `ALTER TABLE` nhúng trong PHP logic → **dọn luôn**: tách ra block SQL riêng theo chuẩn Rule 1.3, xóa khỏi file PHP.
+- ⚠️ **Khi sửa game cũ** phát hiện có `CREATE TABLE` hay `ALTER TABLE` nhúng trong PHP logic → **dọn luôn**: tách ra block SQL riêng theo chuẩn Rule 1.3, xóa khỏi file PHP.
 
 ```sql
 -- ✅ Đúng

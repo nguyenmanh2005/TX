@@ -130,7 +130,7 @@
     ];
     const drawPhrases = [
         'Hòa vẫn tốt, ít nhất không mất vốn! 🤝',
-        'Push! Tiền về tay, ván sau bung lụa! 😊'
+        'Push! GTLM về tay, ván sau bung lụa! 😊'
     ];
     const losePhrases = [
         'Bay màu nhẹ, Dealer may mắn ván này thôi! 😅',
@@ -173,14 +173,14 @@
             BotVirtualCursor.moveToElement($(targetChip), 0.4, 0, () => {
                 setTimeout(() => {
                     BotVirtualCursor.simulateClick(() => {
-                        try { targetChip.click(); } catch (e) {}
+                        try { targetChip.click(); } catch (e) { }
 
                         // Bấm CHIA BÀI
                         setTimeout(() => {
                             BotVirtualCursor.moveToElement($(dealBtn), 0.5, 0, () => {
                                 setTimeout(() => {
                                     BotVirtualCursor.simulateClick(() => {
-                                        try { dealBtn.click(); } catch (e) {}
+                                        try { dealBtn.click(); } catch (e) { }
                                         setTimeout(() => { setBusy(false); }, 800);
                                     });
                                 }, 100);
@@ -194,7 +194,7 @@
             BotVirtualCursor.moveToElement($(dealBtn), 0.5, 0, () => {
                 setTimeout(() => {
                     BotVirtualCursor.simulateClick(() => {
-                        try { dealBtn.click(); } catch (e) {}
+                        try { dealBtn.click(); } catch (e) { }
                         setTimeout(() => { setBusy(false); }, 800);
                     });
                 }, 100);
@@ -217,7 +217,7 @@
             BotVirtualCursor.moveToElement($(submitBtn), 0.5, 0, () => {
                 setTimeout(() => {
                     BotVirtualCursor.simulateClick(() => {
-                        try { submitBtn.click(); } catch (e) {}
+                        try { submitBtn.click(); } catch (e) { }
                         setTimeout(() => { setBusy(false); }, 1000);
                     });
                 }, 100);
@@ -248,14 +248,14 @@
         BotVirtualCursor.moveToElement($(toClick[0]), 0.45, 0, () => {
             setTimeout(() => {
                 BotVirtualCursor.simulateClick(() => {
-                    try { toClick[0].click(); } catch (e) {}
+                    try { toClick[0].click(); } catch (e) { }
 
                     // Click lá 2
                     setTimeout(() => {
                         BotVirtualCursor.moveToElement($(toClick[1]), 0.45, 0, () => {
                             setTimeout(() => {
                                 BotVirtualCursor.simulateClick(() => {
-                                    try { toClick[1].click(); } catch (e) {}
+                                    try { toClick[1].click(); } catch (e) { }
                                     setBusy(false); // Cho phép vòng tiếp theo click Submit
                                 });
                             }, 100);
@@ -288,7 +288,7 @@
             BotVirtualCursor.moveToElement($(resetBtn), 0.5, 0, () => {
                 setTimeout(() => {
                     BotVirtualCursor.simulateClick(() => {
-                        try { resetBtn.click(); } catch (e) {}
+                        try { resetBtn.click(); } catch (e) { }
                         setTimeout(() => { setBusy(false); }, 600);
                     });
                 }, 100);

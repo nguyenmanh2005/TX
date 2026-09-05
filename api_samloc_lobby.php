@@ -3,10 +3,12 @@ session_start();
 header('Content-Type: application/json; charset=utf-8');
 require_once 'db_connect.php';
 
-if (!isset($_SESSION['Iduser'])) {
+if (!isset($_SESSION['Iduser']) && !isset($_SESSION['Iduser_temp_bot'])) {
     echo json_encode(['success' => false, 'message' => 'Login required']);
     exit;
 }
+
+$userId = isset($_SESSION['Iduser_temp_bot']) && (int)$_SESSION['Iduser_temp_bot'] > 0 ? (int)$_SESSION['Iduser_temp_bot'] : (int)$_SESSION['Iduser'];
 
 
 $action = $_GET['action'] ?? 'list';
@@ -66,8 +68,8 @@ if ($action === 'create') {
                 $stmt->execute();
             }
             
-            // Có bot thì auto start sau 10s (turn_expires_at)
-            $nextExpiry = date('Y-m-d H:i:s', time() + 10);
+            // Có bot thì auto start sau 5s (turn_expires_at)
+            $nextExpiry = date('Y-m-d H:i:s', time() + 5);
             $stmt = $conn->prepare("UPDATE samloc_multi_tables SET turn_expires_at = ? WHERE id = ?");
             $stmt->bind_param("si", $nextExpiry, $newTableId);
             $stmt->execute();

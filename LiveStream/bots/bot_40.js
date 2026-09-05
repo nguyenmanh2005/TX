@@ -132,7 +132,7 @@
         }
 
         // ══════════════════════════════════════════════════════
-        // GIAI ĐOẠN 2: GAME ĐANG CHẠY -> DÒ MÌN HOẶC RÚT TIỀN (CASHOUT)
+        // GIAI ĐOẠN 2: GAME ĐANG CHẠY -> DÒ MÌN HOẶC RÚT GTLM (CASHOUT)
         // ══════════════════════════════════════════════════════
         if (isGameActive) {
             setBusy(true);
@@ -145,7 +145,7 @@
 
             // 1. Kiểm tra đã đạt mục tiêu mở ô chưa?
             if (revealedCount >= targetSafePicks) {
-                // 🎉 ĐÃ ĐẠT MỤC TIÊU -> BẤM NÚT RÚT TIỀN
+                // 🎉 ĐÃ ĐẠT MỤC TIÊU -> BẤM NÚT RÚT GTLM
                 BotVirtualCursor.moveToElement($(btnCashout), 0.5, 0, () => {
                     setTimeout(() => {
                         BotVirtualCursor.simulateClick(() => {

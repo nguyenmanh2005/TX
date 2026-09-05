@@ -7,34 +7,34 @@ let myTotalBet = 0;
 let myBetsMap = {};
 
 function fetchState() {
-    $.getJSON(API_URL + '?action=get_state', function(data) {
+    $.getJSON(API_URL + '?action=get_state', function (data) {
         if (!data.success) return;
-        
+
         const phase = data.phase;
         const timeLeft = data.time_left;
         const newCycle = data.cycle_id;
-        
+
         // Update timer
         $('#timerDisplay').text(timeLeft);
-        
+
         // Update pool
         if (data.total_bets) {
             for (let animal in data.total_bets) {
                 $('#pool_' + animal).text(new Intl.NumberFormat().format(data.total_bets[animal]));
             }
         }
-        
+
         if (data.user_money !== undefined && !window.IS_LIVE_MODE) {
             currentBalanceValue = data.user_money;
             $('#currentBalance').text(new Intl.NumberFormat().format(data.user_money));
         }
-        
+
         if (currentCycle !== newCycle) {
             currentCycle = newCycle;
             window.currentCycleId = newCycle;
             resetRace();
         }
-        
+
         if (phase !== currentPhase) {
             currentPhase = phase;
             window.currentPhase = phase;
@@ -48,7 +48,7 @@ function handlePhaseChange(phase, data) {
     const phaseText = $('#phaseText');
     const btnSubmit = $('#btnSubmitBet');
     const betInputs = $('.bet-input');
-    
+
     if (phase === 'betting') {
         overlay.show();
         phaseText.text("CHỜ ĐẶT CƯỢC");
@@ -56,7 +56,7 @@ function handlePhaseChange(phase, data) {
         betInputs.prop('disabled', false);
         isRacing = false;
         resetRace();
-    } 
+    }
     else if (phase === 'racing') {
         overlay.hide();
         btnSubmit.prop('disabled', true);
@@ -69,26 +69,26 @@ function handlePhaseChange(phase, data) {
         overlay.show();
         btnSubmit.prop('disabled', true);
         betInputs.prop('disabled', true);
-        
+
         if (data.rankings && data.rankings.length > 0) {
             let top1 = data.rankings[0];
             let top2 = data.rankings[1];
             let top3 = data.rankings[2];
-            
+
             phaseText.html(`TOP 1: <span>${top1.toUpperCase()}</span> | TOP 2: ${top2.toUpperCase()} | TOP 3: ${top3.toUpperCase()}`);
-            
+
             // Calculate win/loss based on new payouts
             let totalWin = 0;
             if (myBetsMap[top1] > 0) totalWin += myBetsMap[top1] * 3.0;
             if (myBetsMap[top2] > 0) totalWin += myBetsMap[top2] * 2.0;
             if (myBetsMap[top3] > 0) totalWin += myBetsMap[top3] * 0.5;
-            
+
             if (totalWin > 0) {
                 if (window.GameEffects) window.GameEffects.showWin(totalWin);
             } else if (myTotalBet > 0) {
                 if (window.GameEffects) window.GameEffects.showLoss(myTotalBet);
             }
-            
+
             // reset bets for next round
             myTotalBet = 0;
             myBetsMap = {};
@@ -110,13 +110,13 @@ function startRace(rankings) {
     isRacing = true;
     $('.flame').show(); // Show boost flames
     const animals = ['wolf', 'fox', 'panther', 'bear', 'eagle'];
-    
+
     animals.forEach(animal => {
         // Calculate finish time based on rank. Rank 0 (Top 1) crosses first at ~10s.
         let rankIndex = rankings.indexOf(animal);
         if (rankIndex === -1) rankIndex = 4;
-        let duration = 8 + (rankIndex * 1.5) + (Math.random() * 0.5); 
-        
+        let duration = 8 + (rankIndex * 1.5) + (Math.random() * 0.5);
+
         // Bounce effect
         gsap.to('#anim_' + animal, {
             y: "random(-10, 10)",
@@ -136,13 +136,13 @@ function startRace(rankings) {
             }
         });
     });
-    
+
     // Play sound if possible
     try {
         const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-futuristic-engine-power-up-3211.mp3');
         audio.volume = 0.5;
         audio.play();
-    } catch(e) {}
+    } catch (e) { }
 }
 
 let selectedAnimals = [];
@@ -179,22 +179,22 @@ function calculatePotentialWin() {
 }
 
 function addBetSelected(amount) {
-    if(currentPhase !== 'betting') return;
+    if (currentPhase !== 'betting') return;
     if (selectedAnimals.length === 0) {
-        Swal.fire('Chú ý', 'Vui lòng chọn ít nhất một con thú trước khi thêm tiền cược!', 'info');
+        Swal.fire('Chú ý', 'Vui lòng chọn ít nhất một con thú trước khi thêm GTLM cược!', 'info');
         return;
     }
-    
+
     // Calculate current total bet in inputs
     let currentTotalInput = 0;
-    $('.bet-input').each(function() {
+    $('.bet-input').each(function () {
         currentTotalInput += parseInt($(this).val()) || 0;
     });
 
     if (amount === 'ALL') {
         let maxCanBet = currentBalanceValue - currentTotalInput;
         if (maxCanBet <= 0) return;
-        
+
         let splitAmount = Math.floor(maxCanBet / selectedAnimals.length);
         selectedAnimals.forEach(animal => {
             let input = $(`#bet_${animal}`);
@@ -223,11 +223,11 @@ function submitBet() {
         Swal.fire('Lỗi', 'Đã hết thời gian cược!', 'error');
         return;
     }
-    
+
     let bets = [];
     myTotalBet = 0;
     myBetsMap = {};
-    $('.bet-input').each(function() {
+    $('.bet-input').each(function () {
         let amount = parseInt($(this).val());
         if (amount > 0) {
             const animal = $(this).attr('id').replace('bet_', '');
@@ -239,18 +239,18 @@ function submitBet() {
             myBetsMap[animal] = amount;
         }
     });
-    
+
     if (bets.length === 0) {
-        Swal.fire('Lỗi', 'Vui lòng nhập số tiền cược!', 'warning');
+        Swal.fire('Lỗi', 'Vui lòng nhập số GTLM cược!', 'warning');
         return;
     }
-    
+
     $('#btnSubmitBet').prop('disabled', true).text('ĐANG XỬ LÝ...');
-    
+
     $.post(API_URL, {
         action: 'bet',
         bets: JSON.stringify(bets)
-    }, function(res) {
+    }, function (res) {
         if (res.success) {
             Swal.fire({
                 title: 'Thành công!',
@@ -265,7 +265,7 @@ function submitBet() {
             myBetsMap = {};
         }
         $('#btnSubmitBet').prop('disabled', false).text('XÁC NHẬN CƯỢC');
-    }, 'json').fail(function() {
+    }, 'json').fail(function () {
         Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
         $('#btnSubmitBet').prop('disabled', false).text('XÁC NHẬN CƯỢC');
         myTotalBet = 0;

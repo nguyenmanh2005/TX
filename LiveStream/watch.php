@@ -73,7 +73,7 @@ $gameFilesMap = [
     46 => ['file' => 'live_46.php', 'real_game' => '../games/roulette.php', 'name' => 'Roulette', 'icon' => '🎲'],
     47 => ['file' => 'live_47.php', 'real_game' => '../games/rps.php', 'name' => 'Rps', 'icon' => '🎲'],
     48 => ['file' => 'live_48.php', 'real_game' => '../games/ruttham.php', 'name' => 'Ruttham', 'icon' => '🎮'],
-    49 => ['file' => 'live_49.php', 'real_game' => '../games/samloc.php', 'name' => 'Samloc', 'icon' => '🃏'],
+    49 => ['file' => 'live_49.php', 'real_game' => '../games/samloc.php', 'name' => 'Sâm Lốc', 'icon' => '🃏'],
     50 => ['file' => 'live_50.php', 'real_game' => '../games/scratch.php', 'name' => 'Scratch', 'icon' => '🃏'],
     51 => ['file' => 'live_51.php', 'real_game' => '../games/sicbo.php', 'name' => 'Sicbo', 'icon' => '🎮'],
     52 => ['file' => 'live_52.php', 'real_game' => '../games/threecard.php', 'name' => 'Threecard', 'icon' => '🎯'],
@@ -1026,7 +1026,7 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
                         </div>
                         <div class="tiktok-gift-card" onclick="sendTikTokGift('moneygun')">
                             <div class="gift-icon-wrap">🔫</div>
-                            <div class="gift-title">Súng Bắn Tiền</div>
+                            <div class="gift-title">Súng Bắn GTLM</div>
                             <div class="gift-price">20,000 GTLM</div>
                         </div>
                         <div class="tiktok-gift-card" onclick="sendTikTokGift('gem')">

@@ -221,7 +221,7 @@ $stmt->close();
                             window.GameEffects.showLoss();
                         }
                         
-                        // Hiệu ứng chữ trừ tiền nổi lên
+                        // Hiệu ứng chữ trừ GTLM nổi lên
                         const float = $('<div class="floating-loss">-' + formatMoney(betAmount) + '</div>').appendTo('.coin-wrapper');
                         gsap.to(float, { y: 50, opacity: 0, duration: 2, onComplete: () => float.remove() });
                     }

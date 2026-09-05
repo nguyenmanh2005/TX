@@ -2,7 +2,7 @@
  * bot_13.js — Bot Blackjack Xì Dách Thông Minh v3
  * Khớp chính xác với live_13.php (PHP-based BJ):
  *   - #btn-start      → BẮT ĐẦU VÁN MỚI
- *   - #bet-amount     → input tiền cược
+ *   - #bet-amount     → input GTLM cược
  *   - .chip[data-value] → chọn chip
  *   - #action-buttons → vùng Hit/Stand (visible khi đang chơi)
  *   - #btn-hit        → Rút thêm
@@ -23,17 +23,17 @@ function startBJBot13() {
     BotVirtualCursor.init("Thần Bài Xì Dách ♠️🃏");
 
     // ─── CHIP LEVELS ─────────────────────────────────────────────
-    const CHIP_VALUES  = [10000, 50000, 100000, 500000, 1000000, 5000000];
-    let chipIndex      = 1;   // Mặc định 50K
-    let winStreak      = 0;
-    let loseStreak     = 0;
-    let lastBalance    = null;
+    const CHIP_VALUES = [10000, 50000, 100000, 500000, 1000000, 5000000];
+    let chipIndex = 1;   // Mặc định 50K
+    let winStreak = 0;
+    let loseStreak = 0;
+    let lastBalance = null;
 
     // ─── STATE ───────────────────────────────────────────────────
-    let isBusy      = false;
+    let isBusy = false;
     let actionTaken = false;
-    const T_THINK   = () => 1200 + Math.random() * 1600;
-    const T_POLL    = 800;
+    const T_THINK = () => 1200 + Math.random() * 1600;
+    const T_POLL = 800;
     const T_BETWEEN = 3500 + Math.random() * 2000;
 
     // ─── HELPERS ─────────────────────────────────────────────────
@@ -46,7 +46,7 @@ function startBJBot13() {
 
     function readBalance() {
         const el = document.getElementById('balance-display')
-                || document.querySelector('[id*="balance"]');
+            || document.querySelector('[id*="balance"]');
         if (!el) return null;
         return parseInt(el.textContent.replace(/[^0-9]/g, '')) || null;
     }
@@ -106,13 +106,13 @@ function startBJBot13() {
         try {
             BotVirtualCursor.moveToElement($(el), 0.4, 0, () => {
                 BotVirtualCursor.simulateClick(() => {
-                    try { el.click(); } catch(e) {}
-                    setTimeout(cb || function(){}, 350);
+                    try { el.click(); } catch (e) { }
+                    setTimeout(cb || function () { }, 350);
                 });
             });
-        } catch(e) {
-            try { el.click(); } catch(e2) {}
-            setTimeout(cb || function(){}, 350);
+        } catch (e) {
+            try { el.click(); } catch (e2) { }
+            setTimeout(cb || function () { }, 350);
         }
     }
 
@@ -128,10 +128,10 @@ function startBJBot13() {
         setTimeout(() => {
             // 1. Chọn chip
             const chips = Array.from(document.querySelectorAll('.chip[data-value]'));
-            const targetVal  = CHIP_VALUES[chipIndex] || 50000;
+            const targetVal = CHIP_VALUES[chipIndex] || 50000;
             const targetChip = chips.find(c => parseInt(c.dataset.value) === targetVal)
-                             || chips[1]
-                             || chips[0];
+                || chips[1]
+                || chips[0];
 
             safeClick(targetChip, () => {
                 setTimeout(() => {
@@ -194,7 +194,7 @@ function startBJBot13() {
                 phasePlay();
             }
             // Nếu đang animation hoặc chờ server → đợi poll sau
-        } catch(e) {
+        } catch (e) {
             isBusy = false;
             actionTaken = false;
         }

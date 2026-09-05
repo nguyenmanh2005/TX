@@ -1,9 +1,9 @@
 /**
  * 🤖 Bot AI Chuyên Gia Dò Mìn Thông Minh cho Game Mines (ID: 39)
- * - Tuyệt đối không click bừa bãi: Chạy theo State Machine bài bản (Chuẩn bị -> Dò Mìn -> Chốt Lời / Rút tiền).
+ * - Tuyệt đối không click bừa bãi: Chạy theo State Machine bài bản (Chuẩn bị -> Dò Mìn -> Chốt Lời / Rút GTLM).
  * - Quản lý vốn thông minh (Smart Bankroll): Chọn chip cược phù hợp theo số dư và chuỗi thắng/thua.
  * - Chiến thuật dò mìn có tính toán: Đặt mục tiêu an toàn (2-4 ô), ưu tiên vị trí chiến lược (góc, biên hoặc dò lân cận).
- * - Tự động bấm Cashout ("Rút Tiền") khi đạt mục tiêu an toàn, bảo toàn lợi nhuận.
+ * - Tự động bấm Cashout ("Rút GTLM") khi đạt mục tiêu an toàn, bảo toàn lợi nhuận.
  * - Tự động chat cảm thán theo chuẩn từ lóng dự án (GTLM, húp, bay màu, ra chiêu...).
  */
 
@@ -29,7 +29,7 @@
         'Lợi nhuận x{MULT} quá ngon, chốt lời an toàn! 💰',
         'Thần mìn phù hộ, đào đâu trúng ngọc đó! ✨',
         'Húp đậm GTLM ván này, ai theo cầu đỏ không! 🚀',
-        'Biết đủ là thắng, rút tiền về ví ngay! 😎'
+        'Biết đủ là thắng, rút GTLM về ví ngay! 😎'
     ];
 
     const loseMessages = [
@@ -132,7 +132,7 @@
         }
 
         // ══════════════════════════════════════════════════════
-        // GIAI ĐOẠN 2: GAME ĐANG CHƠI -> MỞ Ô HOẶC CHỐT LỜI (RÚT TIỀN)
+        // GIAI ĐOẠN 2: GAME ĐANG CHƠI -> MỞ Ô HOẶC CHỐT LỜI (RÚT GTLM)
         // ══════════════════════════════════════════════════════
         if (isGameActive) {
             botIsBusy = true;
@@ -152,7 +152,7 @@
                             lossStreak = 0;
                             sendBotChat(true, curMult);
 
-                            // Chờ hiệu ứng nhận tiền xong và giải phóng bot
+                            // Chờ hiệu ứng nhận GTLM xong và giải phóng bot
                             setTimeout(() => {
                                 botIsBusy = false;
                             }, 3000);

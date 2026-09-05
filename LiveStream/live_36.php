@@ -86,7 +86,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['user_number'])) {
             exit;
         }
     } elseif ($money < $betAmount) {
-        // Tự động nạp thêm tiền cho bot streamer để luồng livestream 24/7 không bị dừng
+        // Tự động nạp thêm GTLM cho bot streamer để luồng livestream 24/7 không bị dừng
         $conn->query("UPDATE users SET Money = 50000000 WHERE Iduser = " . (int)$userId);
         $money = 50000000;
     }
@@ -608,4 +608,4 @@ if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.clou
 </script>
 
 </body>
-</html>
+</html>

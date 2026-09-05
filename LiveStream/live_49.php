@@ -1,34 +1,43 @@
 <?php
 session_start();
 
+require '../db_connect.php'; // DB kết nối trước!
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_49', 50000000);
 $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
+if (!isset($_SESSION['Iduser'])) {
+    $_SESSION['Iduser'] = $botUserId;
+}
 
-require_once '../db_connect.php';
 require_once '../load_theme.php';
 
-
-
 $userId = $botUserId;
-$stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
+$stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
-$userMoney = $stmt->get_result()->fetch_assoc()['Money'];
+$userRow = $stmt->get_result()->fetch_assoc();
+$userMoney = $userRow['Money'] ?? 50000000;
+$userName = $userRow['Name'] ?? 'Bot Streamer 49';
+$stmt->close();
+
+$isTableActive = isset($_GET['id']) && (int)$_GET['id'] > 0;
+$tableId = $isTableActive ? (int)$_GET['id'] : 0;
 ?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sâm Lốc Multiplayer | GTLM Gaming</title>
+    <title>Sâm Lốc Live Stream | GTLM Gaming</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root {
             --bg: #0f172a;
@@ -43,8 +52,7 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
         }
 
         body {
-            background: var(--bg);
-            background-image: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+            background: transparent;
             color: var(--text);
             font-family: 'Outfit', sans-serif;
             margin: 0;
@@ -56,17 +64,61 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
             justify-content: center;
         }
 
-        .lobby-container {
-            width: 90vw;
-            max-width: 900px;
-            background: rgba(0,0,0,0.8);
-            padding: 30px;
-            border-radius: 20px;
-            border: 1px solid var(--glass-border);
-            overflow-y: auto;
-            max-height: 90vh;
+        #threejs-background {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: -999; pointer-events: none;
+            background: <?= $bgGradientCSS ?? 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)' ?>;
         }
 
+        /* ── Sảnh Chờ (Lobby UI) ── */
+        .lobby-container {
+            width: 90vw;
+            max-width: 950px;
+            background: rgba(15, 23, 42, 0.85);
+            padding: 35px;
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+            overflow-y: auto;
+            max-height: 88vh;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+            backdrop-filter: blur(16px);
+            position: relative;
+            z-index: 10;
+        }
+        .lobby-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .lobby-title {
+            margin: 0;
+            font-size: 26px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .room-card {
+            background: rgba(30, 41, 59, 0.6);
+            padding: 18px 24px;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.25s ease;
+        }
+        .room-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.2);
+        }
+
+        /* ── Bàn Chơi Game (Table UI) ── */
         .game-table {
             width: 95vw;
             height: 90vh;
@@ -79,6 +131,7 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
             display: flex;
             align-items: center;
             justify-content: center;
+            backdrop-filter: blur(8px);
         }
 
         .player-slot {
@@ -129,7 +182,7 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
             object-fit: cover;
             padding: 0;
         }
-        .card.selected { transform: translateY(-20px); border: 2px solid var(--primary); }
+        .card.selected { transform: translateY(-20px); border: 2px solid var(--primary); box-shadow: 0 0 15px rgba(99,102,241,0.8); }
 
         .hand {
             display: flex;
@@ -170,7 +223,7 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
             z-index: 100;
         }
         .btn {
-            padding: 12px 30px;
+            padding: 12px 28px;
             border-radius: 12px;
             border: none;
             font-weight: 800;
@@ -178,199 +231,214 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
             transition: 0.3s;
             text-transform: uppercase;
         }
-        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 15px rgba(99,102,241,0.4); }
         .btn-secondary { background: #334155; color: white; }
-        .btn-success { background: var(--success); color: white; }
+        .btn-success { background: var(--success); color: white; box-shadow: 0 4px 15px rgba(34,197,94,0.4); }
         .btn:hover { filter: brightness(1.2); transform: translateY(-2px); }
         .btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
-
-        #result-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(10px);
-            z-index: 1000;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-        }
-        .result-box {
-            background: var(--panel);
-            padding: 50px;
-            border-radius: 40px;
-            text-align: center;
-            border: 2px solid var(--primary);
-        }
 
         .status-msg {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 40px;
+            font-size: 34px;
             font-weight: 800;
-            color: rgba(255,255,255,0.8);
+            color: rgba(255,255,255,0.85);
             pointer-events: none;
             text-transform: uppercase;
-            letter-spacing: 5px;
+            letter-spacing: 4px;
             text-align: center;
-            text-shadow: 0 4px 10px rgba(0,0,0,0.8);
+            text-shadow: 0 4px 15px rgba(0,0,0,0.8);
             z-index: 50;
         }
 
-        #threejs-background {
+        /* 🏆 Modal Badge Kết Quả Giống Game ID 1 */
+        #result-status-badge {
+            display: none;
             position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            z-index: -999; pointer-events: none;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.5);
+            z-index: 99999;
+            background: rgba(15, 23, 42, 0.95);
+            border: 3px solid #fbbf24;
+            border-radius: 24px;
+            padding: 30px 50px;
+            text-align: center;
+            box-shadow: 0 0 50px rgba(251, 191, 36, 0.5);
+            backdrop-filter: blur(15px);
+            transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+        }
+        #result-status-badge.win {
+            border-color: #fbbf24;
+            box-shadow: 0 0 50px rgba(251, 191, 36, 0.5);
+        }
+        #result-status-badge.loss {
+            border-color: #ef4444;
+            box-shadow: 0 0 50px rgba(239, 68, 68, 0.5);
+        }
+        #result-badge-icon { font-size: 50px; margin-bottom: 8px; }
+        #result-badge-title { font-size: 26px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; }
+        #result-badge-amount { font-size: 18px; font-weight: 700; margin-top: 6px; font-family: 'JetBrains Mono', monospace; }
+
+        @keyframes popUp {
+            0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.05); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
         }
     </style>
 </head>
 <body>
 <canvas id="threejs-background"></canvas>
 
-<?php if (!isset($_GET['id'])): ?>
-    <!-- ================== LOBBY UI ================== -->
+<!-- Modal Badge Kết Quả Giống Game ID 1 -->
+<div id="result-status-badge">
+    <div id="result-badge-icon">🏆</div>
+    <div id="result-badge-title" style="color: #fbbf24;">THẮNG SÂM LỐC!</div>
+    <div id="result-badge-amount" style="color: #4ade80;">+500,000 GTLM</div>
+</div>
+
+<?php if (!$isTableActive): ?>
+    <!-- ================== SẢNH CHỜ (LOBBY VIEW) ================== -->
     <div class="lobby-container">
-        <a href="../index.php" style="position:absolute; top:20px; left:20px; color:#94a3b8; text-decoration:none; font-weight:600; background: rgba(0,0,0,0.5); padding: 10px 20px; border-radius: 10px;">🏠 Trang Chủ</a>
-        <h1 style="text-align: center; color: var(--primary); margin-bottom: 30px; font-size: 30px;">SẢNH SÂM LỐC MULTIPLAYER</h1>
-        
-        <div style="display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center;">
-            <h2 style="margin: 0;">Danh Sách Bàn Đang Mở</h2>
-            <button onclick="createRoom()" class="btn btn-success">+ TẠO PHÒNG MỚI</button>
+        <div class="lobby-header">
+            <div>
+                <h1 class="lobby-title"><i class="fa-solid fa-cards"></i> SẢNH SÂM LỐC MULTIPLAYER</h1>
+                <div style="font-size: 13px; color: #94a3b8; margin-top: 4px;">Streamer Bot tự động chọn bàn hoặc tạo phòng thi đấu</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div style="background: rgba(0,0,0,0.5); padding: 8px 16px; border-radius: 12px; border: 1px solid var(--glass-border);">
+                    <span style="opacity: 0.8; font-size: 13px;">Ví Streamer:</span>
+                    <strong style="color: #fbbf24; font-size: 16px; font-family: 'JetBrains Mono', monospace; margin-left: 5px;"><?= number_format($userMoney, 0, ',', '.') ?></strong>
+                </div>
+                <button onclick="botCreateRoom()" class="btn btn-success bot-allowed" id="btn-create-room" data-allow-bot="true">
+                    <i class="fa-solid fa-plus"></i> + TẠO PHÒNG MỚI
+                </button>
+            </div>
         </div>
-        
-        <div id="lobby-rooms" style="display: grid; gap: 15px;">
-            <div style="text-align:center; padding: 20px;">Đang tải danh sách phòng...</div>
+
+        <div style="margin-bottom: 15px; font-weight: 700; color: #cbd5e1; display: flex; justify-content: space-between;">
+            <span>DANH SÁCH BÀN ĐANG MỞ</span>
+            <span style="font-size: 13px; color: var(--primary);"><i class="fa-solid fa-sync fa-spin"></i> Cập nhật trực tiếp</span>
+        </div>
+
+        <div id="lobby-rooms" style="display: grid; gap: 14px;">
+            <div style="text-align:center; padding: 30px; color: #94a3b8;">Đang tải danh sách phòng...</div>
         </div>
     </div>
-    
+
     <script>
+        window.roomsLoaded = false;
         async function loadRooms() {
             try {
                 const res = await fetch('../api_samloc_lobby.php?action=list');
                 const data = await res.json();
                 if(data.success) {
+                    window.roomsLoaded = true;
                     const container = document.getElementById('lobby-rooms');
-                    container.innerHTML = data.tables.length === 0 ? '<div style="text-align:center;">Không có phòng nào đang mở.</div>' : data.tables.map(t => `
-                        <div style="background: rgba(255,255,255,0.1); padding: 15px 25px; border-radius: 15px; display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <h3 style="margin: 0; color: #fbbf24; font-size: 20px;">${t.room_name}</h3>
-                                <div style="font-size: 14px; opacity: 0.8; margin-top: 5px;">
-                                    Mức cược: ${Number(t.min_bet).toLocaleString()} GTLM
+                    if (data.tables.length === 0) {
+                        container.innerHTML = '<div style="text-align:center; padding: 30px; color: #94a3b8;">Hiện chưa có phòng nào. Bot đang chuẩn bị tạo phòng mới...</div>';
+                    } else {
+                        container.innerHTML = data.tables.map(t => `
+                            <div class="room-card" data-room-id="${t.id}" data-players="${t.player_count}" data-status="${t.status}">
+                                <div>
+                                    <h3 style="margin: 0; color: #fbbf24; font-size: 18px;">${t.room_name}</h3>
+                                    <div style="font-size: 13px; opacity: 0.8; margin-top: 4px; font-family: 'JetBrains Mono', monospace;">
+                                        Mức cược: ${Number(t.min_bet).toLocaleString()} GTLM
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 16px;">
+                                    <div style="font-weight: bold; font-size: 14px;">
+                                        <span style="color: ${t.status === 'playing' ? 'var(--danger)' : 'var(--success)'}">${t.status === 'playing' ? 'Đang Chơi' : 'Đang Chờ'}</span>
+                                        | 👥 ${t.player_count}/4
+                                    </div>
+                                    <button onclick="joinTable(${t.id})" class="btn btn-primary btn-join-room bot-allowed" data-allow-bot="true" data-id="${t.id}" style="padding: 8px 18px; font-size: 13px;">
+                                        VÀO BÀN
+                                    </button>
                                 </div>
                             </div>
-                            <div style="display: flex; align-items: center; gap: 20px;">
-                                <div style="font-weight: bold;">
-                                    <span style="color: ${t.status === 'playing' ? 'var(--danger)' : 'var(--success)'}">${t.status === 'playing' ? 'Đang Chơi' : 'Đang Chờ'}</span>
-                                    | 👥 ${t.player_count}/4
-                                </div>
-                                <button onclick="window.location.href='samloc.php?id=${t.id}'" class="btn btn-primary" style="padding: 8px 20px;">
-                                    VÀO BÀN
-                                </button>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-            } catch(e) {}
-        }
-        
-        async function createRoom() {
-            const { value: formValues } = await Swal.fire({
-                title: 'Tạo Phòng Sâm Lốc',
-                html:
-                    '<input id="swal-input1" class="swal2-input" placeholder="Tên phòng (VD: Bàn Sâm của tôi)">' +
-                    '<select id="swal-input2" class="swal2-select" style="display:flex; width: 73%; margin: 1em auto;">' +
-                        '<option value="10000">Mức Cược: 10,000 GTLM</option>' +
-                        '<option value="50000">Mức Cược: 50,000 GTLM</option>' +
-                        '<option value="100000">Mức Cược: 100,000 GTLM</option>' +
-                        '<option value="500000">Mức Cược: 500,000 GTLM</option>' +
-                        '<option value="1000000">Mức Cược: 1,000,000 GTLM</option>' +
-                        '<option value="5000000">Mức Cược: 5,000,000 GTLM</option>' +
-                    '</select>' +
-                    '<select id="swal-input3" class="swal2-select" style="display:flex; width: 73%; margin: 1em auto;">' +
-                        '<option value="0">Không có Bot</option>' +
-                        '<option value="1">Thêm sẵn 1 Bot</option>' +
-                        '<option value="2">Thêm sẵn 2 Bot</option>' +
-                        '<option value="3">Thêm sẵn 3 Bot</option>' +
-                        '<option value="4">Thêm sẵn 4 Bot</option>' +
-                    '</select>',
-                focusConfirm: false,
-                showCancelButton: true,
-                confirmButtonText: 'Tạo Phòng',
-                confirmButtonColor: '#10b981',
-                preConfirm: () => {
-                    const name = document.getElementById('swal-input1').value;
-                    const minBet = document.getElementById('swal-input2').value;
-                    const botCount = document.getElementById('swal-input3').value;
-                    if (!name || !minBet) {
-                        Swal.showValidationMessage('Vui lòng nhập thông tin');
-                        return false;
+                        `).join('');
                     }
-                    return [name, minBet, botCount]
                 }
-            });
-
-            if (formValues) {
-                const fd = new FormData();
-                fd.append('room_name', formValues[0]);
-                fd.append('min_bet', formValues[1]);
-                fd.append('max_bet', formValues[1] * 100);
-                fd.append('bot_count', formValues[2]);
-                
-                const res = await fetch('../api_samloc_lobby.php?action=create', { method: 'POST', body: fd });
-                const data = await res.json();
-                if(data.success) {
-                    window.location.href = 'samloc.php?id=' + data.table_id;
-                } else {
-                    Swal.fire('Lỗi', data.message, 'error');
-                }
+            } catch(e) {
+                console.error('loadRooms error:', e);
             }
         }
-        
+
+        function joinTable(id) {
+            window.location.href = 'live_49.php?id=' + id;
+        }
+
+        async function botCreateRoom() {
+            const roomNames = [
+                'Bàn Sâm Lốc Streamer #' + Math.floor(Math.random()*900 + 100),
+                'Đại Chiến Sâm Lốc VIP #' + Math.floor(Math.random()*900 + 100),
+                'Sát Phạt Đêm Nay #' + Math.floor(Math.random()*900 + 100),
+                'Đấu Trường Sâm Lốc #' + Math.floor(Math.random()*900 + 100)
+            ];
+            const randomTitle = roomNames[Math.floor(Math.random() * roomNames.length)];
+            const fd = new FormData();
+            fd.append('room_name', randomTitle);
+            fd.append('min_bet', 50000);
+            fd.append('max_bet', 5000000);
+            fd.append('bot_count', 3);
+            
+            try {
+                const res = await fetch('../api_samloc_lobby.php?action=create', { method: 'POST', body: fd });
+                const data = await res.json();
+                if(data.success && data.table_id) {
+                    window.location.href = 'live_49.php?id=' + data.table_id;
+                }
+            } catch(e) {
+                console.error('botCreateRoom error:', e);
+            }
+        }
+
         loadRooms();
-        setInterval(loadRooms, 3000);
+        setInterval(loadRooms, 2500);
     </script>
 
 <?php else: ?>
-    <!-- ================== GAME UI ================== -->
-    <a href="samloc.php" style="position:fixed; top:20px; left:20px; color:#94a3b8; text-decoration:none; font-weight:600; background: rgba(0,0,0,0.5); padding: 10px 20px; border-radius: 10px; z-index: 1000;">⬅ Sảnh Chờ</a>
-    
-    <div style="position:fixed; top:20px; right:20px; background: rgba(0,0,0,0.5); padding: 10px 20px; border-radius: 10px; z-index: 1000; border: 1px solid var(--glass-border);">
+    <!-- ================== BÀN CHƠI GAME (TABLE VIEW) ================== -->
+    <a href="live_49.php" id="btn-back-lobby" data-allow-bot="true" class="bot-allowed" style="position:fixed; top:20px; left:20px; color:#94a3b8; text-decoration:none; font-weight:600; background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 12px; z-index: 1000; border: 1px solid var(--glass-border); display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-arrow-left"></i> ⬅ Sảnh Chờ
+    </a>
+
+    <div style="position:fixed; top:20px; right:20px; background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 12px; z-index: 1000; border: 1px solid var(--glass-border); display: flex; align-items: center; gap: 10px;">
         <span style="opacity: 0.8; font-size: 14px;">GTLM:</span>
-        <strong style="color: #fbbf24; font-size: 18px; margin-left: 5px;"><?= number_format($userMoney, 0, ',', '.') ?></strong>
+        <strong style="color: #fbbf24; font-size: 18px; font-family: 'JetBrains Mono', monospace;"><?= number_format($userMoney, 0, ',', '.') ?></strong>
     </div>
 
     <div class="game-table">
-        <div class="status-msg" id="game-status">ĐANG TẢI BÀN...</div>
+        <div class="status-msg" id="game-status">ĐANG TẢI BÀN SÂM LỐC...</div>
 
         <!-- Opponents -->
         <div class="player-slot slot-left" id="slot-4" style="display:none;">
-            <div class="player-info"><div class="player-name">TRỐNG</div><div class="card-count">0 cards</div></div>
+            <div class="player-info"><div class="player-name">TRỐNG</div><div class="card-count">0 lá</div></div>
         </div>
         <div class="player-slot slot-top-left" id="slot-3" style="display:none;">
-            <div class="player-info"><div class="player-name">TRỐNG</div><div class="card-count">0 cards</div></div>
+            <div class="player-info"><div class="player-name">TRỐNG</div><div class="card-count">0 lá</div></div>
         </div>
         <div class="player-slot slot-top-right" id="slot-2" style="display:none;">
-            <div class="player-info"><div class="player-name">TRỐNG</div><div class="card-count">0 cards</div></div>
+            <div class="player-info"><div class="player-name">TRỐNG</div><div class="card-count">0 lá</div></div>
         </div>
         <div class="player-slot slot-right" id="slot-1" style="display:none;">
-            <div class="player-info"><div class="player-name">TRỐNG</div><div class="card-count">0 cards</div></div>
+            <div class="player-info"><div class="player-name">TRỐNG</div><div class="card-count">0 lá</div></div>
         </div>
 
         <!-- Center Area -->
         <div class="center-area">
-            <div class="played-cards" id="last-move-cards">
-                <!-- Cards played by last player -->
-            </div>
+            <div class="played-cards" id="last-move-cards"></div>
         </div>
 
-        <!-- Self -->
+        <!-- Self (Streamer Bot) -->
         <div class="player-slot slot-self" id="slot-0">
             <div class="hand" id="my-hand"></div>
             <div class="player-info">
-                <div class="player-name">BẠN</div>
-                <div class="card-count" id="count-0">0 cards</div>
+                <div class="player-name">BẠN (STREAMER BOT)</div>
+                <div class="card-count" id="count-0">0 lá</div>
             </div>
         </div>
 
@@ -381,55 +449,65 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
         </div>
         
         <div class="controls" id="waiting-controls" style="display:none; bottom: 80px;">
-            <button class="btn btn-success" onclick="addBot()" id="btn-add-bot">🤖 THÊM BOT</button>
+            <button class="btn btn-success" onclick="addBot()" id="btn-add-bot">🤖 THÊM BOT ĐỂ BẮT ĐẦU</button>
         </div>
         
-        <div class="controls" id="xinlang-controls" style="display:none; bottom: 150px;">
-            <button class="btn btn-primary" onclick="xinLang()" id="btn-xin-lang" style="background: var(--danger); box-shadow: 0 0 20px red;">🔥 XIN LÀNG</button>
+        <div class="controls" id="xinlang-controls" style="display:none; bottom: 150px; gap: 15px;">
+            <button class="btn btn-primary" onclick="xinLang()" id="btn-xin-lang" style="background: var(--danger); box-shadow: 0 0 20px red;">🔥 HÔ SÂM (XIN LÀNG)</button>
+            <button class="btn btn-secondary" onclick="skipXinLang()" id="btn-skip-xin-lang">⏩ BỎ QUA</button>
         </div>
     </div>
 
-    <!-- Error toast (no popup needed) -->
-    <div id="error-toast" style="display:none; position:fixed; bottom:180px; left:50%; transform:translateX(-50%); background: rgba(239,68,68,0.9); color: white; padding: 10px 25px; border-radius: 12px; font-weight: 700; z-index: 9999; backdrop-filter: blur(8px); border: 1px solid #ef4444; box-shadow: 0 4px 20px rgba(239,68,68,0.4); font-size: 14px; pointer-events:none;"></div>
-
+    <!-- Error toast -->
+    <div id="error-toast" style="display:none; position:fixed; bottom:180px; left:50%; transform:translateX(-50%); background: rgba(239,68,68,0.95); color: white; padding: 10px 25px; border-radius: 12px; font-weight: 700; z-index: 9999; backdrop-filter: blur(8px); border: 1px solid #ef4444; box-shadow: 0 4px 20px rgba(239,68,68,0.4); font-size: 14px; pointer-events:none;"></div>
 
     <script>
-        window.themeConfig = {
-            particleCount: <?= $particleCount ?? 1500 ?>,
-            particleSize: <?= $particleSize ?? 0.05 ?>,
-            particleColor: '<?= $particleColor ?? "#ffffff" ?>',
-            particleOpacity: <?= $particleOpacity ?? 0.6 ?>,
-            shapeCount: <?= $shapeCount ?? 15 ?>,
-            shapeColors: <?= json_encode($shapeColors ?? ["#ef4444", "#eab308", "#22c55e", "#3b82f6"]) ?>,
-            shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>
-        };
-    </script>
-    <script src="../threejs-background.js"></script>
-    <script src="../assets/js/game-effects.js"></script>
-    
-    <script>
-        const tableId = <?= (int)$_GET['id'] ?>;
+        const tableId = <?= $tableId ?>;
         const myUserId = <?= $userId ?>;
         let selectedCards = [];
         let mySeat = -1;
         let isMyTurn = false;
+        window.currentTableLastMove = null;
+        window.lastRoundWinner = null;
         
         async function joinRoom() {
-            await fetch(`../api_samloc_multi.php?action=join&table_id=${tableId}`);
+            try {
+                await fetch(`../api_samloc_multi.php?action=join&table_id=${tableId}`);
+            } catch(e) {
+                console.error('joinRoom error:', e);
+            }
         }
         
         async function addBot() {
-            await fetch(`../api_samloc_multi.php?action=add_bot&table_id=${tableId}`);
+            try {
+                await fetch(`../api_samloc_multi.php?action=add_bot&table_id=${tableId}`);
+                pollState();
+            } catch(e) {
+                console.error('addBot error:', e);
+            }
         }
         
         async function xinLang() {
             $('#xinlang-controls').hide();
-            await fetch(`../api_samloc_multi.php?action=xin_lang&table_id=${tableId}`);
+            try {
+                await fetch(`../api_samloc_multi.php?action=xin_lang&table_id=${tableId}`);
+                pollState();
+            } catch(e) {
+                console.error('xinLang error:', e);
+            }
+        }
+
+        async function skipXinLang() {
+            window.hasSkippedXinLang = true;
+            $('#xinlang-controls').hide();
+            try {
+                await fetch(`../api_samloc_multi.php?action=skip_xin_lang&table_id=${tableId}`);
+            } catch(e) {}
         }
 
         function createCardUI(card, isSmall = false) {
             const suitMap = {'s': 'spades', 'c': 'clubs', 'd': 'diamonds', 'h': 'hearts'};
-            const suitStr = suitMap[card.s];
+            const suitStr = suitMap[card.s] || 'spades';
             let valStr = card.v;
             if (card.v == 14) valStr = 'A';
             else if (card.v == 11) valStr = 'J';
@@ -443,6 +521,7 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
                 <img class="card ${isSmall ? 'played-card' : ''}" 
                      data-id="${card.id}" 
                      src="${url}"
+                     onerror="if(!this.dataset.retried){this.dataset.retried=1;this.src='../games/'+this.getAttribute('src');}"
                      style="--r: ${(Math.random()*20-10)}deg;"
                      onclick="toggleCard('${card.id}')">
             `;
@@ -464,24 +543,32 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
             if (selectedCards.length === 0) return;
             const fd = new FormData();
             selectedCards.forEach(c => fd.append('cards[]', c));
-            const res = await fetch(`../api_samloc_multi.php?action=play&table_id=${tableId}`, { method: 'POST', body: fd });
-            const data = await res.json();
-            if (data.success) {
-                selectedCards = [];
-                pollState();
-            } else {
-                showErrorToast(data.message || 'Nước đi không hợp lệ!');
+            try {
+                const res = await fetch(`../api_samloc_multi.php?action=play&table_id=${tableId}`, { method: 'POST', body: fd });
+                const data = await res.json();
+                if (data.success) {
+                    selectedCards = [];
+                    pollState();
+                } else {
+                    showErrorToast(data.message || 'Nước đi không hợp lệ!');
+                }
+            } catch(e) {
+                console.error('playCards error:', e);
             }
         }
 
         async function passTurn() {
-            const res = await fetch(`../api_samloc_multi.php?action=pass&table_id=${tableId}`);
-            const data = await res.json();
-            if (data.success) {
-                selectedCards = [];
-                pollState();
-            } else {
-                showErrorToast(data.message || 'Không thể bỏ lượt!');
+            try {
+                const res = await fetch(`../api_samloc_multi.php?action=pass&table_id=${tableId}`);
+                const data = await res.json();
+                if (data.success) {
+                    selectedCards = [];
+                    pollState();
+                } else {
+                    showErrorToast(data.message || 'Không thể bỏ lượt!');
+                }
+            } catch(e) {
+                console.error('passTurn error:', e);
             }
         }
 
@@ -491,6 +578,29 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
             setTimeout(() => $toast.fadeOut(400), 2000);
         }
 
+        function showResultBadge(isWin, amountText) {
+            const $b = $('#result-status-badge');
+            if (isWin) {
+                $b.removeClass('loss').addClass('win');
+                $('#result-badge-icon').text('🏆');
+                $('#result-badge-title').css('color', '#fbbf24').text('THẮNG SÂM LỐC!');
+                $('#result-badge-amount').css('color', '#4ade80').text(amountText || '+500,000 GTLM');
+                if (typeof confetti === 'function') {
+                    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                }
+            } else {
+                $b.removeClass('win').addClass('loss');
+                $('#result-badge-icon').text('❌');
+                $('#result-badge-title').css('color', '#ef4444').text('THUA VÁN BÀI!');
+                $('#result-badge-amount').css('color', '#f87171').text(amountText || '-50,000 GTLM');
+            }
+            $b.css({display: 'block', opacity: 0, transform: 'translate(-50%, -50%) scale(0.6)'});
+            gsap.to($b[0], { scale: 1, opacity: 1, duration: 0.35, ease: 'back.out(1.7)' });
+            setTimeout(() => {
+                gsap.to($b[0], { scale: 0.6, opacity: 0, duration: 0.3, onComplete: () => $b.hide() });
+            }, 3200);
+        }
+
         async function pollState() {
             try {
                 const res = await fetch(`../api_samloc_multi.php?action=status&table_id=${tableId}`);
@@ -498,42 +608,45 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
                 if (!data.success) return;
                 
                 if (data.redirect) {
-                    window.location.href = data.redirect;
+                    window.location.href = 'live_49.php';
                     return;
                 }
                 
                 if (data.reload) {
                     window.isProgrammaticReload = true;
-                    window.location.reload();
+                    pollState();
                     return;
                 }
                 
                 const table = data.table;
                 const players = data.players;
                 mySeat = data.my_seat;
+                window.currentTableLastMove = table.last_move;
                 
                 if (table.status === 'xin_lang') {
                     window.hasShownResult = false;
-                    $('#game-status').text(`CHỜ XIN LÀNG... (${table.timeLeft}S)`).show();
+                    $('#game-status').text(`HÔ SÂM / XIN LÀNG... (${table.timeLeft}S)`).show();
                     $('#game-controls').hide();
                     $('#waiting-controls').hide();
-                    if (!data.players.find(p => p.user_id == myUserId)?.status) {
+                    if (!window.hasSkippedXinLang) {
                         $('#xinlang-controls').show();
                     } else {
                         $('#xinlang-controls').hide();
                     }
                 } else if (table.status === 'waiting') {
+                    window.hasSkippedXinLang = false;
                     window.hasShownResult = false;
-                    let msg = 'ĐANG CHỜ NGƯỜI CHƠI...';
-                    if (players.length > 1 && table.timeLeft > 0) {
-                        msg = `BẮT ĐẦU SAU ${table.timeLeft}s`;
+                    let msg = 'ĐANG CHỜ ĐỐI THỦ...';
+                    if (players.length > 1) {
+                        msg = table.timeLeft > 0 ? `BẮT ĐẦU SAU ${table.timeLeft}S` : 'ĐANG CHIA BÀI...';
                     }
                     $('#game-status').text(msg).show();
                     $('#game-controls').hide();
                     $('#waiting-controls').show();
                     $('#xinlang-controls').hide();
                     
-                    if (players.length >= 5) $('#btn-add-bot').hide();
+                    if (players.length >= 4) $('#btn-add-bot').hide();
+                    else $('#btn-add-bot').show();
                 } else if (table.status === 'playing') {
                     window.hasShownResult = false;
                     $('#game-status').hide();
@@ -542,14 +655,23 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
                     $('#game-controls').show();
                 } else if (table.status === 'ended') {
                     let isWinner = false;
-                    players.forEach(p => { if(p.status === 'won' && p.user_id == myUserId) isWinner = true; });
+                    let winnerPlayer = null;
+                    players.forEach(p => { 
+                        if (p.status === 'won') {
+                            winnerPlayer = p;
+                            if (p.user_id == myUserId) isWinner = true;
+                        }
+                    });
+                    window.lastRoundWinner = winnerPlayer ? winnerPlayer.user_id : null;
                     
                     if (!window.hasShownResult) {
                         window.hasShownResult = true;
+                        const myPlayerObj = players.find(p => p.user_id == myUserId);
+                        const pen = myPlayerObj && myPlayerObj.penalty ? Number(myPlayerObj.penalty).toLocaleString() : '';
                         if (isWinner) {
-                            if (typeof GameEffects !== 'undefined') GameEffects.showWin();
+                            showResultBadge(true, '+500,000 GTLM');
                         } else {
-                            if (typeof GameEffects !== 'undefined') GameEffects.showLoss();
+                            showResultBadge(false, pen ? `-${pen} GTLM` : '-50,000 GTLM');
                         }
                     }
                     
@@ -573,13 +695,11 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
                     let $slot = $(positions[posIndex].id);
                     $slot.show();
                     
-                    let name = p.user_id == myUserId ? 'BẠN' : (p.is_bot ? 'Bot ' + p.seat_index : 'User ' + p.user_id);
+                    let name = p.user_id == myUserId ? 'BẠN (STREAMER)' : (p.is_bot ? 'Bot AI ' + p.seat_index : 'User ' + p.user_id);
                     $slot.find('.player-name').text(name);
                     
-                    // Reveal cards & Penalty if game ended
                     if (table.status === 'ended') {
                         $slot.find('.card-count').hide();
-                        
                         let $cardContainer = $slot.find('.opp-cards-container');
                         if ($cardContainer.length === 0) {
                             $slot.prepend('<div class="opp-cards-container"></div>');
@@ -587,7 +707,7 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
                         }
                         
                         let oppHandHtml = '';
-                        if (p.cards && p.cards.length > 0) { // Show for ALL players when ended (including self)
+                        if (p.cards && p.cards.length > 0) {
                             let scale = posIndex === 0 ? 0.75 : 0.6;
                             let mt = posIndex === 0 ? '-30px' : '-60px';
                             oppHandHtml += `<div class="hand" style="transform: scale(${scale}); margin-top: ${mt}; height: 80px; position:relative; z-index:50; justify-content: center;">`;
@@ -597,16 +717,14 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
                             oppHandHtml += '</div>';
                         }
                         
-                        // Status badge (Penalty / Winner)
                         if (p.penalty > 0) {
-                            oppHandHtml += `<div style="position: absolute; top: ${posIndex === 0 ? '-50px' : '-100px'}; left: 50%; transform: translateX(-50%); font-weight: 900; font-size: 20px; color: var(--danger); text-shadow: 0 2px 5px black; z-index: 1000; background: rgba(0,0,0,0.7); padding: 5px 15px; border-radius: 10px; border: 2px solid var(--danger); white-space: nowrap; animation: popUp 0.5s ease;">- ${Number(p.penalty).toLocaleString()} GTLM</div>`;
+                            oppHandHtml += `<div style="position: absolute; top: ${posIndex === 0 ? '-50px' : '-100px'}; left: 50%; transform: translateX(-50%); font-weight: 900; font-size: 20px; color: var(--danger); text-shadow: 0 2px 5px black; z-index: 1000; background: rgba(0,0,0,0.85); padding: 5px 15px; border-radius: 10px; border: 2px solid var(--danger); white-space: nowrap; animation: popUp 0.5s ease;">- ${Number(p.penalty).toLocaleString()} GTLM</div>`;
                         } else if (p.status === 'won') {
-                            oppHandHtml += `<div style="position: absolute; top: ${posIndex === 0 ? '-50px' : '-100px'}; left: 50%; transform: translateX(-50%); font-weight: 900; font-size: 20px; color: var(--success); text-shadow: 0 2px 5px black; z-index: 1000; background: rgba(0,0,0,0.7); padding: 5px 15px; border-radius: 10px; border: 2px solid var(--success); white-space: nowrap; animation: popUp 0.5s ease;">WINNER</div>`;
+                            oppHandHtml += `<div style="position: absolute; top: ${posIndex === 0 ? '-50px' : '-100px'}; left: 50%; transform: translateX(-50%); font-weight: 900; font-size: 20px; color: var(--success); text-shadow: 0 2px 5px black; z-index: 1000; background: rgba(0,0,0,0.85); padding: 5px 15px; border-radius: 10px; border: 2px solid var(--success); white-space: nowrap; animation: popUp 0.5s ease;">🏆 WINNER</div>`;
                         }
                         
                         $cardContainer.html(oppHandHtml);
                     } else {
-                        // Normal playing mode
                         $slot.find('.opp-cards-container').empty();
                         $slot.find('.card-count').text(p.card_count + ' lá').show();
                     }
@@ -614,20 +732,18 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
                     if (table.current_turn === p.seat_index && table.status === 'playing') {
                         $slot.find('.player-info').addClass('active');
                     }
-                    if (table.passed_players.includes(p.seat_index) && table.status === 'playing') {
+                    if (table.passed_players && table.passed_players.includes(p.seat_index) && table.status === 'playing') {
                         $slot.find('.player-info').addClass('passed');
                     }
                 });
                 
-                // My Cards
-                if (mySeat > -1 && table.status === 'playing') {
+                if (mySeat > -1 && (table.status === 'playing' || table.status === 'xin_lang') && data.my_cards) {
                     let handHtml = '';
                     data.my_cards.forEach(c => {
                         handHtml += createCardUI(c);
                     });
                     $('#my-hand').html(handHtml);
                     
-                    // Keep selection
                     selectedCards.forEach(id => {
                         $(`.card[data-id="${id}"]`).addClass('selected');
                     });
@@ -637,7 +753,6 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
                 $('#btn-play').prop('disabled', !isMyTurn);
                 $('#btn-pass').prop('disabled', !isMyTurn || table.last_move === null);
                 
-                // Last Move Stacking
                 if (table.last_move && table.last_move.cards) {
                     let lastMoveKey = JSON.stringify(table.last_move) + table.last_player;
                     if (window.lastRenderedMoveKey !== lastMoveKey) {
@@ -654,11 +769,9 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
                         let randomX = (Math.random() * 60 - 30) + 'px';
                         let randomY = (Math.random() * 60 - 30) + 'px';
                         
-                        // Start animation from scaled up
                         $newGroup.css({transform: `translate(${randomX}, ${randomY}) scale(2)`, opacity: 0});
                         $('#last-move-cards').append($newGroup);
                         
-                        // Play small pop sound if possible
                         setTimeout(() => {
                             $newGroup.css({transform: `translate(${randomX}, ${randomY}) scale(1) rotate(${randomAngle})`, opacity: 1});
                         }, 50);
@@ -669,65 +782,35 @@ $userMoney = $stmt->get_result()->fetch_assoc()['Money'];
                 }
 
             } catch (e) {
-                console.error(e);
+                console.error('pollState error:', e);
             }
         }
 
         $(document).ready(function() {
             joinRoom().then(() => {
                 pollState();
-                setInterval(pollState, 1500); // Poll every 1.5s
-            });
-            
-            // Gọi API leave khi người chơi thoát trang
-            window.addEventListener('beforeunload', function() {
-                if (!window.isProgrammaticReload) {
-                    navigator.sendBeacon(`../api_samloc_multi.php?action=leave&table_id=${tableId}`);
-                }
+                setInterval(pollState, 1200);
             });
         });
-
     </script>
 <?php endif; ?>
 
-<!-- AUTO-GENERATED BOT SCRIPT -->
+<!-- ── Nạp ThreeJS Background & Bot Streamer ── -->
 <script>
-if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
-if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
+    window.themeConfig = {
+        particleCount: <?= $particleCount ?? 1500 ?>,
+        particleSize: <?= $particleSize ?? 0.05 ?>,
+        particleColor: '<?= $particleColor ?? "#ffffff" ?>',
+        particleOpacity: <?= $particleOpacity ?? 0.6 ?>,
+        shapeCount: <?= $shapeCount ?? 15 ?>,
+        shapeColors: <?= json_encode($shapeColors ?? ["#ef4444", "#eab308", "#22c55e", "#3b82f6"]) ?>,
+        shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>
+    };
 </script>
+<script src="../threejs-background.js"></script>
+<script src="../assets/js/game-effects.js"></script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
-<script>
-    if (typeof BotVirtualCursor !== "undefined") {
-        BotVirtualCursor.init("Bot Streamer");
-        setInterval(() => {
-            const allBtns = Array.from(document.querySelectorAll("button, .btn-bet, .chip, .spin-btn, #btnSpin, .bet-button, .card, .btn-primary, .btn-success, input[type='button'], input[type='submit']"));
-            const btns = allBtns.filter(b => {
-                if(b.offsetParent === null || b.disabled) return false;
-                const txt = (b.innerText || b.value || "").toLowerCase();
-                const cls = (b.className || "").toLowerCase();
-                const id = (b.id || "").toLowerCase();
-                
-                // Exclude common navigation/help buttons
-                if(txt.includes("hướng dẫn") || txt.includes("trang chủ") || txt.includes("nạp") || txt.includes("rút") || txt.includes("lịch sử") || txt.includes("quay lại") || txt.includes("thoát")) return false;
-                if(cls.includes("back") || cls.includes("help") || cls.includes("guide") || cls.includes("close") || cls.includes("swal") || cls.includes("nav")) return false;
-                if(id.includes("guide") || id.includes("back") || id.includes("close") || id.includes("nav")) return false;
-                
-                return true;
-            });
-            
-            if(btns.length > 0) {
-                const btn = btns[Math.floor(Math.random() * btns.length)];
-                BotVirtualCursor.moveToElement($(btn), 1, 0, () => {
-                    setTimeout(() => { 
-                        BotVirtualCursor.simulateClick(() => {
-                            try { btn.click(); } catch(e){}
-                        });
-                    }, 500);
-                });
-            }
-        }, 3000 + Math.random() * 4000);
-    }
-</script>
+<script src="bots/bot_49.js"></script>
 
 </body>
 </html>

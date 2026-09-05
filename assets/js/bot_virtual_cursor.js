@@ -81,18 +81,22 @@ window.BotVirtualCursor = {
         }
 
         // --- GLOBAL BOT FILTER ---
-        // Ngăn chặn bot click vào âm lượng, quay lại sảnh, chuyển kênh...
-        const txt = ($el.text() || $el.val() || "").toLowerCase();
-        const id = ($el.attr('id') || "").toLowerCase();
-        const cls = ($el.attr('class') || "").toLowerCase();
-        
-        if (
-            txt.includes('âm lượng') || txt.includes('quay lại') || txt.includes('thoát') || txt.includes('sảnh') || txt.includes('kênh') ||
-            id.includes('volume') || id.includes('sound') || id.includes('back') || id.includes('home') || id.includes('nav') ||
-            cls.includes('volume') || cls.includes('sound') || cls.includes('back') || cls.includes('home') || cls.includes('nav') || cls.includes('channel')
-        ) {
-            console.warn("[BotVirtualCursor] Blocked interaction with forbidden UI element:", $el);
-            return; // Dừng lại, không di chuyển và không gọi onComplete (hủy click)
+        // Ngăn chặn bot click vào âm lượng, quay lại sảnh ngoài, chuyển kênh...
+        // Cho phép các nút trong game multiplayer có data-allow-bot="true" hoặc class bot-allowed (như nút Rời Bàn / Quay lại Sảnh Game)
+        const isBotAllowed = ($el.attr('data-allow-bot') === 'true' || $el.hasClass('bot-allowed'));
+        if (!isBotAllowed) {
+            const txt = ($el.text() || $el.val() || "").toLowerCase();
+            const id = ($el.attr('id') || "").toLowerCase();
+            const cls = ($el.attr('class') || "").toLowerCase();
+            
+            if (
+                txt.includes('âm lượng') || txt.includes('quay lại trang') || txt.includes('thoát live') || txt.includes('chuyển kênh') ||
+                id.includes('volume') || id.includes('sound') || id.includes('btn-back-live') || id.includes('nav') ||
+                cls.includes('volume') || cls.includes('sound') || cls.includes('btn-back-live') || cls.includes('channel')
+            ) {
+                console.warn("[BotVirtualCursor] Blocked interaction with forbidden UI element:", $el);
+                return; // Dừng lại, không di chuyển và không gọi onComplete (hủy click)
+            }
         }
         
         gsap.set('#' + this.cursorId, { opacity: 1 });

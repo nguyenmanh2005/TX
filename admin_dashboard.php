@@ -448,13 +448,6 @@ body::after{
                     <p>Giám sát tiến trình tiến hóa, cấp độ và tâm trạng của 136 Bot AI.</p>
                 </div>
             </a>
-            <a href="admin_advanced_center.php" class="action-card">
-                <div class="action-icon" style="background: linear-gradient(135deg, #3b82f6, #06b6d4);"><i class="fa fa-shield-halved"></i></div>
-                <div class="action-content">
-                    <h4>Master Trận Địa</h4>
-                    <p>Trung tâm quản lý an ninh, can thiệp vào các trò chơi đang chạy.</p>
-                </div>
-            </a>
             <a href="admin_analytics.php" class="action-card">
                 <div class="action-icon" style="background: linear-gradient(135deg, #10b981, #34d399);"><i class="fa fa-chart-line"></i></div>
                 <div class="action-content">

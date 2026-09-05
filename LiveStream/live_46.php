@@ -3,15 +3,12 @@ session_start();
 
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
+
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_46', 50000000);
 $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
 
-
-
-
 require '../db_connect.php';
-
 
 // AJAX history endpoint
 $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
@@ -39,17 +36,21 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) &&
     exit;
 }
 
+$useBotTheme = $botUserId;
 require_once '../load_theme.php';
+
 // Đảm bảo các biến theme luôn tồn tại
-if (!isset($bgGradientCSS)) $bgGradientCSS = 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%)';
-if (!isset($particleCount)) $particleCount = 100;
+if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
+    $bgGradientCSS = 'linear-gradient(135deg, #072a1a 0%, #0d452c 50%, #03140c 100%)';
+}
+if (!isset($particleCount)) $particleCount = 500;
 if (!isset($particleSize)) $particleSize = 0.05;
-if (!isset($particleColor)) $particleColor = '#ffffff';
-if (!isset($particleOpacity)) $particleOpacity = 0.6;
-if (!isset($shapeCount)) $shapeCount = 10;
-if (!isset($shapeColors)) $shapeColors = ['#667eea', '#764ba2', '#4facfe', '#00f2fe'];
-if (!isset($shapeOpacity)) $shapeOpacity = 0.3;
-if (!isset($bgGradient)) $bgGradient = ['#667eea', '#764ba2', '#4facfe'];
+if (!isset($particleColor)) $particleColor = '#ffd700';
+if (!isset($particleOpacity)) $particleOpacity = 0.5;
+if (!isset($shapeCount)) $shapeCount = 15;
+if (!isset($shapeColors)) $shapeColors = ['#ffd700', '#00ff88', '#e74c3c', '#f1c40f'];
+if (!isset($shapeOpacity)) $shapeOpacity = 0.25;
+if (!isset($bgGradient)) $bgGradient = ['#072a1a', '#0d452c', '#03140c'];
 
 $userId = $botUserId;
 $sql = "SELECT Money, Name FROM users WHERE Iduser = ?";
@@ -58,7 +59,6 @@ $stmt->bind_param("i", $userId);
 $stmt->execute();
 $result = $stmt->get_result();
 $user = $result->fetch_assoc();
-
 
 // Get statistics from database for chart
 $gameThang = 0;
@@ -74,9 +74,8 @@ if ($rowStats = $resultStats->fetch_assoc()) {
 }
 $stmtStats->close();
 
-
-$soDu = $user['Money'];
-$tenNguoiChoi = $user['Name'];
+$soDu = $user['Money'] ?? 50000000;
+$tenNguoiChoi = $user['Name'] ?? 'Bot Streamer';
 
 // --- ROULETTE PRO DATA ---
 $redNumbers = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
@@ -106,7 +105,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
     }
 
     if ($totalBet <= 0) {
-        echo json_encode(['success' => false, 'message' => '⚠️ Số  Gtlm cược không hợp lệ!']);
+        echo json_encode(['success' => false, 'message' => '⚠️ Số Gtlm cược không hợp lệ!']);
         exit;
     }
 
@@ -210,8 +209,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
     }
     exit;
 }
-
-
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -220,12 +217,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
     <meta charset="UTF-8">
     <title>Roulette Royal - Premium Casino</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.6.0/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="../assets/css/main.css">
     <link rel="stylesheet" href="../assets/css/components.css">
     <link rel="stylesheet" href="../assets/css/game-ui-enhancements.css">
     <link
-        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Poppins:wght@400;600;800&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Poppins:wght@400;600;800&family=Orbitron:wght@600;800;900&display=swap"
         rel="stylesheet">
     <style>
         :root {
@@ -239,9 +239,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
             margin: 0;
             cursor: url('../img/chuot.png'), auto !important;
             font-family: 'Poppins', sans-serif;
-            background:
-                <?= $bgGradientCSS ?>
-            ;
+            background: <?= $bgGradientCSS ?>;
+            background-attachment: fixed;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -258,201 +257,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
             width: 100%;
             height: 100%;
             z-index: -1;
-        }
-
-        /* Header */
-        .casino-header {
-            width: 100%;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 30px;
-            box-sizing: border-box;
-        }
-
-        .logo-text {
-            font-family: 'Cinzel', serif;
-            font-size: 28px;
-            color: var(--gold);
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
-            letter-spacing: 5px;
-        }
-
-        .balance-pill {
-            background: rgba(0, 0, 0, 0.6);
-            padding: 10px 25px;
-            border-radius: 30px;
-            border: 1px solid var(--gold);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-    if (empty($bets)) {
-        echo json_encode(['success' => false, 'message' => '⚠️ Vui lòng đặt cược trước khi quay!']);
-        exit;
-    }
-
-    $totalBet = 0;
-    foreach ($bets as $b) {
-        $totalBet += (float) $b['amount'];
-    }
-
-    if ($totalBet <= 0) {
-        echo json_encode(['success' => false, 'message' => '⚠️ Số  Gtlm cược không hợp lệ!']);
-        exit;
-    }
-
-    $conn->begin_transaction();
-    try {
-        // SELECT FOR UPDATE để khóa bản ghi user
-        $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ? FOR UPDATE");
-        $stmt->bind_param("i", $userId);
-        $stmt->execute();
-        $user = $stmt->get_result()->fetch_assoc();
-
-        if (!$user || $user['Money'] < $totalBet) {
-            throw new Exception('⚠️ Số Gtlm không đủ cho tổng cược!');
-        }
-
-        $winningNumber = rand(0, 36);
-        $color = getNumberColor($winningNumber);
-
-        $totalWin = 0;
-        $breakdown = [];
-
-        foreach ($bets as $b) {
-            $type = $b['type'];
-            $val = $b['value'];
-            $amt = (float) $b['amount'];
-            $win = 0;
-
-            switch ($type) {
-                case 'straight':
-                    if ($winningNumber == $val) $win = $amt * 36;
-                    break;
-                case 'red':
-                    if ($color === 'red') $win = $amt * 2;
-                    break;
-                case 'black':
-                    if ($color === 'black') $win = $amt * 2;
-                    break;
-                case 'even':
-                    if ($winningNumber != 0 && $winningNumber % 2 == 0) $win = $amt * 2;
-                    break;
-                case 'odd':
-                    if ($winningNumber != 0 && $winningNumber % 2 != 0) $win = $amt * 2;
-                    break;
-                case 'low':
-                    if ($winningNumber >= 1 && $winningNumber <= 18) $win = $amt * 2;
-                    break;
-                case 'high':
-                    if ($winningNumber >= 19 && $winningNumber <= 36) $win = $amt * 2;
-                    break;
-                case 'dozen':
-                    if ($val == 1 && $winningNumber >= 1 && $winningNumber <= 12) $win = $amt * 3;
-                    if ($val == 2 && $winningNumber >= 13 && $winningNumber <= 24) $win = $amt * 3;
-                    if ($val == 3 && $winningNumber >= 25 && $winningNumber <= 36) $win = $amt * 3;
-                    break;
-                case 'column':
-                    if ($winningNumber != 0 && ($winningNumber - $val) % 3 == 0) $win = $amt * 3;
-                    break;
-            }
-
-            if ($win > 0) {
-                $totalWin += $win;
-                $breakdown[] = "Cược $type: Thắng " . number_format($win) . " gtlm";
-            }
-        }
-
-        // Cập nhật số dư tương đối
-        $stmt = $conn->prepare("UPDATE users SET Money = Money - ? + ? WHERE Iduser = ?");
-        $stmt->bind_param("ddi", $totalBet, $totalWin, $userId);
-        $stmt->execute();
-
-        // Ghi log lịch sử riêng của roulette
-        $historyStmt = $conn->prepare("INSERT INTO history_roulette (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-        $resultStr = "Số $winningNumber ($color)";
-        $historyStmt->bind_param("idid", $userId, $totalBet, $resultStr, $totalWin);
-        $historyStmt->execute();
-        $historyStmt->close();
-
-        // Ghi log tổng quát (Quest, BattlePass, etc)
-        if (file_exists('../game_history_helper.php')) {
-            require_once '../game_history_helper.php';
-            logGameHistoryWithAll($conn, $userId, 'Roulette Pro', $totalBet, $totalWin, ($totalWin > 0));
-        }
-
-        $conn->commit();
-        
-        $newMoneyVal = $user['Money'] - $totalBet + $totalWin;
-
-        echo json_encode([
-            'success' => true,
-            'number' => $winningNumber,
-            'color' => $color,
-            'totalWin' => $totalWin,
-            'totalBet' => $totalBet,
-            'newMoney' => number_format($newMoneyVal) . ' gtlm',
-            'breakdown' => $breakdown,
-            'message' => ($totalWin > 0) ? "🎉 CHIẾN THẮNG: TRÚNG SỐ $winningNumber! (" . strtoupper($color) . ")" : "💀 KẾT QUẢ: SỐ $winningNumber ($color). CHÚC BẠN MAY MẮN LẦN SAU!"
-        ]);
-    } catch (Exception $e) {
-        $conn->rollback();
-        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-    }
-    exit;
-}
-
-
-?>
-<!DOCTYPE html>
-<html lang="vi">
-
-<head>
-    <meta charset="UTF-8">
-    <title>Roulette Royal - Premium Casino</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.6.0/confetti.browser.min.js"></script>
-    <link rel="stylesheet" href="../assets/css/main.css">
-    <link rel="stylesheet" href="../assets/css/components.css">
-    <link rel="stylesheet" href="../assets/css/game-ui-enhancements.css">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Poppins:wght@400;600;800&display=swap"
-        rel="stylesheet">
-    <style>
-        :root {
-            --gold: #ffd700;
-            --gold-dark: #b8860b;
-            --bg: #072a1a;
-            --border: rgba(255, 215, 0, 0.3);
-        }
-
-        body {
-            margin: 0;
-            cursor: url('../img/chuot.png'), auto !important;
-            font-family: 'Poppins', sans-serif;
-            background:
-                <?= $bgGradientCSS ?>
-            ;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            color: white;
-            overflow-x: hidden;
-            padding-bottom: 50px;
-        }
-
-        #threejs-background {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
+            pointer-events: none;
         }
 
         /* Header */
@@ -502,6 +307,18 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
             max-width: 1200px;
             padding: 0 20px;
             box-sizing: border-box;
+            transition: transform 0.1s ease;
+        }
+
+        .game-wrapper.lose-shake {
+            animation: lose-shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes lose-shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(3px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
         }
 
         /* Wheel Section */
@@ -579,6 +396,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
             color: var(--gold);
             z-index: 15;
             box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+            transition: background-color 0.4s ease, color 0.4s ease;
         }
         
         .wheel-number {
@@ -674,19 +492,43 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
         .cell.active::after {
             content: '🪙';
             position: absolute;
-            font-size: 24px;
-            top: -10px;
-            right: -10px;
+            font-size: 20px;
+            top: -8px;
+            right: -8px;
+        }
+
+        .cell.winner {
+            border-color: #ffd700 !important;
+            background: radial-gradient(circle, #f1c40f, #27ae60) !important;
+            box-shadow: 0 0 35px #ffd700, inset 0 0 15px #fff !important;
+            animation: cell-bounce 0.6s infinite !important;
+            z-index: 5;
+            color: #000 !important;
+        }
+
+        @keyframes cell-bounce {
+            0%, 100% { transform: scale(1.05); }
+            50% { transform: scale(1.15) translateY(-5px); }
+        }
+
+        .floating-win {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--gold);
+            font-family: 'Orbitron', 'Poppins', sans-serif;
+            font-weight: 900;
+            font-size: 1.2rem;
+            pointer-events: none;
+            text-shadow: 0 0 10px #000, 0 0 20px rgba(0,0,0,0.8);
+            z-index: 100;
+            white-space: nowrap;
         }
 
         @keyframes pulse {
-            from {
-                transform: scale(1.02);
-            }
-
-            to {
-                transform: scale(1.08);
-            }
+            from { transform: scale(1.02); }
+            to { transform: scale(1.08); }
         }
 
         .dozen-cell {
@@ -843,138 +685,23 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
             min-width: 400px;
             text-align: center;
             box-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
+            z-index: 100;
         }
-    
-        /* History Box Styles */
-        .bottom-section {
-            margin-top: 50px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            max-width: 1000px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .history-box, .chart-box {
-            background: rgba(0, 121, 107, 0.9);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: var(--border-radius);
-            padding: 25px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-            color: white;
-        }
-
-        .history-box h3, .chart-box h3 {
-            margin-top: 0;
-            font-size: 20px;
-            color: #ffd700;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        .history-box table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-
-        .history-box table tr {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            animation: slideIn 0.5s ease-out forwards;
-        }
-
-        .history-box table td, .history-box table th {
-            padding: 10px;
-            text-align: center;
-        }
-
-        .history-box table th {
-            background: rgba(255, 255, 255, 0.1);
-            font-weight: 700;
-            color: #ffd700;
-        }
-
-        .history-box table tr:hover {
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        @media (max-width: 768px) {
-            .bottom-section {
-                grid-template-columns: 1fr;
-                gap: 20px;
-            }
-        }
-
-    
-        /* Statistics Container */
-        .stats-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .stat-item {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 15px;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-        
-        .stat-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
-        }
-        
-        .stat-item.wins {
-            border-left: 4px solid #4ade80;
-        }
-        
-        .stat-item.losses {
-            border-left: 4px solid #ff6b6b;
-        }
-        
-        .stat-item .label {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.6);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 8px;
-        }
-        
-        .stat-item .value {
-            font-size: 28px;
-            font-weight: 700;
-            color: #ffd700;
-        }
-        
-        .chart-box {
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .chart-box canvas {
-            margin-top: 20px;
-        }
-
     </style>
 </head>
 
 <body>
 
-
     <header class="casino-header">
         <div class="logo-text">ROULETTE ROYAL</div>
         <div class="balance-pill" id="balance-pill">
-            <span>GOLD CHIPS:</span>
+            <span>GTLM:</span>
             <span id="balance-val" style="font-size: 22px;"><?= number_format($soDu) ?></span>
         </div>
         <div style="font-size: 14px; color: #888;">PLAYER: <b><?= htmlspecialchars($tenNguoiChoi) ?></b></div>
     </header>
 
-    <div class="game-wrapper">
+    <div class="game-wrapper" id="game-wrapper">
         <!-- Visualization: Wheel -->
         <div class="wheel-container">
             <div class="wheel-outer-frame"></div>
@@ -1044,28 +771,47 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
 
     <div class="status-marquee" id="status-marquee">WELCOME TO THE HIGH TABLE. PLACE YOUR BETS.</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <canvas id="threejs-background"></canvas>
+
     <script>
+        // 1. ThreeJS Background and Effects Loader
         (function () {
-            window.themeConfig = { particleCount: <?= $particleCount ?>, particleSize: <?= $particleSize ?>, particleColor: '<?= $particleColor ?>', particleOpacity: <?= $particleOpacity ?>, shapeCount: <?= $shapeCount ?>, shapeColors: <?= json_encode($shapeColors) ?>, shapeOpacity: <?= $shapeOpacity ?>, bgGradient: <?= json_encode($bgGradient) ?> };
-            const script = document.createElement('script'); script.src = '../threejs-background.js'; document.head.appendChild(script);
+            window.themeConfig = { 
+                particleCount: <?= (int)$particleCount ?>, 
+                particleSize: <?= (float)$particleSize ?>, 
+                particleColor: '<?= htmlspecialchars($particleColor) ?>', 
+                particleOpacity: <?= (float)$particleOpacity ?>, 
+                shapeCount: <?= (int)$shapeCount ?>, 
+                shapeColors: <?= json_encode($shapeColors) ?>, 
+                shapeOpacity: <?= (float)$shapeOpacity ?>, 
+                bgGradient: <?= json_encode($bgGradient) ?> 
+            };
+            const prefix = '../';
+            ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'].forEach(src => {
+                const script = document.createElement('script');
+                script.src = prefix + src;
+                script.async = false;
+                document.head.appendChild(script);
+            });
         })();
 
-        // Chip selection logic
+        // 2. Chip selection logic
         document.querySelectorAll('.chip').forEach(chip => {
             chip.addEventListener('click', function() {
+                if (window.isSpinning) return;
                 document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
                 this.classList.add('active');
                 const val = this.getAttribute('data-value');
                 if (val === 'allin') {
-                    document.getElementById('bet-amount').value = <?= $soDu ?>;
+                    const curBal = parseInt(document.getElementById('balance-val').innerText.replace(/\D/g, '')) || 0;
+                    document.getElementById('bet-amount').value = curBal;
                 } else {
                     document.getElementById('bet-amount').value = val;
                 }
             });
         });
 
-        // Generate numbers on the wheel
+        // 3. Generate numbers on the wheel
         const wheelOrder = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
         const wheelInner = document.getElementById('wheel-inner');
         const sliceAngle = 360 / 37;
@@ -1074,60 +820,72 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
             const numDiv = document.createElement('div');
             numDiv.className = 'wheel-number';
             numDiv.textContent = num;
-            // The wheel background is drawn starting at 0deg. 
-            // The first slice (0) spans 0 to 9.73deg. 
-            // Its center is at index * sliceAngle + sliceAngle / 2.
             numDiv.style.transform = `rotate(${index * sliceAngle + sliceAngle / 2}deg)`;
             wheelInner.appendChild(numDiv);
         });
 
-        let currentBets = [];
+        window.currentBets = [];
+        window.isSpinning = false;
         let totalRotation = 0;
 
+        // 4. Click Cell on Board
         document.querySelectorAll('.cell').forEach(cell => {
             cell.addEventListener('click', function () {
+                if (window.isSpinning) return;
                 const type = this.dataset.type;
                 const val = this.dataset.val;
                 const amt = parseInt(document.getElementById('bet-amount').value);
 
-                if (amt <= 0 || isNaN(amt)) { Swal.fire('Error', 'Chưa nhập số gtlm cược!', 'error'); return; }
+                if (amt <= 0 || isNaN(amt)) { return; }
 
                 this.classList.add('active');
-                currentBets.push({ type, value: val, amount: amt });
+                window.currentBets.push({ type, value: val, amount: amt });
                 updateStatus();
             });
         });
 
         document.getElementById('btn-clear').addEventListener('click', () => {
-            currentBets = [];
-            document.querySelectorAll('.cell').forEach(c => c.classList.remove('active'));
+            if (window.isSpinning) return;
+            window.currentBets = [];
+            document.querySelectorAll('.cell').forEach(c => {
+                c.classList.remove('active');
+                c.classList.remove('winner');
+            });
             updateStatus();
         });
 
         function updateStatus() {
-            const total = currentBets.reduce((sum, b) => sum + b.amount, 0);
-            document.getElementById('status-marquee').textContent = currentBets.length > 0
-                ? `ACTIVE BETS: ${currentBets.length} | TOTAL EXPOSURE: ${total.toLocaleString()} gtlm`
+            const total = window.currentBets.reduce((sum, b) => sum + b.amount, 0);
+            document.getElementById('status-marquee').textContent = window.currentBets.length > 0
+                ? `ACTIVE BETS: ${window.currentBets.length} | TOTAL EXPOSURE: ${total.toLocaleString()} gtlm`
                 : 'WAITING FOR BETS... CHOOSE NUMBERS OR AREAS ON THE BOARD.';
         }
 
+        // 5. Spin and Win/Loss Result Handler (Tương tự Game id = 1)
         document.getElementById('btn-spin').addEventListener('click', async function () {
-            if (currentBets.length === 0) { Swal.fire('Lưu ý', 'Bạn chưa đặt cược quân bài nào lên bàn!', 'warning'); return; }
+            if (window.isSpinning) return;
+            if (window.currentBets.length === 0) {
+                console.warn('Vui lòng đặt cược trước khi quay!');
+                return;
+            }
 
             const btn = this;
+            window.isSpinning = true;
             btn.disabled = true;
+            document.getElementById('btn-clear').disabled = true;
             document.getElementById('status-marquee').textContent = 'BALL IS SPINNING. NO MORE BETS!';
+
+            const betsCopy = [...window.currentBets];
 
             try {
                 const fd = new FormData();
-                fd.append('bets', JSON.stringify(currentBets));
+                fd.append('bets', JSON.stringify(betsCopy));
 
                 const res = await fetch('?action=spin_pro', { method: 'POST', body: fd });
                 const data = await res.json();
 
                 if (data.success) {
                     const wheel = document.getElementById('wheel-inner');
-                    const wheelOrder = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
                     const idx = wheelOrder.indexOf(data.number);
 
                     // Logic xoay mượt mà chân thực
@@ -1143,77 +901,120 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
                         document.getElementById('balance-val').textContent = data.newMoney;
                         document.getElementById('status-marquee').textContent = data.message;
 
-                        btn.disabled = false;
+                        const winningNumber = data.number;
+                        const winningColor = data.color;
+
+                        // ── HIỆU ỨNG THẮNG / THUA GIỐNG GAME ID = 1 ──
                         if (data.totalWin > 0) {
-                            if (typeof GameEffects !== 'undefined') {
-                                GameEffects.showWin(data.totalWin, `<br><div style="text-align: center; font-size: 14px;">${data.breakdown.join('<br>')}</div>`);
-                            } else {
-                                confetti({ particleCount: 250, spread: 100, origin: { y: 0.6 }, colors: ['#ffd700', '#ffffff', '#27ae60'] });
-                                Swal.fire({ title: '🎊 BIG WIN!', html: `<strong style="color: #27ae60; font-size: 24px;">+ ${data.totalWin.toLocaleString()} gtlm</strong><br><br><div style="text-align: left; font-size: 14px;">${data.breakdown.join('<br>')}</div>`, icon: 'success' });
+                            // 1. Kích hoạt hiệu ứng GameEffects chuẩn (không có popup modal che màn hình)
+                            if (window.GameEffects && typeof window.GameEffects.showWin === 'function') {
+                                window.GameEffects.showWin(data.totalWin);
+                            } else if (typeof confetti === 'function') {
+                                confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 }, colors: ['#ffd700', '#ffffff', '#27ae60'] });
                             }
+
+                            // 2. Đánh dấu các ô thắng (Winner bounce + glow) và spawn số GTLM floating +xxx
+                            document.querySelectorAll('.cell.active').forEach(cell => {
+                                const cType = cell.dataset.type;
+                                const cVal = cell.dataset.val;
+                                let isWin = false;
+                                let multiplier = 0;
+
+                                if (cType === 'straight' && parseInt(cVal) === winningNumber) { isWin = true; multiplier = 36; }
+                                else if (cType === 'red' && winningColor === 'red') { isWin = true; multiplier = 2; }
+                                else if (cType === 'black' && winningColor === 'black') { isWin = true; multiplier = 2; }
+                                else if (cType === 'even' && winningNumber !== 0 && winningNumber % 2 === 0) { isWin = true; multiplier = 2; }
+                                else if (cType === 'odd' && winningNumber !== 0 && winningNumber % 2 !== 0) { isWin = true; multiplier = 2; }
+                                else if (cType === 'low' && winningNumber >= 1 && winningNumber <= 18) { isWin = true; multiplier = 2; }
+                                else if (cType === 'high' && winningNumber >= 19 && winningNumber <= 36) { isWin = true; multiplier = 2; }
+                                else if (cType === 'dozen') {
+                                    if (cVal == '1' && winningNumber >= 1 && winningNumber <= 12) { isWin = true; multiplier = 3; }
+                                    if (cVal == '2' && winningNumber >= 13 && winningNumber <= 24) { isWin = true; multiplier = 3; }
+                                    if (cVal == '3' && winningNumber >= 25 && winningNumber <= 36) { isWin = true; multiplier = 3; }
+                                }
+                                else if (cType === 'column' && winningNumber !== 0 && (winningNumber - parseInt(cVal)) % 3 === 0) {
+                                    isWin = true; multiplier = 3;
+                                }
+
+                                const cellBets = betsCopy.filter(b => b.type === cType && String(b.value) === String(cVal));
+                                const cellBetAmt = cellBets.reduce((sum, b) => sum + b.amount, 0);
+
+                                if (isWin) {
+                                    cell.classList.add('winner');
+                                    const winVal = cellBetAmt * multiplier;
+                                    const float = $(`<div class="floating-win">+${winVal.toLocaleString('vi-VN')}</div>`).appendTo(cell);
+                                    if (window.gsap) {
+                                        gsap.to(float, { y: -80, opacity: 0, duration: 2.2, ease: "power2.out", onComplete: () => float.remove() });
+                                    } else {
+                                        setTimeout(() => float.remove(), 2200);
+                                    }
+                                } else {
+                                    const float = $(`<div class="floating-win" style="color: #ff4757;">-${cellBetAmt.toLocaleString('vi-VN')}</div>`).appendTo(cell);
+                                    if (window.gsap) {
+                                        gsap.to(float, { y: -80, opacity: 0, duration: 2.2, ease: "power2.out", onComplete: () => float.remove() });
+                                    } else {
+                                        setTimeout(() => float.remove(), 2200);
+                                    }
+                                }
+                            });
+
                         } else {
-                            if (typeof GameEffects !== 'undefined') {
-                                GameEffects.showLoss('Không trúng', data.message);
-                            } else {
-                                Swal.fire({ title: 'Không trúng', text: data.message, icon: 'error' });
+                            // Thua: Rung màn hình bàn game (lose-shake) và flash đỏ giống game id = 1
+                            $('#game-wrapper').addClass('lose-shake');
+                            if (window.GameEffects && typeof window.GameEffects.showLoss === 'function') {
+                                window.GameEffects.showLoss(data.totalBet);
                             }
+                            setTimeout(() => $('#game-wrapper').removeClass('lose-shake'), 600);
+
+                            // Spawn số GTLM thua màu đỏ (-xxx) bay lên từ các ô cược
+                            document.querySelectorAll('.cell.active').forEach(cell => {
+                                const cType = cell.dataset.type;
+                                const cVal = cell.dataset.val;
+                                const cellBets = betsCopy.filter(b => b.type === cType && String(b.value) === String(cVal));
+                                const cellBetAmt = cellBets.reduce((sum, b) => sum + b.amount, 0);
+                                const float = $(`<div class="floating-win" style="color: #ff4757;">-${cellBetAmt.toLocaleString('vi-VN')}</div>`).appendTo(cell);
+                                if (window.gsap) {
+                                    gsap.to(float, { y: -80, opacity: 0, duration: 2.2, ease: "power2.out", onComplete: () => float.remove() });
+                                } else {
+                                    setTimeout(() => float.remove(), 2200);
+                                }
+                            });
                         }
 
-                        // Clear board
-                        currentBets = [];
-                        document.querySelectorAll('.cell').forEach(c => c.classList.remove('active'));
+                        // Sau khi hiển thị kết quả 3 giây, dọn bàn chuẩn bị ván tiếp theo
+                        setTimeout(() => {
+                            window.currentBets = [];
+                            document.querySelectorAll('.cell').forEach(c => {
+                                c.classList.remove('active');
+                                c.classList.remove('winner');
+                            });
+                            btn.disabled = false;
+                            document.getElementById('btn-clear').disabled = false;
+                            window.isSpinning = false;
+                            updateStatus();
+                        }, 3000);
+
                     }, 6500);
+
                 } else {
-                    Swal.fire('Error', data.message, 'error');
+                    console.error(data.message);
                     btn.disabled = false;
+                    document.getElementById('btn-clear').disabled = false;
+                    window.isSpinning = false;
+                    updateStatus();
                 }
             } catch (e) {
                 console.error(e);
                 btn.disabled = false;
+                document.getElementById('btn-clear').disabled = false;
+                window.isSpinning = false;
             }
         });
     </script>
-    <script src="../assets/js/game-effects.js"></script>
-    <script src="../assets/js/game-effects-auto.js"></script>
 
-<!-- AUTO-GENERATED BOT SCRIPT -->
-<script>
-if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
-if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
-</script>
-<script src="../assets/js/bot_virtual_cursor.js"></script>
-<script>
-    if (typeof BotVirtualCursor !== "undefined") {
-        BotVirtualCursor.init("Bot Streamer");
-        setInterval(() => {
-            const allBtns = Array.from(document.querySelectorAll("button, .btn-bet, .chip, .spin-btn, #btnSpin, .bet-button, .card, .btn-primary, .btn-success, input[type='button'], input[type='submit']"));
-            const btns = allBtns.filter(b => {
-                if(b.offsetParent === null || b.disabled) return false;
-                const txt = (b.innerText || b.value || "").toLowerCase();
-                const cls = (b.className || "").toLowerCase();
-                const id = (b.id || "").toLowerCase();
-                
-                // Exclude common navigation/help buttons
-                if(txt.includes("hướng dẫn") || txt.includes("trang chủ") || txt.includes("nạp") || txt.includes("rút") || txt.includes("lịch sử") || txt.includes("quay lại") || txt.includes("thoát")) return false;
-                if(cls.includes("back") || cls.includes("help") || cls.includes("guide") || cls.includes("close") || cls.includes("swal") || cls.includes("nav")) return false;
-                if(id.includes("guide") || id.includes("back") || id.includes("close") || id.includes("nav")) return false;
-                
-                return true;
-            });
-            
-            if(btns.length > 0) {
-                const btn = btns[Math.floor(Math.random() * btns.length)];
-                BotVirtualCursor.moveToElement($(btn), 1, 0, () => {
-                    setTimeout(() => { 
-                        BotVirtualCursor.simulateClick(() => {
-                            try { btn.click(); } catch(e){}
-                        });
-                    }, 500);
-                });
-            }
-        }, 3000 + Math.random() * 4000);
-    }
-</script>
+    <!-- 🤖 THUẬT TOÁN BOT STREAMER 46 CHUYÊN BIỆT -->
+    <script src="../assets/js/bot_virtual_cursor.js"></script>
+    <script src="bots/bot_46.js"></script>
 
 </body>
 </html>
