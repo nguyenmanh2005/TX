@@ -146,7 +146,10 @@ $botThemesMap = [
     55 => ['particleColor' => '#ff00ff', 'shapeColors' => ['#ff00ff', '#00ffff', '#ffff00'], 'bgGradient' => ['#000000', '#110011', '#220022']],
     56 => ['particleColor' => '#ff00ff', 'shapeColors' => ['#ff00ff', '#00ffff', '#ffff00'], 'bgGradient' => ['#000000', '#110011', '#220022']],
     57 => ['particleColor' => '#ffd700', 'shapeColors' => ['#ffd700', '#ff4757', '#12c2e9'], 'bgGradient' => ['#1a0b2e', '#2a1b3d', '#000000']],
-    58 => ['particleColor' => '#ff4757', 'shapeColors' => ['#ff4757', '#ff6b81', '#70a1ff'], 'bgGradient' => ['#000000', '#12001a', '#250033']]
+    58 => ['particleColor' => '#ff4757', 'shapeColors' => ['#ff4757', '#ff6b81', '#70a1ff'], 'bgGradient' => ['#000000', '#12001a', '#250033']],
+    59 => ['particleColor' => '#12c2e9', 'shapeColors' => ['#12c2e9', '#a29bfe', '#fd79a8'], 'bgGradient' => ['#0f0c29', '#302b63', '#24243e']],
+    60 => ['particleColor' => '#ffd700', 'shapeColors' => ['#ffd700', '#ff4757', '#12c2e9'], 'bgGradient' => ['#1a0b2e', '#2a1b3d', '#000000']],
+    61 => ['particleColor' => '#a855f7', 'shapeColors' => ['#a855f7', '#fbbf24', '#3b82f6', '#ef4444'], 'bgGradient' => ['#030611', '#0d0821', '#0a0020']]
 ];
 
 $currentGame = $gameFilesMap[$tableId];
