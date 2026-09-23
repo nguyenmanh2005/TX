@@ -51,21 +51,8 @@ for ($i = 4; $i > 0; $i--) {
 }
 
 if ($action === 'get_state') {
-    // Nếu phase là result, và user đã login, kiểm tra trả thưởng
-    if ($phase === 'result' && isset($_SESSION['Iduser'])) {
-        $userId = (int)$_SESSION['Iduser'];
-        $conn->begin_transaction();
-        
-        // Lấy các cược chưa thanh toán của user trong cycle này
-        $stmt = $conn->prepare("SELECT id, animal, amount FROM user_bets_cyber_racing WHERE user_id = ? AND cycle_id = ? AND is_paid = 0 FOR UPDATE");
-        $stmt->bind_param("ii", $userId, $cycleId);
-        $stmt->execute();
-        $unpaidBets = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-        $stmt->close();
-        
-        $totalWin = 0;
-        $totalBet = 0;
-        
+    // Nếu phase là result, kiểm tra và thanh toán cho tất cả cược (cả user và bot) trong cycle này
+    if ($phase === 'result') {
         $payouts = [
             $rankings[0] => 3.0, // Top 1: x3
             $rankings[1] => 2.0, // Top 2: x2
@@ -73,40 +60,40 @@ if ($action === 'get_state') {
             $rankings[3] => 0.0, // Top 4: x0
             $rankings[4] => 0.0  // Top 5: x0
         ];
-        
-        foreach ($unpaidBets as $b) {
-            $amt = (float)$b['amount'];
-            $totalBet += $amt;
-            
-            $multiplier = $payouts[$b['animal']] ?? 0;
-            $isWin = ($multiplier > 0) ? 1 : 0;
-            $winAmt = $amt * $multiplier;
-            
-            $totalWin += $winAmt;
-            
-            $uStmt = $conn->prepare("UPDATE user_bets_cyber_racing SET is_win = ?, is_paid = 1 WHERE id = ?");
-            $uStmt->bind_param("ii", $isWin, $b['id']);
-            $uStmt->execute();
-            $uStmt->close();
+
+        $stmt = $conn->prepare("SELECT id, user_id, animal, amount FROM user_bets_cyber_racing WHERE cycle_id = ? AND is_paid = 0");
+        $stmt->bind_param("i", $cycleId);
+        $stmt->execute();
+        $unpaidBets = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        if (!empty($unpaidBets)) {
+            $conn->begin_transaction();
+            foreach ($unpaidBets as $b) {
+                $amt = (float)$b['amount'];
+                $uId = (int)$b['user_id'];
+                $multiplier = $payouts[$b['animal']] ?? 0;
+                $isWin = ($multiplier > 0) ? 1 : 0;
+                $winAmt = $amt * $multiplier;
+
+                $uStmt = $conn->prepare("UPDATE user_bets_cyber_racing SET is_win = ?, is_paid = 1 WHERE id = ?");
+                $uStmt->bind_param("ii", $isWin, $b['id']);
+                $uStmt->execute();
+                $uStmt->close();
+
+                if ($winAmt > 0) {
+                    $conn->query("UPDATE users SET Money = Money + $winAmt WHERE Iduser = $uId");
+                }
+                logGameHistoryWithAll($conn, $uId, 'CYBER RACING', $amt, $winAmt, $winAmt > 0);
+            }
+            $conn->commit();
         }
-        
-        if ($totalWin > 0) {
-            $conn->query("UPDATE users SET Money = Money + $totalWin WHERE Iduser = $userId");
-        }
-        
-        if ($totalBet > 0) {
-            // Log history 
-            $profit = $totalWin - $totalBet;
-            logGameHistoryWithAll($conn, $userId, 'CYBER RACING', $totalBet, $totalWin, $totalWin > 0);
-        }
-        
-        $conn->commit();
     }
-    
+
     // Nếu đang ở phase betting, trả về tổng cược để render UI
     $totalBets = [];
     foreach ($animalKeys as $k) $totalBets[$k] = 0;
-    
+
     if ($phase === 'betting') {
         $bRes = $conn->query("SELECT animal, SUM(amount) as total FROM user_bets_cyber_racing WHERE cycle_id = $cycleId GROUP BY animal");
         if ($bRes) {
@@ -115,14 +102,22 @@ if ($action === 'get_state') {
             }
         }
     }
-    
+
     $userMoney = 0;
     if (isset($_SESSION['Iduser'])) {
         $u = (int)$_SESSION['Iduser'];
         $resM = $conn->query("SELECT Money FROM users WHERE Iduser = $u");
         if ($resM) $userMoney = (float)$resM->fetch_assoc()['Money'];
     }
-    
+
+    $botMoney = null;
+    $botNameParam = $_GET['bot_name'] ?? null;
+    if ($botNameParam) {
+        require_once __DIR__ . '/LiveStream/bot_streamer_helper.php';
+        $bUser = getOrCreateBotStreamerUser($conn, $botNameParam, 50000000);
+        $botMoney = (float)($bUser['Money'] ?? 0);
+    }
+
     // Trả về state chung
     echo json_encode([
         'success' => true,
@@ -131,6 +126,7 @@ if ($action === 'get_state') {
         'time_left' => $timeLeft,
         'total_bets' => $totalBets,
         'user_money' => $userMoney,
+        'bot_money' => $botMoney,
         'rankings' => ($phase !== 'betting') ? $rankings : null
     ]);
     exit;
@@ -142,7 +138,8 @@ if ($action === 'bot_bet') {
         exit;
     }
     require_once __DIR__ . '/LiveStream/bot_streamer_helper.php';
-    $botUser = getOrCreateBotStreamerUser($conn, 'bot_cyber_racing');
+    $botName = $_POST['bot_name'] ?? 'bot_6';
+    $botUser = getOrCreateBotStreamerUser($conn, $botName, 50000000);
     $botId = (int)$botUser['Iduser'];
     
     $bets = json_decode($_POST['bets'] ?? '[]', true);

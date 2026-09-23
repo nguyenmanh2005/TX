@@ -1,6 +1,8 @@
 <?php
 session_start();
 
+require_once __DIR__ . '/../db_connect.php';
+
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
 $botUser = getOrCreateBotStreamerUser($conn, 'Thần Bài [Live]', 50000000);
@@ -11,7 +13,6 @@ if (!isset($botUserId)) {
     header("Location: ../login.php");
     exit;
 }
-require_once '../db_connect.php';
 require_once '../load_theme.php';
 ?>
 <!DOCTYPE html>

@@ -15,7 +15,7 @@ Hệ thống xoay quanh sự tương tác liên tục giữa Người chơi th�
     *   Được vinh danh trên Bảng Xếp Hạng (Leaderboard) hoặc Biên Niên Sử Server.
 *   **Role 1 (Quản trị viên / Admin)**:
     *   Kiểm soát vĩ mô: Bật/tắt Sự kiện mùa giải, thiết lập Lời Tiên Tri.
-    *   Giám sát qua `admin_dashboard.php` và `bot_intelligence.php` (Phòng phân tích trí tuệ Bot).
+    *   Giám sát qua `admin_dashboard.php` và `bot/index.php` (Trung tâm chỉ huy Quân đoàn Bot AI).
     *   Sử dụng hệ thống "Tester Bot" để tự động rà quét và kiểm toán lỗ hổng bảo mật.
 
 ### 2. Quân Đoàn AI - Bot Army (Hệ sinh thái tự vận hành)

@@ -38,6 +38,51 @@ if (isset($_GET['action']) && $_GET['action'] === 'trigger_event') {
     exit;
 }
 
+// 1.3 Handle Spawn Bots (Tích hợp thay thế bot_manager.php)
+if (isset($_GET['action']) && $_GET['action'] === 'spawn') {
+    $count = isset($_GET['count']) ? max(1, (int)$_GET['count']) : 1;
+    $count = min($count, 50); // Giới hạn 50 bot/lần
+    
+    // Lấy số lớn nhất hiện tại 1 lần duy nhất
+    $maxRes = $conn->query("SELECT MAX(CAST(SUBSTRING(Email, 4, LOCATE('@', Email) - 4) AS UNSIGNED)) as max_num FROM users WHERE Email REGEXP '^bot[0-9]+@'");
+    $currentMax = (int)($maxRes->fetch_assoc()['max_num'] ?? 0);
+    
+    $env = file_exists(__DIR__ . '/../.env.php') ? require __DIR__ . '/../.env.php' : [];
+    $passText = $env['BOT_PASSWORD'] ?? '123456';
+    $passHash = password_hash($passText, PASSWORD_DEFAULT);
+    
+    $values = [];
+    $params = [];
+    $types = "";
+    $spawned = 0;
+    
+    for ($i = 1; $i <= $count; $i++) {
+        $nextNumber = $currentMax + $i;
+        $newName = "Bot " . str_pad($nextNumber, 2, '0', STR_PAD_LEFT);
+        $email = "bot" . $nextNumber . "@gmail.com";
+        $avatarUrl = "https://ui-avatars.com/api/?name=" . urlencode($newName) . "&background=random";
+        
+        $values[] = "(?, ?, ?, 1000000, ?)";
+        $params[] = $newName;
+        $params[] = $email;
+        $params[] = $passHash;
+        $params[] = $avatarUrl;
+        $types .= "ssss";
+        $spawned++;
+    }
+    
+    if (!empty($values)) {
+        $sql = "INSERT INTO users (Name, Email, Pass, Money, ImageURL) VALUES " . implode(", ", $values);
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+    }
+    
+    $msg = "Đã sinh thành công $spawned bot siêu tốc.";
+    header("Location: index.php?msg=" . urlencode($msg));
+    exit;
+}
+
 $sessionFiles = glob('sessions/*.state.json');
 
 // 2. Phân tích trạng thái bot từ Files
@@ -292,7 +337,6 @@ if (isset($_GET['ajax'])) {
                 <a href="../chat3.php" class="btn" style="background: #334155; border: 1px solid rgba(255,255,255,0.1)">📋 Báo Cáo Tester</a>
                 <a href="../games/megaspin.php" class="btn" style="background: #065f46; border: 1px solid rgba(255,255,255,0.1)">🎡 Mega Spin</a>
                 <a href="bot_buff.php" class="btn" style="background: #1e293b; border: 1px solid rgba(255,255,255,0.1)">💰 Buff  Gtlm</a>
-                <a href="bot_intelligence.php" class="btn" style="background: linear-gradient(135deg, #38bdf8, #6366f1); border: 1px solid rgba(255,255,255,0.1)">🧠 Trí Tuệ Bot</a>
                 <a href="bot_runner.php" class="btn" style="background: linear-gradient(135deg, #6366f1, #a855f7)">🚀 Trình Điều Khiển Web</a>
                 <a href="javascript:void(0)" onclick="spawnBots()" class="btn" style="background: var(--status-warn)">➕ Sinh Bot</a>
             </div>
@@ -302,7 +346,7 @@ if (isset($_GET['ajax'])) {
         function spawnBots() {
             let count = prompt("Bạn muốn sinh thêm bao nhiêu bot? (Tối đa 50)", "1");
             if (count && !isNaN(count) && count > 0) {
-                window.location.href = "bot_manager.php?action=spawn&count=" + count;
+                window.location.href = "index.php?action=spawn&count=" + count;
             }
         }
         </script>

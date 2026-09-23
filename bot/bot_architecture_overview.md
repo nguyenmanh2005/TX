@@ -16,12 +16,9 @@ Tài liệu này mô tả chi tiết cấu trúc, chức năng và các luồng 
     *   Quản lý tính cách (Aggressive, Shy, Balanced, Random).
     *   Tạo dự đoán (Predictions) riêng biệt cho từng loại game.
     *   Sinh nội dung tin nhắn dựa trên kết quả Thắng/Thua và tâm trạng.
-*   **`bot_manager.php`**: 🥚 **Nhà máy sản xuất Bot.**
-    *   Tự động tạo tài khoản Bot mới với tên và avatar ngẫu nhiên.
-    *   Kiểm tra trùng lặp và lưu vào Database bảo mật.
-
 ### 2. Giao Diện & Giám Sát (Dashboard)
-*   **`index.php`**: 🖥️ **Trung tâm chỉ huy (Control Center).**
+*   **`index.php`**: 🖥️ **Trung tâm chỉ huy & Sản xuất Bot (Control Center).**
+    *   Tích hợp tính năng sinh hàng loạt tài khoản Bot mới tự động, an toàn.
     *   Hiển thị Dashboard chuyên nghiệp với biểu đồ Doughnut (Chart.js).
     *   Theo dõi tài sản quân đoàn, tỉ lệ lạm phát so với người thật.
     *   Lưới (Grid) quản lý chi tiết từng Bot: Tên, GTLM, Mood, Inventory.

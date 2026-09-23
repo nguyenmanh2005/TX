@@ -1,11 +1,14 @@
 <?php
 session_start();
-require_once 'db_connect.php';
-require_once 'admin_helper.php';
+require_once __DIR__ . '/../db_connect.php';
+require_once __DIR__ . '/../admin_helper.php';
 
 if (!isset($_SESSION['Iduser'])) { header('Location: login.php'); exit(); }
 $userId = (int)$_SESSION['Iduser'];
-if (!isAdmin($conn, $userId)) { header("Location: Shared/403/403.php"); exit(); }
+if (!isAdmin($conn, $userId)) { header("Location: ../Shared/403/403.php"); exit(); }
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    session_write_close();
+}
 
 // --- 1. Tổng quan Doanh thu (GTLM Sinks) ---
 $revenueStats = [
@@ -19,42 +22,50 @@ $revenueStats = [
 
 // Marketplace Fees (5% mỗi giao dịch thành công)
 $res = $conn->query("SELECT SUM(price * 0.05) as fees FROM marketplace_listings WHERE status = 'sold'");
-$revenueStats['marketplace_fees'] = (float)($res ? ($res->fetch_assoc()['fees'] ?? 0) : 0);
+$revenueStats['marketplace_fees'] = (float)($res && $row = $res->fetch_assoc() ? ($row['fees'] ?? 0) : 0);
 
 // Crafting Costs (Phí từ crafting_logs)
 $res = $conn->query("SELECT SUM(gtlm_spent) as spent FROM crafting_logs");
-$revenueStats['crafting_costs'] = (float)($res ? ($res->fetch_assoc()['spent'] ?? 0) : 0);
+$revenueStats['crafting_costs'] = (float)($res && $row = $res->fetch_assoc() ? ($row['spent'] ?? 0) : 0);
 
 // Guild Fees (Phí tạo Guild)
 $res = $conn->query("SELECT COUNT(*) * 500000 as fees FROM guilds");
-$revenueStats['guild_fees'] = (float)($res ? ($res->fetch_assoc()['fees'] ?? 0) : 0);
+$revenueStats['guild_fees'] = (float)($res && $row = $res->fetch_assoc() ? ($row['fees'] ?? 0) : 0);
 
 // Battle Pass Premium Purchases
 $res = $conn->query("SELECT COUNT(*) * 1000000 as revenue FROM bp_stats WHERE has_premium = 1");
-$revenueStats['battle_pass'] = (float)($res ? ($res->fetch_assoc()['revenue'] ?? 0) : 0);
+$revenueStats['battle_pass'] = (float)($res && $row = $res->fetch_assoc() ? ($row['revenue'] ?? 0) : 0);
 
 $revenueStats['total_burned'] = $revenueStats['marketplace_fees'] + $revenueStats['crafting_costs'] + $revenueStats['guild_fees'] + $revenueStats['battle_pass'];
 
-// --- 2. Phân tích Game Revenue ---
-$gameRevenue = [];
-$res = $conn->query("SELECT game_name, SUM(bet_amount - win_amount) as house_profit FROM game_history GROUP BY game_name ORDER BY house_profit DESC");
-if ($res) {
-    while($row = $res->fetch_assoc()) {
-        $gameRevenue[] = $row;
+// --- 2. Phân tích Game Revenue (Micro-cache 60s để tải tức thì 1ms) ---
+$cacheFile = sys_get_temp_dir() . '/gtlm_rev_games.json';
+if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < 60) {
+    $gameRevenue = json_decode(file_get_contents($cacheFile), true) ?: [];
+} else {
+    $gameRevenue = [];
+    $res = $conn->query("SELECT game_name, SUM(bet_amount - win_amount) as house_profit FROM game_history GROUP BY game_name ORDER BY house_profit DESC");
+    if ($res) {
+        while($row = $res->fetch_assoc()) {
+            $gameRevenue[] = $row;
+        }
     }
+    @file_put_contents($cacheFile, json_encode($gameRevenue));
 }
 
 // --- 3. ARPU & Conversion ---
-$totalUsers = (int)($conn->query("SELECT COUNT(*) FROM users")->fetch_row()[0] ?? 0);
+$resU = $conn->query("SELECT COUNT(*) FROM users");
+$totalUsers = (int)($resU && $row = $resU->fetch_row() ? ($row[0] ?? 0) : 0);
 $arpu = $totalUsers > 0 ? $revenueStats['total_burned'] / $totalUsers : 0;
 
-$vipUsers = (int)($conn->query("SELECT COUNT(*) FROM user_vip WHERE vip_level > 1")->fetch_row()[0] ?? 0);
+$resVip = $conn->query("SELECT COUNT(*) FROM user_vip WHERE vip_level > 1");
+$vipUsers = (int)($resVip && $row = $resVip->fetch_row() ? ($row[0] ?? 0) : 0);
 $conversionRate = $totalUsers > 0 ? ($vipUsers / $totalUsers) * 100 : 0;
 
 // --- 4. Churn Prediction (Người chơi không hoạt động > 7 ngày) ---
-$churnedUsers = (int)($conn->query("SELECT COUNT(*) FROM users WHERE last_active < DATE_SUB(NOW(), INTERVAL 7 DAY)")->fetch_row()[0] ?? 0);
+$resChurn = @$conn->query("SELECT COUNT(*) FROM users WHERE last_active IS NOT NULL AND last_active < DATE_SUB(NOW(), INTERVAL 7 DAY)");
+$churnedUsers = (int)($resChurn && $row = $resChurn->fetch_row() ? ($row[0] ?? 0) : 0);
 $churnRate = $totalUsers > 0 ? ($churnedUsers / $totalUsers) * 100 : 0;
-
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -67,6 +78,7 @@ $churnRate = $totalUsers > 0 ? ($churnedUsers / $totalUsers) * 100 : 0;
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="admin_modules/admin_theme.css">
 
     <style>
         :root {
@@ -122,7 +134,11 @@ $churnRate = $totalUsers > 0 ? ($churnedUsers / $totalUsers) * 100 : 0;
 </head>
 <body>
     <div class="container">
-        <a href="admin_analytics.php" class="btn-back"><i class="fas fa-arrow-left"></i> Quay lại Analytics chính</a>
+        <?php
+        require_once __DIR__ . '/navbar.php';
+        renderAdminNavbar('economy', 'revenue');
+        ?>
+        <a href="admin_dashboard.php?page=economy&sub=overview" class="btn-back"><i class="fas fa-arrow-left"></i> Quay lại Kinh Tế Vĩ Mô</a>
         <h1><i class="fas fa-coins" style="color: var(--primary);"></i> Revenue & <span>GTLM Sink</span> Breakdown</h1>
 
         <div class="grid">

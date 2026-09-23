@@ -1,13 +1,13 @@
 <?php
 session_start();
 
+require_once __DIR__ . '/../db_connect.php';
+
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_35', 50000000);
 $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
-
-include '../db_connect.php';
 require_once '../include_css.php';
 include '../load_theme.php';
 require_once '../game_history_helper.php';
@@ -404,29 +404,37 @@ if (isset($_GET['action'])) {
                 </div>
                 <div class="input-group">
                     <label>Gtlm cược (gtlm)</label>
-                    <input type="number" id="betAmount" value="10000" min="1000">
+                    <input type="number" id="betAmount" value="10000" min="1000" data-allow-bot="true">
                     <div class="quick-bets" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 10px;">
-                        <button class="btn-quick-bet" onclick="setBet(10000)">10K</button>
-                        <button class="btn-quick-bet" onclick="setBet(50000)">50K</button>
-                        <button class="btn-quick-bet" onclick="setBet(100000)">100K</button>
-                        <button class="btn-quick-bet" onclick="setBet(500000)">500K</button>
-                        <button class="btn-quick-bet" onclick="setBet(1000000)">1M</button>
-                        <button class="btn-quick-bet" onclick="setBet(5000000)">5M</button>
-                        <button class="btn-quick-bet" onclick="setBet('ALLIN')" style="grid-column: span 3; background: var(--primary); color:#000; border:none; font-weight:800;">ALL IN</button>
+                        <button class="btn-quick-bet" id="btnBet10k" data-allow-bot="true" onclick="setBet(10000)">10K</button>
+                        <button class="btn-quick-bet" id="btnBet50k" data-allow-bot="true" onclick="setBet(50000)">50K</button>
+                        <button class="btn-quick-bet" id="btnBet100k" data-allow-bot="true" onclick="setBet(100000)">100K</button>
+                        <button class="btn-quick-bet" id="btnBet500k" data-allow-bot="true" onclick="setBet(500000)">500K</button>
+                        <button class="btn-quick-bet" id="btnBet1M" data-allow-bot="true" onclick="setBet(1000000)">1M</button>
+                        <button class="btn-quick-bet" id="btnBet5M" data-allow-bot="true" onclick="setBet(5000000)">5M</button>
+                        <button class="btn-quick-bet" id="btnBetAllIn" data-allow-bot="true" onclick="setBet('ALLIN')" style="grid-column: span 3; background: var(--primary); color:#000; border:none; font-weight:800;">ALL IN</button>
                     </div>
                 </div>
                 <div class="input-group">
                     <label>Mục tiêu (Multiplier)</label>
-                    <input type="number" id="targetMult" value="2.00" min="1.01" step="0.1">
+                    <input type="number" id="targetMult" value="2.00" min="1.01" step="0.1" data-allow-bot="true">
                     <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:5px; margin-top:8px;">
-                        <button onclick="$('#targetMult').val(1.50); updateInfo();"
-                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:4px; font-size:0.6rem; cursor:pointer;">1.5x</button>
-                        <button onclick="$('#targetMult').val(2.00); updateInfo();"
-                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:4px; font-size:0.6rem; cursor:pointer;">2x</button>
-                        <button onclick="$('#targetMult').val(10.00); updateInfo();"
-                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:4px; font-size:0.6rem; cursor:pointer;">10x</button>
-                        <button onclick="$('#targetMult').val(100.00); updateInfo();"
-                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:4px; font-size:0.6rem; cursor:pointer;">100x</button>
+                        <button class="btn-target-mult" id="btnTarget1_3x" data-allow-bot="true" onclick="setTarget(1.30)"
+                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:6px 2px; font-size:0.7rem; font-weight:700; cursor:pointer;">1.3x</button>
+                        <button class="btn-target-mult" id="btnTarget1_5x" data-allow-bot="true" onclick="setTarget(1.50)"
+                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:6px 2px; font-size:0.7rem; font-weight:700; cursor:pointer;">1.5x</button>
+                        <button class="btn-target-mult" id="btnTarget2x" data-allow-bot="true" onclick="setTarget(2.00)"
+                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:6px 2px; font-size:0.7rem; font-weight:700; cursor:pointer;">2.0x</button>
+                        <button class="btn-target-mult" id="btnTarget3x" data-allow-bot="true" onclick="setTarget(3.00)"
+                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:6px 2px; font-size:0.7rem; font-weight:700; cursor:pointer;">3.0x</button>
+                        <button class="btn-target-mult" id="btnTarget5x" data-allow-bot="true" onclick="setTarget(5.00)"
+                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:6px 2px; font-size:0.7rem; font-weight:700; cursor:pointer;">5.0x</button>
+                        <button class="btn-target-mult" id="btnTarget10x" data-allow-bot="true" onclick="setTarget(10.00)"
+                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:6px 2px; font-size:0.7rem; font-weight:700; cursor:pointer;">10x</button>
+                        <button class="btn-target-mult" id="btnTarget20x" data-allow-bot="true" onclick="setTarget(20.00)"
+                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:6px 2px; font-size:0.7rem; font-weight:700; cursor:pointer;">20x</button>
+                        <button class="btn-target-mult" id="btnTarget100x" data-allow-bot="true" onclick="setTarget(100.00)"
+                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:6px 2px; font-size:0.7rem; font-weight:700; cursor:pointer;">100x</button>
                     </div>
                 </div>
                 <div class="stat-grid">
@@ -439,7 +447,7 @@ if (isset($_GET['action'])) {
                         <b id="potentialWin">20.000</b>
                     </div>
                 </div>
-                <button id="rollBtn" class="btn-roll" onclick="playLimbo()">⚡ PHÓNG TÊN LỬA</button>
+                <button id="rollBtn" class="btn-roll" data-allow-bot="true" onclick="playLimbo()">⚡ PHÓNG TÊN LỬA</button>
                 <div style="margin-top:auto; padding-top:1rem; border-top:1px solid rgba(255,255,255,0.1);">
                     <div
                         style="background:rgba(0,0,0,0.2); padding: 0.8rem; border-radius: 1.2rem; border: 1px solid rgba(255,255,255,0.05);">
@@ -482,6 +490,7 @@ if (isset($_GET['action'])) {
         </div>
     </div>
     <script>
+        window.limboHistory = [];
         function updateInfo() {
             const t = parseFloat($('#targetMult').val()) || 1.01;
             const b = parseFloat($('#betAmount').val()) || 0;
@@ -501,6 +510,12 @@ if (isset($_GET['action'])) {
             }
             updateInfo();
         }
+        function setTarget(mult) {
+            $('#targetMult').val(mult.toFixed(2));
+            $('.btn-target-mult').css({ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)', color: '#fff' });
+            $(`#btnTarget${String(mult).replace('.', '_')}x`).css({ background: 'var(--primary)', borderColor: 'var(--primary)', color: '#000' });
+            updateInfo();
+        }
         let isRolling = false;
         function playLimbo() {
             if (isRolling) return;
@@ -516,9 +531,11 @@ if (isset($_GET['action'])) {
             $.post('?action=roll', { bet, target }, function (res) {
                 if (res.success) {
                     $('#userMoney').text(res.money);
-                    const duration = res.result > 10 ? 2 : 1;
+                    const duration = res.result > 10 ? 0.9 : 0.5;
                     const resultMult = res.result;
                     const isWin = res.win;
+                    window.limboHistory.push({ result: resultMult, target: parseFloat(target), win: isWin, bet: parseFloat(bet) });
+                    if (window.limboHistory.length > 20) window.limboHistory.shift();
                     // Counter Animation
                     animateCounter(1.00, resultMult, duration, isWin, res);
                 } else {
@@ -566,7 +583,7 @@ if (isset($_GET['action'])) {
                     setTimeout(() => {
                         $('#rollBtn').prop('disabled', false).text('⚡ PHÓNG TÊN LỬA');
                         isRolling = false;
-                    }, 1000);
+                    }, 300);
                 }
             });
         }
@@ -621,6 +638,7 @@ if (typeof jQuery === "undefined") document.write('<script src="https://code.jqu
 if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
+<script src="../assets/js/bot_chat.js"></script>
 <script src="bots/bot_35.js?v=<?= time() ?>"></script>
 
 </body>

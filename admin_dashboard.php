@@ -20,10 +20,30 @@ function fetchOne(mysqli $conn, string $sql): ?array {
 }
 
 require_once 'admin_helper.php';
+require_once __DIR__ . '/admin_modules/navbar.php';
 
 if (!isset($_SESSION['Iduser'])) { header('Location: login.php'); exit(); }
 $currentUserId = (int)$_SESSION['Iduser'];
 if (!isAdmin($conn, $currentUserId)) { header("Location: Shared/403/403.php"); exit(); }
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    session_write_close();
+}
+
+// Routing các phân hệ quản trị thống nhất
+$page = $_GET['page'] ?? 'overview';
+if ($page === 'economy') {
+    require __DIR__ . '/admin_modules/mod_economy.php';
+    exit();
+} elseif ($page === 'assets') {
+    require __DIR__ . '/admin_modules/mod_assets.php';
+    exit();
+} elseif ($page === 'events') {
+    require __DIR__ . '/admin_modules/mod_events.php';
+    exit();
+} elseif ($page === 'competitions') {
+    require __DIR__ . '/admin_modules/mod_competitions.php';
+    exit();
+}
 
 $stats = [
     'users'  => ['total' => null, 'new7d' => null, 'active15m' => null, 'warnings' => []],
@@ -359,18 +379,20 @@ body::after{
 <body>
 <div class="wrapper">
 
-    <!-- Header -->
+    <?php renderAdminNavbar('overview'); ?>
+
+    <!-- Header Title -->
     <div class="header">
         <div class="header-left">
-            <div class="breadcrumb">⬡ Admin Panel</div>
+            <div class="breadcrumb">⬡ Admin Portal</div>
             <h1>Dashboard <span>Overview</span></h1>
         </div>
         <div class="header-right">
-            <a href="index.php" class="btn btn-ghost">
-                <i class="fa fa-home"></i> Trang Chủ
+            <a href="admin_dashboard.php?page=economy&sub=overview" class="btn btn-ghost" style="border-color: rgba(79,141,255,0.4); color: var(--blue);">
+                <i class="fa fa-vault"></i> Kinh Tế Vĩ Mô
             </a>
-            <a href="logout.php" class="btn btn-ghost" style="color: var(--red); border-color: rgba(251,113,133,0.3);">
-                <i class="fa fa-sign-out-alt"></i> Đăng xuất
+            <a href="admin_dashboard.php?page=assets&sub=users" class="btn btn-ghost" style="border-color: rgba(52,211,153,0.4); color: var(--green);">
+                <i class="fa fa-users"></i> Quản Lý User
             </a>
         </div>
     </div>
@@ -414,6 +436,28 @@ body::after{
         </div>
     </div>
 
+    <?php
+    // Kiểm tra nhanh cảnh báo tài chính khẩn cấp
+    $anomalyWinCount = (int)($conn->query("SELECT COUNT(DISTINCT user_id) FROM game_history WHERE played_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) GROUP BY user_id HAVING COUNT(*) >= 15 AND (SUM(CASE WHEN is_win = 1 THEN 1 ELSE 0 END)/COUNT(*)) >= 0.8")->num_rows ?? 0);
+    $anomalyWealthCount = (int)($conn->query("SELECT COUNT(*) FROM users WHERE Money >= 1000000000000")->fetch_row()[0] ?? 0);
+    $totalAnomalies = $anomalyWinCount + $anomalyWealthCount;
+    if ($totalAnomalies > 0): ?>
+        <div style="background: rgba(251, 113, 133, 0.1); border: 1px solid rgba(251, 113, 133, 0.3); border-radius: 14px; padding: 14px 20px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(251, 113, 133, 0.2); color: #fb7185; display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                    <i class="fa fa-triangle-exclamation"></i>
+                </div>
+                <div>
+                    <h4 style="margin: 0; font-size: 14px; color: #fb7185; font-weight: 700;">Hệ Thống Phát Hiện <?= $totalAnomalies ?> Cảnh Báo Tài Chính & Nghi Vấn Bất Thường!</h4>
+                    <p style="margin: 2px 0 0 0; font-size: 12px; color: var(--muted);">Phát hiện tài khoản có tỉ lệ thắng dị thường >80% hoặc số dư vượt ngưỡng kiểm soát.</p>
+                </div>
+            </div>
+            <a href="admin_economy.php?tab=anomalies" style="background: #fb7185; color: #fff; text-decoration: none; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s;">
+                <i class="fa fa-shield-virus"></i> Xử Lý Ngay
+            </a>
+        </div>
+    <?php endif; ?>
+
     <!-- Biểu đồ -->
     <div class="two-col" style="margin-bottom: 24px;">
         <div class="section-card">
@@ -432,55 +476,69 @@ body::after{
 
     <!-- Quick Actions -->
     <div class="section-card" style="margin-bottom: 24px; padding-bottom: 10px;">
-        <h3><span class="icon"><i class="fa fa-bolt"></i></span> Trung Tâm Điều Khiển Vĩ Mô</h3>
+        <h3><span class="icon"><i class="fa fa-bolt"></i></span> Trung Tâm Điều Khiển Vĩ Mô (Master Control Hub)</h3>
         <div class="action-grid">
-            <a href="bot/bot_manager.php" class="action-card">
+            <a href="admin_dashboard.php?page=economy&sub=overview" class="action-card">
+                <div class="action-icon" style="background: linear-gradient(135deg, #facc15, #eab308);"><i class="fa fa-vault"></i></div>
+                <div class="action-content">
+                    <h4>Kinh Tế & Dòng Tiền Vĩ Mô</h4>
+                    <p>Tổng GDP, dòng tiền Inflow/Outflow, House Edge 61+ game và lạm phát.</p>
+                </div>
+            </a>
+            <a href="admin_dashboard.php?page=economy&sub=anomalies" class="action-card">
+                <div class="action-icon" style="background: linear-gradient(135deg, #ef4444, #f43f5e);"><i class="fa fa-shield-virus"></i></div>
+                <div class="action-content">
+                    <h4>Giám Sát Bất Thường (Fraud Monitor)</h4>
+                    <p>Dò tìm nick cheat winrate >80%, tràn số GTLM và đóng băng số dư tức thì.</p>
+                </div>
+            </a>
+            <a href="admin_dashboard.php?page=assets&sub=users" class="action-card">
+                <div class="action-icon" style="background: linear-gradient(135deg, #10b981, #34d399);"><i class="fa fa-users"></i></div>
+                <div class="action-content">
+                    <h4>Quản Trị Người Dùng</h4>
+                    <p>Tìm kiếm thành viên, hiệu chỉnh số dư GTLM / KC, cấp Role và khóa tài khoản.</p>
+                </div>
+            </a>
+            <a href="admin_dashboard.php?page=assets&sub=items" class="action-card">
+                <div class="action-icon" style="background: linear-gradient(135deg, #3b82f6, #60a5fa);"><i class="fa fa-box-open"></i></div>
+                <div class="action-content">
+                    <h4>Vật Phẩm, Khung Avatar & Chế Tạo</h4>
+                    <p>Quản lý cửa hàng vật phẩm, kho khung avatar và công thức rèn trang bị.</p>
+                </div>
+            </a>
+            <a href="admin_dashboard.php?page=events&sub=main" class="action-card">
+                <div class="action-icon" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);"><i class="fa fa-calendar-star"></i></div>
+                <div class="action-content">
+                    <h4>Đại Sự Kiện & Cốt Truyện</h4>
+                    <p>Event Manager tổng lực, Flash Event chớp nhoáng và chương hồi cốt truyện.</p>
+                </div>
+            </a>
+            <a href="admin_dashboard.php?page=competitions&sub=tournaments" class="action-card">
+                <div class="action-icon" style="background: linear-gradient(135deg, #8b5cf6, #c084fc);"><i class="fa fa-trophy"></i></div>
+                <div class="action-content">
+                    <h4>Giải Đấu & Trọng Tài PvP</h4>
+                    <p>Khởi tạo giải đấu Tournaments, xếp nhánh thi đấu và giám sát trận chiến PvP.</p>
+                </div>
+            </a>
+            <a href="bot/index.php" class="action-card">
                 <div class="action-icon" style="background: linear-gradient(135deg, #a855f7, #ec4899);"><i class="fa fa-robot"></i></div>
                 <div class="action-content">
-                    <h4>Bot Army Controller</h4>
+                    <h4>Quân Đoàn Bot AI (Bot Army)</h4>
                     <p>Hệ thống sinh sản hàng loạt và quản lý tài sản của toàn bộ Bot.</p>
                 </div>
             </a>
-            <a href="bot/bot_intelligence.php" class="action-card">
-                <div class="action-icon" style="background: linear-gradient(135deg, #8b5cf6, #d946ef);"><i class="fa fa-network-wired"></i></div>
-                <div class="action-content">
-                    <h4>Bot Intelligence Center</h4>
-                    <p>Giám sát tiến trình tiến hóa, cấp độ và tâm trạng của 136 Bot AI.</p>
-                </div>
-            </a>
-            <a href="admin_analytics.php" class="action-card">
-                <div class="action-icon" style="background: linear-gradient(135deg, #10b981, #34d399);"><i class="fa fa-chart-line"></i></div>
-                <div class="action-content">
-                    <h4>Phân Tích Website</h4>
-                    <p>Xem biểu đồ doanh thu, thống kê người dùng và lưu lượng truy cập.</p>
-                </div>
-            </a>
-            <a href="admin_economy.php" class="action-card">
-                <div class="action-icon" style="background: linear-gradient(135deg, #facc15, #eab308);"><i class="fa fa-coins"></i></div>
-                <div class="action-content">
-                    <h4>Kinh Tế Server</h4>
-                    <p>Quản lý tổng lượng GTLM lưu thông, bảng phong thần và lạm phát.</p>
-                </div>
-            </a>
-            <a href="bot/tester_bot.php?action=scan" target="_blank" class="action-card">
-                <div class="action-icon" style="background: linear-gradient(135deg, #ef4444, #f97316);"><i class="fa fa-bug-slash"></i></div>
-                <div class="action-content">
-                    <h4>Hệ thống Tester Bot</h4>
-                    <p>Chạy tool kiểm toán bảo mật, dò tìm lỗ hổng hack xu tự động.</p>
-                </div>
-            </a>
-            <a href="events.php" class="action-card">
-                <div class="action-icon" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);"><i class="fa fa-calendar-star"></i></div>
-                <div class="action-content">
-                    <h4>Đại Sảnh Sự Kiện</h4>
-                    <p>Quản lý các sự kiện theo mùa và các chuỗi nhiệm vụ Event Hub.</p>
-                </div>
-            </a>
             <a href="chat3.php" class="action-card">
-                <div class="action-icon" style="background: linear-gradient(135deg, #64748b, #94a3b8);"><i class="fa fa-comments"></i></div>
+                <div class="action-icon" style="background: linear-gradient(135deg, #ef4444, #f97316);"><i class="fa fa-shield-halved"></i></div>
                 <div class="action-content">
-                    <h4>Quản lý Báo Cáo</h4>
-                    <p>Xem tin nhắn báo cáo lỗi từ người chơi để hỗ trợ kịp thời.</p>
+                    <h4>Master Tester Hub (All-in-One)</h4>
+                    <p>Kiểm toán an ninh 5.0, Kịch bản Chat AI, Mưa Lì Xì, Sound FX & CSDL Bot.</p>
+                </div>
+            </a>
+            <a href="admin_dashboard.php?page=economy&sub=analytics" class="action-card">
+                <div class="action-icon" style="background: linear-gradient(135deg, #06b6d4, #22d3ee);"><i class="fa fa-chart-line"></i></div>
+                <div class="action-content">
+                    <h4>Phân Tích Lưu Lượng & Tăng Trưởng</h4>
+                    <p>Lượt truy cập, thiết bị người dùng, trang xem nhiều và báo cáo doanh thu.</p>
                 </div>
             </a>
         </div>

@@ -169,9 +169,9 @@ Khi viết chat cho bot, **PHẢI** dùng từ thay thế theo bảng sau, khôn
 
 ### 5.4 Tích hợp game mới vào Bot
 - Nếu game có chức năng bot (tự động đặt cược, chat, reaction...), logic đó **PHẢI** được viết vào file trong thư mục `bot/` — **không** nhúng vào file game (`games/*.php`) hay API game.
-- Bot **chỉ hoạt động khi admin bật** — không có cơ chế nào tự kích hoạt bot ngoài luồng admin khởi động (`bot_runner.php` / `bot_manager.php`).
+- Bot **chỉ hoạt động khi admin bật** — không có cơ chế nào tự kích hoạt bot ngoài luồng admin khởi động (`bot_runner.php` / `bot/index.php`).
 - Khi admin tắt bot, **toàn bộ** hoạt động bot dừng — không game nào được phép có bot chạy ngầm ngoài hệ thống này.
-- Khi tạo game mới có bot support, phải hỏi: *"Game này cần bot chơi không? Nếu có, mình sẽ tạo/cập nhật file trong `bot/` và hook vào `bot_manager.php`."*
+- Khi tạo game mới có bot support, phải hỏi: *"Game này cần bot chơi không? Nếu có, mình sẽ tạo/cập nhật file trong `bot/` và hook vào `bot/index.php`."*
 
 ### 5.5 Tích hợp bot live chơi game 
 - Bot không chỉ comment mà còn là người tham gia tích cực trong game, comment như người thật.

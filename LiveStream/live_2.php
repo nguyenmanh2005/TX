@@ -1,6 +1,8 @@
 <?php
 session_start();
 
+require_once __DIR__ . '/../db_connect.php';
+
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_2', 50000000);

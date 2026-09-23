@@ -11,13 +11,14 @@ require_once __DIR__ . '/bot_streamer_helper.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-if (!isset($_SESSION['Iduser'])) {
+$action = $_POST['action'] ?? $_GET['action'] ?? '';
+
+if (!isset($_SESSION['Iduser']) && !isset($_SESSION['Iduser_temp_bot']) && $action !== 'bot_chat') {
     echo json_encode(['success' => false, 'message' => 'Vui lòng đăng nhập tài khoản!']);
     exit;
 }
 
-$userId = (int)$_SESSION['Iduser'];
-$action = $_POST['action'] ?? $_GET['action'] ?? '';
+$userId = (int)($_SESSION['Iduser'] ?? $_SESSION['Iduser_temp_bot'] ?? 0);
 
 // ── Cấu hình 5 Bàn Phát Live Song Song ──
 $tablesConfig = [
@@ -513,6 +514,29 @@ switch ($action) {
             echo json_encode(['success' => true]);
         }
         break;
+
+    case 'bot_chat':
+        $tId = (int)($_POST['table_id'] ?? 0);
+        $botName = $_POST['bot_name'] ?? ('bot_' . $tId);
+        $msg = strip_tags($_POST['message'] ?? '');
+        if (empty($msg) || $tId <= 0) {
+            echo json_encode(['success' => false, 'message' => 'Nội dung hoặc bàn không hợp lệ!']);
+            exit;
+        }
+
+        require_once __DIR__ . '/bot_streamer_helper.php';
+        $bUser = getOrCreateBotStreamerUser($conn, $botName, 50000000);
+        $bId = (int)$bUser['Iduser'];
+        $streamerTitle = $tablesConfig[$tId]['streamer_name'] ?? ($bUser['Name'] ?? 'Cơ Trưởng Limbo');
+
+        $botChatMsg = "🎙️ **$streamerTitle**: " . $msg;
+        $stmt = $conn->prepare("INSERT INTO spectator_chat (game_id, user_id, message) VALUES (?, ?, ?)");
+        $stmt->bind_param("iis", $tId, $bId, $botChatMsg);
+        $stmt->execute();
+        $stmt->close();
+
+        echo json_encode(['success' => true]);
+        exit;
 
     case 'clear_chat':
         if (!isset($_SESSION['Role']) || $_SESSION['Role'] != 1) {

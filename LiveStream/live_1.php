@@ -1,13 +1,13 @@
-﻿<?php
+<?php
 session_start();
+
+require_once __DIR__ . '/../db_connect.php';
 
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_1', 50000000);
 $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
-
-include '../db_connect.php';
 require_once '../include_css.php';
 $useBotTheme = $botUserId;
 include '../load_theme.php';
@@ -430,17 +430,17 @@ if (isset($_GET['action'])) {
                         <input type="number" id="customBet" value="10000" min="1000" step="1000" 
                                style="background:none; border:none; color:var(--accent); font-family:'Orbitron'; font-size:1.2rem; font-weight:900; width:100%; text-align:center; outline:none; margin-bottom: 10px;">
                         <div class="quick-bets" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 10px;">
-                            <button class="btn-quick-bet" onclick="$('#customBet').val(10000)">10K</button>
-                            <button class="btn-quick-bet" onclick="$('#customBet').val(50000)">50K</button>
-                            <button class="btn-quick-bet" onclick="$('#customBet').val(100000)">100K</button>
-                            <button class="btn-quick-bet" onclick="$('#customBet').val(500000)">500K</button>
-                            <button class="btn-quick-bet" onclick="$('#customBet').val(1000000)">1M</button>
-                            <button class="btn-quick-bet" onclick="$('#customBet').val(5000000)">5M</button>
-                            <button class="btn-quick-bet" onclick="$('#customBet').val(parseFloat($('#userMoney').text().replace(/\./g, '')))" style="grid-column: span 3; background: var(--primary); color:#000; border:none; font-weight:800;">ALL IN</button>
+                            <button class="btn-quick-bet" id="btnChip10k" onclick="$('#customBet').val(10000)">10K</button>
+                            <button class="btn-quick-bet" id="btnChip50k" onclick="$('#customBet').val(50000)">50K</button>
+                            <button class="btn-quick-bet" id="btnChip100k" onclick="$('#customBet').val(100000)">100K</button>
+                            <button class="btn-quick-bet" id="btnChip500k" onclick="$('#customBet').val(500000)">500K</button>
+                            <button class="btn-quick-bet" id="btnChip1M" onclick="$('#customBet').val(1000000)">1M</button>
+                            <button class="btn-quick-bet" id="btnChip5M" onclick="$('#customBet').val(5000000)">5M</button>
+                            <button class="btn-quick-bet" id="btnChipAllIn" onclick="$('#customBet').val(parseFloat($('#userMoney').text().replace(/\./g, '')))" style="grid-column: span 3; background: var(--primary); color:#000; border:none; font-weight:800;">ALL IN</button>
                         </div>
                     </div>
                     <button id="playBtn" class="btn-action" onclick="playGame()">⚡ XÓC NGAY</button>
-                    <button class="btn-action" onclick="clearBets()"
+                    <button class="btn-action" id="btnClearBets" onclick="clearBets()"
                         style="background:rgba(255,255,255,0.1); color:#fff; font-size:0.8rem; padding:0.8rem; margin-top:10px; box-shadow:none;">XÓA
                         CƯỢC</button>
                     <div style="text-align: center; margin-top: 1rem;">
@@ -462,7 +462,7 @@ if (isset($_GET['action'])) {
                 </div>
                 <div class="betting-grid">
                     <?php foreach ($animals as $a): ?>
-                        <div class="animal-tile" data-animal="<?= $a ?>" onclick="placeBet('<?= $a ?>')">
+                        <div class="animal-tile" data-animal="<?= $a ?>" id="tile-<?= $a ?>" onclick="placeBet('<?= $a ?>')">
                             <span class="animal-emoji"><?= $emojis[$a] ?></span>
                             <span class="animal-name"><?= strtoupper($a) ?></span>
                             <span class="bet-amount-badge" id="bet-<?= $a ?>">0</span>
@@ -559,31 +559,32 @@ if (isset($_GET['action'])) {
             $('.animal-tile').removeClass('winner');
             $('.die').css('opacity', 0);
             const tl = gsap.timeline();
-            tl.to(bowl, { y: 0, rotateX: 0, rotateZ: 0, opacity: 1, duration: 0.4, ease: "bounce.out" })
+            tl.to(bowl, { y: 0, rotateX: 0, rotateZ: 0, opacity: 1, duration: 0.2, ease: "bounce.out" })
               .add(() => {
                   sparks.show().empty();
-                  for(let i=0; i<12; i++) {
+                  for(let i=0; i<10; i++) {
                       $('<div class="spark"></div>').css({
                           left: Math.random()*100 + '%', top: Math.random()*100 + '%',
                           transform: `rotate(${Math.random()*360}deg)`
                       }).appendTo(sparks);
                   }
-                  gsap.to('.spark', { opacity: 0, scale: 2, duration: 0.2, repeat: -1, stagger: 0.1 });
+                  gsap.to('.spark', { opacity: 0, scale: 2, duration: 0.12, repeat: -1, stagger: 0.05 });
                   gsap.to(bowl, {
-                      x: "random(-12, 12)", y: "random(-6, 6)", rotateZ: "random(-10, 10)",
-                      duration: 0.1, repeat: -1, yoyo: true
+                      x: "random(-10, 10)", y: "random(-5, 5)", rotateZ: "random(-8, 8)",
+                      duration: 0.08, repeat: -1, yoyo: true
                   });
               });
             $.post('?action=play', { bets: JSON.stringify(betsData) }, function (res) {
                 if (res.success) {
+                    // Shaking lasts 500ms max (Turbo Fast-Paced)
                     setTimeout(() => {
                         gsap.killTweensOf(bowl);
                         sparks.hide();
-                        gsap.to(bowl, { y: -250, x: 100, rotateZ: 45, opacity: 0, duration: 0.8, ease: "power2.inOut" });
+                        gsap.to(bowl, { y: -230, x: 80, rotateZ: 35, opacity: 0, duration: 0.35, ease: "power2.out" });
                         res.results.forEach((animal, i) => {
                             const die = $(`#die${i}`);
                             die.text(animalEmojis[animal]).css('opacity', 1);
-                            gsap.fromTo(die, { scale: 0, rotate: -180 }, { scale: 1, rotate: 0, duration: 0.6, delay: i * 0.2, ease: "back.out(1.7)" });
+                            gsap.fromTo(die, { scale: 0, rotate: -120 }, { scale: 1, rotate: 0, duration: 0.35, delay: i * 0.08, ease: "back.out(1.5)" });
                             $(`.animal-tile[data-animal="${animal}"]`).addClass('winner');
                         });
                         setTimeout(() => {
@@ -593,30 +594,43 @@ if (isset($_GET['action'])) {
                                 $('.animal-tile.active.winner').each(function() {
                                     const betVal = parseInt($(this).find('.bet-amount-badge').text().replace(/\./g, ''));
                                     const winRatio = res.winAmount ? parseInt(res.winAmount.replace(/\./g, '')) / total : 0;
-                                    const tileWin = Math.round(betVal * winRatio); // Approximate if multiple
+                                    const tileWin = Math.round(betVal * winRatio);
                                     const float = $('<div class="floating-win">+' + tileWin.toLocaleString('vi-VN') + '</div>').appendTo($(this));
-                                    gsap.to(float, { y: -100, opacity: 0, duration: 2, onComplete: () => float.remove() });
+                                    gsap.to(float, { y: -70, opacity: 0, duration: 1.2, onComplete: () => float.remove() });
                                 });
                             } else {
                                 $('.game-area').addClass('lose-shake');
                                 if (window.GameEffects) window.GameEffects.showLoss(total);
                                 $('.animal-tile.active:not(.winner)').each(function() {
                                     const float = $('<div class="floating-win" style="color: #ff4757;">-' + $(this).find('.bet-amount-badge').text() + '</div>').appendTo($(this));
-                                    gsap.to(float, { y: -100, opacity: 0, duration: 2, onComplete: () => float.remove() });
+                                    gsap.to(float, { y: -70, opacity: 0, duration: 1.2, onComplete: () => float.remove() });
                                 });
-                                setTimeout(() => $('.game-area').removeClass('lose-shake'), 500);
+                                setTimeout(() => $('.game-area').removeClass('lose-shake'), 350);
                             }
+
+                            // Expose round event for bot & watchers
+                            window.lastBaucuaResult = {
+                                results: res.results,
+                                win: res.win,
+                                winAmount: res.winAmount,
+                                totalBet: total,
+                                newMoney: res.money
+                            };
+                            if (typeof window.onBaucuaRoundComplete === 'function') {
+                                try { window.onBaucuaRoundComplete(window.lastBaucuaResult); } catch(e){}
+                            }
+
                             setTimeout(() => {
-                                gsap.to(bowl, { y: 0, x: 0, rotateZ: 0, opacity: 1, duration: 0.5 });
-                                gsap.to('.die', { scale: 0, opacity: 0, duration: 0.3 });
+                                gsap.to(bowl, { y: 0, x: 0, rotateZ: 0, opacity: 1, duration: 0.35 });
+                                gsap.to('.die', { scale: 0, opacity: 0, duration: 0.2 });
                                 $('.animal-tile').removeClass('winner');
                                 $('#playBtn').prop('disabled', false).text('⚡ XÓC NGAY');
                                 isRolling = false;
                                 clearBets();
                                 loadBaucuaHistory();
-                            }, 2500);
-                        }, 1200);
-                    }, 1500);
+                            }, 750);
+                        }, 400);
+                    }, 500);
                 } else {
                     gsap.killTweensOf(bowl);
                     sparks.hide();
@@ -712,6 +726,7 @@ if (typeof jQuery === "undefined") document.write('<script src="https://code.jqu
 if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
+<script src="../assets/js/bot_chat.js"></script>
 <script src="bots/bot_1.js"></script>
 
 </body>

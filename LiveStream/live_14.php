@@ -1,14 +1,13 @@
 <?php
 session_start();
 
+require_once __DIR__ . '/../db_connect.php';
+
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_14', 50000000);
 $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
-
-
-require '../db_connect.php';
 
 
 
@@ -87,7 +86,6 @@ if (!empty($_SERVER['HTTP_X_BOT']) || isset($_GET['bot_action'])) {
     header('Content-Type: application/json; charset=utf-8');
     $botAction = $_GET['bot_action'] ?? $_POST['action'] ?? '';
     $botCuoc   = (int)($_POST['cuoc'] ?? 0);
-    require_once '../db_connect.php';
 
     // Lấy số dư thực từ DB
     $stmtM = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");

@@ -1,15 +1,24 @@
 <?php
 session_start();
 
-require_once '../game_history_helper.php';
-require_once 'bot_streamer_helper.php';
+require_once __DIR__ . '/../db_connect.php';
+require_once __DIR__ . '/../game_history_helper.php';
+require_once __DIR__ . '/bot_streamer_helper.php';
+
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_52', 50000000);
-$botUserId = $botUser['Iduser'];
+$botUserId = (int)($botUser['Iduser'] ?? 0);
 $_SESSION['Iduser_temp_bot'] = $botUserId;
 
-require '../db_connect.php';
+// Tự động bù tiền nếu số dư thấp để livestream 24/7
+if ($botUserId > 0) {
+    $balCheck = $conn->query("SELECT Money FROM users WHERE Iduser = $botUserId")->fetch_assoc();
+    if (!$balCheck || (float)$balCheck['Money'] < 2000000) {
+        $conn->query("UPDATE users SET Money = 50000000 WHERE Iduser = $botUserId");
+    }
+}
+
 $useBotTheme = $botUserId;
-require_once '../load_theme.php';
+require_once __DIR__ . '/../load_theme.php';
 
 // Fallback theme cho Bàn 52 (Three Card Poker - Tím Neon Vũ Trụ)
 $particleColor = $particleColor ?? '#00f2fe';
@@ -182,6 +191,11 @@ if (isset($_GET['action'])) {
             $conn->query("UPDATE users SET Money = Money + $totalReturn WHERE Iduser = $userId");
         }
 
+        // Rule 5.2: Ghi nhận game_history
+        $totalBet = $ante + $pairPlus + $play;
+        $isWin = ($winAmount > 0) ? 1 : 0;
+        logGameHistory($conn, $userId, 'ThreeCardPoker', $totalBet, $totalReturn, $isWin);
+
         $conn->commit();
             $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
 
@@ -199,7 +213,11 @@ if (isset($_GET['action'])) {
         $ante = $_SESSION['3cp_ante'];
         $pairPlus = $_SESSION['3cp_pairPlus'];
         $winAmount = -($ante + $pairPlus);
-        // Money was already deducted in deal step, so we don't need to do anything here except return new balance.
+        $totalBet = $ante + $pairPlus;
+
+        // Rule 5.2: Ghi nhận game_history
+        logGameHistory($conn, $userId, 'ThreeCardPoker', $totalBet, 0, 0);
+
         $conn->commit();
             $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
 
@@ -513,19 +531,19 @@ if (isset($_GET['action'])) {
                         <input type="number" id="pairplus" value="0">
                     </div>
                 </div>
-                <button id="deal-btn" class="btn-premium btn-deal" style="padding: 0.65rem 2.5rem; font-size: 0.95rem;">CHIA BÀI</button>
+                <button id="deal-btn" class="btn-premium btn-deal" data-allow-bot="true" style="padding: 0.65rem 2.5rem; font-size: 0.95rem;">CHIA BÀI</button>
             </div>
 
             <div id="play-area" style="display: none; margin-top: 1rem;">
                 <p style="margin-bottom: 0.8rem; font-weight: 700; color: #f1c40f; font-size: 1rem;">BẠN MUỐN THEO (PLAY) HAY ÚP BÀI (FOLD)?</p>
                 <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
-                    <button id="play-btn" class="btn-premium btn-play" style="padding: 0.65rem 2rem;">PLAY (THEO)</button>
-                    <button id="fold-btn" class="btn-premium btn-fold" style="padding: 0.65rem 2rem;">FOLD (ÚP BÀI)</button>
+                    <button id="play-btn" class="btn-premium btn-play" data-allow-bot="true" style="padding: 0.65rem 2rem;">PLAY (THEO)</button>
+                    <button id="fold-btn" class="btn-premium btn-fold" data-allow-bot="true" style="padding: 0.65rem 2rem;">FOLD (ÚP BÀI)</button>
                 </div>
             </div>
 
             <div id="result-area" style="display: none; margin-top: 1rem;">
-                <button id="reset-btn" class="btn-premium btn-deal" style="padding: 0.65rem 2.5rem;">VÁN MỚI</button>
+                <button id="reset-btn" class="btn-premium btn-deal" data-allow-bot="true" style="padding: 0.65rem 2.5rem;">VÁN MỚI</button>
             </div>
             
             <div style="margin-top: 1rem; margin-bottom: 0.5rem;">
@@ -718,6 +736,7 @@ if (isset($_GET['action'])) {
     if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
     </script>
     <script src="../assets/js/bot_virtual_cursor.js"></script>
+    <script src="../assets/js/bot_chat.js"></script>
     <script src="bots/bot_52.js"></script>
 </body>
 </html>

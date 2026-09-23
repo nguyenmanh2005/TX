@@ -1,13 +1,13 @@
 <?php
 session_start();
 
+require_once __DIR__ . '/../db_connect.php';
+
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_30', 50000000);
 $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
-
-require_once '../db_connect.php';
 
 ?>
 <!DOCTYPE html>

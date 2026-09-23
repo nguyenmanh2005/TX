@@ -1,6 +1,8 @@
 <?php
 session_start();
 
+require_once __DIR__ . '/../db_connect.php';
+
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_29', 50000000);
@@ -9,8 +11,6 @@ $_SESSION['Iduser_temp_bot'] = $botUserId;
 
 
 // Kiểm tra đăng nhập
-
-require '../db_connect.php';
 
 // AJAX history endpoint
 $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
@@ -402,7 +402,7 @@ $message = "";
         }
 
         .bag-icon.opening {
-            animation: bagOpening 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+            animation: bagOpening 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
         }
 
         @keyframes bagOpening {
@@ -545,7 +545,7 @@ $message = "";
         <div id="result-container"></div>
 
         <form id="bagForm">
-            <button type="submit" id="submitBtn">👉 Bóc túi ngay!</button>
+            <button type="submit" id="submitBtn" data-allow-bot="true">👉 Bóc túi ngay!</button>
         </form>
         <p><a href="../index.php">🏠 Quay Lại Trang Chủ</a></p>
 
@@ -600,7 +600,7 @@ $message = "";
                             throw new Error('Lỗi dữ liệu từ server');
                         }
 
-                        // Chờ hiệu ứng animation (1s)
+                        // Chờ hiệu ứng animation (0.5s)
                         setTimeout(() => {
                             bag.classList.remove('opening');
                             submitBtn.disabled = false;
@@ -630,74 +630,38 @@ $message = "";
                                 Swal.fire({
                                     icon: 'error',
                                     title: 'Thông báo',
-                                    text: data.message
+                                    text: data.message,
+                                    timer: 1500,
+                                    showConfirmButton: false
                                 });
                             }
-                        }, 1000);
+                        }, 450);
 
                     } catch (error) {
                         console.error('Lỗi khi mở túi:', error);
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Lỗi kết nối',
-                            text: 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau.'
-                        });
                         submitBtn.disabled = false;
                         submitBtn.innerHTML = '👉 Bóc túi ngay!';
                         bag.classList.remove('opening');
                     }
                 });
+
+                window.openBagStreamer = function() {
+                    const btn = document.getElementById('submitBtn');
+                    if (btn && !btn.disabled) {
+                        form.dispatchEvent(new Event('submit', { cancelable: true }));
+                    }
+                };
             }
         });
     </script>
 
+    <!-- NẠP THƯ VIỆN BẮT BUỘC CHO CHUỘT ẢO GSAP VÀ JQUERY -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
-
-
-
-
-
-
-
-
-
-
-
-<!-- AUTO-GENERATED BOT SCRIPT -->
-<script>
-if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
-if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
-</script>
-<script src="../assets/js/bot_virtual_cursor.js"></script>
-<script>
-    if (typeof BotVirtualCursor !== "undefined") {
-        BotVirtualCursor.init("Bot Streamer");
-        setInterval(() => {
-            const allBtns = Array.from(document.querySelectorAll("button, .btn-bet, .chip, .spin-btn, #btnSpin, .bet-button, .card, .btn-primary, .btn-success, input[type='button'], input[type='submit']"));
-            const btns = allBtns.filter(b => {
-                if(b.offsetParent === null || b.disabled) return false;
-                const txt = (b.innerText || b.value || "").toLowerCase();
-                const cls = (b.className || "").toLowerCase();
-                const id = (b.id || "").toLowerCase();
-                
-                // Exclude common navigation/help buttons
-                if(txt.includes("hướng dẫn") || txt.includes("trang chủ") || txt.includes("nạp") || txt.includes("rút") || txt.includes("lịch sử") || txt.includes("quay lại") || txt.includes("thoát")) return false;
-                if(cls.includes("back") || cls.includes("help") || cls.includes("guide") || cls.includes("close") || cls.includes("swal") || cls.includes("nav")) return false;
-                if(id.includes("guide") || id.includes("back") || id.includes("close") || id.includes("nav")) return false;
-                
-                return true;
-            });
-            
-            if(btns.length > 0) {
-                const btn = btns[Math.floor(Math.random() * btns.length)];
-                BotVirtualCursor.moveToElement($(btn), 1, 0, () => {
-                    setTimeout(() => { 
-                        BotVirtualCursor.simulateClick(() => {
-                            try { btn.click(); } catch(e){}
-                        });
-                    }, 500);
-                });
-            }
-        }, 3000 + Math.random() * 4000);
-    }
-</script>
+    <!-- BOT STREAMER SCRIPT -->
+    <script src="../assets/js/bot_virtual_cursor.js"></script>
+    <script src="../assets/js/bot_chat.js"></script>
+    <script src="bots/bot_29.js"></script>
+</body>
+</html>

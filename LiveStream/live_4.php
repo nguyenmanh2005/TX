@@ -1,13 +1,13 @@
 <?php
 session_start();
 
+require_once __DIR__ . '/../db_connect.php';
+
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_4', 50000000);
 $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
-
-require '../db_connect.php';
 require_once '../include_css.php';
 $useBotTheme = $botUserId;
 require_once '../load_theme.php';
@@ -239,9 +239,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
         </div>
         <input type="number" id="bet-amount" placeholder="GTLM thả thính..." value="10000" style="background: #000; color: #fff; border: 1px solid #444; padding: 0.8rem; font-size: 1.2rem; border-radius: 10px; width: 250px; text-align: center;"><br><br>
         <div class="betting-area">
-            <button class="bet-btn btn-meron" onclick="placeBet('meron')">CHIẾN MERON<br><small>1 húp 1</small></button>
-            <button class="bet-btn btn-draw" onclick="placeBet('draw')">HÒA (BDD)<br><small>1 húp 8</small></button>
-            <button class="bet-btn btn-wala" onclick="placeBet('wala')">CHIẾN WALA<br><small>1 húp 1</small></button>
+            <button class="bet-btn btn-meron" data-allow-bot="true" onclick="placeBet('meron')">CHIẾN MERON<br><small>1 húp 1</small></button>
+            <button class="bet-btn btn-draw" data-allow-bot="true" onclick="placeBet('draw')">HÒA (BDD)<br><small>1 húp 8</small></button>
+            <button class="bet-btn btn-wala" data-allow-bot="true" onclick="placeBet('wala')">CHIẾN WALA<br><small>1 húp 1</small></button>
     <a href="../index.php" style="color: #888; text-decoration: none; display: block; margin-bottom: 3rem;">🏠 Quay lại sảnh</a>
 
     <style>
@@ -279,12 +279,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
             $('#status').text('ĐANG CHIẾN...').fadeIn();
             $('#rooster-meron, #rooster-wala').addClass('shaking jump');
             
-            $('#rooster-meron').animate({ left: '300px' }, 2000);
-            $('#rooster-wala').animate({ right: '300px' }, 2000);
+            $('#rooster-meron').animate({ left: '300px' }, 600);
+            $('#rooster-wala').animate({ right: '300px' }, 600);
 
             $.post('?action=bet', { side: side, amount: amount }, function(data) {
                 if (!data.success) {
-                    Swal.fire('Lỗi', data.message, 'error');
                     resetArena();
                     return;
                 }
@@ -296,13 +295,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
                     addHistoryBubble(data.winner);
 
                     if (data.winner === 'meron') {
-                        $('#rooster-wala').fadeOut();
-                        $('#rooster-meron').animate({ left: '325px' }, 500);
+                        $('#rooster-wala').fadeOut(300);
+                        $('#rooster-meron').animate({ left: '325px' }, 300);
                     } else if (data.winner === 'wala') {
-                        $('#rooster-meron').fadeOut();
-                        $('#rooster-wala').animate({ right: '325px' }, 500);
-                    } else {
-                        // Draw
+                        $('#rooster-meron').fadeOut(300);
+                        $('#rooster-wala').animate({ right: '325px' }, 300);
                     }
 
                     setTimeout(() => {
@@ -313,8 +310,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'bet') {
                             if (window.GameEffects) window.GameEffects.showLoss(amount);
                         }
                         resetArena();
-                    }, 1000);
-                }, 3000);
+                    }, 400);
+                }, 1100);
             });
         }
 
@@ -364,6 +361,7 @@ if (typeof jQuery === "undefined") document.write('<script src="https://code.jqu
 if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
+<script src="../assets/js/bot_chat.js"></script>
 <script src="bots/bot_4.js"></script>
 
 </body>

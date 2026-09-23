@@ -1,6 +1,8 @@
 <?php
 session_start();
 
+require_once __DIR__ . '/../db_connect.php';
+
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_25', 50000000);
@@ -11,8 +13,6 @@ if (!isset($botUserId)) {
     header('Location: ../login.php');
     exit;
 }
-
-require '../db_connect.php';
 require_once '../load_theme.php';
 if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
     $bgGradientCSS = 'linear-gradient(135deg, #1a1c29 0%, #2a2d3e 100%)';
@@ -416,7 +416,7 @@ $userMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fet
             </div>
         </div>
 
-        <button class="btn-pull" id="btn-pull" onclick="pullCard()">Triệu Hồi Thẻ (50k)</button>
+        <button class="btn-pull" id="btn-pull" data-allow-bot="true" onclick="pullCard()">Triệu Hồi Thẻ (50k)</button>
     </div>
 
     <script>
@@ -463,18 +463,16 @@ $userMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fet
                         setTimeout(() => {
                             isPulling = false;
                             $('#btn-pull').prop('disabled', false).text('Triệu Hồi Thẻ Lần Nữa');
-                        }, 1000);
+                        }, 400);
                     } else {
-                        Swal.fire('Lỗi!', res.message, 'error');
                         isPulling = false;
                         $('#btn-pull').prop('disabled', false).text('Triệu Hồi Thẻ (50k)');
                     }
                 }, 'json').fail(function() {
-                    Swal.fire('Lỗi!', 'Lỗi kết nối mạng!', 'error');
                     isPulling = false;
                     $('#btn-pull').prop('disabled', false).text('Triệu Hồi Thẻ (50k)');
                 });
-            }, 500); // 0.5s delay to make it feel like "shuffling"
+            }, 100); // 0.1s fast shuffle
         }
     </script>
 
@@ -484,6 +482,7 @@ if (typeof jQuery === "undefined") document.write('<script src="https://code.jqu
 if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
+<script src="../assets/js/bot_chat.js"></script>
 <script src="bots/bot_25.js"></script>
 
 <div class="result-banner" id="resultBanner"></div>

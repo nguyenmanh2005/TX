@@ -16,10 +16,18 @@ function getOrCreateBotStreamerUser($conn, $botName, $defaultMoney = 88888000) {
     
     if ($row = $res->fetch_assoc()) {
         $stmt->close();
+        $curMoney = (float)$row['Money'];
+        // Tự động bơm vốn nếu số dư bot dưới 2,000,000 GTLM để bảo hộ livestream 24/7 toàn bộ 61 bàn
+        if ($curMoney < 2000000) {
+            $topupAmt = max($defaultMoney, 50000000);
+            $botId = (int)$row['Iduser'];
+            $conn->query("UPDATE users SET Money = $topupAmt WHERE Iduser = $botId");
+            $curMoney = (float)$topupAmt;
+        }
         return [
             'Iduser' => (int)$row['Iduser'],
             'Name' => $row['Name'],
-            'Money' => (float)$row['Money']
+            'Money' => $curMoney
         ];
     }
     $stmt->close();

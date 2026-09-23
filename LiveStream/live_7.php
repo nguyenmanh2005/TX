@@ -1,13 +1,13 @@
-﻿<?php
+<?php
 session_start();
+
+require_once __DIR__ . '/../db_connect.php';
 
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_7', 50000000);
 $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
-
-include '../db_connect.php';
 require_once '../include_css.php';
 include '../load_theme.php';
 require_once '../game_history_helper.php';
@@ -387,7 +387,7 @@ if (isset($_GET['action'])) {
                         style="font-size:1.4rem; font-weight:900; color:rgba(255,255,255,0.9); font-family: 'Orbitron';">
                         0</div>
                 </div>
-                <button id="dropBtn" class="btn-action" onclick="dropBalls()">🎱 THẢ BÓNG</button>
+                <button id="dropBtn" class="btn-action" data-allow-bot="true" onclick="dropBalls()">🎱 THẢ BÓNG</button>
                 <div style="margin-top:auto; padding-top:1.5rem; border-top:1px solid rgba(255,255,255,0.1);">
                     <div
                         style="background:rgba(0,0,0,0.2); padding: 1rem; border-radius: 1.2rem; border: 1px solid rgba(255,255,255,0.05);">
@@ -487,7 +487,7 @@ if (isset($_GET['action'])) {
                     res.results.forEach((data, index) => {
                         setTimeout(() => {
                             animateSingleBall(data);
-                        }, index * 200); // Staggered drop
+                        }, index * 80); // Staggered drop nhanh
                     });
                 } else {
                     Swal.fire('Lỗi', res.message, 'error');
@@ -535,8 +535,8 @@ if (isset($_GET['action'])) {
                 tl.to(ball, {
                     x: curX,
                     y: nextY - 10,
-                    duration: 0.3,
-                    ease: "back.out(1.7)",
+                    duration: 0.12,
+                    ease: "power1.out",
                     onStart: () => {
                         // Flash nearest pin
                         pins.forEach(p => {
@@ -557,7 +557,7 @@ if (isset($_GET['action'])) {
                 finalX = (pRect.left - bRect.left) + (pRect.width / 2) - 11;
                 finalY = (pRect.top - bRect.top) + 6;
             }
-            tl.to(ball, { x: finalX, y: finalY, duration: 0.38, ease: "power2.in" });
+            tl.to(ball, { x: finalX, y: finalY, duration: 0.15, ease: "power2.in" });
         }
     </script>
     <canvas id="threejs-background"></canvas>
@@ -588,6 +588,7 @@ if (typeof jQuery === "undefined") document.write('<script src="https://code.jqu
 if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
+<script src="../assets/js/bot_chat.js"></script>
 <script src="bots/bot_7.js"></script>
 
 </body>

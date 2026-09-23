@@ -1,13 +1,13 @@
 <?php
 session_start();
 
+require_once __DIR__ . '/../db_connect.php';
+
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_18', 50000000);
 $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
-
-require_once '../db_connect.php';
 
 if (!isset($botUserId)) {
     header('Location: ../login.php');
@@ -45,7 +45,7 @@ $stmt->close();
         
         /* Coin Animation */
         .coin-wrapper { perspective: 1000px; margin: 0 auto 40px auto; width: 150px; height: 150px; }
-        .coin { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .coin { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.9s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .coin-face { position: absolute; width: 100%; height: 100%; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 3rem; font-weight: 800; backface-visibility: hidden; box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 10px 20px rgba(0,0,0,0.5); border: 8px solid #fbbf24; }
         .coin-heads { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; }
         .coin-tails { background: linear-gradient(135deg, #94a3b8, #64748b); color: #fff; transform: rotateY(180deg); border-color: #cbd5e1; }
@@ -142,11 +142,11 @@ $stmt->close();
         </div>
 
         <div class="action-btns">
-            <button class="action-btn btn-heads" onclick="playGame('sấp')" id="btn-sap">
+            <button class="action-btn btn-heads" data-allow-bot="true" onclick="playGame('sấp')" id="btn-sap">
                 CHỌN SẤP
                 <span class="payout-rate">Ăn x2</span>
             </button>
-            <button class="action-btn btn-tails" onclick="playGame('ngửa')" id="btn-ngua">
+            <button class="action-btn btn-tails" data-allow-bot="true" onclick="playGame('ngửa')" id="btn-ngua">
                 CHỌN NGỬA
                 <span class="payout-rate">Ăn x2</span>
             </button>
@@ -226,7 +226,7 @@ $stmt->close();
                         gsap.to(float, { y: 50, opacity: 0, duration: 2, onComplete: () => float.remove() });
                     }
                     $('.action-btn').prop('disabled', false);
-                }, 3000); // Đợi 3s khớp với animation
+                }, 1000); // Đợi 1s khớp với animation 0.9s
             }, 'json').fail(function() {
                 Swal.fire('Lỗi', 'Lỗi kết nối máy chủ', 'error');
                 $('.action-btn').prop('disabled', false);
@@ -268,6 +268,7 @@ if (typeof jQuery === "undefined") document.write('<script src="https://code.jqu
 if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
+<script src="../assets/js/bot_chat.js"></script>
 <script src="bots/bot_18.js"></script>
 
 </body>

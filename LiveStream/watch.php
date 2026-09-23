@@ -30,7 +30,7 @@ $gameFilesMap = [
     3 => ['file' => 'live_3.php', 'real_game' => '../games/crash.php', 'name' => 'Tiên Tri Vũ Trụ', 'icon' => '🚀'],
     4 => ['file' => 'live_4.php', 'real_game' => '../games/daga.php', 'name' => 'Đại Chiến Thần Kê', 'icon' => '🐓'],
     5 => ['file' => 'live_5.php', 'real_game' => '../games/dragontiger.php', 'name' => 'Chiến Trường Rồng Hổ', 'icon' => '🐉'],
-    6 => ['file' => '../games/cyber_racing.php?live=1', 'real_game' => '../games/cyber_racing.php', 'name' => 'Đua Thú Cyberpunk', 'icon' => '🏎️'],
+    6 => ['file' => 'live_6.php', 'real_game' => '../games/cyber_racing.php', 'name' => 'Đua Thú Cyberpunk', 'icon' => '🏎️'],
     7 => ['file' => 'live_7.php', 'real_game' => '../games/plinko.php', 'name' => 'Plinko Royale', 'icon' => '🎱'],
     8 => ['file' => 'live_8.php', 'real_game' => '../games/slot.php', 'name' => 'Slot Machine Premium', 'icon' => '🎰'],
     9 => ['file' => 'live_9.php', 'real_game' => '../games/baccarat.php', 'name' => 'Baccarat', 'icon' => '🎪'],

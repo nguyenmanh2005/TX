@@ -4,12 +4,12 @@ include 'db_connect.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-if (!isset($_SESSION['Iduser'])) {
+$userId = $_SESSION['Iduser'] ?? $_SESSION['Iduser_temp_bot'] ?? null;
+if (!$userId) {
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit;
 }
-
-$userId = $_SESSION['Iduser'];
+$userId = (int)$userId;
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 // Check active pet cho farm_time

@@ -1,15 +1,24 @@
 <?php
 session_start();
 
-require_once '../game_history_helper.php';
-require_once 'bot_streamer_helper.php';
+require_once __DIR__ . '/../db_connect.php';
+require_once __DIR__ . '/../game_history_helper.php';
+require_once __DIR__ . '/bot_streamer_helper.php';
+
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_51', 50000000);
-$botUserId = $botUser['Iduser'];
+$botUserId = (int)($botUser['Iduser'] ?? 0);
 $_SESSION['Iduser_temp_bot'] = $botUserId;
 
-require '../db_connect.php';
+// Tự động bù tiền nếu số dư thấp để livestream 24/7
+if ($botUserId > 0) {
+    $balCheck = $conn->query("SELECT Money FROM users WHERE Iduser = $botUserId")->fetch_assoc();
+    if (!$balCheck || (float)$balCheck['Money'] < 2000000) {
+        $conn->query("UPDATE users SET Money = 50000000 WHERE Iduser = $botUserId");
+    }
+}
+
 $useBotTheme = $botUserId;
-require_once '../load_theme.php';
+require_once __DIR__ . '/../load_theme.php';
 
 // Fallback theme cho Bàn 51 (Sicbo Đỏ Ruby Neon)
 $particleColor = $particleColor ?? '#ff4757';
@@ -134,11 +143,15 @@ if (isset($_GET['action'])) {
         $stmt->bind_param("di", $newMoney, $userId);
         $stmt->execute();
         $stmt->close();
-        // History
+        // History bảng riêng
         $his = $conn->prepare("INSERT INTO history_sicbo (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
         $his->bind_param("idss", $userId, $totalBet, $diceStr, $winAmount);
         $his->execute();
         $his->close();
+
+        // Ghi nhận game_history (Rule 5.2)
+        $isWin = ($winAmount > 0) ? 1 : 0;
+        logGameHistory($conn, $userId, 'Sicbo', $totalBet, $totalRevenue, $isWin);
         echo json_encode([
             'success' => true,
             'dice' => $dice,
@@ -552,7 +565,7 @@ if (isset($_GET['action'])) {
                     <div class="odds">1:60</div>
                 </div>
             </div>
-            <button id="roll-btn" class="btn-roll">LẮC XÚC XẮC</button>
+            <button id="roll-btn" class="btn-roll" data-allow-bot="true">LẮC XÚC XẮC</button>
         </div>
         <div class="history-section">
             <h2 style="font-size: 1.2rem; letter-spacing: 2px; margin-bottom: 1rem;">LỊCH SỬ GẦN ĐÂY</h2>
@@ -634,7 +647,7 @@ if (isset($_GET['action'])) {
             }
             $.post('?action=roll', { bets: JSON.stringify(betArray) }, function(data) {
                 if (!data.success) {
-                    Swal.fire('Lỗi', data.message, 'error');
+                    console.warn('[Sicbo 51]', data.message);
                     isRolling = false;
                     $('#roll-btn').prop('disabled', false);
                     return;
@@ -670,7 +683,7 @@ if (isset($_GET['action'])) {
             }, 'json').fail(function(xhr) {
                 isRolling = false;
                 $('#roll-btn').prop('disabled', false);
-                Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
+                console.error('[Sicbo 51] Không thể kết nối đến máy chủ');
             });
         });
 
@@ -740,6 +753,7 @@ if (isset($_GET['action'])) {
     if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
     </script>
     <script src="../assets/js/bot_virtual_cursor.js"></script>
+    <script src="../assets/js/bot_chat.js"></script>
     <script src="bots/bot_51.js"></script>
 </body>
 </html>

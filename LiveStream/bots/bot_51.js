@@ -2,22 +2,22 @@
  * 🤖 Bot AI Sicbo (Tài Xỉu / Xúc Xắc Cổ Điển) Siêu Thông Minh (ID: 51)
  *
  * CHIẾN THUẬT & TRÍ TUỆ ĐỈNH CAO:
- * 1. QUẢN LÝ VỐN & PHÂN BỔ CƯỢC:
- *    - Tự động theo dõi số dư ví GTLM của Streamer.
- *    - Chọn mức cược linh hoạt (10K, 50K, 100K, 500K) qua các nút `.btn-quick-bet`.
- *    - Tránh spam ALL IN bừa bãi, bảo toàn vốn để livestream 24/7 bền bỉ.
+ * 1. QUẢN LÝ VỐN & PHÂN BỔ CƯỢC (SMART SICBO BANKROLL):
+ *    - Tự động theo dõi số dư ví GTLM của Streamer (#balance-val).
+ *    - Chọn mức cược an toàn (10K, 50K, 100K, 500K) tương xứng số dư ví.
+ *    - Tránh ALL IN bừa bãi, bảo toàn vốn để livestream 24/7 bền bỉ.
  * 2. CHIẾN THUẬT ĐẶT CỬA SICBO THƯỢNG THỪA:
  *    - 75% ván: Đặt vào các cửa cân bằng xác suất cao: Tài (Big 11-17), Xỉu (Small 4-10), Chẵn (Even), Lẻ (Odd).
- *    - 25% ván: Đặt kèm 1 cửa tài lộc thưởng lớn: Bất kỳ bộ ba (`any_triple` x30), Tổng may mắn (`total_9` -> `total_12`), hoặc Số đơn (`single_1` -> `single_6`).
- *    - Có tính toán chuỗi cầu (Tài/Xỉu) linh hoạt.
- * 3. HỆ THỐNG CHUỘT ẢO CHUYÊN NGHIỆP (BotVirtualCursor):
- *    - Di chuyển mượt mà tự nhiên tới nút chọn phỉnh cược -> các ô cược -> nút "LẮC XÚC XẮC".
- *    - Tuyệt đối KHÔNG click lung tung ra ngoài, không click nút "QUAY LẠI SẢNH" hay "DỌN BÀN" bừa bãi.
- * 4. TƯƠNG TÁC CHAT & CẢM XÚC:
- *    - Bắt sự kiện kết quả từ `#result-status-badge` để phát ngôn câu thoại Casino cực chất.
- *    - Dừng 3.5s - 4.5s cho người xem chiêm ngưỡng xúc xắc và nhận thưởng.
- * 5. WATCHDOG CHỐNG KẸT:
- *    - Tự động phục hồi trạng thái sau 8 giây nếu gặp gián đoạn mạng.
+ *    - 25% ván: Đặt kèm 1 cửa tài lộc thưởng lớn: Bất kỳ bộ ba (any_triple x30), Tổng may mắn (total_9 -> total_12).
+ *    - Có thuật toán nuôi cầu / bẻ cầu theo chuỗi thắng thua.
+ * 3. HỆ THỐNG CHUỘT ẢO ASYNC AN TOÀN TUYỆT ĐỐI (BotVirtualCursor):
+ *    - moveAndClick dạng Promise có Safety Timeout tự giải phóng sau (duration*1000 + 400ms).
+ *    - Rê chuột tự nhiên chọn phỉnh -> click ô cược -> click nút "LẮC XÚC XẮC".
+ * 4. BÌNH LUẬN & PHÁT NGÔN CASINO LIVESTREAM (BotChat.send):
+ *    - Tuân thủ 100% Bảng thuật ngữ Casino Rule 5.3 (húp GTLM, bay màu, ra chiêu, chiến, giao lưu, trận địa...).
+ * 5. TRIPLE-LAYER WATCHDOG CHỐNG KẸT:
+ *    - Tự động giải phóng trạng thái bận sau 10 giây nếu gặp trục trặc mạng.
+ *    - Quét định kỳ mỗi 2.5s, nếu nút #roll-btn sẵn sàng mà chưa lắc thì tự kích hoạt.
  */
 
 (function () {
@@ -28,7 +28,7 @@
         return;
     }
 
-    BotVirtualCursor.init('Thần Đổ Xúc Xắc 51');
+    BotVirtualCursor.init('Thần Đổ Xúc Xắc 51 🎲');
 
     // ═══════════════════════════════════════════════════════
     // TRẠNG THÁI VÀ BIẾN ĐIỀU KHIỂN
@@ -39,128 +39,130 @@
     let winStreak = 0;
     let lossStreak = 0;
     let lastBetType = null;
+    let roundCount = 0;
 
-    function setBusy(val, timeoutMs = 8000) {
+    function setBusy(val, timeoutMs = 10000) {
         botIsBusy = val;
         if (busyTimer) clearTimeout(busyTimer);
         if (val) {
             busyTimer = setTimeout(() => {
-                console.log('[Bot 51] Watchdog giải phóng trạng thái bận!');
+                console.warn('[Bot 51 Watchdog] Tự động giải phóng trạng thái bận!');
                 botIsBusy = false;
                 if (typeof isRolling !== 'undefined') isRolling = false;
+                const btn = document.getElementById('roll-btn');
+                if (btn && btn.disabled) btn.disabled = false;
             }, timeoutMs);
         }
     }
 
     // ═══════════════════════════════════════════════════════
-    // BÌNH LUẬN & PHÁT NGÔN CASINO LIVESTREAM
+    // BÌNH LUẬN & PHÁT NGÔN CASINO CHUẨN RULE 5.3
     // ═══════════════════════════════════════════════════════
     const bigWinPhrases = [
         'Nổ hũ bộ ba rồi anh em ơi! x30 GTLM thơm nức mũi! 🎲💥🔥',
         'Cầu chuẩn như sách giáo khoa! Húp trọn mâm xúc xắc vàng! 🏆✨',
-        'Xúc xắc lắc ra kim cương! Tay thơm bạc tỷ đây rồi! 💵🎉',
-        'Bảo rồi theo cầu là ăn đậm! Anh em vào xin vía may mắn nào! 🚀💎'
+        'Xúc xắc lắc ra kim cương! Tay thơm húp bạc tỷ đây rồi! 💵🎉',
+        'Bảo rồi theo cầu là ăn ngập mặt! Anh em vào xin vía húp GTLM nào! 🚀💎'
     ];
 
     const normalWinPhrases = [
-        'Có lộc có lộc! Đoán chuẩn cửa rồi, cộng GTLM tươi rói! 🎲✨',
+        'Có phúc lộc rồi ae ơi! Đoán chuẩn cửa, húp trọn GTLM tươi rói! 🎲✨',
         'Tiếng xúc xắc leng keng nghe sướng tai quá! Tiếp đà chiến thắng! 💰',
-        'Húp nhẹ ván này! Cầu đang chạy quá êm! 🍀🔥',
-        'Thắng tiếp một ván nữa! Đang trên đà phong độ đỉnh cao! 🎯'
+        'Húp nhẹ ván giao lưu này! Trận địa cầu đang chạy quá êm! 🍀🔥',
+        'Ra chiêu chuẩn chỉ, húp thêm một ván ngọt ngào nữa! 🎯'
     ];
 
     const lossPhrases = [
-        'Xúc xắc bẻ cầu một nhịp, ván sau bắt lại ngay! 😤',
-        'Hụt một phát xíu xiu, bình tĩnh gỡ lại gấp bội! 💨',
-        'Cầu đang đảo chiều, ván sau đổi cửa lụm lúa liền! 🔥🎲',
-        'Không sao hết, tay chơi lớn không nản lòng! Chuẩn bị tay mới! 🎯'
+        'Xúc xắc bẻ cầu một nhịp làm bay màu nhẹ, ván sau bắt lại ngay! 😤',
+        'Hụt một phát xíu xiu, bình tĩnh ra chiêu mới gỡ lại gấp bội! 💨',
+        'Cầu đang đảo chiều, ván sau đổi cửa húp lộc liền! 🔥🎲',
+        'Bay màu một hiệp không sao cả, còn thở là còn gỡ, chuẩn bị tay mới! 🎯'
+    ];
+
+    const actionPhrases = [
+        'Chuẩn bị ra chiêu mâm xúc xắc Sicbo, anh em sẵn sàng húp vía nào! 🎲✨',
+        'Soi cầu Tài Xỉu cực bén, ván này tự tin húp đậm GTLM! 🍀🔥',
+        'Lên đạn dàn trận xong xuôi, chuẩn bị lắc xúc xắc rực lửa! 🚀'
     ];
 
     function sendBotChat(type) {
         const now = Date.now();
-        if (now - lastChatTime < 12000) return;
-        if (Math.random() > 0.6) return;
+        if (now - lastChatTime < 7000 && type !== 'big' && type !== 'win') return;
 
         let list = normalWinPhrases;
         if (type === 'big') list = bigWinPhrases;
         else if (type === 'loss') list = lossPhrases;
+        else if (type === 'action') list = actionPhrases;
 
         const msg = list[Math.floor(Math.random() * list.length)];
+        lastChatTime = now;
+
         if (typeof BotChat !== 'undefined' && BotChat.send) {
             BotChat.send(51, 'bot_51', msg);
-            lastChatTime = now;
         }
+
+        try {
+            fetch('api_spectator.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    action: 'send_chat',
+                    table_id: 51,
+                    message: '🎙️ ' + msg
+                })
+            }).catch(() => {});
+        } catch (e) {}
+
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: 'bot_chat', text: msg, tableId: 51 }, '*');
+            }
+        } catch (e) {}
     }
 
     // ═══════════════════════════════════════════════════════
-    // QUẢN LÝ VỐN & CHỌN MỨC CƯỢC
+    // QUẢN LÝ VỐN & PHÂN BỔ CƯỢC
     // ═══════════════════════════════════════════════════════
     function getBalance() {
-        const moneyEl = document.getElementById('balance-val');
-        if (!moneyEl) return 1000000;
-        return parseInt(moneyEl.innerText.replace(/\D/g, '')) || 0;
+        const el = document.getElementById('balance-val');
+        if (!el) return 50000000;
+        const num = parseFloat(el.textContent.replace(/\./g, '').replace(/,/g, '').trim());
+        return isNaN(num) || num <= 0 ? 50000000 : num;
     }
 
     function selectOptimalChipButton() {
-        const balance = getBalance();
-        const chips = Array.from(document.querySelectorAll('.btn-quick-bet'));
-        if (chips.length === 0) return null;
+        const bal = getBalance();
+        let targetVal = '10000';
 
-        // Lọc bỏ ALL IN để bot không all in vô tội vạ
-        const safeChips = chips.filter(b => {
-            const val = b.getAttribute('data-val');
-            return val && val !== 'ALL';
-        });
-        if (safeChips.length === 0) return null;
-
-        let targetChip = safeChips[0]; // Mặc định 10K
-
-        if (balance > 10000000) {
-            // Số dư dồi dào > 10M: Chọn 100K, 500K hoặc 1M
-            const highChips = safeChips.filter(b => {
-                const val = parseInt(b.getAttribute('data-val')) || 0;
-                return val >= 100000 && val <= 1000000;
-            });
-            if (highChips.length > 0) targetChip = highChips[Math.floor(Math.random() * highChips.length)];
-        } else if (balance > 2000000) {
-            // Số dư khá > 2M: Chọn 50K hoặc 100K
-            const midChips = safeChips.filter(b => {
-                const val = parseInt(b.getAttribute('data-val')) || 0;
-                return val >= 50000 && val <= 100000;
-            });
-            if (midChips.length > 0) targetChip = midChips[Math.floor(Math.random() * midChips.length)];
+        if (bal >= 40000000) {
+            if (winStreak >= 2) targetVal = '100000';
+            else if (winStreak >= 1) targetVal = '50000';
+            else targetVal = Math.random() > 0.5 ? '50000' : '10000';
+        } else if (bal >= 10000000) {
+            targetVal = Math.random() > 0.6 ? '50000' : '10000';
         } else {
-            // Số dư thấp: Chọn 10K hoặc 50K
-            const lowChips = safeChips.filter(b => {
-                const val = parseInt(b.getAttribute('data-val')) || 0;
-                return val <= 50000;
-            });
-            if (lowChips.length > 0) targetChip = lowChips[Math.floor(Math.random() * lowChips.length)];
+            targetVal = '10000';
         }
 
-        return targetChip;
+        return document.querySelector(`.btn-quick-bet[data-val="${targetVal}"]`);
     }
 
     // ═══════════════════════════════════════════════════════
-    // LỰA CHỌN CỬA CƯỢC THÔNG MINH
+    // CHIẾN THUẬT CHỌN CỬA SICBO THÔNG MINH
     // ═══════════════════════════════════════════════════════
+    const mainBetTypes = ['small', 'big', 'odd', 'even'];
+    const luckyBetTypes = ['any_triple', 'total_9', 'total_10', 'total_11', 'total_12'];
+
     function pickBetItems() {
-        const mainBetTypes = ['small', 'big', 'odd', 'even'];
-        const luckyBetTypes = [
-            'any_triple',
-            'single_1', 'single_2', 'single_3', 'single_4', 'single_5', 'single_6',
-            'total_9', 'total_10', 'total_11', 'total_12'
-        ];
+        const selectedTypes = [];
 
-        let selectedTypes = [];
-
-        // 1. Chọn 1 cửa chính: Theo cầu hoặc bẻ cầu
+        // 1. Cửa chính (Tài / Xỉu / Chẵn / Lẻ)
         let primaryType = mainBetTypes[Math.floor(Math.random() * mainBetTypes.length)];
-        if (lastBetType && winStreak > 0 && Math.random() < 0.65) {
-            // Đang thắng: Nuôi tiếp cửa cũ (theo cầu)
+        if (lastBetType && winStreak >= 1) {
+            // Nuôi tiếp cửa cũ (theo cầu son)
             primaryType = lastBetType;
         } else if (lastBetType && lossStreak >= 2) {
-            // Đang thua 2 ván: Đổi cầu (bẻ cầu)
+            // Bẻ cầu khi thua 2 ván
             if (lastBetType === 'small') primaryType = 'big';
             else if (lastBetType === 'big') primaryType = 'small';
             else if (lastBetType === 'odd') primaryType = 'even';
@@ -170,13 +172,12 @@
         lastBetType = primaryType;
         selectedTypes.push(primaryType);
 
-        // 2. Xác suất 30% đánh thêm 1 cửa phụ để săn thưởng lớn
-        if (Math.random() < 0.3) {
-            const luckyType = luckyBetTypes[Math.floor(Math.random() * luckyBetTypes.length)];
-            selectedTypes.push(luckyType);
+        // 2. 25% cơ hội đánh thêm 1 cửa phụ để săn thưởng lớn
+        if (Math.random() < 0.25) {
+            const lucky = luckyBetTypes[Math.floor(Math.random() * luckyBetTypes.length)];
+            selectedTypes.push(lucky);
         }
 
-        // Tìm các DOM element tương ứng
         const items = [];
         selectedTypes.forEach(t => {
             const el = document.querySelector(`.bet-item[data-type="${t}"]`);
@@ -187,125 +188,137 @@
     }
 
     // ═══════════════════════════════════════════════════════
-    // VÒNG LẶP CHÍNH CỦA BOT (GAMEPLAY LOOP)
+    // CHUỘT ẢO ASYNC AN TOÀN TUYỆT ĐỐI (SAFETY TIMEOUT)
     // ═══════════════════════════════════════════════════════
-    function botLoop() {
+    function moveAndClick(el, duration = 0.4) {
+        return new Promise(resolve => {
+            if (!el || $(el).length === 0) {
+                resolve();
+                return;
+            }
+
+            let done = false;
+            const finish = () => {
+                if (!done) {
+                    done = true;
+                    resolve();
+                }
+            };
+
+            const safetyTimer = setTimeout(() => {
+                try { el.click(); } catch (e) {}
+                finish();
+            }, (duration * 1000) + 400);
+
+            try {
+                BotVirtualCursor.moveToElement($(el), duration, 0, () => {
+                    BotVirtualCursor.simulateClick(() => {
+                        clearTimeout(safetyTimer);
+                        try { el.click(); } catch (e) {}
+                        setTimeout(finish, 120);
+                    });
+                });
+            } catch (err) {
+                clearTimeout(safetyTimer);
+                try { el.click(); } catch (e) {}
+                finish();
+            }
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // VÒNG LẶP CHƠI GAME TỰ ĐỘNG CỦA BOT
+    // ═══════════════════════════════════════════════════════
+    async function executeBotTurn() {
         if (botIsBusy) return;
         if (typeof isRolling !== 'undefined' && isRolling) return;
 
         const rollBtn = document.getElementById('roll-btn');
         if (!rollBtn || rollBtn.disabled) return;
 
-        // Bắt đầu 1 chu kỳ cược
         setBusy(true, 10000);
+        roundCount++;
 
-        // BƯỚC 1: RÊ CHUỘT CHỌN MỨC CHIP
-        const chipBtn = selectOptimalChipButton();
-        if (!chipBtn) {
-            setBusy(false);
-            return;
-        }
-
-        BotVirtualCursor.moveToElement($(chipBtn), 0.35, 0, () => {
-            setTimeout(() => {
-                BotVirtualCursor.simulateClick(() => {
-                    try { chipBtn.click(); } catch (e) { }
-
-                    // BƯỚC 2: RÊ CHUỘT ĐẶT CỬA CƯỢC
-                    setTimeout(() => {
-                        const betItems = pickBetItems();
-                        placeBetsSequentially(betItems, () => {
-                            // BƯỚC 3: RÊ CHUỘT BẤM "LẮC XÚC XẮC"
-                            setTimeout(() => {
-                                BotVirtualCursor.moveToElement($(rollBtn), 0.45, 0, () => {
-                                    setTimeout(() => {
-                                        BotVirtualCursor.simulateClick(() => {
-                                            try { rollBtn.click(); } catch (e) { }
-
-                                            // Đợi kết quả đổ xúc xắc (1.2s) + xem badge kết quả (3.5s) = 4.7s
-                                            setTimeout(() => {
-                                                setBusy(false);
-                                            }, 4500);
-                                        });
-                                    }, 120);
-                                });
-                            }, 400);
-                        });
-                    }, 350);
-                });
-            }, 100);
-        });
-    }
-
-    function placeBetsSequentially(items, onComplete) {
-        if (!items || items.length === 0) {
-            if (onComplete) onComplete();
-            return;
-        }
-
-        let idx = 0;
-        function betNext() {
-            if (idx >= items.length) {
-                if (onComplete) onComplete();
-                return;
+        try {
+            if (roundCount % 6 === 0) {
+                sendBotChat('action');
             }
 
-            const item = items[idx];
-            idx++;
+            // BƯỚC 1: Chọn Chip cược
+            const chipBtn = selectOptimalChipButton();
+            if (chipBtn && !chipBtn.classList.contains('sel')) {
+                await moveAndClick(chipBtn, 0.35);
+            }
 
-            BotVirtualCursor.moveToElement($(item), 0.4, 0, () => {
+            // BƯỚC 2: Chọn các cửa cược Sicbo
+            const betItems = pickBetItems();
+            for (const item of betItems) {
+                await moveAndClick(item, 0.3);
+            }
+
+            // BƯỚC 3: Rê chuột tới nút "LẮC XÚC XẮC" và click
+            const activeRollBtn = document.getElementById('roll-btn');
+            if (activeRollBtn && !activeRollBtn.disabled) {
+                await moveAndClick(activeRollBtn, 0.45);
+
+                // Quan sát kết quả từ huy hiệu
                 setTimeout(() => {
-                    BotVirtualCursor.simulateClick(() => {
-                        try { item.click(); } catch (e) { }
-                        setTimeout(betNext, 350 + Math.random() * 200);
-                    });
-                }, 100);
-            });
-        }
+                    const badge = document.getElementById('result-status-badge');
+                    const isWin = badge && badge.style.display !== 'none' && badge.style.borderColor === 'rgb(241, 196, 15)';
 
-        betNext();
-    }
-
-    // ═══════════════════════════════════════════════════════
-    // THEO DÕI BADGE KẾT QUẢ ĐỂ GỬI CHAT & CẬP NHẬT TÂM LÝ
-    // ═══════════════════════════════════════════════════════
-    function setupResultBadgeObserver() {
-        const badge = document.getElementById('result-status-badge');
-        if (!badge) return;
-
-        const observer = new MutationObserver(() => {
-            if (badge.style.display !== 'none' && badge.style.opacity === '1') {
-                const titleEl = document.getElementById('result-badge-title');
-                const amtEl = document.getElementById('result-badge-amount');
-                const title = titleEl ? titleEl.textContent : '';
-                const amtText = amtEl ? amtEl.textContent : '';
-                const amount = parseInt(amtText.replace(/\D/g, '')) || 0;
-
-                if (title.includes('THẮNG')) {
-                    winStreak++;
-                    lossStreak = 0;
-                    if (amount >= 300000) {
-                        sendBotChat('big');
-                    } else {
-                        sendBotChat('win');
+                    if (isWin) {
+                        winStreak++;
+                        lossStreak = 0;
+                        const amtText = $('#result-badge-amount').text();
+                        if (amtText.includes('500') || amtText.includes('1.000')) {
+                            sendBotChat('big');
+                        } else {
+                            sendBotChat('win');
+                        }
+                    } else if (badge && badge.style.display !== 'none') {
+                        lossStreak++;
+                        winStreak = 0;
+                        sendBotChat('loss');
                     }
-                } else if (title.includes('BAY MÀU') || title.includes('TIẾC') || title.includes('THUA')) {
-                    lossStreak++;
-                    winStreak = 0;
-                    sendBotChat('loss');
-                }
-            }
-        });
 
-        observer.observe(badge, { attributes: true, attributeFilter: ['style', 'class'] });
+                    setBusy(false);
+                }, 4500);
+            } else {
+                setBusy(false);
+            }
+
+        } catch (err) {
+            console.error('[Bot 51] Lỗi lượt cược:', err);
+            setBusy(false);
+        }
     }
 
-    // Khởi động bot
+    // ═══════════════════════════════════════════════════════
+    // TRIPLE-LAYER ANTI-STUCK WATCHDOG TIMER
+    // ═══════════════════════════════════════════════════════
+    let idleSeconds = 0;
+    setInterval(() => {
+        const rollBtn = document.getElementById('roll-btn');
+        if (rollBtn && !rollBtn.disabled && (typeof isRolling === 'undefined' || !isRolling)) {
+            idleSeconds += 2;
+            if (idleSeconds >= 4) {
+                console.warn('[Bot 51 Watchdog] Bàn Sicbo đang sẵn sàng mà bot nghỉ quá 4s, tự kích hoạt!');
+                botIsBusy = false;
+                idleSeconds = 0;
+                executeBotTurn();
+            }
+        } else {
+            idleSeconds = 0;
+        }
+    }, 2000);
+
+    // ═══════════════════════════════════════════════════════
+    // KHỞI ĐỘNG VÒNG ĐIỀU KHIỂN ĐỊNH KỲ
+    // ═══════════════════════════════════════════════════════
     $(document).ready(() => {
-        setupResultBadgeObserver();
-        // Nhịp kiểm tra mỗi 1.5s
-        setInterval(botLoop, 1600);
-        console.log('[Bot 51] Thần Đổ Xúc Xắc 51 đã kích hoạt thành công!');
+        console.log('[Bot 51] 🎲 Thần Đổ Xúc Xắc 51 khởi động thành công!');
+        setTimeout(() => { executeBotTurn(); }, 1800);
+        setInterval(() => { executeBotTurn(); }, 5000);
     });
 
 })();

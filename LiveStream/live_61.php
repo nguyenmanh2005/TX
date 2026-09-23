@@ -771,7 +771,7 @@ if (isset($_GET['action'])) {
             gap: 8px;
             width: 44%;
             justify-content: center;
-            transition: transform 0.15s ease-out;
+            transition: transform 0.12s ease-out;
         }
         .combat-entity {
             text-align: center;
@@ -807,7 +807,7 @@ if (isset($_GET['action'])) {
             background: #22c55e;
             height: 100%;
             width: 100%;
-            transition: width 0.3s ease-out, background-color 0.3s;
+            transition: width 0.25s ease-out, background-color 0.25s;
         }
         .hp-text {
             font-size: 9px;
@@ -829,7 +829,7 @@ if (isset($_GET['action'])) {
             color: #94a3b8;
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 5px;
             scroll-behavior: smooth;
         }
         .combat-log::-webkit-scrollbar { width: 3px; }
@@ -913,11 +913,11 @@ if (isset($_GET['action'])) {
             align-items: center;
             justify-content: center;
             gap: 16px;
-            animation: fadeStage .35s ease-out;
+            animation: fadeStage .25s ease-out;
         }
         @keyframes fadeStage { from { opacity: 0; } to { opacity: 1; } }
         .overlay-result-stage.active { display: flex; }
-        .ov-icon-anim { font-size: 64px; animation: bounceIcon .6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .ov-icon-anim { font-size: 64px; animation: bounceIcon .5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes bounceIcon { from { transform: scale(0) rotate(-30deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
         .ov-title-text { font-family: 'Cinzel Decorative', serif; font-size: 24px; font-weight: 900; text-align: center; }
         .ov-subtitle-text { font-size: 13.5px; color: #94a3b8; text-align: center; max-width: 360px; line-height: 1.5; padding: 0 12px; }
@@ -1038,7 +1038,7 @@ if (isset($_GET['action'])) {
 
             <!-- Nút Hành Động -->
             <div class="control-zone">
-                <button class="btn-battle-main" id="btnStart" onclick="Game.startBattle()">⚔️ TIẾN VÀO CHIẾN ĐẤU</button>
+                <button class="btn-battle-main" id="btnStart" data-allow-bot="true" onclick="Game.startBattle()">⚔️ TIẾN VÀO CHIẾN ĐẤU</button>
             </div>
 
             <!-- Overlay Kết Quả Sau Trận -->
@@ -1074,7 +1074,7 @@ if (isset($_GET['action'])) {
 
                 <!-- Nút Tuyệt Kỹ -->
                 <div class="skill-control-box">
-                    <button class="btn-skill-cast ready" id="btnSkill" onclick="Game.castSkill()">KÍCH HOẠT TUYỆT KỸ</button>
+                    <button class="btn-skill-cast ready" id="btnSkill" data-allow-bot="true" onclick="Game.castSkill()">KÍCH HOẠT TUYỆT KỸ</button>
                     <div id="skillDescText" style="font-size: 11px; color: #64748b; margin-top: 6px; line-height: 1.4">Đòn chém đầu x3 Sát thương. (CD: 3 tầng)</div>
                 </div>
 
@@ -1154,6 +1154,7 @@ if (isset($_GET['action'])) {
             const btn = document.createElement('button');
             btn.className = 'char-select-btn';
             btn.id = `btnChar_${k}`;
+            btn.setAttribute('data-allow-bot', 'true');
             btn.onclick = () => Game.switchCharacter(k);
             btn.innerHTML = `<span class="char-select-icon">${c.icon}</span><span class="char-select-name">${c.name}</span>`;
             charBar.appendChild(btn);
@@ -1179,7 +1180,7 @@ if (isset($_GET['action'])) {
             setTimeout(() => {
                 b.classList.remove('show');
                 setTimeout(() => { b.style.display = 'none'; }, 400);
-            }, 3200);
+            }, 3000);
         }
 
         const Game = (() => {
@@ -1352,7 +1353,7 @@ if (isset($_GET['action'])) {
                                 if (m.hp <= 0 && elBox) elBox.style.opacity = '0.35';
                             }
                         }
-                        await new Promise(r => setTimeout(r, 450));
+                        await new Promise(r => setTimeout(r, 200));
                         continue;
                     }
 
@@ -1370,15 +1371,15 @@ if (isset($_GET['action'])) {
                     // Hiệu ứng lướt đánh
                     if (log.speaker === 'player') {
                         pArea.style.transform = 'translateX(10px)';
-                        setTimeout(() => pArea.style.transform = 'none', 120);
+                        setTimeout(() => pArea.style.transform = 'none', 100);
                     } else if (log.speaker === 'monster') {
                         mArea.style.transform = 'translateX(-10px)';
-                        setTimeout(() => mArea.style.transform = 'none', 120);
+                        setTimeout(() => mArea.style.transform = 'none', 100);
                     }
-                    await new Promise(r => setTimeout(r, 160));
+                    await new Promise(r => setTimeout(r, 90));
                 }
 
-                await new Promise(r => setTimeout(r, 800));
+                await new Promise(r => setTimeout(r, 500));
 
                 if (data.progress) {
                     updateUIStats(data.progress, data.cooldowns, data.user_balance);
@@ -1406,9 +1407,9 @@ if (isset($_GET['action'])) {
 
                 const actRow = document.getElementById('ovActions');
                 if (data.is_win) {
-                    actRow.innerHTML = `<button class="post-action-btn btn-advance-floor" onclick="Game.nextFloor()">🚀 Lên Tầng ${floor}!</button>`;
+                    actRow.innerHTML = `<button class="post-action-btn btn-advance-floor" id="btnAdvanceFloor" data-allow-bot="true" onclick="Game.nextFloor()">🚀 Lên Tầng ${floor}!</button>`;
                 } else {
-                    actRow.innerHTML = `<button class="post-action-btn btn-retry-floor" onclick="Game.closeOverlay()">🔄 Quay Lại Tầng 1</button>`;
+                    actRow.innerHTML = `<button class="post-action-btn btn-retry-floor" id="btnRetryFloor" data-allow-bot="true" onclick="Game.closeOverlay()">🔄 Quay Lại Tầng 1</button>`;
                 }
 
                 ov.classList.add('active');
@@ -1458,7 +1459,7 @@ if (isset($_GET['action'])) {
             }
 
             function initInfo() {
-                fetch('?action=info')
+                return fetch('?action=info')
                     .then(res => res.json())
                     .then(data => {
                         if (data.success) {
@@ -1495,6 +1496,7 @@ if (isset($_GET['action'])) {
 
     <!-- Bot AI & Virtual Cursor -->
     <script src="../assets/js/bot_virtual_cursor.js"></script>
+    <script src="../assets/js/bot_chat.js"></script>
     <script src="bots/bot_61.js"></script>
 </body>
 </html>
