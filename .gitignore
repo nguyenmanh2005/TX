@@ -46,6 +46,7 @@ cursors/
 # --- TOOL OUTPUTS ---
 xuat-toan-bo-du-an
 repomix-output.xml
+graphify-out/
 
 # --- IMAGE EXCLUSION RULES ---
 # Ignore all images globally to save Git space
