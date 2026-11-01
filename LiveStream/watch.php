@@ -14,10 +14,10 @@ require_once __DIR__ . '/../db_connect.php';
 require_once __DIR__ . '/bot_streamer_helper.php';
 
 $userId = (int)$_SESSION['Iduser'];
-$tableId = isset($_GET['id']) ? (int)$_GET['id'] : 1;
-// Bàn hợp lệ: 1 đến 61 (trừ 19) và bàn 66 (Đại Chiến Cờ Ca-rô AI). Loại bỏ hoàn toàn: 19, 62, 63, 64, 65, 67
-$invalidTables = [19, 62, 63, 64, 65, 67];
-if ($tableId < 1 || $tableId > 66 || in_array($tableId, $invalidTables)) {
+// Tương thích ngược: nếu ai truy cập id=66 cũ thì tự động đẩy lên bàn 62
+if ($tableId === 66) $tableId = 62;
+// Bàn hợp lệ liên tục từ 1 đến 62 (loại bỏ bàn 19)
+if ($tableId < 1 || $tableId > 62 || $tableId === 19) {
     $tableId = 1;
 }
 
@@ -89,7 +89,7 @@ $gameFilesMap = [
     59 => ['file' => 'live_59.php', 'real_game' => '../games/plinko_v2.php', 'name' => 'Plinko V2 Pro', 'icon' => '🎱'],
     60 => ['file' => 'live_60.php', 'real_game' => '../plinko_royale_v3.php', 'name' => 'Plinko Royale V3', 'icon' => '👑'],
     61 => ['file' => 'live_61.php', 'real_game' => '../tower_of_gods.php', 'name' => 'Tháp Thần Bài', 'icon' => '🗼'],
-    66 => ['file' => 'live_66.php', 'real_game' => '../pvp_caro.php', 'name' => 'Đại Chiến Cờ Ca-rô AI (AlphaX vs DeepO)', 'icon' => '♟️']
+    62 => ['file' => 'live_62.php', 'real_game' => '../pvp_caro.php', 'name' => 'Đại Chiến Cờ Ca-rô AI (AlphaX vs DeepO)', 'icon' => '♟️']
 ];
 
 $botThemesMap = [
@@ -153,7 +153,7 @@ $botThemesMap = [
     59 => ['particleColor' => '#12c2e9', 'shapeColors' => ['#12c2e9', '#a29bfe', '#fd79a8'], 'bgGradient' => ['#0f0c29', '#302b63', '#24243e']],
     60 => ['particleColor' => '#ffd700', 'shapeColors' => ['#ffd700', '#ff4757', '#12c2e9'], 'bgGradient' => ['#1a0b2e', '#2a1b3d', '#000000']],
     61 => ['particleColor' => '#a855f7', 'shapeColors' => ['#a855f7', '#fbbf24', '#3b82f6', '#ef4444'], 'bgGradient' => ['#030611', '#0d0821', '#0a0020']],
-    66 => ['particleColor' => '#10b981', 'shapeColors' => ['#10b981', '#3b82f6', '#ef4444'], 'bgGradient' => ['#050c1e', '#091830', '#020610']]
+    62 => ['particleColor' => '#10b981', 'shapeColors' => ['#10b981', '#3b82f6', '#ef4444'], 'bgGradient' => ['#050c1e', '#091830', '#020610']]
 ];
 
 $currentGame = $gameFilesMap[$tableId];

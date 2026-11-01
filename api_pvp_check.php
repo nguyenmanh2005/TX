@@ -17,12 +17,12 @@ if (!isset($_SESSION['Iduser'])) {
 
 $userId = $_SESSION['Iduser'];
 
-// 1. Tìm thách đấu mới nhất ở trạng thái 'pending' mà mình là người bị thách đấu
+// 1. Tìm thách đấu mới nhất ở trạng thái 'pending' mà mình là người bị thách đấu (loại trừ Bot và Caro nội bộ)
 $stmt = $conn->prepare("
     SELECT c.id, c.bet_amount, u.Name as challenger_name 
     FROM pvp_challenges c
     JOIN users u ON c.challenger_id = u.Iduser
-    WHERE c.opponent_id = ? AND c.status = 'pending'
+    WHERE c.opponent_id = ? AND c.status = 'pending' AND c.game_type != 'caro' AND u.Name NOT LIKE 'bot_%'
     ORDER BY c.created_at DESC LIMIT 1
 ");
 $stmt->bind_param("i", $userId);
@@ -30,13 +30,15 @@ $stmt->execute();
 $pending = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
-// 2. Tìm challenge mà mình là CHALLENGER và vừa được accept (trong 2 phút qua)
+// 2. Tìm challenge mà mình là CHALLENGER và vừa được accept (trong 2 phút qua, loại trừ Bot và Caro)
 $stmt2 = $conn->prepare("
     SELECT c.id, c.bet_amount, u.Name as opponent_name
     FROM pvp_challenges c
     JOIN users u ON c.opponent_id = u.Iduser
     WHERE c.challenger_id = ? 
       AND c.status = 'accepted'
+      AND c.game_type != 'caro'
+      AND u.Name NOT LIKE 'bot_%'
       AND c.accepted_at >= DATE_SUB(NOW(), INTERVAL 2 MINUTE)
     ORDER BY c.accepted_at DESC LIMIT 1
 ");

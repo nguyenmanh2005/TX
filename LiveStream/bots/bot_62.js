@@ -1,73 +1,71 @@
-/**
- * 🤖 Bot Streamer Bàn 62: Thợ Mỏ Siêu Hạng ⛏️💎 (Mining Tycoon)
- * - Tự động thu hoạch mỏ khoáng sản tích lũy
- * - Tích hợp chuột ảo Turbo & Bộ phát ngôn Casino Rule 5.3 chuẩn chỉnh
+﻿/**
+ * ðŸ¤– Bot Streamer BÃ n 66: Äáº¡i Chiáº¿n Cá» Ca-rÃ´ AI Live (AlphaX vs DeepO)
+ * - TÆ°Æ¡ng tÃ¡c bÃ¬nh luáº­n trá»±c tiáº¿p Casino Rule 5.3 (GTLM, hÃºp, gÃ¡y khÃ©t, tam hoa, ngÅ© tá»­)
  */
 (function () {
     'use strict';
 
-    if (typeof BotVirtualCursor === 'undefined') return;
-    BotVirtualCursor.init("Thợ Mỏ Siêu Hạng ⛏️💎");
-
-    const CASINO_CHATS = {
-        mine: [
-            "Đào trúng mạch khoáng sản VIP! Ra chiêu cuốc vàng khai thác ngập tràn GTLM! ⛏️💎🔥",
-            "Mỏ kim cương hôm nay cho sản lượng cực đỉnh! Tiền tươi thóc thật về nick rủng rỉnh! 🌟💰",
-            "Trận địa mỏ khoáng sản bùng nổ, anh em cùng tôi thu hoạch lộc lá đón bão nhé! 🚀💎",
-            "Khai thác ngày đêm, cứ đầy bồn chứa là húp trọn vẹn GTLM! 🛡️✨"
+    const CHATS = {
+        alphaX_taunt: [
+            "AlphaX ta Ä‘Ã£ giÄƒng tháº¿ tráº­n Tam Hoa ÄÃ´i! DeepO liá»‡u cÃ³ phÃ¡ ná»•i khÃ´ng? â™Ÿï¸âš¡ðŸ”¥",
+            "Äá»c vá»‹ nÆ°á»›c cá» trÆ°á»›c 5 bÆ°á»›c! Tiáº¿ng cá» nÃ y chá»‘t háº¡ hÃºp trá»n GTLM! ðŸŽ¯ðŸ’Ž",
+            "Cá» bÃ­ dÃ­ tá»‘t, cÃ²n AlphaX thÃ¬ háº¡ quÃ¢n Ã©p gÃ³c má»Ÿ Ä‘Æ°á»ng NgÅ© Tá»­ Liá»n HÃ ng! ðŸš€ðŸ‘‘"
         ],
-        claim: [
-            "HÚP TRỌN MẺ VÀNG KHOÁNG SẢN! GTLM cộng dồn ngập nick! 🏆⛏️🤑",
-            "Gáy khét lẹt cả khu mỏ hôm nay! Thu hoạch kim cương thành công rực rỡ! 👑💎💰",
-            "Vàng ròng nhảy ting ting vào tài khoản! Đẳng cấp thợ mỏ thần tài! 🌟🎉"
+        deepO_taunt: [
+            "DeepO tÃ­nh toÃ¡n lÆ°á»£ng tá»­! HÃ³a giáº£i báº«y Ã©p gÃ³c trong gang táº¥c! ðŸ›¡ï¸âš¡",
+            "Äá»«ng vá»™i má»«ng! Má»™t nÆ°á»›c pháº£n cÃ´ng cá»§a DeepO lÃ  bay mÃ u cáº£ vÃ¡n cá»! âš”ï¸ðŸ”¥",
+            "Äá»‰nh cao phÃ²ng ngá»± pháº£n kÃ­ch! Xem ai má»›i lÃ  báº­c tháº§y cá» Ca-rÃ´ thá»±c thá»¥! ðŸ’ŽðŸ†"
+        ],
+        alphaX_win: [
+            "NGÅ¨ Tá»¬ LIá»€N HÃ€NG! Master AlphaX háº¡ gá»¥c DeepO hÃºp trá»n 1.000.000 GTLM! ðŸ†â™Ÿï¸ðŸ¤‘",
+            "GÃ¡y khÃ©t láº¹t cáº£ sÃ n Ä‘áº¥u hÃ´m nay! Tháº¿ cá» tháº§n thÃ¡nh khÃ´ng thá»ƒ cáº£n phÃ¡! ðŸ‘‘ðŸ’ŽðŸ’°"
+        ],
+        deepO_win: [
+            "CHIáº¾N THáº®NG TUYá»†T Äá»I! DeepO pháº£n cÃ´ng chá»›p nhoÃ¡ng hÃºp trá»n hÅ© 1.000.000 GTLM! ðŸ†ðŸ”¥ðŸŽ‰",
+            "Báº­c tháº§y tÃ­nh toÃ¡n lÆ°á»£ng tá»­! GÃ¡y khÃ©t cáº£ phÃ²ng live cÃ¹ng DeepO nÃ o anh em! ðŸš€ðŸ‘‘ðŸ’Ž"
         ]
     };
 
-    function sendChat(type) {
+    function sendChat(sender, msg) {
         if (typeof BotChat !== 'undefined' && BotChat.send) {
-            const list = CASINO_CHATS[type] || CASINO_CHATS.mine;
-            const msg = list[Math.floor(Math.random() * list.length)];
-            BotChat.send(62, 'Thợ Mỏ Siêu Hạng ⛏️💎', msg);
+            BotChat.send(62, sender, msg);
         }
     }
 
-    let isBusy = false;
-
-    function runMiningTurn() {
-        if (isBusy) return;
-        const btn = document.getElementById('btnClaimAll');
-        if (!btn || btn.disabled) return;
-
-        isBusy = true;
-        if (Math.random() < 0.4) sendChat('mine');
-
-        BotVirtualCursor.moveToElement($(btn), 0.5, 0, () => {
-            setTimeout(() => {
-                BotVirtualCursor.simulateClick(() => {
-                    $.get('live_62.php?action=claim_all', function (res) {
-                        if (res && res.success) {
-                            $('#balance-val').text(res.balance);
-                            sendChat('claim');
-                            const nextVal = Math.floor(Math.random() * 150000 + 80000);
-                            $('#accumulatedDisplay').text('+' + nextVal.toLocaleString('vi-VN'));
-                        }
-                        isBusy = false;
-                    }).fail(function () {
-                        isBusy = false;
-                    });
-                });
-            }, 300);
-        });
+    // Káº¿t ná»‘i vá»›i Live Arena
+    if (window.CaroLiveArena) {
+        window.CaroLiveArena.onWin = function (winnerCode, winnerName) {
+            if (winnerCode === 1) {
+                const msg = CHATS.alphaX_win[Math.floor(Math.random() * CHATS.alphaX_win.length)];
+                sendChat('ðŸ¤– Master AlphaX âŒ', msg);
+                setTimeout(() => {
+                    sendChat('ðŸ¤– Grandmaster DeepO â­•', 'Tháº¿ cá» biáº¿n áº£o khÃ´n lÆ°á»ng! VÃ¡n sau ta quyáº¿t phá»¥c háº­n! ðŸ¤ðŸ”¥');
+                }, 1500);
+            } else {
+                const msg = CHATS.deepO_win[Math.floor(Math.random() * CHATS.deepO_win.length)];
+                sendChat('ðŸ¤– Grandmaster DeepO â­•', msg);
+                setTimeout(() => {
+                    sendChat('ðŸ¤– Master AlphaX âŒ', 'ÄÃ²n pháº£n cÃ´ng quÃ¡ hiá»ƒm! Äá»£i Ä‘áº¥y, vÃ¡n sau ta láº¥y láº¡i! ðŸ˜…ðŸ”„');
+                }, 1500);
+            }
+        };
     }
 
+    // Chat tÆ°Æ¡ng tÃ¡c Ä‘á»‹nh ká»³ táº¡o khÃ´ng khÃ­
     setInterval(() => {
-        if (!isBusy) runMiningTurn();
-    }, 4500);
-
-    setTimeout(() => {
-        if (typeof BotChat !== 'undefined' && BotChat.send) {
-            BotChat.send(62, 'Thợ Mỏ Siêu Hạng ⛏️💎', 'Chào mừng anh em đến với Mỏ Khoáng Bàn 62! Cùng tôi vác cuốc vàng húp trọn kim cương GTLM nhé! ⛏️💎🚀');
+        if (Math.random() < 0.5) {
+            const isAlpha = Math.random() < 0.5;
+            const list = isAlpha ? CHATS.alphaX_taunt : CHATS.deepO_taunt;
+            const sender = isAlpha ? 'ðŸ¤– Master AlphaX âŒ' : 'ðŸ¤– Grandmaster DeepO â­•';
+            const msg = list[Math.floor(Math.random() * list.length)];
+            sendChat(sender, msg);
         }
-        runMiningTurn();
+    }, 18000);
+
+    // Lá»i chÃ o má»Ÿ mÃ n
+    setTimeout(() => {
+        sendChat('ðŸ‘‘ Trá»ng TÃ i AI â™Ÿï¸', 'ChÃ o má»«ng toÃ n thá»ƒ Ä‘áº¡o há»¯u Ä‘áº¿n vá»›i VÃµ ÄÃ i Ca-rÃ´ BÃ n 66! Äáº¡i chiáº¿n AlphaX vs DeepO 24/7 chÃ­nh thá»©c bÃ¹ng ná»•! â™Ÿï¸âœ¨ðŸš€');
     }, 1500);
+
 })();
+
