@@ -11,7 +11,19 @@ $userId = $_SESSION['Iduser'];
 $challengeId = (int) ($_GET['id'] ?? 0);
 
 if (!$challengeId) {
-    die("ID Thách đấu không hợp lệ!");
+    // Tự động tìm trận Cờ Ca-rô đang diễn ra của người chơi
+    $stmtAct = $conn->prepare("SELECT id FROM pvp_challenges WHERE (challenger_id = ? OR opponent_id = ?) AND game_type = 'caro' AND status = 'accepted' ORDER BY id DESC LIMIT 1");
+    $stmtAct->bind_param("ii", $userId, $userId);
+    $stmtAct->execute();
+    $actMatch = $stmtAct->get_result()->fetch_assoc();
+    $stmtAct->close();
+    if ($actMatch) {
+        header("Location: pvp_caro.php?id=" . $actMatch['id']);
+        exit();
+    }
+    // Nếu chưa có phòng đấu, chuyển hướng về Sảnh Thách Đấu PvP
+    header("Location: pvp_challenge.php");
+    exit();
 }
 
 // Lấy thông tin ban đầu
@@ -27,11 +39,13 @@ $challenge = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
 if (!$challenge || $challenge['game_type'] != 'caro') {
-    die("Trò chơi không hợp lệ!");
+    header("Location: pvp_challenge.php");
+    exit();
 }
 
 if ($challenge['challenger_id'] != $userId && $challenge['opponent_id'] != $userId) {
-    die("Bạn không tham gia trận đấu này!");
+    header("Location: pvp_challenge.php");
+    exit();
 }
 ?>
 <!DOCTYPE html>

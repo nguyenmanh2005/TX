@@ -1,4 +1,7 @@
 <?php
+// Bàn 19 đã bị xóa bỏ theo yêu cầu của xếp
+header("Location: watch.php?id=1");
+exit();
 session_start();
 
 require_once __DIR__ . '/../db_connect.php';

@@ -15,7 +15,8 @@ require_once __DIR__ . '/bot_streamer_helper.php';
 
 $userId = (int)$_SESSION['Iduser'];
 $tableId = isset($_GET['id']) ? (int)$_GET['id'] : 1;
-if ($tableId < 1 || $tableId > 61) $tableId = 1;
+// Cho phép từ 1 đến 67, loại bỏ bàn 19 theo yêu cầu
+if ($tableId < 1 || $tableId > 67 || $tableId === 19) $tableId = 1;
 
 // Lấy thông tin Bot Streamer để nạp Theme của Streamer thay vì người xem
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_' . $tableId, 50000000);
@@ -43,7 +44,6 @@ $gameFilesMap = [
     16 => ['file' => 'live_16.php', 'real_game' => '../games/blackjack_multi.php', 'name' => 'Blackjack Multi', 'icon' => '🎲'],
     17 => ['file' => 'live_17.php', 'real_game' => '../games/caribbean.php', 'name' => 'Caribbean', 'icon' => '🕹️'],
     18 => ['file' => 'live_18.php', 'real_game' => '../games/coinflip.php', 'name' => 'Coinflip', 'icon' => '🎴'],
-    19 => ['file' => 'live_19.php', 'real_game' => '../games/community_lottery.php', 'name' => 'Community Lottery', 'icon' => '🎮'],
     20 => ['file' => 'live_20.php', 'real_game' => '../games/craps.php', 'name' => 'Craps', 'icon' => '🎯'],
     21 => ['file' => 'live_21.php', 'real_game' => '../games/dice.php', 'name' => 'Dice', 'icon' => '🎯'],
     22 => ['file' => 'live_22.php', 'real_game' => '../games/duangua.php', 'name' => 'Duangua', 'icon' => '🎲'],
@@ -113,7 +113,6 @@ $botThemesMap = [
     16 => ['particleColor' => '#12c2e9', 'shapeColors' => ['#12c2e9', '#c471ed', '#f64f59'], 'bgGradient' => ['#0f0c29', '#302b63', '#24243e']],
     17 => ['particleColor' => '#ff4757', 'shapeColors' => ['#ff4757', '#ff6b81', '#70a1ff'], 'bgGradient' => ['#000000', '#12001a', '#250033']],
     18 => ['particleColor' => '#ff4757', 'shapeColors' => ['#ff4757', '#ff6b81', '#70a1ff'], 'bgGradient' => ['#000000', '#12001a', '#250033']],
-    19 => ['particleColor' => '#00f2fe', 'shapeColors' => ['#00f2fe', '#712cf9', '#ff4757'], 'bgGradient' => ['#000000', '#050015', '#0a0025']],
     20 => ['particleColor' => '#ff00ff', 'shapeColors' => ['#ff00ff', '#00ffff', '#ffff00'], 'bgGradient' => ['#000000', '#110011', '#220022']],
     21 => ['particleColor' => '#ff4757', 'shapeColors' => ['#ff4757', '#ff6b81', '#70a1ff'], 'bgGradient' => ['#000000', '#12001a', '#250033']],
     22 => ['particleColor' => '#ff4757', 'shapeColors' => ['#ff4757', '#ff6b81', '#70a1ff'], 'bgGradient' => ['#000000', '#12001a', '#250033']],
