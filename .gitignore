@@ -17,12 +17,19 @@ db_info.json
 .php-cs-fixer.cache
 .phpunit.result.cache
 bot/sessions/
-# --- SENSITIVE CONFIGURATION ---
+# --- SENSITIVE CONFIGURATION & CREDENTIALS ---
 db_connect.php
 db_connect_backup_local.php
 .env.php
 .env
+cookie.txt
+cookies.txt
+*.cookie
 bot/cookies.txt
+bot/tester_session.txt
+*tester_session*.txt
+*session*.txt
+scratch_bench.php
 
 # --- DATABASE EXPORTS ---
 *.sql

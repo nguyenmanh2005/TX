@@ -4,7 +4,12 @@ if (!defined('DB_CONNECT_INCLUDED')) {
     require_once 'db_connect.php';
 }
 
-function updateBPMission(mysqli $conn, int $userId, string $actionType, int $amount = 1) {
+function updateBPMission(mysqli $conn, int $userId, string $actionType, float|int $amount = 1) {
+    $amount = (float)$amount;
+    if ($amount <= 0) {
+        return;
+    }
+
     // Lấy nhiệm vụ active của action này — dùng prepared statement
     $stmtM = $conn->prepare("SELECT id, goal, reward_xp FROM bp_missions WHERE action = ?");
     $stmtM->bind_param("s", $actionType);
@@ -13,7 +18,10 @@ function updateBPMission(mysqli $conn, int $userId, string $actionType, int $amo
     $stmtM->close();
 
     while ($m = $missions->fetch_assoc()) {
-        $mid = $m['id'];
+        $mid = (int)$m['id'];
+        $goal = (float)($m['goal'] ?? 0);
+        $rewardXp = (int)($m['reward_xp'] ?? 0);
+
         $stmtUM = $conn->prepare("SELECT progress, status FROM bp_user_missions WHERE user_id = ? AND mission_id = ?");
         $stmtUM->bind_param("ii", $userId, $mid);
         $stmtUM->execute();
@@ -21,35 +29,44 @@ function updateBPMission(mysqli $conn, int $userId, string $actionType, int $amo
         $stmtUM->close();
 
         if (!$um) {
-            $stmtIns = $conn->prepare("INSERT INTO bp_user_missions (user_id, mission_id, progress) VALUES (?, ?, ?)");
-            $stmtIns->bind_param("iii", $userId, $mid, $amount);
+            $isCompleted = ($goal > 0 && $amount >= $goal);
+            $status = $isCompleted ? 'completed' : 'active';
+            $progressToSave = $isCompleted ? (int)$goal : (int)min($amount, 2147483647);
+
+            $stmtIns = $conn->prepare("INSERT INTO bp_user_missions (user_id, mission_id, progress, status, last_updated) VALUES (?, ?, ?, ?, CURDATE())");
+            $stmtIns->bind_param("iiis", $userId, $mid, $progressToSave, $status);
             $stmtIns->execute();
             $stmtIns->close();
+
             // Kiểm tra ngay nếu amount >= goal thì complete
-            if ($amount >= $m['goal']) {
-                addBPXP($conn, $userId, $m['reward_xp']);
-                $stmtComp = $conn->prepare("UPDATE bp_user_missions SET status = 'completed' WHERE user_id = ? AND mission_id = ?");
-                $stmtComp->bind_param("ii", $userId, $mid);
-                $stmtComp->execute();
-                $stmtComp->close();
+            if ($isCompleted) {
+                addBPXP($conn, $userId, $rewardXp);
             }
         } else if ($um['status'] == 'active') {
-            $newProgress = $um['progress'] + $amount;
-            $status = ($newProgress >= $m['goal']) ? 'completed' : 'active';
+            $curProgress = (float)($um['progress'] ?? 0);
+            $newProgressVal = $curProgress + $amount;
+            $isCompleted = ($goal > 0 && $newProgressVal >= $goal);
+            $status = $isCompleted ? 'completed' : 'active';
+            $progressToSave = $isCompleted ? (int)$goal : (int)min($newProgressVal, 2147483647);
 
-            if ($status == 'completed') {
-                addBPXP($conn, $userId, $m['reward_xp']);
+            if ($isCompleted) {
+                addBPXP($conn, $userId, $rewardXp);
             }
 
-            $stmtUpd = $conn->prepare("UPDATE bp_user_missions SET progress = ?, status = ? WHERE user_id = ? AND mission_id = ?");
-            $stmtUpd->bind_param("isii", $newProgress, $status, $userId, $mid);
+            $stmtUpd = $conn->prepare("UPDATE bp_user_missions SET progress = ?, status = ?, last_updated = CURDATE() WHERE user_id = ? AND mission_id = ?");
+            $stmtUpd->bind_param("isii", $progressToSave, $status, $userId, $mid);
             $stmtUpd->execute();
             $stmtUpd->close();
         }
     }
 }
 
-function addBPXP(mysqli $conn, int $userId, int $amount) {
+function addBPXP(mysqli $conn, int $userId, float|int $amount) {
+    $amount = (int)round((float)$amount);
+    if ($amount <= 0) {
+        return;
+    }
+
     $stmtS = $conn->prepare("SELECT level, xp FROM bp_stats WHERE user_id = ?");
     $stmtS->bind_param("i", $userId);
     $stmtS->execute();
@@ -65,7 +82,7 @@ function addBPXP(mysqli $conn, int $userId, int $amount) {
     }
 
     $newXP = $stats['xp'] + $amount;
-    $level = $stats['level'];
+    $level = (int)$stats['level'];
     $xpToNext = $level * 1000;
 
     while ($newXP >= $xpToNext) {

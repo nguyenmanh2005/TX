@@ -9,7 +9,7 @@ require_once __DIR__ . '/../admin_helper.php';
 
 $currentUserId = (int)($_SESSION['Iduser'] ?? 0);
 if (!isAdmin($conn, $currentUserId)) { header("Location: ../Shared/403/403.php"); exit(); }
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
     session_write_close();
 }
 
@@ -50,9 +50,14 @@ if (!$tblCheck || $tblCheck->num_rows === 0) {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 }
 
+$range = $_GET['range'] ?? '24h';
+if (!in_array($range, ['24h', '7d', '30d'])) {
+    $range = '24h';
+}
+
 $cacheFile = sys_get_temp_dir() . '/gtlm_traffic_cache_' . preg_replace('/[^a-zA-Z0-9]/', '', $range) . '.json';
 $now = time();
-$useCache = file_exists($cacheFile) && ($now - filemtime($cacheFile) < 60) && !isset($_GET['refresh']);
+$useCache = file_exists($cacheFile) && ($now - filemtime($cacheFile) < 300) && !isset($_GET['refresh']);
 
 if ($useCache) {
     $cached = json_decode(file_get_contents($cacheFile), true);

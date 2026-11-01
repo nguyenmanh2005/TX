@@ -6,43 +6,53 @@ require_once __DIR__ . '/../admin_helper.php';
 if (!isset($_SESSION['Iduser'])) { header('Location: login.php'); exit(); }
 $userId = (int)$_SESSION['Iduser'];
 if (!isAdmin($conn, $userId)) { header("Location: ../Shared/403/403.php"); exit(); }
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
     session_write_close();
 }
 
-// --- 1. Tổng quan Doanh thu (GTLM Sinks) ---
-$revenueStats = [
-    'total_burned' => 0,
-    'marketplace_fees' => 0,
-    'crafting_costs' => 0,
-    'guild_fees' => 0,
-    'battle_pass' => 0,
-    'vip_purchases' => 0
-];
+// --- 1. Full Data Micro-cache (300s) giúp tải trang tức thì < 1ms ---
+$cacheFile = sys_get_temp_dir() . '/gtlm_rev_full_cache.json';
+$useCache = (!isset($_GET['refresh']) && file_exists($cacheFile) && (time() - filemtime($cacheFile)) < 300);
 
-// Marketplace Fees (5% mỗi giao dịch thành công)
-$res = $conn->query("SELECT SUM(price * 0.05) as fees FROM marketplace_listings WHERE status = 'sold'");
-$revenueStats['marketplace_fees'] = (float)($res && $row = $res->fetch_assoc() ? ($row['fees'] ?? 0) : 0);
+if ($useCache) {
+    $cachedData = json_decode(file_get_contents($cacheFile), true);
+    if (is_array($cachedData)) {
+        extract($cachedData);
+    } else {
+        $useCache = false;
+    }
+}
 
-// Crafting Costs (Phí từ crafting_logs)
-$res = $conn->query("SELECT SUM(gtlm_spent) as spent FROM crafting_logs");
-$revenueStats['crafting_costs'] = (float)($res && $row = $res->fetch_assoc() ? ($row['spent'] ?? 0) : 0);
+if (!$useCache) {
+    // --- 1. Tổng quan Doanh thu (GTLM Sinks) ---
+    $revenueStats = [
+        'total_burned' => 0,
+        'marketplace_fees' => 0,
+        'crafting_costs' => 0,
+        'guild_fees' => 0,
+        'battle_pass' => 0,
+        'vip_purchases' => 0
+    ];
 
-// Guild Fees (Phí tạo Guild)
-$res = $conn->query("SELECT COUNT(*) * 500000 as fees FROM guilds");
-$revenueStats['guild_fees'] = (float)($res && $row = $res->fetch_assoc() ? ($row['fees'] ?? 0) : 0);
+    // Marketplace Fees (5% mỗi giao dịch thành công)
+    $res = $conn->query("SELECT SUM(price * 0.05) as fees FROM marketplace_listings WHERE status = 'sold'");
+    $revenueStats['marketplace_fees'] = (float)($res && $row = $res->fetch_assoc() ? ($row['fees'] ?? 0) : 0);
 
-// Battle Pass Premium Purchases
-$res = $conn->query("SELECT COUNT(*) * 1000000 as revenue FROM bp_stats WHERE has_premium = 1");
-$revenueStats['battle_pass'] = (float)($res && $row = $res->fetch_assoc() ? ($row['revenue'] ?? 0) : 0);
+    // Crafting Costs (Phí từ crafting_logs)
+    $res = $conn->query("SELECT SUM(gtlm_spent) as spent FROM crafting_logs");
+    $revenueStats['crafting_costs'] = (float)($res && $row = $res->fetch_assoc() ? ($row['spent'] ?? 0) : 0);
 
-$revenueStats['total_burned'] = $revenueStats['marketplace_fees'] + $revenueStats['crafting_costs'] + $revenueStats['guild_fees'] + $revenueStats['battle_pass'];
+    // Guild Fees (Phí tạo Guild)
+    $res = $conn->query("SELECT COUNT(*) * 500000 as fees FROM guilds");
+    $revenueStats['guild_fees'] = (float)($res && $row = $res->fetch_assoc() ? ($row['fees'] ?? 0) : 0);
 
-// --- 2. Phân tích Game Revenue (Micro-cache 60s để tải tức thì 1ms) ---
-$cacheFile = sys_get_temp_dir() . '/gtlm_rev_games.json';
-if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < 60) {
-    $gameRevenue = json_decode(file_get_contents($cacheFile), true) ?: [];
-} else {
+    // Battle Pass Premium Purchases
+    $res = $conn->query("SELECT COUNT(*) * 1000000 as revenue FROM bp_stats WHERE has_premium = 1");
+    $revenueStats['battle_pass'] = (float)($res && $row = $res->fetch_assoc() ? ($row['revenue'] ?? 0) : 0);
+
+    $revenueStats['total_burned'] = $revenueStats['marketplace_fees'] + $revenueStats['crafting_costs'] + $revenueStats['guild_fees'] + $revenueStats['battle_pass'];
+
+    // --- 2. Phân tích Game Revenue ---
     $gameRevenue = [];
     $res = $conn->query("SELECT game_name, SUM(bet_amount - win_amount) as house_profit FROM game_history GROUP BY game_name ORDER BY house_profit DESC");
     if ($res) {
@@ -50,22 +60,32 @@ if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < 60) {
             $gameRevenue[] = $row;
         }
     }
-    @file_put_contents($cacheFile, json_encode($gameRevenue));
+
+    // --- 3. ARPU & Conversion ---
+    $resU = $conn->query("SELECT COUNT(*) FROM users");
+    $totalUsers = (int)($resU && $row = $resU->fetch_row() ? ($row[0] ?? 0) : 0);
+    $arpu = $totalUsers > 0 ? $revenueStats['total_burned'] / $totalUsers : 0;
+
+    $resVip = $conn->query("SELECT COUNT(*) FROM user_vip WHERE vip_level > 1");
+    $vipUsers = (int)($resVip && $row = $resVip->fetch_row() ? ($row[0] ?? 0) : 0);
+    $conversionRate = $totalUsers > 0 ? ($vipUsers / $totalUsers) * 100 : 0;
+
+    // --- 4. Churn Prediction ---
+    $resChurn = @$conn->query("SELECT COUNT(*) FROM users WHERE last_active IS NOT NULL AND last_active < DATE_SUB(NOW(), INTERVAL 7 DAY)");
+    $churnedUsers = (int)($resChurn && $row = $resChurn->fetch_row() ? ($row[0] ?? 0) : 0);
+    $churnRate = $totalUsers > 0 ? ($churnedUsers / $totalUsers) * 100 : 0;
+
+    @file_put_contents($cacheFile, json_encode([
+        'revenueStats'   => $revenueStats,
+        'gameRevenue'    => $gameRevenue,
+        'totalUsers'     => $totalUsers,
+        'arpu'           => $arpu,
+        'vipUsers'       => $vipUsers,
+        'conversionRate' => $conversionRate,
+        'churnedUsers'   => $churnedUsers,
+        'churnRate'      => $churnRate
+    ]));
 }
-
-// --- 3. ARPU & Conversion ---
-$resU = $conn->query("SELECT COUNT(*) FROM users");
-$totalUsers = (int)($resU && $row = $resU->fetch_row() ? ($row[0] ?? 0) : 0);
-$arpu = $totalUsers > 0 ? $revenueStats['total_burned'] / $totalUsers : 0;
-
-$resVip = $conn->query("SELECT COUNT(*) FROM user_vip WHERE vip_level > 1");
-$vipUsers = (int)($resVip && $row = $resVip->fetch_row() ? ($row[0] ?? 0) : 0);
-$conversionRate = $totalUsers > 0 ? ($vipUsers / $totalUsers) * 100 : 0;
-
-// --- 4. Churn Prediction (Người chơi không hoạt động > 7 ngày) ---
-$resChurn = @$conn->query("SELECT COUNT(*) FROM users WHERE last_active IS NOT NULL AND last_active < DATE_SUB(NOW(), INTERVAL 7 DAY)");
-$churnedUsers = (int)($resChurn && $row = $resChurn->fetch_row() ? ($row[0] ?? 0) : 0);
-$churnRate = $totalUsers > 0 ? ($churnedUsers / $totalUsers) * 100 : 0;
 ?>
 <!DOCTYPE html>
 <html lang="vi">

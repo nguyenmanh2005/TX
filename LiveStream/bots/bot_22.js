@@ -21,20 +21,20 @@ if (typeof BotVirtualCursor !== "undefined") {
             const animalSelect = document.getElementById('animalSelect');
             if (animalSelect && !animalSelect.disabled) {
                 BotVirtualCursor.moveToElement($(animalSelect), 0.3, 0, () => {
-                    BotVirtualCursor.simulateClick(() => { 
+                    BotVirtualCursor.simulateClick(() => {
                         try {
                             const newAnimal = Math.floor(Math.random() * 8) + 1;
                             animalSelect.value = newAnimal;
                             // Trigger change event if needed
                             animalSelect.dispatchEvent(new Event('change'));
-                        } catch(e){} 
+                        } catch (e) { }
                     });
                     setTimeout(chooseRacingBet, 400);
                 });
                 return;
             }
         }
-        
+
         chooseRacingBet();
     }
 
@@ -44,10 +44,10 @@ if (typeof BotVirtualCursor !== "undefined") {
             // Nghiêng về các mức cược thấp và vừa (ưu tiên mảng đầu)
             const maxIdx = Math.min(betBtns.length, 5);
             let targetBet = betBtns[Math.floor(Math.random() * maxIdx)];
-            
+
             BotVirtualCursor.moveToElement($(targetBet), 0.4, 0, () => {
                 setTimeout(() => {
-                    BotVirtualCursor.simulateClick(() => { try { targetBet.click(); } catch(e){} });
+                    BotVirtualCursor.simulateClick(() => { try { targetBet.click(); } catch (e) { } });
                     setTimeout(() => clickRace(document.getElementById('raceBtn')), 300);
                 }, 200);
             });
@@ -60,7 +60,7 @@ if (typeof BotVirtualCursor !== "undefined") {
         if (raceBtn && !raceBtn.disabled) {
             BotVirtualCursor.moveToElement($(raceBtn), 0.4, 0, () => {
                 setTimeout(() => {
-                    BotVirtualCursor.simulateClick(() => { try { raceBtn.click(); } catch(e){} });
+                    BotVirtualCursor.simulateClick(() => { try { raceBtn.click(); } catch (e) { } });
                     // Đợi cuộc đua bắt đầu và kết thúc (khoảng 8-10 giây)
                     setTimeout(runRacingBot, 8000 + Math.random() * 2000);
                 }, 200);
