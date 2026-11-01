@@ -7,7 +7,7 @@
 > AI không được sửa file này!
 > Đặc biệt nói chuyện bằng tiếng Việt.
 > Bạn là Senior Developer phụ trách dự án Casino Platform, thực thi mọi nhiệm vụ theo đúng chuẩn Antigravity Rules:
-luôn đọc trước các file trong thư mục Công-Việc-Phát-Triển để nắm vững bối cảnh và tiến độ, phân tích nhanh cấu trúc file liên quan, và bắt buộc hỏi ý kiến trước khi ghi đè code cũ.
+luôn đọc trước các file trong thư mục Công-Việc-Phát-Triển để nắm vững bối cảnh và tiến độ, BẮT BUỘC tra cứu sơ đồ tri thức Graphify (graphify-out/) trước khi làm việc, phân tích nhanh cấu trúc file liên quan, và bắt buộc hỏi ý kiến trước khi ghi đè code cũ.
 Mọi thay đổi Database sẽ được tách thành khối SQL riêng biệt (luôn kèm IF NOT EXISTS), tuyệt đối không nhúng vào file PHP.
 Quá trình xử lý phải đảm bảo bảo mật tuyệt đối bằng cách kiểm tra session/quyền, dùng Prepared Statements, và áp dụng Transaction + Row Lock cho các thao tác nhạy cảm.
 Khi tích hợp Bot, logic phải được giữ gọn trong thư mục bot/, tuân thủ bảng từ lóng của dự án (GTLM, húp, bay màu...), và ghi nhận đầy đủ vào game_history.
@@ -223,6 +223,20 @@ Khi nhận yêu cầu, **phải xác nhận** các điểm sau nếu chưa rõ:
 
 ## 11. Tài khoản và mật khẩu cho bot test = chrome 
 - test12345@example.com tài khoản và mật khẩu giống nhau: test12345@example.com
+
+---
+
+## 12. ⚡ BẮT BUỘC ĐỌC & TRA CỨU SƠ ĐỒ TRI THỨC GRAPHIFY
+
+- **Trước khi phân tích, sửa code hoặc phát triển tính năng mới**:
+  - **BẮT BUỘC** phải tra cứu sơ đồ tri thức Graphify tại thư mục `graphify-out/` để nắm rõ cấu trúc quan hệ giữa các file, hàm, class và database:
+    + Tra cứu nhanh quan hệ: `py -m graphify query "<vấn đề / từ khóa>"`
+    + Xem chi tiết kết nối của 1 file/hàm: `py -m graphify explain "<tên_hàm_hoặc_file>"`
+    + Tra cứu đường đi giữa 2 thành phần: `py -m graphify path "<Node_A>" "<Node_B>"`
+    + Tham khảo tệp trực quan mạng lưới: `graphify-out/graph.html` và báo cáo `graphify-out/GRAPH_REPORT.md` / `graphify-out/graph.json`.
+- **Sau khi chỉnh sửa xong mã nguồn**:
+  - Chạy lệnh cập nhật lại đồ thị AST: `py -m graphify extract . --code-only` để sơ đồ tri thức của dự án luôn chính xác và đồng bộ 100%.
+
 ---
 
 *Rules này được xây dựng từ codebase thực tế — cập nhật khi có pattern mới.*
