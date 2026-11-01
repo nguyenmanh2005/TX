@@ -303,6 +303,7 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
             display: grid;
             grid-template-columns: 1fr 340px;
             height: calc(100vh - 60px);
+            max-height: calc(100vh - 60px);
             overflow: hidden;
         }
 
@@ -537,34 +538,61 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
         
         .dock-left, .dock-right { display: flex; gap: 12px; }
 
-        /* Sidebar Chat */
+        /* Sidebar Chat (Khóa cố định khung chat không để kéo dài layout) */
         .sidebar-chat {
             background: var(--panel-bg);
             backdrop-filter: blur(12px);
             border-left: 1px solid var(--panel-border);
-            display: flex; flex-direction: column; height: 100%;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            max-height: 100%;
+            min-height: 0;
+            overflow: hidden;
             position: relative;
         }
 
         .chat-header {
-            padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.05);
-            font-weight: 900; font-size: 0.9rem;
-            display: flex; align-items: center; justify-content: space-between;
+            flex-shrink: 0;
+            padding: 14px 18px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-weight: 900;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             color: var(--purple);
             background: rgba(0,0,0,0.2);
         }
 
         .chat-body {
-            flex: 1; overflow-y: auto; padding: 15px;
-            display: flex; flex-direction: column; gap: 10px;
+            flex: 1 1 0;
+            min-height: 0;
+            max-height: 100%;
+            overflow-y: auto !important;
+            overflow-x: hidden;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            scroll-behavior: smooth;
         }
 
-        .chat-line { font-size: 0.85rem; line-height: 1.4; word-break: break-word; }
+        .chat-line {
+            font-size: 0.85rem;
+            line-height: 1.4;
+            word-break: break-word;
+            flex-shrink: 0;
+        }
         .chat-user { font-weight: 800; color: var(--purple); margin-right: 4px; }
 
         .chat-input-area {
-            padding: 12px 15px; background: rgba(0, 0, 0, 0.4);
-            border-top: 1px solid var(--panel-border); display: flex; gap: 8px;
+            flex-shrink: 0;
+            padding: 12px 15px;
+            background: rgba(0, 0, 0, 0.4);
+            border-top: 1px solid var(--panel-border);
+            display: flex;
+            gap: 8px;
         }
 
         .chat-input-area input {
@@ -835,6 +863,9 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
                                 }
                                 let formattedMsg = chat.message.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\*(.*?)\*/g, '<b>$1</b>');
 
+                                if ($('#chatBody .chat-line').length > 50) {
+                                    $('#chatBody .chat-line').slice(0, 10).remove();
+                                }
                                 $('#chatBody').append(`
                                     <div class="chat-line">
                                         ${userPrefix}<span>${formattedMsg}</span>

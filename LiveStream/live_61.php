@@ -1,11 +1,13 @@
-﻿<?php
+<?php
 /**
- * â™Ÿï¸ VÃµ ÄÃ i Cá» Ca-rÃ´ AI LiveStream (BÃ n 66) â€” Bot vs Bot 24/7
- * Tráº­n Ä‘áº¡i chiáº¿n siÃªu trÃ­ tuá»‡ nhÃ¢n táº¡o: Master AlphaX (âŒ) vs Grandmaster DeepO (â­•)
+ * ♟️ Võ Đài Cờ Ca-rô AI LiveStream (Bàn 61) — Bot vs Bot 24/7
+ * Trận đại chiến siêu trí tuệ nhân tạo: Master AlphaX (❌) vs Grandmaster DeepO (⭕)
  */
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+header('Content-Type: text/html; charset=utf-8');
+
 require_once __DIR__ . '/../db_connect.php';
 require_once __DIR__ . '/bot_streamer_helper.php';
 
@@ -16,7 +18,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
     header('Content-Type: application/json; charset=utf-8');
     $winner = $_GET['winner'] ?? 'X';
     $pot = 1000000;
-    // Cáº­p nháº­t sá»‘ dÆ° tÆ°á»£ng trÆ°ng cho Bot Streamer
+    // Cập nhật số dư tượng trưng cho Bot Streamer
     $diff = ($winner === 'X') ? ($pot / 2) : -($pot / 2);
     $conn->query("UPDATE users SET Money = Money + $diff WHERE Iduser = " . (int)$botUserX['Iduser']);
     echo json_encode(['success' => true, 'new_balance' => number_format($moneyX + $diff, 0, ',', '.')]);
@@ -28,7 +30,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>â™Ÿï¸ Äáº¡i Chiáº¿n Cá» Ca-rÃ´ AI (AlphaX vs DeepO) - Live BÃ n 66</title>
+    <title>♟️ Đại Chiến Cờ Ca-rô AI (AlphaX vs DeepO) - Live Bàn 61</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Orbitron:wght@700;900&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -47,7 +49,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
             padding: 10px;
             background: radial-gradient(circle at 50% 20%, #0d1527 0%, #060913 100%);
             color: #fff;
-            font-family: 'Outfit', sans-serif;
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -56,7 +58,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
             overflow-x: hidden;
         }
 
-        /* ðŸ‘‘ SÃ‚N Äáº¤U HEADER */
+        /* 👑 SÂN ĐẤU HEADER */
         .arena-header {
             width: 100%;
             max-width: 820px;
@@ -126,7 +128,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
             overflow: hidden;
         }
         .bot-name {
-            font-family: 'Orbitron', sans-serif;
+            font-family: 'Orbitron', 'Outfit', sans-serif;
             font-weight: 800;
             font-size: 0.95rem;
             letter-spacing: 0.5px;
@@ -162,7 +164,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
             min-width: 140px;
         }
         .vs-badge {
-            font-family: 'Orbitron', sans-serif;
+            font-family: 'Orbitron', 'Outfit', sans-serif;
             font-weight: 900;
             font-size: 1.1rem;
             background: linear-gradient(135deg, #f59e0b, #ef4444);
@@ -187,7 +189,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
             margin-top: 2px;
         }
 
-        /* â™Ÿï¸ BÃ€N Cá»œ CA-RÃ” CHUáº¨N 15x15 */
+        /* ♟️ BÀN CỜ CA-RÔ CHUẨN 15x15 */
         .board-wrapper {
             position: relative;
             background: #141b2d;
@@ -201,7 +203,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
             margin-bottom: 8px;
         }
 
-        /* Tá»a Ä‘á»™ cá» */
+        /* Tọa độ cờ */
         .coord-letters {
             display: grid;
             grid-template-columns: repeat(15, 26px);
@@ -239,62 +241,62 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
         .caro-cell {
             width: 26px;
             height: 26px;
-            background: rgba(255, 255, 255, 0.025);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: #1e293b;
             border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 14px;
             font-weight: 900;
-            cursor: pointer;
-            transition: background 0.15s ease;
+            cursor: default;
+            transition: all 0.15s ease;
             position: relative;
         }
         .caro-cell:hover {
-            background: rgba(255, 255, 255, 0.08);
+            background: #334155;
         }
-
-        /* Äiá»ƒm sao thiÃªn nguyÃªn (H8, D4, L4, D12, L12) */
         .caro-cell.star-point::after {
             content: '';
+            position: absolute;
             width: 4px;
             height: 4px;
-            background: rgba(251, 191, 36, 0.4);
+            background: rgba(255, 255, 255, 0.3);
             border-radius: 50%;
-            position: absolute;
         }
 
-        /* QuÃ¢n cá» X */
+        /* Quân X và Quân O */
         .caro-cell.piece-x {
+            background: rgba(239, 68, 68, 0.15);
             color: var(--red-neon);
-            text-shadow: 0 0 10px rgba(239, 68, 68, 0.9);
-            animation: dropPiece 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+            animation: popStone 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        /* QuÃ¢n cá» O */
         .caro-cell.piece-o {
+            background: rgba(56, 189, 248, 0.15);
             color: var(--blue-neon);
-            text-shadow: 0 0 10px rgba(56, 189, 248, 0.9);
-            animation: dropPiece 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+            animation: popStone 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        @keyframes dropPiece {
-            0% { transform: scale(1.6); opacity: 0; }
+        @keyframes popStone {
+            0% { transform: scale(0.2); opacity: 0; }
+            70% { transform: scale(1.25); }
             100% { transform: scale(1); opacity: 1; }
         }
 
-        /* NÆ°á»›c cá» vá»«a háº¡ (Last move aura) */
+        /* Nước đi cuối cùng (highlight) */
         .caro-cell.last-move {
-            border-color: var(--gold-neon) !important;
-            box-shadow: 0 0 10px var(--gold-neon), inset 0 0 8px rgba(251, 191, 36, 0.4);
+            outline: 2px solid var(--gold-neon);
+            outline-offset: -2px;
+            box-shadow: 0 0 12px var(--gold-neon);
+            z-index: 5;
         }
 
-        /* 5 quÃ¢n tháº¯ng cuá»™c sÃ¡ng rá»±c */
+        /* Đường thắng 5 quân */
         .caro-cell.win-cell {
-            background: rgba(251, 191, 36, 0.35) !important;
-            border-color: #f59e0b !important;
-            box-shadow: 0 0 20px #fbbf24, inset 0 0 10px #fbbf24 !important;
-            animation: winPulse 0.8s infinite alternate !important;
+            background: rgba(251, 191, 36, 0.3) !important;
+            outline: 2px solid #fbbf24 !important;
+            animation: winPulse 0.8s infinite alternate ease-in-out;
             z-index: 10;
         }
         @keyframes winPulse {
@@ -302,7 +304,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
             100% { transform: scale(1.12); filter: brightness(1.5); }
         }
 
-        /* ðŸ¤– VIRTUAL BOT CURSORS TRÃŠN BÃ€N Cá»œ */
+        /* 🤖 VIRTUAL BOT CURSORS TRÊN BÀN CỜ */
         .bot-cursor {
             position: absolute;
             width: 22px;
@@ -319,7 +321,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
         .bot-cursor.cursor-o { color: var(--blue-neon); }
         .bot-cursor i { font-size: 18px; transform: rotate(-45deg); }
 
-        /* ðŸ“œ NHáº¬T KÃ NÆ¯á»šC ÄI & FOOTER STATUS */
+        /* 📜 NHẬT KÝ NƯỚC ĐI & FOOTER STATUS */
         .arena-footer {
             width: 100%;
             max-width: 820px;
@@ -362,7 +364,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
             transform: translateY(-1px);
         }
 
-        /* ðŸ† VICTORY POPUP OVERLAY */
+        /* 🏆 VICTORY POPUP OVERLAY */
         .victory-overlay {
             position: absolute;
             inset: 0;
@@ -378,7 +380,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
         }
         .victory-overlay.show { display: flex; }
         .victory-title {
-            font-family: 'Orbitron', sans-serif;
+            font-family: 'Orbitron', 'Outfit', sans-serif;
             font-size: 1.6rem;
             font-weight: 900;
             text-align: center;
@@ -412,7 +414,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
 </head>
 <body>
 
-    <!-- ðŸ‘‘ SÃ‚N Äáº¤U HEADER: BOT ALPHAX VS BOT DEEPO -->
+    <!-- 👑 SÂN ĐẤU HEADER: BOT ALPHAX VS BOT DEEPO -->
     <div class="arena-header">
         <!-- BOT 1: ALPHAX -->
         <div class="bot-card bot-x active-turn" id="botCardX">
@@ -422,13 +424,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
             <div class="bot-info">
                 <div class="bot-name">
                     <span>AlphaX</span>
-                    <span style="color:var(--red-neon); font-size:1.1rem;">âŒ</span>
+                    <span style="color:var(--red-neon); font-size:1.1rem;">❌</span>
                 </div>
                 <div class="bot-status">
-                    <span id="statusTextX">ðŸ”´ Äang suy nghÄ©...</span>
+                    <span id="statusTextX">🔴 Đang suy nghĩ...</span>
                 </div>
                 <div class="bot-score">
-                    ðŸ† <span id="scoreX">0</span> VÃ¡n Tháº¯ng
+                    🏆 <span id="scoreX">0</span> Ván Thắng
                 </div>
             </div>
         </div>
@@ -437,10 +439,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
         <div class="vs-center">
             <div class="vs-badge">VS</div>
             <div class="pot-badge">
-                ðŸ’° 1.000.000 GTLM
+                💰 1.000.000 GTLM
             </div>
             <div class="turn-timer" id="turnTimerText">
-                â±ï¸ NÆ°á»›c Ä‘i: <span id="moveCount">0</span>
+                ⏳ Nước đi: <span id="moveCount">0</span>
             </div>
         </div>
 
@@ -452,32 +454,32 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
             <div class="bot-info">
                 <div class="bot-name">
                     <span>DeepO</span>
-                    <span style="color:var(--blue-neon); font-size:1.1rem;">â­•</span>
+                    <span style="color:var(--blue-neon); font-size:1.1rem;">⭕</span>
                 </div>
                 <div class="bot-status">
-                    <span id="statusTextO">âšª Chá» lÆ°á»£t</span>
+                    <span id="statusTextO">⚪ Chờ lượt</span>
                 </div>
                 <div class="bot-score">
-                    ðŸ† <span id="scoreO">0</span> VÃ¡n Tháº¯ng
+                    🏆 <span id="scoreO">0</span> Ván Thắng
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- â™Ÿï¸ BÃ€N Cá»œ CA-RÃ” 15x15 Äá»ˆNH CAO -->
+    <!-- ♟️ BÀN CỜ CA-RÔ 15x15 ĐỈNH CAO -->
     <div class="board-wrapper" id="boardWrapper">
-        <!-- Con trá» áº£o chuyá»ƒn Ä‘á»™ng -->
+        <!-- Con trỏ ảo chuyển động -->
         <div class="bot-cursor cursor-x" id="cursorX"><i class="fa-solid fa-arrow-pointer"></i></div>
         <div class="bot-cursor cursor-o" id="cursorO"><i class="fa-solid fa-arrow-pointer"></i></div>
 
-        <!-- Tá»a Ä‘á»™ chá»¯ A - O -->
+        <!-- Tọa độ chữ A - O -->
         <div class="coord-letters">
             <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span>
             <span>F</span><span>G</span><span>H</span><span>I</span><span>J</span>
             <span>K</span><span>L</span><span>M</span><span>N</span><span>O</span>
         </div>
 
-        <!-- LÆ°á»›i cá» 15x15 kÃ¨m tá»a Ä‘á»™ sá»‘ 1-15 -->
+        <!-- Lưới cờ 15x15 kèm tọa độ số 1-15 -->
         <div class="coord-row">
             <div class="coord-num" style="display:flex; flex-direction:column; justify-content:space-between; height:418px; padding:6px 0;">
                 <?php for ($i = 1; $i <= 15; $i++) echo "<span>$i</span>"; ?>
@@ -488,7 +490,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
             </div>
         </div>
 
-        <!-- Tá»a Ä‘á»™ chá»¯ A - O Ä‘Ã¡y -->
+        <!-- Tọa độ chữ A - O đáy -->
         <div class="coord-letters" style="margin-top:4px; margin-bottom:0;">
             <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span>
             <span>F</span><span>G</span><span>H</span><span>I</span><span>J</span>
@@ -497,25 +499,25 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
 
         <!-- VICTORY OVERLAY BANNER -->
         <div class="victory-overlay" id="victoryOverlay">
-            <div class="victory-title" id="victoryTitle">ðŸŽ‰ CHIáº¾N THáº®NG TUYá»†T Äá»I!</div>
-            <div class="victory-sub" id="victorySub">Master AlphaX chá»‘t háº¡ 5 quÃ¢n liÃªn tiáº¿p (+1.000.000 GTLM)</div>
-            <div class="victory-next">ðŸ”„ VÃ¡n má»›i sáº½ tá»± Ä‘á»™ng báº¯t Ä‘áº§u sau <b id="countdownNext">4</b>s...</div>
+            <div class="victory-title" id="victoryTitle">🎉 CHIẾN THẮNG TUYỆT ĐỐI!</div>
+            <div class="victory-sub" id="victorySub">Master AlphaX chốt hạ 5 quân liên tiếp (+1.000.000 GTLM)</div>
+            <div class="victory-next">🔄 Ván mới sẽ tự động bắt đầu sau <b id="countdownNext">4</b>s...</div>
         </div>
     </div>
 
-    <!-- ðŸ“œ NHáº¬T KÃ NÆ¯á»šC ÄI & ÄIá»€U KHIá»‚N KHÃN GIáº¢ -->
+    <!-- 📜 NHẬT KÝ NƯỚC ĐI & ĐIỀU KHIỂN KHÁN GIẢ -->
     <div class="arena-footer">
         <div class="log-ticker" id="logTicker">
-            âš¡ Tráº­n Ä‘áº¥u cá» Ca-rÃ´ AI 15x15 trá»±c tiáº¿p Ä‘ang diá»…n ra ká»‹ch tÃ­nh!
+            ⚡ Trận đấu cờ Ca-rô AI 15x15 trực tiếp đang diễn ra kịch tính!
         </div>
         <div class="arena-controls">
-            <button class="btn-ctrl" id="btnSpeed" title="Thay Ä‘á»•i tá»‘c Ä‘á»™ bot">âš¡ 1x</button>
-            <button class="btn-ctrl" id="btnSound" title="Báº­t/Táº¯t Ã¢m thanh">ðŸ”Š Ã‚m</button>
-            <button class="btn-ctrl" id="btnRestart" title="Báº¯t Ä‘áº§u vÃ¡n má»›i ngay">ðŸ”„ Äá»•i VÃ¡n</button>
+            <button class="btn-ctrl" id="btnSpeed" title="Thay đổi tốc độ bot">⚡ 1x</button>
+            <button class="btn-ctrl" id="btnSound" title="Bật/Tắt âm thanh">🔊 Âm</button>
+            <button class="btn-ctrl" id="btnRestart" title="Bắt đầu ván mới ngay">🔄 Đổi Ván</button>
         </div>
     </div>
 
-    <!-- ThÆ° viá»‡n bot chat vÃ  ká»‹ch báº£n Ä‘áº¥u trÃ­ -->
+    <!-- Thư viện bot chat và kịch bản đấu trí -->
     <script src="../assets/js/bot_chat.js"></script>
     <script src="bots/bot_61.js?v=<?= time() ?>"></script>
 
@@ -523,7 +525,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
     (function () {
         'use strict';
 
-        // ðŸŽµ SYNTHESIZER AUDIO (KhÃ´ng phá»¥ thuá»™c file ngoÃ i)
+        // 🎵 SYNTHESIZER AUDIO (Không phụ thuộc file ngoài)
         let audioCtx = null;
         let soundEnabled = true;
 
@@ -565,11 +567,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
             });
         }
 
-        // â™Ÿï¸ CARO ENGINE CONFIGURATION
+        // ♟️ CARO ENGINE CONFIGURATION
         const SIZE = 15;
         let board = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
         let currentTurn = 1; // 1: X (AlphaX), 2: O (DeepO)
-        let firstTurnNext = 2; // LuÃ¢n phiÃªn lÆ°á»£t má»Ÿ mÃ n
+        let firstTurnNext = 2; // Luân phiên lượt mở màn
         let isGameOver = false;
         let isThinking = false;
         let moveCount = 0;
@@ -580,7 +582,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
         const LETTERS = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O'];
         const STAR_POINTS = [[7,7], [3,3], [11,3], [3,11], [11,11]]; // H8, D4, L4, D12, L12
 
-        // Khá»Ÿi táº¡o lÆ°á»›i HTML 15x15
+        // Khởi tạo lưới HTML 15x15
         const gridEl = document.getElementById('caroGrid');
         function initGridDOM() {
             gridEl.innerHTML = '';
@@ -603,23 +605,23 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
             return gridEl.querySelector(`.caro-cell[data-row="${r}"][data-col="${c}"]`);
         }
 
-        // Cáº­p nháº­t giao diá»‡n tráº¡ng thÃ¡i 2 Bot
+        // Cập nhật giao diện trạng thái 2 Bot
         function updateTurnUI() {
             $('#moveCount').text(moveCount);
             if (currentTurn === 1) {
                 $('#botCardX').addClass('active-turn');
                 $('#botCardO').removeClass('active-turn');
-                $('#statusTextX').html('ðŸ”´ Äang suy nghÄ©...');
-                $('#statusTextO').html('âšª Chá» Ä‘á»‘i thá»§');
+                $('#statusTextX').html('🔴 Đang suy nghĩ...');
+                $('#statusTextO').html('⚪ Chờ đối thủ');
             } else {
                 $('#botCardO').addClass('active-turn');
                 $('#botCardX').removeClass('active-turn');
-                $('#statusTextO').html('ðŸ”µ Äang tÃ­nh nÆ°á»›c...');
-                $('#statusTextX').html('âšª Chá» Ä‘á»‘i thá»§');
+                $('#statusTextO').html('🔵 Đang tính nước...');
+                $('#statusTextX').html('⚪ Chờ đối thủ');
             }
         }
 
-        // Äáº¶T QUÃ‚N Cá»œ
+        // ĐẶT QUÂN CỜ
         function placePiece(r, c, player) {
             board[r][c] = player;
             moveCount++;
@@ -631,43 +633,43 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
 
             if (player === 1) {
                 cell.classList.add('piece-x');
-                cell.textContent = 'âŒ';
+                cell.textContent = '❌';
             } else {
                 cell.classList.add('piece-o');
-                cell.textContent = 'â­•';
+                cell.textContent = '⭕';
             }
 
             playStoneClick();
 
             const coordName = LETTERS[c] + (r + 1);
-            const botName = (player === 1) ? 'ðŸ”´ AlphaX' : 'ðŸ”µ DeepO';
-            $('#logTicker').html(`<b>${botName}</b> háº¡ quÃ¢n táº¡i Ã´ <b>[${coordName}]</b> â€” NÆ°á»›c thá»© ${moveCount}`);
+            const botName = (player === 1) ? '🔴 AlphaX' : '🔵 DeepO';
+            $('#logTicker').html(`<b>${botName}</b> hạ quân tại ô <b>[${coordName}]</b> — Nước thứ ${moveCount}`);
 
-            // Kiá»ƒm tra chiáº¿n tháº¯ng
+            // Kiểm tra chiến thắng
             const winLine = checkWin(r, c, player);
             if (winLine) {
                 handleVictory(player, winLine);
                 return;
             }
 
-            // Kiá»ƒm tra hÃ²a cá» (háº¿t Ã´)
+            // Kiểm tra hòa cờ (hết ô)
             if (moveCount >= SIZE * SIZE) {
                 handleDraw();
                 return;
             }
 
-            // Chuyá»ƒn lÆ°á»£t
+            // Chuyển lượt
             currentTurn = (currentTurn === 1) ? 2 : 1;
             updateTurnUI();
             scheduleNextMove();
         }
 
-        // KIá»‚M TRA 5 QUÃ‚N LIá»€N HÃ€NG
+        // KIỂM TRA 5 QUÂN LIỀN HÀNG
         const DIRECTIONS = [
             [[0, 1], [0, -1]],   // Ngang
-            [[1, 0], [-1, 0]],   // Dá»c
-            [[1, 1], [-1, -1]],  // ChÃ©o chÃ­nh
-            [[1, -1], [-1, 1]]   // ChÃ©o phá»¥
+            [[1, 0], [-1, 0]],   // Dọc
+            [[1, 1], [-1, -1]],  // Chéo chính
+            [[1, -1], [-1, 1]]   // Chéo phụ
         ];
 
         function checkWin(r, c, player) {
@@ -687,7 +689,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
             return null;
         }
 
-        // Xá»¬ LÃ Káº¾T THÃšC VÃN Äáº¤U
+        // XỬ LÝ KẾT THÚC VÁN ĐẤU
         function handleVictory(winner, winLine) {
             isGameOver = true;
             playWinSound();
@@ -701,24 +703,24 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
             if (winner === 1) {
                 scoreX++;
                 $('#scoreX').text(scoreX);
-                $('#victoryTitle').html('ðŸ”´ MASTER ALPHAX CHIáº¾N THáº®NG!');
-                $('#victorySub').html(`NgÅ© Tá»­ Liá»n HÃ ng chá»‘t háº¡ vÃ¡n Ä‘áº¥u thá»© ${scoreX + scoreO}! (+1.000.000 GTLM)`);
+                $('#victoryTitle').html('🔴 MASTER ALPHAX CHIẾN THẮNG!');
+                $('#victorySub').html(`Ngũ Tử Liền Hàng chốt hạ ván đấu thứ ${scoreX + scoreO}! (+1.000.000 GTLM)`);
             } else {
                 scoreO++;
                 $('#scoreO').text(scoreO);
-                $('#victoryTitle').html('ðŸ”µ GRANDMASTER DEEPO TOÃ€N THáº®NG!');
-                $('#victorySub').html(`KhÃ³a báº«y Ã©p gÃ³c pháº£n cÃ´ng ngoáº¡n má»¥c! (+1.000.000 GTLM)`);
+                $('#victoryTitle').html('🔵 GRANDMASTER DEEPO TOÀN THẮNG!');
+                $('#victorySub').html(`Khóa bẫy ép góc phản công ngoạn mục! (+1.000.000 GTLM)`);
             }
 
-            // Báº¯n tÃ­n hiá»‡u sang BotChat
+            // Bắn tín hiệu sang BotChat
             if (window.CaroLiveArena && window.CaroLiveArena.onWin) {
                 window.CaroLiveArena.onWin(winner, winnerName);
             }
 
             $('#victoryOverlay').addClass('show');
 
-            // Cáº­p nháº­t sá»‘ dÆ° tÆ°á»£ng trÆ°ng
-            $.get('live_62.php?action=record_round&winner=' + (winner === 1 ? 'X' : 'O'));
+            // Cập nhật số dư tượng trưng cho bàn 61
+            $.get('live_61.php?action=record_round&winner=' + (winner === 1 ? 'X' : 'O'));
 
             let count = 4;
             $('#countdownNext').text(count);
@@ -734,27 +736,27 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
 
         function handleDraw() {
             isGameOver = true;
-            $('#victoryTitle').html('ðŸ¤ BÃ€N Cá»œ Báº¤T PHÃ‚N THáº®NG Báº I!');
-            $('#victorySub').html('225 Ã´ cá» Ä‘Ã£ kÃ­n, hai Ä‘áº¡i sÆ° ká»³ phÃ¹ng Ä‘á»‹ch thá»§!');
+            $('#victoryTitle').html('🤝 BÀN CỜ BẤT PHÂN THẮNG BẠI!');
+            $('#victorySub').html('225 ô cờ đã kín, hai đại sư kỳ phùng địch thủ!');
             $('#victoryOverlay').addClass('show');
             setTimeout(startNewGame, 3500);
         }
 
-        // ðŸ§  AI HEURISTIC ENGINE CHO Cáº¢ 2 BOT
+        // 🧠 AI HEURISTIC ENGINE CHO CẢ 2 BOT
         function evaluateCell(r, c, player) {
             const opp = (player === 1) ? 2 : 1;
             let myScore = getPatternScore(r, c, player);
             let oppScore = getPatternScore(r, c, opp);
 
-            // AlphaX thiÃªn vá» cÃ´ng (1.3x cÃ´ng), DeepO thiÃªn vá» thá»§ / pháº£n cÃ´ng (1.3x thá»§)
+            // AlphaX thiên về công (1.3x công), DeepO thiên về thủ / phản công (1.3x thủ)
             const attackWeight = (player === 1) ? 1.3 : 1.1;
             const defenseWeight = (player === 1) ? 1.05 : 1.3;
 
-            // Äiá»ƒm trá»ng sá»‘ trung tÃ¢m bÃ n cá»
+            // Điểm trọng số trung tâm bàn cờ
             const distFromCenter = Math.abs(r - 7) + Math.abs(c - 7);
             const centerBonus = Math.max(0, 16 - distFromCenter);
 
-            // ChÃºt ngáº«u nhiÃªn Ä‘á»ƒ cÃ¡c tráº­n biáº¿n hÃ³a
+            // Chút ngẫu nhiên để các trận biến hóa
             const jitter = Math.random() * 8;
 
             return (myScore * attackWeight) + (oppScore * defenseWeight) + centerBonus + jitter;
@@ -795,11 +797,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
         }
 
         function findBestMove(player) {
-            // NÆ°á»›c Ä‘i Ä‘áº§u tiÃªn: Ä‘Ã¡nh vÃ o trung tÃ¢m
+            // Nước đi đầu tiên: đánh vào trung tâm
             if (moveCount === 0) {
                 return [7, 7];
             }
-            // NÆ°á»›c Ä‘i thá»© 2: Ä‘Ã¡nh gáº§n trung tÃ¢m
+            // Nước đi thứ 2: đánh gần trung tâm
             if (moveCount === 1) {
                 const candidates = [[6,6], [6,7], [6,8], [7,6], [7,8], [8,6], [8,7], [8,8]];
                 return candidates[Math.floor(Math.random() * candidates.length)];
@@ -812,7 +814,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
                 for (let c = 0; c < SIZE; c++) {
                     if (board[r][c] !== 0) continue;
 
-                    // Tá»‘i Æ°u: Chá»‰ xÃ©t cÃ¡c Ã´ gáº§n quÃ¢n Ä‘Ã£ Ä‘Ã¡nh (trong bÃ¡n kÃ­nh 2 Ã´)
+                    // Tối ưu: Chỉ xét các ô gần quân đã đánh (trong bán kính 2 ô)
                     let hasNeighbor = false;
                     for (let dr = -2; dr <= 2 && !hasNeighbor; dr++) {
                         for (let dc = -2; dc <= 2 && !hasNeighbor; dc++) {
@@ -836,7 +838,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
             }
 
             if (bestMoves.length === 0) {
-                // Fallback náº¿u khÃ´ng cÃ³ Ã´ gáº§n
+                // Fallback nếu không có ô gần
                 for (let r = 0; r < SIZE; r++) {
                     for (let c = 0; c < SIZE; c++) {
                         if (board[r][c] === 0) return [r, c];
@@ -844,11 +846,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
                 }
             }
 
-            // Chá»n ngáº«u nhiÃªn trong cÃ¡c nÆ°á»›c Ä‘iá»ƒm cao nháº¥t
+            // Chọn ngẫu nhiên trong các nước điểm cao nhất
             return bestMoves[Math.floor(Math.random() * bestMoves.length)];
         }
 
-        // Láº¬P Lá»ŠCH NÆ¯á»šC ÄI Cá»¦A BOT
+        // LẬP LỊCH NƯỚC ĐI CỦA BOT
         function scheduleNextMove() {
             if (isGameOver || isThinking) return;
             isThinking = true;
@@ -864,16 +866,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
 
                 if (targetCell) {
                     const offset = $(targetCell).position();
-                    const bOffset = $('#boardWrapper').position();
 
-                    // Di chuyá»ƒn chuá»™t áº£o Ä‘áº¿n Ã´ cá»
+                    // Di chuyển chuột ảo đến ô cờ
                     cursorEl.addClass('active');
                     cursorEl.css({
                         top: (offset.top + 13) + 'px',
                         left: (offset.left + 13) + 'px'
                     });
 
-                    // Cáº£nh bÃ¡o náº¿u cÃ³ nÆ°á»›c 3 hoáº·c 4
+                    // Cảnh báo nếu có nước 3 hoặc 4
                     const patternScore = getPatternScore(bestR, bestC, player);
                     if (patternScore >= 4000) playThreatSound();
 
@@ -888,7 +889,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
             }, turnDelay);
         }
 
-        // Báº®T Äáº¦U VÃN Má»šI
+        // BẮT ĐẦU VÁN MỚI
         function startNewGame() {
             isGameOver = false;
             isThinking = false;
@@ -902,43 +903,43 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
             firstTurnNext = (firstTurnNext === 1) ? 2 : 1;
 
             updateTurnUI();
-            $('#logTicker').html(`âœ¨ VÃ¡n má»›i khá»Ÿi tranh! <b>${currentTurn === 1 ? 'ðŸ”´ AlphaX' : 'ðŸ”µ DeepO'}</b> giá»¯ quyá»n TiÃªn thá»§!`);
+            $('#logTicker').html(`✨ Ván mới khởi tranh! <b>${currentTurn === 1 ? '🔴 AlphaX' : '🔵 DeepO'}</b> giữ quyền Tiên thủ!`);
 
             scheduleNextMove();
         }
 
-        // ÄIá»€U KHIá»‚N KHÃN GIáº¢
+        // ĐIỀU KHIỂN KHÁN GIẢ
         $('#btnSpeed').on('click', function () {
             if (turnDelay === 1600) {
                 turnDelay = 800;
-                $(this).text('âš¡ 2x').css('color', '#fbbf24');
+                $(this).text('⚡ 2x').css('color', '#fbbf24');
             } else if (turnDelay === 800) {
                 turnDelay = 400;
-                $(this).text('ðŸš€ Turbo').css('color', '#ef4444');
+                $(this).text('🚀 Turbo').css('color', '#ef4444');
             } else {
                 turnDelay = 1600;
-                $(this).text('âš¡ 1x').css('color', '#fff');
+                $(this).text('⚡ 1x').css('color', '#fff');
             }
         });
 
         $('#btnSound').on('click', function () {
             soundEnabled = !soundEnabled;
-            $(this).text(soundEnabled ? 'ðŸ”Š Ã‚m' : 'ðŸ”‡ Táº¯t');
+            $(this).text(soundEnabled ? '🔊 Âm' : '🔇 Tắt');
         });
 
         $('#btnRestart').on('click', function () {
             startNewGame();
         });
 
-        // Báº­t Ã¢m thanh trÃªn tÆ°Æ¡ng tÃ¡c Ä‘áº§u tiÃªn
+        // Bật âm thanh trên tương tác đầu tiên
         document.addEventListener('click', () => { initAudio(); }, { once: true });
 
-        // Cáº§u ná»‘i giao tiáº¿p vá»›i bot_61.js
+        // Cầu nối giao tiếp với bot_61.js
         window.CaroLiveArena = {
             onWin: function (wCode, wName) {}
         };
 
-        // KHá»žI Äá»˜NG TRáº¬N Äáº¤U Äáº¦U TIÃŠN
+        // KHỞI ĐỘNG TRẬN ĐẤU ĐẦU TIÊN
         updateTurnUI();
         setTimeout(scheduleNextMove, 1200);
 
@@ -946,4 +947,3 @@ if (isset($_GET['action']) && $_GET['action'] === 'record_round') {
     </script>
 </body>
 </html>
-
