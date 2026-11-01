@@ -138,8 +138,8 @@ class RedEnvelopeManager {
 
         $this->conn->begin_transaction();
         try {
-            // Kiểm tra xem người dùng này đã giật bao này chưa
-            $stmtCheckClaim = $this->conn->prepare("SELECT id FROM red_envelope_claims WHERE envelope_id = ? AND user_id = ? FOR UPDATE");
+            // Kiểm tra xem người dùng này đã giật bao này chưa (không dùng FOR UPDATE để tránh gap-lock deadlock)
+            $stmtCheckClaim = $this->conn->prepare("SELECT id FROM red_envelope_claims WHERE envelope_id = ? AND user_id = ?");
             $stmtCheckClaim->bind_param("ii", $envelopeId, $userId);
             $stmtCheckClaim->execute();
             $claimedBefore = $stmtCheckClaim->get_result()->fetch_assoc();

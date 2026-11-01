@@ -929,53 +929,97 @@ if ($action === 'join') {
         echo json_encode(['success' => false, 'message' => 'Phòng đang chơi']);
         exit;
     }
-    foreach ($players as $p) {
-        if ($p['user_id'] == $userId) {
-            echo json_encode(['success' => true]); 
+    
+    $conn->begin_transaction();
+    try {
+        $stmtChk = $conn->prepare("SELECT user_id, seat_index FROM samloc_multi_players WHERE table_id = ? FOR UPDATE");
+        $stmtChk->bind_param("i", $tableId);
+        $stmtChk->execute();
+        $currPlayers = $stmtChk->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmtChk->close();
+
+        foreach ($currPlayers as $p) {
+            if ($p['user_id'] == $userId) {
+                $conn->commit();
+                echo json_encode(['success' => true]); 
+                exit;
+            }
+        }
+        if (count($currPlayers) >= 5) {
+            $conn->commit();
+            echo json_encode(['success' => false, 'message' => 'Phòng đã đầy']);
             exit;
         }
-    }
-    if (count($players) >= 5) {
-        echo json_encode(['success' => false, 'message' => 'Phòng đã đầy']);
+
+        $takenSeats = array_column($currPlayers, 'seat_index');
+        $seatIndex = 0;
+        for ($i=0; $i<5; $i++) {
+            if (!in_array($i, $takenSeats)) { $seatIndex = $i; break; }
+        }
+
+        $stmtIns = $conn->prepare("INSERT INTO samloc_multi_players (table_id, user_id, seat_index, cards) VALUES (?, ?, ?, '[]')");
+        $stmtIns->bind_param("iii", $tableId, $userId, $seatIndex);
+        $stmtIns->execute();
+        $stmtIns->close();
+
+        if (count($currPlayers) + 1 >= 2) {
+            $nextExpiry = date('Y-m-d H:i:s', time() + 5);
+            $conn->query("UPDATE samloc_multi_tables SET turn_expires_at = '$nextExpiry' WHERE id = $tableId");
+        }
+        $conn->commit();
+        echo json_encode(['success' => true]);
+        exit;
+    } catch (Throwable $e) {
+        $conn->rollback();
+        echo json_encode(['success' => false, 'message' => 'Lỗi vào bàn: ' . $e->getMessage()]);
         exit;
     }
-    $takenSeats = array_column($players, 'seat_index');
-    $seatIndex = 0;
-    for ($i=0; $i<5; $i++) {
-        if (!in_array($i, $takenSeats)) { $seatIndex = $i; break; }
-    }
-    $stmt = $conn->prepare("INSERT INTO samloc_multi_players (table_id, user_id, seat_index, cards) VALUES (?, ?, ?, '[]')");
-    $stmt->bind_param("iii", $tableId, $userId, $seatIndex);
-    $stmt->execute();
-    if (count($players) + 1 >= 2) {
-        $nextExpiry = date('Y-m-d H:i:s', time() + 5);
-        $conn->query("UPDATE samloc_multi_tables SET turn_expires_at = '$nextExpiry' WHERE id = $tableId");
-    }
-    echo json_encode(['success' => true]);
-    exit;
 }
 
 if ($action === 'add_bot') {
-    if ($table['status'] !== 'waiting' || count($players) >= 5) {
-        echo json_encode(['success' => false]);
+    if ($table['status'] !== 'waiting') {
+        echo json_encode(['success' => false, 'message' => 'Phòng đang chơi']);
         exit;
     }
-    $takenSeats = array_column($players, 'seat_index');
-    $seatIndex = 0;
-    for ($i=0; $i<5; $i++) {
-        if (!in_array($i, $takenSeats)) { $seatIndex = $i; break; }
-    }
-    $botId = -rand(1000, 9999);
-    $stmt = $conn->prepare("INSERT INTO samloc_multi_players (table_id, user_id, seat_index, cards, is_bot) VALUES (?, ?, ?, '[]', 1)");
-    $stmt->bind_param("iii", $tableId, $botId, $seatIndex);
-    $stmt->execute();
     
-    if (count($players) + 1 >= 2) {
-        $nextExpiry = date('Y-m-d H:i:s', time() + 5);
-        $conn->query("UPDATE samloc_multi_tables SET turn_expires_at = '$nextExpiry' WHERE id = $tableId");
+    $conn->begin_transaction();
+    try {
+        $stmtChk = $conn->prepare("SELECT seat_index FROM samloc_multi_players WHERE table_id = ? FOR UPDATE");
+        $stmtChk->bind_param("i", $tableId);
+        $stmtChk->execute();
+        $currPlayers = $stmtChk->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmtChk->close();
+
+        if (count($currPlayers) >= 5) {
+            $conn->commit();
+            echo json_encode(['success' => false, 'message' => 'Phòng đã đầy']);
+            exit;
+        }
+
+        $takenSeats = array_column($currPlayers, 'seat_index');
+        $seatIndex = 0;
+        for ($i=0; $i<5; $i++) {
+            if (!in_array($i, $takenSeats)) { $seatIndex = $i; break; }
+        }
+
+        $botId = -rand(1000, 9999);
+        $stmtIns = $conn->prepare("INSERT INTO samloc_multi_players (table_id, user_id, seat_index, cards, is_bot) VALUES (?, ?, ?, '[]', 1)");
+        $stmtIns->bind_param("iii", $tableId, $botId, $seatIndex);
+        $stmtIns->execute();
+        $stmtIns->close();
+
+        if (count($currPlayers) + 1 >= 2) {
+            $nextExpiry = date('Y-m-d H:i:s', time() + 5);
+            $conn->query("UPDATE samloc_multi_tables SET turn_expires_at = '$nextExpiry' WHERE id = $tableId");
+        }
+        $conn->commit();
+        echo json_encode(['success' => true]);
+        exit;
+    } catch (Throwable $e) {
+        $conn->rollback();
+        echo json_encode(['success' => false, 'message' => 'Lỗi thêm bot: ' . $e->getMessage()]);
+        exit;
     }
-    echo json_encode(['success' => true]);
-    exit;
 }
 
 if ($action === 'xin_lang') {

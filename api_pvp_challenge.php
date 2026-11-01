@@ -170,16 +170,23 @@ switch ($action) {
         // Trừ gtlm và chấp nhận challenge
         $conn->begin_transaction();
         try {
+            $acceptSql = "UPDATE pvp_challenges SET status = 'accepted', accepted_at = NOW() WHERE id = ? AND status = 'pending'";
+            $acceptStmt = $conn->prepare($acceptSql);
+            $acceptStmt->bind_param("i", $challengeId);
+            $acceptStmt->execute();
+            $affected = $acceptStmt->affected_rows;
+            $acceptStmt->close();
+
+            if ($affected <= 0) {
+                $conn->rollback();
+                echo json_encode(['success' => false, 'message' => 'Challenge đã được chấp nhận hoặc không còn khả dụng!']);
+                exit;
+            }
+
             $updateMoney = $conn->prepare("UPDATE users SET Money = Money - ? WHERE Iduser = ?");
             $updateMoney->bind_param("di", $challenge['bet_amount'], $userId);
             $updateMoney->execute();
             $updateMoney->close();
-
-            $acceptSql = "UPDATE pvp_challenges SET status = 'accepted', accepted_at = NOW() WHERE id = ?";
-            $acceptStmt = $conn->prepare($acceptSql);
-            $acceptStmt->bind_param("i", $challengeId);
-            $acceptStmt->execute();
-            $acceptStmt->close();
 
             // Khởi tạo Caro nếu là game Caro
             if ($challenge['game_type'] == 'caro') {

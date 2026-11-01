@@ -85,7 +85,13 @@ $gameFilesMap = [
     58 => ['file' => 'live_58.php', 'real_game' => '../games/yahtzee.php', 'name' => 'Yahtzee', 'icon' => '🎯'],
     59 => ['file' => 'live_59.php', 'real_game' => '../games/plinko_v2.php', 'name' => 'Plinko V2 Pro', 'icon' => '🎱'],
     60 => ['file' => 'live_60.php', 'real_game' => '../plinko_royale_v3.php', 'name' => 'Plinko Royale V3', 'icon' => '👑'],
-    61 => ['file' => 'live_61.php', 'real_game' => '../tower_of_gods.php', 'name' => 'Tháp Thần Bài', 'icon' => '🗼']
+    61 => ['file' => 'live_61.php', 'real_game' => '../tower_of_gods.php', 'name' => 'Tháp Thần Bài', 'icon' => '🗼'],
+    62 => ['file' => 'live_62.php', 'real_game' => '../games/mining.php', 'name' => 'Mỏ Khoáng Tycoon', 'icon' => '⛏️'],
+    63 => ['file' => 'live_63.php', 'real_game' => '../games/market.php', 'name' => 'Chợ Thần Tài', 'icon' => '🏪'],
+    64 => ['file' => 'live_64.php', 'real_game' => '../games/pets.php', 'name' => 'Vườn Linh Thú', 'icon' => '🐾'],
+    65 => ['file' => 'live_65.php', 'real_game' => '../pvp_arena.php', 'name' => 'Đấu Trường PvP', 'icon' => '⚔️'],
+    66 => ['file' => 'live_66.php', 'real_game' => '../pvp_caro.php', 'name' => 'Cờ Ca-rô PvP', 'icon' => '♟️'],
+    67 => ['file' => 'live_67.php', 'real_game' => '../lucky_wheel.php', 'name' => 'Vòng Quay May Mắn', 'icon' => '🎡']
 ];
 
 $botThemesMap = [
@@ -149,7 +155,13 @@ $botThemesMap = [
     58 => ['particleColor' => '#ff4757', 'shapeColors' => ['#ff4757', '#ff6b81', '#70a1ff'], 'bgGradient' => ['#000000', '#12001a', '#250033']],
     59 => ['particleColor' => '#12c2e9', 'shapeColors' => ['#12c2e9', '#a29bfe', '#fd79a8'], 'bgGradient' => ['#0f0c29', '#302b63', '#24243e']],
     60 => ['particleColor' => '#ffd700', 'shapeColors' => ['#ffd700', '#ff4757', '#12c2e9'], 'bgGradient' => ['#1a0b2e', '#2a1b3d', '#000000']],
-    61 => ['particleColor' => '#a855f7', 'shapeColors' => ['#a855f7', '#fbbf24', '#3b82f6', '#ef4444'], 'bgGradient' => ['#030611', '#0d0821', '#0a0020']]
+    61 => ['particleColor' => '#a855f7', 'shapeColors' => ['#a855f7', '#fbbf24', '#3b82f6', '#ef4444'], 'bgGradient' => ['#030611', '#0d0821', '#0a0020']],
+    62 => ['particleColor' => '#ffd700', 'shapeColors' => ['#ffd700', '#f59e0b', '#38bdf8'], 'bgGradient' => ['#0f0c29', '#302b63', '#24243e']],
+    63 => ['particleColor' => '#c084fc', 'shapeColors' => ['#c084fc', '#a855f7', '#6366f1'], 'bgGradient' => ['#0a0d1a', '#18112e', '#000000']],
+    64 => ['particleColor' => '#10b981', 'shapeColors' => ['#10b981', '#34d399', '#059669'], 'bgGradient' => ['#051811', '#06281e', '#000000']],
+    65 => ['particleColor' => '#ef4444', 'shapeColors' => ['#ef4444', '#f87171', '#b91c1c'], 'bgGradient' => ['#1f0d0d', '#2d0f0f', '#000000']],
+    66 => ['particleColor' => '#3b82f6', 'shapeColors' => ['#3b82f6', '#60a5fa', '#1d4ed8'], 'bgGradient' => ['#0a1026', '#0f172a', '#000000']],
+    67 => ['particleColor' => '#fde047', 'shapeColors' => ['#fde047', '#eab308', '#f59e0b'], 'bgGradient' => ['#160a29', '#24103f', '#000000']]
 ];
 
 $currentGame = $gameFilesMap[$tableId];
