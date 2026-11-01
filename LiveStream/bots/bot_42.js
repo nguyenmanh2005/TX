@@ -1,15 +1,20 @@
 /**
- * 🤖 Bot AI Pai Gow Poker Thông Minh (ID: 42)
+ * 🤖 Bot AI Texas Hold'em Poker Siêu Thông Minh (ID: 43)
  *
- * QUY TRÌNH 3 GIAI ĐOẠN:
- *  1. BETTING: Chọn chip → điền bet → bấm "CHIA BÀI"
- *  2. SPLITTING: Đọc 7 lá → tự tính tay thấp tối ưu (House Way đơn giản) → click 2 lá → bấm "XÁC NHẬN CHIA TAY"
- *  3. RESULT: Đọc kết quả → bấm "VÁN MỚI" → lặp lại
- *
- * CHIẾN LƯỢC CHIA BÀI (Simplified House Way):
- *  - Nếu có đôi: giữ đôi ở tay cao (5 lá), đưa 2 lá cao nhất còn lại vào tay thấp.
- *  - Không đôi: đưa lá cao nhất thứ 2 và thứ 3 vào tay thấp.
- *  - Bot đọc data-index từ các .card trong #player-hand để click đúng.
+ * CHIẾN THUẬT & TRÍ THÔNG MINH:
+ * 1. QUẢN LÝ VỐN CHUYÊN NGHIỆP (Bankroll Management):
+ *    - Đọc số dư ví & chuỗi thắng/thua để nâng/hạ mức cược linh hoạt (10K -> 50K -> 100K -> 500K).
+ *    - Thắng chuỗi -> Tăng cược ép sân các bot đối thủ.
+ *    - Thua -> Tự động hạ về mức cơ sở an toàn (10K).
+ * 2. ĐỌC VÒNG BÀI (Street Awareness):
+ *    - Nhận biết từng vòng: Pre-Flop (0 lá chung) -> Flop (3 lá) -> Turn (4 lá) -> River (5 lá) -> Showdown.
+ *    - Thời gian suy nghĩ tự nhiên theo từng vòng cược (Pre-flop nhanh, River cân nhắc kỹ).
+ * 3. BẢO TOÀN LỢI THẾ CƯỢC:
+ *    - Luôn Call/Check qua từng vòng để tối đa hóa cơ hội ăn trọn Pot x4 ở Showdown.
+ *    - Tuyệt đối không tự Fold bỏ GTLM oan uổng.
+ * 4. HỆ THỐNG WATCHDOG & CHỐNG KẸT:
+ *    - Tự động đóng popup cản trở, phục hồi trạng thái sau 3s nếu có gián đoạn mạng.
+ *    - Tương tác chat chuẩn phong cách Poker sảnh VIP.
  */
 
 (function () {
@@ -20,129 +25,106 @@
         return;
     }
 
-    BotVirtualCursor.init('Pai Gow Master');
+    BotVirtualCursor.init('Poker Pro 43');
 
     // ═══════════════════════════════════════════════════════
-    // TRẠNG THÁI
+    // TRẠNG THÁI VÀ CHỈ SỐ BOT
     // ═══════════════════════════════════════════════════════
     let botIsBusy = false;
     let busyTimer = null;
     let lastChatTime = 0;
     let winStreak = 0;
     let lossStreak = 0;
+    let currentRoundActionCount = 0;
+    let lastProcessedState = '';
 
-    // Trạng thái game hiện tại
-    const STATE = {
-        BETTING: 'betting',      // Đang ở màn bet / ván mới
-        SPLITTING: 'splitting',  // Đang chọn 2 lá thấp
-        RESULT: 'result',        // Đã xem kết quả, cần bấm Ván Mới
-        BUSY: 'busy'
-    };
-
-    function setBusy(val) {
+    function setBusy(val, timeoutMs = 3000) {
         botIsBusy = val;
         if (busyTimer) clearTimeout(busyTimer);
         if (val) {
-            busyTimer = setTimeout(() => { botIsBusy = false; }, 3000);
+            busyTimer = setTimeout(() => {
+                botIsBusy = false;
+            }, timeoutMs);
         }
     }
 
     // ═══════════════════════════════════════════════════════
-    // PHÁT HIỆN TRẠNG THÁI GAME
+    // PHÁT HIỆN TRẠNG THÁI BÀN POKER
     // ═══════════════════════════════════════════════════════
+    const STATE = { START: 'start', PLAY: 'play', NONE: 'none' };
+
     function detectState() {
-        const betForm = document.getElementById('bet-form');
-        const splitControls = document.getElementById('split-controls');
-        const resultView = document.getElementById('result-view');
+        // Đóng các popup SweetAlert nếu có che phủ
+        if (typeof Swal !== 'undefined' && Swal.isVisible && Swal.isVisible()) {
+            try { Swal.close(); } catch (e) { }
+        }
 
-        if (betForm && betForm.style.display !== 'none') return STATE.BETTING;
-        if (splitControls && splitControls.style.display !== 'none') return STATE.SPLITTING;
-        if (resultView && resultView.style.display !== 'none') return STATE.RESULT;
-        return STATE.BUSY;
+        const startCtrl = document.getElementById('start-controls');
+        const playCtrl = document.getElementById('play-controls');
+
+        const startVisible = startCtrl && window.getComputedStyle(startCtrl).display !== 'none';
+        const playVisible = playCtrl && window.getComputedStyle(playCtrl).display !== 'none';
+
+        if (startVisible) return STATE.START;
+        if (playVisible) return STATE.PLAY;
+        return STATE.NONE;
+    }
+
+    // Xác định đang ở vòng nào dựa trên số lá bài chung trên bàn
+    function getCurrentStreet() {
+        const commCards = document.querySelectorAll('#community-area .card');
+        const count = commCards.length;
+        if (count === 0) return 'pre-flop';
+        if (count === 3) return 'flop';
+        if (count === 4) return 'turn';
+        if (count === 5) return 'river';
+        return 'unknown';
     }
 
     // ═══════════════════════════════════════════════════════
-    // TÍNH TỐI ƯU 2 LÁ CHO TAY THẤP
-    // Chiến lược House Way đơn giản:
-    // - Tìm cặp đôi trong 7 lá. Nếu có, giữ đôi trong tay cao,
-    //   đưa 2 lá cao nhất còn lại vào tay thấp.
-    // - Nếu không có đôi, đưa lá rank cao thứ 2 và thứ 3 vào tay thấp.
-    // ═══════════════════════════════════════════════════════
-    function chooseLowHandIndices() {
-        const cards = Array.from(document.querySelectorAll('#player-hand .card'));
-        if (cards.length !== 7) return null;
-
-        // Đọc rank từ card text (val: 2-10,J,Q,K,A → rank 2-14)
-        function parseRank(el) {
-            const valEl = el.querySelector('.card-v');
-            if (!valEl) return 0;
-            const v = valEl.textContent.trim();
-            if (v === 'A') return 14;
-            if (v === 'K') return 13;
-            if (v === 'Q') return 12;
-            if (v === 'J') return 11;
-            return parseInt(v) || 0;
-        }
-
-        const indexed = cards.map((el, i) => ({
-            el,
-            domIndex: i,
-            dataIndex: parseInt(el.getAttribute('data-index') ?? i),
-            rank: parseRank(el)
-        }));
-
-        // Tìm đôi
-        const rankCount = {};
-        indexed.forEach(c => { rankCount[c.rank] = (rankCount[c.rank] || 0) + 1; });
-        const pairRanks = Object.keys(rankCount).filter(r => rankCount[r] >= 2).map(Number);
-        pairRanks.sort((a, b) => b - a); // đôi lớn nhất trước
-
-        let lowIndices = [];
-
-        if (pairRanks.length >= 2) {
-            // 2 đôi trở lên: giữ đôi LỚN NHẤT ở tay cao, đưa đôi nhỏ vào tay thấp
-            const smallPairRank = pairRanks[1];
-            const pairCards = indexed.filter(c => c.rank === smallPairRank).slice(0, 2);
-            lowIndices = pairCards.map(c => c.dataIndex);
-        } else if (pairRanks.length === 1) {
-            // 1 đôi: giữ đôi ở tay cao, đưa 2 lá cao nhất còn lại vào tay thấp
-            const pairRank = pairRanks[0];
-            const nonPair = indexed.filter(c => c.rank !== pairRank)
-                .sort((a, b) => b.rank - a.rank);
-            lowIndices = nonPair.slice(0, 2).map(c => c.dataIndex);
-        } else {
-            // Không đôi: đưa lá rank cao thứ 2 và thứ 3 vào tay thấp
-            const sorted = [...indexed].sort((a, b) => b.rank - a.rank);
-            lowIndices = [sorted[1].dataIndex, sorted[2].dataIndex];
-        }
-
-        return { lowIndices, cards: indexed };
-    }
-
-    // ═══════════════════════════════════════════════════════
-    // CHAT
+    // CHAT PHONG CÁCH POKER MASTER
     // ═══════════════════════════════════════════════════════
     const winPhrases = [
-        'Pai Gow Master đây! Thắng cả 2 tay, húp GTLM sạch bóng! 🃏',
-        'Bài hay tay cao, ăn gọn vào ví! 💰',
-        'House Way chuẩn chỉnh, thắng đẹp anh em ơi! 🏆',
-        'Đôi lớn bảo vệ tay cao, bái phục! ✨'
-    ];
-    const drawPhrases = [
-        'Hòa vẫn tốt, ít nhất không mất vốn! 🤝',
-        'Push! GTLM về tay, ván sau bung lụa! 😊'
-    ];
-    const losePhrases = [
-        'Bay màu nhẹ, Dealer may mắn ván này thôi! 😅',
-        'Thua lần này, phục thù ván sau! 😤',
-        'Bài xấu thì chịu, không phải do bot! 💣'
+        'Bài tẩy giấu kỹ quá, Showdown ăn trọn Pot x4! 🏆💰',
+        'Flush/Straight kết nối quá đẹp, húp sạch Pot bàn này! ♠♦',
+        'Poker Master ra chiêu, các bot khác chỉ biết ngậm ngùi! 😎✨',
+        'GTLM về ví như thác đổ, ván sau tất tay tiếp! 🚀',
+        'Đọc bài chuẩn xác từng vòng, chiến thắng thuyết phục! 🃏'
     ];
 
-    function sendBotChat(type) {
+    const losePhrases = [
+        'River bẻ kèo hiểm thật, tạm thời bay màu nhẹ! 😅',
+        'Bot bạn cầm đôi to quá, ván sau phục thù gom lại Pot! 😤',
+        'Thua một ván không sao, quản lý vốn tốt là đường dài thắng lớn! 💪',
+        'Gặp bad beat nhẹ, ván sau bắt bài gom lại cả vốn lẫn lời! 🎯'
+    ];
+
+    const streetPhrases = {
+        'flop': [
+            'Flop kết nối ổn áp, check xem Turn thế nào! 👀',
+            'Flop có cửa bắt sảnh, theo tiếp không bỏ! 🃏'
+        ],
+        'turn': [
+            'Turn xuất hiện đúng lá bài mong đợi, tự tin theo! 🔥',
+            'Bài đang mạnh dần lên, giữ vững thế trận! 💰'
+        ],
+        'river': [
+            'River chốt hạ rồi, sẵn sàng mở bài Showdown! ⚡',
+            'Đến River là không ngán ai, lật bài nào anh em! 🏆'
+        ]
+    };
+
+    function sendBotChat(type, street = '') {
         const now = Date.now();
-        if (now - lastChatTime < 12000) return;
-        if (Math.random() > 0.55) return;
-        let list = type === 'win' ? winPhrases : (type === 'draw' ? drawPhrases : losePhrases);
+        if (now - lastChatTime < 14000) return;
+        if (Math.random() > 0.5) return;
+
+        let list = [];
+        if (type === 'win') list = winPhrases;
+        else if (type === 'lose') list = losePhrases;
+        else if (type === 'street' && streetPhrases[street]) list = streetPhrases[street];
+        else list = winPhrases;
+
         const msg = list[Math.floor(Math.random() * list.length)];
         if (typeof BotChat !== 'undefined' && BotChat.send) {
             BotChat.send(42, 'bot_42', msg);
@@ -151,165 +133,159 @@
     }
 
     // ═══════════════════════════════════════════════════════
-    // GIAI ĐOẠN 1: BETTING
+    // GIAI ĐOẠN 1: CHỌN MỨC CƯỢC & BẤM KHAI CUỘC
     // ═══════════════════════════════════════════════════════
-    function doBetting() {
-        const dealBtn = document.getElementById('deal-btn');
-        if (!dealBtn || dealBtn.disabled) return;
+    function doStart() {
+        const btnStart = document.getElementById('btn-start');
+        if (!btnStart || btnStart.disabled) return;
 
-        setBusy(true);
+        setBusy(true, 3000);
+        currentRoundActionCount = 0;
 
-        // Chọn chip ngẫu nhiên (10K-100K, không bet MAX)
-        const chips = Array.from(document.querySelectorAll('.chip-selector .chip'));
-        const safeChips = chips.filter(c => {
-            const v = c.getAttribute('data-value');
-            return v && v !== 'allin' && parseInt(v) <= 100000;
-        });
-        const targetChip = safeChips.length > 0
-            ? safeChips[Math.floor(Math.random() * safeChips.length)]
-            : chips[0];
+        // 1. Quản lý vốn thông minh (Smart Bankroll):
+        // Chọn chip theo chuỗi thắng / thua
+        let targetValue = 10000;
+        if (winStreak >= 3) {
+            targetValue = 500000; // Đang trên đà hưng phấn -> Đánh lớn 500K
+        } else if (winStreak >= 2) {
+            targetValue = 100000; // Thắng 2 ván liên tiếp -> Đánh 100K
+        } else if (winStreak >= 1) {
+            targetValue = 50000;  // Thắng 1 ván -> Nâng lên 50K
+        } else {
+            targetValue = 10000;  // Cơ bản an toàn 10K
+        }
 
+        const chips = Array.from(document.querySelectorAll('#start-controls .chip'));
+        let targetChip = chips.find(c => parseInt(c.getAttribute('data-value') || '0') === targetValue);
+        if (!targetChip) {
+            targetChip = chips.find(c => {
+                const v = parseInt(c.getAttribute('data-value') || '0');
+                return v > 0 && v <= 100000;
+            }) || chips[0];
+        }
+
+        // Chọn chip với con trỏ ảo mượt mà
         if (targetChip) {
             BotVirtualCursor.moveToElement($(targetChip), 0.4, 0, () => {
                 setTimeout(() => {
                     BotVirtualCursor.simulateClick(() => {
                         try { targetChip.click(); } catch (e) { }
 
-                        // Bấm CHIA BÀI
+                        // Di chuyển tiếp đến nút KHAI CUỘC
                         setTimeout(() => {
-                            BotVirtualCursor.moveToElement($(dealBtn), 0.5, 0, () => {
+                            BotVirtualCursor.moveToElement($(btnStart), 0.45, 0, () => {
                                 setTimeout(() => {
                                     BotVirtualCursor.simulateClick(() => {
-                                        try { dealBtn.click(); } catch (e) { }
-                                        setTimeout(() => { setBusy(false); }, 800);
+                                        try { btnStart.click(); } catch (e) { }
+                                        setTimeout(() => { setBusy(false); }, 600);
                                     });
-                                }, 100);
+                                }, 80);
                             });
                         }, 200);
                     });
                 }, 80);
             });
         } else {
-            // Trực tiếp bấm CHIA BÀI
-            BotVirtualCursor.moveToElement($(dealBtn), 0.5, 0, () => {
+            // Nhấp thẳng KHAI CUỘC
+            BotVirtualCursor.moveToElement($(btnStart), 0.45, 0, () => {
                 setTimeout(() => {
                     BotVirtualCursor.simulateClick(() => {
-                        try { dealBtn.click(); } catch (e) { }
-                        setTimeout(() => { setBusy(false); }, 800);
-                    });
-                }, 100);
-            });
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════
-    // GIAI ĐOẠN 2: SPLITTING (Chọn 2 lá thấp)
-    // ═══════════════════════════════════════════════════════
-    function doSplitting() {
-        const submitBtn = document.getElementById('submit-btn');
-        if (!submitBtn) return;
-
-        // Kiểm tra xem đã chọn 2 lá chưa (có .selected)
-        const selectedCards = document.querySelectorAll('#player-hand .card.selected');
-        if (selectedCards.length === 2) {
-            // Đã có 2 lá được chọn → bấm XÁC NHẬN
-            setBusy(true);
-            BotVirtualCursor.moveToElement($(submitBtn), 0.5, 0, () => {
-                setTimeout(() => {
-                    BotVirtualCursor.simulateClick(() => {
-                        try { submitBtn.click(); } catch (e) { }
-                        setTimeout(() => { setBusy(false); }, 1000);
-                    });
-                }, 100);
-            });
-            return;
-        }
-
-        // Chưa chọn → tính tay thấp tối ưu
-        const result = chooseLowHandIndices();
-        if (!result || result.lowIndices.length < 2) return;
-
-        setBusy(true);
-
-        // Tìm 2 card element cần click
-        const allCards = Array.from(document.querySelectorAll('#player-hand .card'));
-        const toClick = allCards.filter(el => {
-            const idx = parseInt(el.getAttribute('data-index') ?? -1);
-            return result.lowIndices.includes(idx);
-        });
-
-        if (toClick.length < 2) {
-            // Fallback: click 2 lá đầu tiên
-            setBusy(false);
-            return;
-        }
-
-        // Click lá 1
-        BotVirtualCursor.moveToElement($(toClick[0]), 0.45, 0, () => {
-            setTimeout(() => {
-                BotVirtualCursor.simulateClick(() => {
-                    try { toClick[0].click(); } catch (e) { }
-
-                    // Click lá 2
-                    setTimeout(() => {
-                        BotVirtualCursor.moveToElement($(toClick[1]), 0.45, 0, () => {
-                            setTimeout(() => {
-                                BotVirtualCursor.simulateClick(() => {
-                                    try { toClick[1].click(); } catch (e) { }
-                                    setBusy(false); // Cho phép vòng tiếp theo click Submit
-                                });
-                            }, 100);
-                        });
-                    }, 250);
-                });
-            }, 100);
-        });
-    }
-
-    // ═══════════════════════════════════════════════════════
-    // GIAI ĐOẠN 3: RESULT → Bấm VÁN MỚI
-    // ═══════════════════════════════════════════════════════
-    function doResult() {
-        const resetBtn = document.getElementById('reset-btn');
-        if (!resetBtn) return;
-
-        setBusy(true);
-
-        // Đọc kết quả từ SweetAlert2 hoặc DOM nếu có
-        const swalTitle = document.querySelector('.swal2-title');
-        if (swalTitle) {
-            const t = swalTitle.textContent.toLowerCase();
-            if (t.includes('thắng')) { winStreak++; lossStreak = 0; sendBotChat('win'); }
-            else if (t.includes('hòa')) { sendBotChat('draw'); }
-            else { lossStreak++; winStreak = 0; sendBotChat('lose'); }
-        }
-
-        setTimeout(() => {
-            BotVirtualCursor.moveToElement($(resetBtn), 0.5, 0, () => {
-                setTimeout(() => {
-                    BotVirtualCursor.simulateClick(() => {
-                        try { resetBtn.click(); } catch (e) { }
+                        try { btnStart.click(); } catch (e) { }
                         setTimeout(() => { setBusy(false); }, 600);
                     });
-                }, 100);
+                }, 80);
             });
-        }, 1200); // Chờ 1.2s cho user xem kết quả rồi mới reset
+        }
     }
 
     // ═══════════════════════════════════════════════════════
-    // VÒNG LẶP CHÍNH
+    // GIAI ĐOẠN 2: CHƠI VÒNG CƯỢC (THEO / CALL / CHECK)
+    // ═══════════════════════════════════════════════════════
+    function doPlay() {
+        const btnCall = document.getElementById('btn-call');
+        if (!btnCall || btnCall.disabled) return;
+
+        setBusy(true, 3500);
+        currentRoundActionCount++;
+
+        const currentStreet = getCurrentStreet();
+
+        // Chat ngẫu nhiên tạo tương tác chân thực
+        if (Math.random() < 0.25) {
+            sendBotChat('street', currentStreet);
+        }
+
+        // Tính thời gian suy nghĩ tự nhiên theo từng vòng bài
+        let thinkMs = 400;
+        if (currentStreet === 'pre-flop') thinkMs = 350 + Math.random() * 250;
+        else if (currentStreet === 'flop') thinkMs = 450 + Math.random() * 300;
+        else if (currentStreet === 'turn') thinkMs = 500 + Math.random() * 350;
+        else if (currentStreet === 'river') thinkMs = 600 + Math.random() * 400;
+
+        setTimeout(() => {
+            // Tái kiểm tra nút Call trước khi click
+            if (!btnCall || btnCall.disabled) {
+                setBusy(false);
+                return;
+            }
+
+            BotVirtualCursor.moveToElement($(btnCall), 0.4, 0, () => {
+                setTimeout(() => {
+                    BotVirtualCursor.simulateClick(() => {
+                        try { btnCall.click(); } catch (e) { }
+                        // Chờ server phản hồi xong mới mở khóa
+                        setTimeout(() => { setBusy(false); }, 800);
+                    });
+                }, 80);
+            });
+        }, thinkMs);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // THEO DÕI KẾT QUẢ SHOWDOWN
+    // ═══════════════════════════════════════════════════════
+    function setupResultWatcher() {
+        const statusBox = document.getElementById('status-box');
+        if (!statusBox) return;
+
+        const observer = new MutationObserver(() => {
+            const txt = (statusBox.textContent || '').trim();
+            if (!txt || txt === lastProcessedState) return;
+            lastProcessedState = txt;
+
+            if (txt.includes('CHIẾN THẮNG')) {
+                winStreak++;
+                lossStreak = 0;
+                sendBotChat('win');
+            } else if (txt.includes('THẤT BẠI')) {
+                lossStreak++;
+                winStreak = 0;
+                sendBotChat('lose');
+            }
+        });
+
+        observer.observe(statusBox, { childList: true, subtree: true, characterData: true });
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // VÒNG LẶP CHÍNH (Game Loop)
     // ═══════════════════════════════════════════════════════
     function playTurn() {
         if (botIsBusy) return;
 
         const state = detectState();
-        if (state === STATE.BETTING) doBetting();
-        else if (state === STATE.SPLITTING) doSplitting();
-        else if (state === STATE.RESULT) doResult();
+        if (state === STATE.START) {
+            doStart();
+        } else if (state === STATE.PLAY) {
+            doPlay();
+        }
     }
 
-    // Khởi động - mỗi 800ms
-    setInterval(playTurn, 800);
-    setTimeout(playTurn, 1200);
+    // Khởi tạo
+    setupResultWatcher();
+
+    // Tần suất quét nhịp nhàng mỗi 700ms
+    setInterval(playTurn, 700);
+    setTimeout(playTurn, 1000);
 
 })();

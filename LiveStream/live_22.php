@@ -5,1453 +5,558 @@ require_once __DIR__ . '/../db_connect.php';
 
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
-$botUser = getOrCreateBotStreamerUser($conn, 'bot_22', 50000000);
+$botUser = getOrCreateBotStreamerUser($conn, 'bot_22', 5000000000);
 $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
-
-// AJAX history endpoint
-$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
-
-if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_history') {
-    header('Content-Type: application/json; charset=utf-8');
-    
-    $id = $botUserId ?? 0;
-    $sql = "SELECT * FROM history_duangua WHERE Iduser = ? ORDER BY Time DESC LIMIT 20";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    $history = [];
-    while ($row = $result->fetch_assoc()) {
-        $history[] = $row;
-    }
-    $stmt->close();
-    
-    echo json_encode([
-        'success' => true,
-        'history' => $history
-    ], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
-$userId = $botUserId;
-
-/* ══════════════════════════════════════════════
-   AJAX endpoint — POST + X-Requested-With header
-══════════════════════════════════════════════ */
-if (
-    !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
-    strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest' &&
-    $_SERVER['REQUEST_METHOD'] === 'POST'
-) {
-    header('Content-Type: application/json; charset=utf-8');
-
-    $betAnimal = (int) ($_POST['animal'] ?? 0);
-    $betAmount = (int) ($_POST['amount'] ?? 0);
-    $animalNames = ["Chó", "Mèo", "Sư Tử", "Khỉ", "Ngựa Vằn", "Hổ", "Cáo", "Thỏ"];
-
-    // Lấy Số Gtlm
-    $q = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
-    $q->bind_param("i", $userId);
-    $q->execute();
-    $row = $q->get_result()->fetch_assoc();
-
-
-// Get statistics from database for chart
-$gameThang = 0;
-$gameThua = 0;
-$sqlStats = "SELECT COUNT(*) as total, SUM(CASE WHEN WinAmount > 0 THEN 1 ELSE 0 END) as wins FROM history_duangua WHERE Iduser = ?";
-$stmtStats = $conn->prepare($sqlStats);
-$stmtStats->bind_param("i", $userId);
-$stmtStats->execute();
-$resultStats = $stmtStats->get_result();
-if ($rowStats = $resultStats->fetch_assoc()) {
-    $gameThang = $rowStats['wins'] ?? 0;
-    $gameThua = ($rowStats['total'] ?? 0) - $gameThang;
-}
-$stmtStats->close();
-
-    $q->close();
-    $currentMoney = (float) $row['Money'];
-
-    if ($betAnimal < 1 || $betAnimal > 8 || $betAmount <= 0) {
-        echo json_encode(['ok' => false, 'msg' => '❌ Dữ liệu ra chiêu không hợp lệ!']);
-        exit;
-    }
-    if ($betAmount > $currentMoney) {
-        echo json_encode(['ok' => false, 'msg' => '⚠️ Số Gtlm không đủ để bay lắc!']);
-        exit;
-    }
-
-    // Kết quả
-    $winnerIdx = rand(0, 7); // 0-based
-    $isWin = ($betAnimal - 1) === $winnerIdx;
-    $reward = $isWin ? $betAmount * 7 : 0;
-    $newMoney = $isWin ? $currentMoney + $reward : $currentMoney - $betAmount;
-
-    // Vị trí % cuối cho từng con
-    // FIX PHP6403: thay lcg_value() bằng mt_rand()/mt_getrandmax() (tương thích PHP 8.4)
-    $positions = [];
-    for ($i = 0; $i < 8; $i++) {
-        $positions[] = ($i === $winnerIdx)
-            ? 92
-            : round(22 + (mt_rand() / mt_getrandmax()) * 58, 1);
-    }
-
-    // Lưu DB
-    $upd = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
-    $upd->bind_param("di", $newMoney, $userId);
-    $upd->execute();
-    $upd->close();
-
-    require_once '../game_history_helper.php';
-    logGameHistoryWithAll($conn, $userId, 'Đua Thú', $betAmount, $reward, $isWin);
-
-    $his = $conn->prepare("INSERT INTO history_duangua (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-    if ($his) {
-        $resultStr = "Chọn " . $animalNames[$betAnimal - 1] . " → Ra " . $animalNames[$winnerIdx];
-        $his->bind_param("iisi", $userId, $betAmount, $resultStr, $reward);
-        $his->execute();
-        $his->close();
-    }
-
-    echo json_encode([
-        'ok' => true,
-        'winner' => $winnerIdx,
-        'betIdx' => $betAnimal - 1,
-        'isWin' => $isWin,
-        'reward' => $reward,
-        'betAmount' => $betAmount,
-        'newMoney' => $newMoney,
-        'positions' => $positions,
-        'winnerName' => $animalNames[$winnerIdx],
-        'betName' => $animalNames[$betAnimal - 1],
-        'msg' => $isWin
-            ? "🎉 Con " . $animalNames[$winnerIdx] . " về đích! Bạn húp " . number_format($reward) . " gtlm!"
-            : "😢 Con " . $animalNames[$winnerIdx] . " về đích! Bạn cháy " . number_format($betAmount) . " gtlm.",
-    ]);
-    exit;
-}
-
 require_once '../load_theme.php';
 
 
-/* ══════════════════════════════════════════════
-   Trang bình thường
-══════════════════════════════════════════════ */
-$ud = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
-$ud->bind_param("i", $userId);
-$ud->execute();
-$user = $ud->get_result()->fetch_assoc();
-$ud->close();
 
-$currentMoney = $user['Money'];
-$userName = $user['Name'];
-$animalNames = ["Chó", "Mèo", "Sư Tử", "Khỉ", "Ngựa Vằn", "Hổ", "Cáo", "Thỏ"];
-$animalEmojis = ["🐶", "🐱", "🦁", "🐵", "🦓", "🐯", "🦊", "🐰"];
+
+$userId = $botUserId;
+
+$stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$user = $stmt->get_result()->fetch_assoc();
+$money = $user['Money'];
+$stmt->close();
+
+if (isset($_GET['action'])) {
+    header('Content-Type: application/json');
+    $action = $_GET['action'];
+
+    if ($action === 'play') {
+        $bet1 = (int) ($_POST['bet1'] ?? 0);
+        $bet2 = (int) ($_POST['bet2'] ?? 0);
+        $bet3 = (int) ($_POST['bet3'] ?? 0);
+        $bet4 = (int) ($_POST['bet4'] ?? 0);
+        $totalBet = $bet1 + $bet2 + $bet3 + $bet4;
+
+        if ($totalBet <= 0 || $totalBet > $money) {
+            echo json_encode(['success' => false, 'message' => 'Cược không hợp lệ!']);
+            exit;
+        }
+
+        $beadsCount = rand(40, 60);
+        $remainder = $beadsCount % 4;
+        if ($remainder === 0)
+            $remainder = 4;
+
+        $winAmount = -$totalBet;
+        if ($remainder === 1)
+            $winAmount += $bet1 * 3.85;
+        elseif ($remainder === 2)
+            $winAmount += $bet2 * 3.85;
+        elseif ($remainder === 3)
+            $winAmount += $bet3 * 3.85;
+        elseif ($remainder === 4)
+            $winAmount += $bet4 * 3.85;
+
+        $newMoney = $money + $winAmount;
+        $stmt = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
+        $stmt->bind_param("di", $newMoney, $userId);
+        $stmt->execute();
+        $stmt->close();
+
+        // History
+        $his = $conn->prepare("INSERT INTO history_fantan (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
+        $resStr = "Kết quả: $remainder (Tổng hạt: $beadsCount)";
+        $his->bind_param("idss", $userId, $totalBet, $resStr, $winAmount);
+        $his->execute();
+        $his->close();
+
+        // Tích hợp hệ thống Nhiệm vụ Sự kiện, Battle Pass, XP, v.v.
+        require_once '../game_history_helper.php';
+        logGameHistoryWithAll($conn, $userId, 'Fan-Tan', $totalBet, $winAmount > 0 ? $winAmount + $totalBet : 0, $winAmount > 0);
+
+        echo json_encode([
+            'success' => true,
+            'beadsCount' => $beadsCount,
+            'remainder' => $remainder,
+            'winAmount' => $winAmount,
+            'money' => number_format($newMoney, 0, ',', '.'),
+            'rawMoney' => $newMoney
+        ]);
+        exit;
+    } elseif ($action === 'get_history') {
+        $stmt = $conn->prepare("SELECT Bet, Result, WinAmount, Time FROM history_fantan WHERE Iduser = ? ORDER BY Time DESC LIMIT 10");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $res = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        echo json_encode(['success' => true, 'history' => $res]);
+        exit;
+    }
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="vi">
 
 <head>
     <meta charset="UTF-8">
+    <title>Fan-Tan - Nét Đẹp Truyền Thống</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🐎 Đua Thú</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Exo+2:wght@300;400;700;900&display=swap"
-        rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0
+        :root {
+            --primary: #818cf8;
+            --secondary: #6ee7b7;
+            --danger: #ef4444;
+            --accent: #fbbf24;
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
         }
 
-        :root {
-            --gold: #f5c842;
-            --gold-glow: rgba(245, 200, 66, .38);
-            --gold-dim: rgba(245, 200, 66, .12);
-            --win: #00e676;
-            --lose: #ff5566;
-            --surface: rgba(8, 8, 24, .80);
-            --surface-lite: rgba(255, 255, 255, .055);
-            --border: rgba(255, 255, 255, .10);
-            --border-gold: rgba(245, 200, 66, .30);
-            --r-card: 22px;
-            --font: 'Exo 2', sans-serif;
-            --font-head: 'Rajdhani', sans-serif;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
 
         body {
-            font-family: var(--font);
             background:
                 <?= $bgGradientCSS ?>
             ;
             background-attachment: fixed;
+            color: #fff;
+            font-family: 'Exo 2', system-ui, sans-serif;
             min-height: 100vh;
+            overflow-x: hidden;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
-            padding: 16px 16px 20px; /* Reduced padding */
-            overflow-x: hidden;
         }
 
-        /* ── Three.js + Particles ── */
         #threejs-background {
             position: fixed;
-            inset: 0;
-            z-index: 0;
-            pointer-events: none
-        }
-
-        #particles-bg {
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            z-index: 1;
-            overflow: hidden
-        }
-
-        .ambient-dot {
-            position: absolute;
-            border-radius: 50%;
-            animation: floatUp linear infinite;
-            opacity: 0
-        }
-
-        @keyframes floatUp {
-            0% {
-                transform: translateY(100vh) scale(0);
-                opacity: 0
-            }
-
-            10% {
-                opacity: .9
-            }
-
-            90% {
-                opacity: .4
-            }
-
-            100% {
-                transform: translateY(-10vh) scale(1.5);
-                opacity: 0
-            }
-        }
-
-        /* ── Overlays ── */
-        #fireworks-canvas {
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            z-index: 9999
-        }
-
-        .screen-flash {
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            z-index: 9998;
-            opacity: 0;
-            animation: flashOut .7s ease-out forwards
-        }
-
-        .screen-flash.win {
-            background: radial-gradient(ellipse at center, rgba(0, 230, 118, .18) 0%, transparent 65%)
-        }
-
-        .screen-flash.lose {
-            background: radial-gradient(ellipse at center, rgba(255, 61, 87, .14) 0%, transparent 65%)
-        }
-
-        @keyframes flashOut {
-            0% {
-                opacity: 0
-            }
-
-            20% {
-                opacity: 1
-            }
-
-            100% {
-                opacity: 0
-            }
-        }
-
-        .float-reward {
-            position: fixed;
-            font-family: var(--font-head);
-            font-size: 2.6rem;
-            font-weight: 900;
-            color: var(--gold);
-            text-shadow: 0 0 30px rgba(245, 200, 66, .8);
-            pointer-events: none;
-            z-index: 10000;
-            animation: fUp 2.2s cubic-bezier(.16, 1, .3, 1) forwards;
-        }
-
-        @keyframes fUp {
-            0% {
-                opacity: 0;
-                transform: translateY(0) scale(.5)
-            }
-
-            15% {
-                opacity: 1;
-                transform: translateY(-22px) scale(1.15)
-            }
-
-            80% {
-                opacity: .9;
-                transform: translateY(-95px) scale(1)
-            }
-
-            100% {
-                opacity: 0;
-                transform: translateY(-125px) scale(.85)
-            }
-        }
-
-        /* ── Card ── */
-        .game-card {
-            position: relative;
-            z-index: 2;
-            width: 100%;
-            max-width: 840px;
-            background: var(--surface);
-            backdrop-filter: blur(28px) saturate(1.4);
-            -webkit-backdrop-filter: blur(28px) saturate(1.4);
-            border: 1px solid var(--border);
-            border-radius: var(--r-card);
-            box-shadow: 0 0 0 1px rgba(255, 255, 255, .04) inset, 0 24px 80px rgba(0, 0, 0, .6), 0 0 80px rgba(245, 200, 66, .04);
-            padding: 24px 30px 20px; /* Reduced padding */
-            text-align: center;
-            animation: cardIn .65s cubic-bezier(.16, 1, .3, 1) both;
-            transform: scale(0.65); /* Scale down more for stream view */
-            transform-origin: top center;
-            margin-bottom: -250px; /* Adjust spacing after scaling */
-        }
-
-        @keyframes cardIn {
-            from {
-                opacity: 0;
-                transform: translateY(36px) scale(.97)
-            }
-
-            to {
-                opacity: 1;
-                transform: none
-            }
-        }
-
-        .game-card::before {
-            content: '';
-            position: absolute;
             top: 0;
-            left: 12%;
-            right: 12%;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--gold), transparent);
-            animation: shimmer 3.5s ease-in-out infinite;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
         }
 
-        @keyframes shimmer {
-
-            0%,
-            100% {
-                opacity: .2;
-                left: 18%;
-                right: 18%
-            }
-
-            50% {
-                opacity: .9;
-                left: 6%;
-                right: 6%
-            }
+        .main-container {
+            position: relative;
+            z-index: 1;
+            width: 95%;
+            max-width: 1000px;
+            margin: 0 auto;
+            text-align: center;
+            transform: scale(0.65);
+            transform-origin: top center;
         }
 
-        /* ── Header ── */
         .game-title {
-            font-family: var(--font-head);
-            font-size: 2.2rem;
-            font-weight: 700;
-            letter-spacing: 4px;
+            font-size: clamp(2.5rem, 8vw, 4.5rem);
+            font-weight: 900;
+            color: var(--primary);
+            text-shadow: 0 0 30px rgba(129, 140, 248, 0.4);
+            margin-bottom: 0.5rem;
             text-transform: uppercase;
-            color: var(--gold);
-            animation: titlePulse 4s ease-in-out infinite;
-            margin-bottom: 4px;
+            letter-spacing: 15px;
         }
 
-        @keyframes titlePulse {
-
-            0%,
-            100% {
-                text-shadow: 0 0 18px var(--gold-glow)
-            }
-
-            50% {
-                text-shadow: 0 0 44px rgba(245, 200, 66, .75)
-            }
-        }
-
-        .game-sub {
-            font-size: .75rem;
-            letter-spacing: 4px;
-            text-transform: uppercase;
-            color: rgba(255, 255, 255, .3);
-            margin-bottom: 8px
-        }
-
-        .welcome {
-            font-size: .9rem;
-            color: rgba(255, 255, 255, .5);
-            margin-bottom: 18px
-        }
-
-        .welcome b {
-            color: var(--gold)
-        }
-
-        /* ── Balance ── */
-        .balance-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: var(--gold-dim);
-            border: 1px solid var(--border-gold);
-            border-radius: 50px;
-            padding: 9px 24px;
-            margin-bottom: 28px;
-            transition: box-shadow .3s;
-        }
-
-        .balance-pill:hover {
-            box-shadow: 0 0 24px var(--gold-glow)
-        }
-
-        .balance-amt {
-            font-family: var(--font-head);
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--gold);
-            letter-spacing: .5px
-        }
-
-        @keyframes balancePop {
-
-            0%,
-            100% {
-                transform: scale(1)
-            }
-
-            40% {
-                transform: scale(1.1);
-                box-shadow: 0 0 30px var(--gold-glow)
-            }
-        }
-
-        .balance-pill.pop {
-            animation: balancePop .45s ease-out
-        }
-
-        /* ── Form ── */
-        .form-row {
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            gap: 16px;
-            flex-wrap: wrap;
-            margin-bottom: 24px
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 7px
-        }
-
-        .s-label {
-            font-size: .68rem;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            color: rgba(255, 255, 255, .35);
-            text-align: left
-        }
-
-        .game-select,
-        .bet-input {
-            background: var(--surface-lite);
-            border: 1.5px solid var(--border);
-            border-radius: 13px;
-            color: #fff;
-            font-family: var(--font-head);
-            font-size: 1.05rem;
-            font-weight: 600;
-            padding: 12px 16px;
-            outline: none;
-            transition: border-color .2s, box-shadow .2s;
-        }
-
-        .game-select {
-            min-width: 180px;
-            padding-right: 36px;
-            appearance: none;
-            -webkit-appearance: none;
-            cursor: pointer
-        }
-
-        .game-select option {
-            background: #1a1a3a;
-            color: #fff
-        }
-
-        .select-wrap {
-            position: relative
-        }
-
-        .select-wrap::after {
-            content: '▾';
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--gold);
-            font-size: .85rem;
-            pointer-events: none
-        }
-
-        .bet-input {
-            width: 200px
-        }
-
-        .bet-input::placeholder {
-            color: rgba(255, 255, 255, .22);
-            font-weight: 400;
-            font-size: .9rem
-        }
-
-        .game-select:focus,
-        .bet-input:focus {
-            border-color: rgba(245, 200, 66, .55);
-            background: rgba(245, 200, 66, .05);
-            box-shadow: 0 0 0 3px rgba(245, 200, 66, .1)
-        }
-
-        .qbets {
-            display: flex;
-            gap: 5px;
-            margin-top: 4px
-        }
-
-        .qbtn {
-            background: rgba(245, 200, 66, .12);
-            border: 1px solid rgba(245, 200, 66, .28);
-            border-radius: 8px;
-            color: var(--gold);
-            font-size: .68rem;
-            font-weight: 700;
-            padding: 4px 9px;
-            cursor: pointer;
-            transition: background .2s, transform .15s;
-        }
-
-        .qbtn:hover {
-            background: rgba(245, 200, 66, .28);
-            transform: translateY(-1px)
-        }
-
-        /* ── Race button ── */
-        .race-btn {
-            padding: 14px 38px;
-            border-radius: 16px;
-            border: none;
+        .glass-card {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 3rem;
+            padding: clamp(1.5rem, 5vw, 3.5rem);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            margin-bottom: 2rem;
             position: relative;
             overflow: hidden;
-            background: linear-gradient(135deg, #f9d030 0%, #e09800 60%, #f9d030 100%);
-            background-size: 200% 100%;
-            color: #1c1000;
-            font-family: var(--font-head);
+        }
+
+        .balance-pill {
+            background: rgba(110, 231, 183, 0.1);
+            border: 1px solid var(--secondary);
+            padding: 0.8rem 2rem;
+            border-radius: 50px;
+            display: inline-block;
+            margin-bottom: 2rem;
+            color: var(--secondary);
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .beads-area {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-content: center;
+            gap: 8px;
+            max-width: 500px;
+            min-height: 200px;
+            margin: 0 auto 3rem;
+            padding: 2rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 2rem;
+            border: 1px solid var(--glass-border);
+        }
+
+        @keyframes dropBead {
+            0% { transform: translateY(-200px) scale(0.5); opacity: 0; }
+            60% { transform: translateY(15px) scale(1.1); opacity: 1; }
+            80% { transform: translateY(-5px) scale(0.95); }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+
+        .bead {
+            width: clamp(12px, 2vw, 18px);
+            aspect-ratio: 1;
+            background: var(--accent);
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.6);
+            animation: dropBead 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+        }
+
+        .bet-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .bet-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .bet-box:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-5px);
+        }
+
+        .bet-box.active {
+            border-color: var(--primary);
+            background: rgba(129, 140, 248, 0.15);
+            box-shadow: 0 0 20px rgba(129, 140, 248, 0.2);
+        }
+
+        .bet-label {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .bet-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.8rem;
+            color: #fff;
+            text-align: center;
+            padding: 0.5rem;
             font-size: 1.1rem;
             font-weight: 700;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            box-shadow: 0 4px 22px rgba(245, 200, 66, .28);
-            transition: transform .2s, box-shadow .2s, background-position .4s;
-            align-self: flex-end;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        .bet-input:focus {
+            border-color: var(--primary);
+        }
+
+        .btn-play {
+            background: linear-gradient(135deg, var(--primary) 0%, #4338ca 100%);
+            border: none;
+            padding: 1.2rem 5rem;
+            border-radius: 50px;
+            color: #fff;
+            font-size: 1.5rem;
+            font-weight: 900;
             cursor: pointer;
-        }
-
-        .race-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -120%;
-            width: 70%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .3), transparent);
-            transform: skewX(-15deg);
-            transition: left .5s ease;
-        }
-
-        .race-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 34px rgba(245, 200, 66, .45);
-            background-position: 100% 0
-        }
-
-        .race-btn:hover::before {
-            left: 130%
-        }
-
-        .race-btn:active {
-            transform: translateY(-1px) scale(.985)
-        }
-
-        .race-btn:disabled {
-            opacity: .5;
-            cursor: not-allowed;
-            transform: none !important;
-            box-shadow: none !important
-        }
-
-        /* ── Countdown ── */
-        .countdown-box {
-            font-family: var(--font-head);
-            font-size: 4rem;
-            font-weight: 700;
-            color: var(--gold);
-            text-shadow: 0 0 40px var(--gold-glow);
-            min-height: 90px;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-
-        @keyframes countPop {
-            from {
-                transform: scale(.3);
-                opacity: 0
-            }
-
-            to {
-                transform: scale(1);
-                opacity: 1
-            }
-        }
-
-        .countdown-box.pop {
-            animation: countPop .35s cubic-bezier(.34, 1.56, .64, 1)
-        }
-
-        /* ── Tracks ── */
-        .tracks {
-            margin: 10px 0 28px
-        }
-
-        .track {
-            position: relative;
-            width: 100%;
-            height: 68px;
-            margin: 8px 0;
-            background: rgba(255, 255, 255, .035);
-            border: 1px solid rgba(255, 255, 255, .07);
-            border-radius: 12px;
-            overflow: hidden;
-            transition: border-color .4s, background .4s, box-shadow .4s, opacity .4s, filter .4s;
-        }
-
-        .track::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: repeating-linear-gradient(90deg, transparent, transparent 44px, rgba(255, 255, 255, .022) 44px, rgba(255, 255, 255, .022) 45px);
-            pointer-events: none;
-        }
-
-        .track::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: transparent;
-            transition: background .5s;
-            pointer-events: none;
-            border-radius: 12px;
-            z-index: 1;
-        }
-
-        .track.win-track::after {
-            background: linear-gradient(90deg, transparent 30%, rgba(0, 230, 118, .09) 100%)
-        }
-
-        .track-flag {
-            position: absolute;
-            right: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 26px;
-            z-index: 5;
-            opacity: .35;
-            transition: opacity .4s, filter .4s;
-        }
-
-        .track.win-track .track-flag {
-            opacity: 1;
-            filter: drop-shadow(0 0 8px #00e676)
-        }
-
-        .track-label {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-family: var(--font-head);
-            font-size: .66rem;
-            font-weight: 700;
-            letter-spacing: 2px;
+            transition: all 0.3s;
             text-transform: uppercase;
-            color: rgba(255, 255, 255, .18);
-            z-index: 3;
-            white-space: nowrap;
-            pointer-events: none;
-            transition: color .4s;
+            letter-spacing: 4px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 10px 30px rgba(129, 140, 248, 0.4);
         }
 
-        .track.bet-track {
-            border-color: rgba(245, 200, 66, .35);
-            background: rgba(245, 200, 66, .045)
+        .btn-play:hover:not(:disabled) {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(129, 140, 248, 0.6);
         }
 
-        .track.bet-track .track-label {
-            color: rgba(245, 200, 66, .55)
+        .btn-play:disabled {
+            opacity: 0.5;
+            filter: grayscale(1);
+            cursor: not-allowed;
         }
 
-        .track.win-track {
-            border-color: rgba(0, 230, 118, .5);
-            background: rgba(0, 230, 118, .04);
-            box-shadow: 0 0 22px rgba(0, 230, 118, .1) inset, 0 0 10px rgba(0, 230, 118, .08)
+        .status-msg {
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            font-weight: 800;
+            color: var(--accent);
+            margin-bottom: 2rem;
+            min-height: 3rem;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
         }
 
-        .track.win-track .track-label {
-            color: rgba(0, 230, 118, .7)
+        .history-section {
+            background: var(--glass);
+            border-radius: 2.5rem;
+            padding: 2.5rem;
+            border: 1px solid var(--glass-border);
         }
 
-        .track.lose-track {
-            opacity: .45;
-            filter: grayscale(.35)
-        }
-
-        /* ── Animal ── */
-        .animal {
-            position: absolute;
-            top: 50%;
-            left: 10px;
-            transform: translateY(-50%);
-            font-size: 36px;
-            z-index: 6;
-            will-change: left;
-            filter: drop-shadow(2px 3px 5px rgba(0, 0, 0, .5));
-        }
-
-        .animal.state-idle {
-            animation: aIdle 2.2s ease-in-out infinite
-        }
-
-        .animal.state-race {
-            animation: aRace .30s ease-in-out infinite
-        }
-
-        .animal.state-winner {
-            animation: aWinner .65s ease-in-out infinite;
-            filter: drop-shadow(0 0 14px rgba(255, 215, 0, .9))
-        }
-
-        .animal.state-loser {
-            animation: none;
-            filter: grayscale(.6) opacity(.45)
-        }
-
-        @keyframes aIdle {
-
-            0%,
-            100% {
-                transform: translateY(-50%)
-            }
-
-            50% {
-                transform: translateY(calc(-50% - 4px))
-            }
-        }
-
-        @keyframes aRace {
-
-            0%,
-            100% {
-                transform: translateY(-50%) scaleX(1)
-            }
-
-            30% {
-                transform: translateY(calc(-50% - 9px)) scaleX(1.07)
-            }
-
-            70% {
-                transform: translateY(calc(-50% + 2px)) scaleX(.95)
-            }
-        }
-
-        @keyframes aWinner {
-
-            0%,
-            100% {
-                transform: translateY(-50%) scale(1) rotate(0)
-            }
-
-            25% {
-                transform: translateY(calc(-50% - 12px)) scale(1.2) rotate(-10deg)
-            }
-
-            75% {
-                transform: translateY(calc(-50% - 12px)) scale(1.2) rotate(10deg)
-            }
-        }
-
-        /* Dust */
-        .dust {
-            position: absolute;
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: rgba(255, 200, 80, .55);
-            pointer-events: none;
-            z-index: 4;
-            animation: dustFly .55s ease-out forwards;
-        }
-
-        @keyframes dustFly {
-            0% {
-                opacity: .85;
-                transform: scale(1) translateX(0) translateY(0)
-            }
-
-            100% {
-                opacity: 0;
-                transform: scale(2.2) translateX(-28px) translateY(-8px)
-            }
-        }
-
-        /* ── Result banner ── */
+        /* Result banner */
         .result-banner {
+            position: fixed;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
             border-radius: 15px;
             padding: 18px 26px;
-            font-family: var(--font-head);
-            font-size: 1.15rem;
-            font-weight: 600;
+            font-size: 1.5rem;
+            font-weight: 800;
             letter-spacing: .5px;
-            line-height: 1.5;
             display: none;
+            z-index: 1000;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-
         .result-banner.show {
             display: block;
-            animation: bannerIn .5s cubic-bezier(.16, 1, .3, 1) both
+            animation: bannerIn .5s cubic-bezier(.16, 1, .3, 1) forwards;
         }
-
         @keyframes bannerIn {
-            from {
-                opacity: 0;
-                transform: translateY(18px) scale(.95)
-            }
-
-            to {
-                opacity: 1;
-                transform: none
-            }
+            from { opacity: 0; transform: translate(-50%, -20px) scale(.95); }
+            to { opacity: 1; transform: translate(-50%, 20px) scale(1); }
         }
-
         .result-banner.win {
-            background: linear-gradient(135deg, rgba(0, 230, 118, .14), rgba(0, 200, 100, .06));
+            background: linear-gradient(135deg, rgba(0, 230, 118, .95), rgba(0, 200, 100, .95));
             border: 1px solid rgba(0, 230, 118, .4);
-            color: #00ff88;
-            box-shadow: 0 0 28px rgba(0, 230, 118, .12);
-            text-shadow: 0 0 18px rgba(0, 255, 136, .45);
-            margin-top: 20px;
+            color: #fff;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
         }
-
         .result-banner.lose {
-            background: linear-gradient(135deg, rgba(255, 61, 87, .11), rgba(200, 40, 60, .05));
+            background: linear-gradient(135deg, rgba(255, 61, 87, .95), rgba(200, 40, 60, .95));
             border: 1px solid rgba(255, 61, 87, .3);
-            color: #ff7080;
-            box-shadow: 0 0 20px rgba(255, 61, 87, .08);
-            margin-top: 20px;
+            color: #fff;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
         }
 
-        .result-banner.error {
-            background: rgba(255, 61, 87, .08);
-            border: 1px solid rgba(255, 61, 87, .25);
-            color: #ffaa80;
-            margin-top: 12px;
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
         }
 
-        /* ── Play again ── */
-        .play-again-btn {
-            display: none;
-            margin-top: 16px;
-            padding: 11px 32px;
-            border-radius: 12px;
-            border: 1.5px solid var(--border-gold);
-            background: var(--gold-dim);
-            color: var(--gold);
-            font-family: var(--font-head);
-            font-size: 1rem;
-            font-weight: 700;
-            letter-spacing: 2px;
+        .history-table th {
+            color: rgba(255, 255, 255, 0.4);
             text-transform: uppercase;
-            cursor: pointer;
-            transition: background .2s, box-shadow .2s, transform .2s;
+            font-size: 0.8rem;
+            padding: 1.2rem;
+            border-bottom: 2px solid var(--glass-border);
         }
 
-        .play-again-btn.show {
-            display: inline-block
+        .history-table td {
+            padding: 1.2rem;
+            border-bottom: 1px solid var(--glass-border);
+            font-weight: 600;
         }
 
-        .play-again-btn:hover {
-            background: rgba(245, 200, 66, .22);
-            box-shadow: 0 0 22px var(--gold-glow);
-            transform: translateY(-2px)
-        }
+        .quick-bet-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 30px; }
+        .quick-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #e2e8f0; padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+        .quick-btn:hover { background: rgba(255,255,255,0.15); transform: translateY(-2px); }
+        .quick-btn.active { background: #f59e0b; color: #fff; border-color: #f59e0b; }
 
-        /* ── Back link ── */
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            margin-top: 22px;
-            color: rgba(255, 255, 255, .27);
-            font-size: .73rem;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            text-decoration: none;
-            transition: color .2s;
-        }
-
-        .back-link:hover {
-            color: rgba(255, 255, 255, .65);
-            text-decoration: none
-        }
-
-        @media(max-width:560px) {
-            .game-card {
-                padding: 26px 14px 24px
+        @media (max-width: 600px) {
+            .bet-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
             }
 
-            .game-title {
-                font-size: 1.7rem
+            .bet-box {
+                padding: 1rem;
             }
 
-            .form-row {
-                flex-direction: column;
-                align-items: center
-            }
-
-            .game-select,
-            .bet-input {
-                width: 100%;
-                max-width: 280px;
-                min-width: unset
-            }
-
-            .race-btn {
-                width: 100%;
-                max-width: 280px;
-                align-self: center
-            }
-
-            .animal {
-                font-size: 28px
-            }
-
-            .track {
-                height: 58px
-            }
-
-            .countdown-box {
-                font-size: 3rem
+            .btn-play {
+                padding: 1rem 2rem;
+                font-size: 1.2rem;
             }
         }
-    
-        /* Statistics Container */
-        .stats-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .stat-item {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 15px;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-        
-        .stat-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
-        }
-        
-        .stat-item.wins {
-            border-left: 4px solid #4ade80;
-        }
-        
-        .stat-item.losses {
-            border-left: 4px solid #ff6b6b;
-        }
-        
-        .stat-item .label {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.6);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 8px;
-        }
-        
-        .stat-item .value {
-            font-size: 28px;
-            font-weight: 700;
-            color: #ffd700;
-        }
-        
-        .chart-box {
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .chart-box canvas {
-            margin-top: 20px;
-        }
-
     </style>
 </head>
 
 <body>
 
 
-    <div id="particles-bg"></div>
-    <canvas id="fireworks-canvas"></canvas>
-
-    <div class="game-card" id="gameCard">
-
-        <h1 class="game-title">🐎 Đua Thú</h1>
-        <p class="game-sub">Chọn đúng con vật · Thắng ×7</p>
-        <p class="welcome">Xin chào <b><?= htmlspecialchars($userName, ENT_QUOTES, 'UTF-8') ?></b></p>
-
-        <div class="balance-pill" id="balancePill">
-            <span>💰</span>
-            <span class="balance-amt" id="balanceAmt"><?= number_format($currentMoney, 0, ',', '.') ?> gtlm</span>
+    <div class="main-container">
+        <h1 class="game-title">FAN-TAN</h1>
+        <div class="balance-pill">💰 Số Gtlm: <span id="balance-val"><?= number_format($money, 0, ',', '.') ?></span>
+            gtlm
         </div>
 
-        <form id="raceForm">
-            <div class="form-row">
-                <div class="form-group">
-                    <span class="s-label">Chọn con vật</span>
-                    <div class="select-wrap">
-                        <select name="animal" class="game-select" id="animalSelect">
-                            <?php for ($i = 0; $i < 8; $i++): ?>
-                                <option value="<?= $i + 1 ?>"><?= $animalEmojis[$i] ?>     <?= $animalNames[$i] ?></option>
-                            <?php endfor; ?>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <span class="s-label">Số GTLM muốn Chiến</span>
-                    <input type="number" name="amount" id="betInput" class="bet-input" placeholder="Nhập số muốn Chiến…"
-                        value="10000" min="1" autocomplete="off">
-                    <div class="qbets">
-                        <button type="button" class="qbtn" onclick="qbet(10000)">10K GTLM</button>
-                        <button type="button" class="qbtn" onclick="qbet(50000)">50K GTLM</button>
-                        <button type="button" class="qbtn" onclick="qbet(100000)">100K GTLM</button>
-                <button type="button" class="qbtn" onclick="qbet(500000)">500K GTLM</button>
-                <button type="button" class="qbtn" onclick="qbet(1000000)">1M GTLM</button>
-                <button type="button" class="qbtn" onclick="qbet(2000000)">2M GTLM</button>
-                <button type="button" class="qbtn" onclick="qbet(5000000)">5M GTLM</button>
-                        <button type="button" class="qbtn" id="maxBtn" onclick="qbet(<?= $currentMoney ?>)">MAX</button>
-                    </div>
-                </div>
-                <button type="submit" class="race-btn" id="raceBtn">🏁 Bắt đầu đua</button>
+        <div class="glass-card">
+            <div id="beads-container" class="beads-area"></div>
+
+            <div id="status-text" class="status-msg">Đặt cược và cùng đếm hạt!</div>
+
+            <div class="quick-bet-grid">
+                <button class="quick-btn" onclick="setBet(10000, event)">10K</button>
+                <button class="quick-btn" onclick="setBet(50000, event)">50K</button>
+                <button class="quick-btn" onclick="setBet(100000, event)">100K</button>
+                <button class="quick-btn" onclick="setBet(500000, event)">500K</button>
+                <button class="quick-btn" onclick="setBet(1000000, event)">1M</button>
+                <button class="quick-btn" onclick="setBet(5000000, event)">5M</button>
+                <button class="quick-btn" onclick="setBet(<?= $money ?>, event)">ALL IN</button>
             </div>
-        </form>
 
-        <div class="countdown-box" id="countdownBox">3</div>
-
-        <div class="tracks" id="tracksContainer">
-            <?php for ($i = 0; $i < 8; $i++): ?>
-                <div class="track<?= $i === 0 ? ' bet-track' : '' ?>" id="track<?= $i ?>">
-                    <span class="track-label"><?= $animalNames[$i] ?></span>
-                    <div class="animal state-idle" id="animal<?= $i ?>"><?= $animalEmojis[$i] ?></div>
-                    <span class="track-flag">🏁</span>
+            <div class="bet-grid">
+                <div class="bet-box" onclick="$('#bet-1').focus()">
+                    <div class="bet-label">1</div>
+                    <input type="number" id="bet-1" class="bet-input" value="0" min="0">
                 </div>
-            <?php endfor; ?>
+                <div class="bet-box" onclick="$('#bet-2').focus()">
+                    <div class="bet-label">2</div>
+                    <input type="number" id="bet-2" class="bet-input" value="0" min="0">
+                </div>
+                <div class="bet-box" onclick="$('#bet-3').focus()">
+                    <div class="bet-label">3</div>
+                    <input type="number" id="bet-3" class="bet-input" value="0" min="0">
+                </div>
+                <div class="bet-box" onclick="$('#bet-4').focus()">
+                    <div class="bet-label">4</div>
+                    <input type="number" id="bet-4" class="bet-input" value="0" min="0">
+                </div>
+            </div>
+
+            <button id="play-btn" class="btn-play">MỞ BÁT (COUNT)</button>
         </div>
 
-        <div class="result-banner" id="resultBanner"></div>
-        <button class="play-again-btn" id="playAgainBtn" onclick="resetGame()">🔄 Chơi lại</button>
-
-        <a href="../index.php" class="back-link">← Quay lại trang chủ</a>
-
+        <div class="history-section" style="display: none;">
+            <h2 style="font-size: 1.2rem; letter-spacing: 2px; margin-bottom: 1rem;">LỊCH SỬ GẦN ĐÂY</h2>
+            <div style="overflow-x: auto;">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Thời gian</th>
+                            <th>gtlm cược</th>
+                            <th>Kết quả</th>
+                            <th>Thắng/Thua</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body"></tbody>
+                </table>
+            </div>
+        </div>
+        <div style="margin-top: 1rem; text-align: center;"><a href="../index.php"
+                style="color: var(--primary); text-decoration: none; font-weight: 700; border: 1px solid var(--primary); padding: 0.8rem 2.5rem; border-radius: 50px; transition: 0.3s; display: inline-block;">🏠
+                QUAY LẠI SẢNH</a></div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/confetti.browser.min.js"></script>
+
     <script>
-        /* ── Particles ─────────────────────────────────── */
-        (function () {
-            const bg = document.getElementById('particles-bg');
-            const pal = ['rgba(245,200,66,', 'rgba(120,180,255,', 'rgba(160,100,255,', 'rgba(80,230,160,'];
-            for (let i = 0; i < 22; i++) {
-                const d = document.createElement('div'), c = pal[i % pal.length], s = 3 + Math.random() * 5;
-                d.className = 'ambient-dot';
-                d.style.cssText = 'width:' + s + 'px;height:' + s + 'px;left:' + (Math.random() * 100) + '%;' +
-                    'background:' + c + (0.4 + Math.random() * 0.45) + ');' +
-                    'box-shadow:0 0 ' + (s * 2.5) + 'px ' + c + '0.55);' +
-                    'animation-duration:' + (7 + Math.random() * 12) + 's;' +
-                    'animation-delay:' + (Math.random() * 10) + 's;';
-                bg.appendChild(d);
-            }
-        })();
-
-        /* ── State ─────────────────────────────────────── */
-        let raceActive = false;
-        let currentMoney = <?= (int) $currentMoney ?>;
-
-        const RACE_DUR = 5200;   // ms tổng thời gian chạy
-        const SETTLE = 700;    // ms sau đích mới đổi animation
-        const REVEAL_LAG = 550;    // ms sau settle mới hiện kết quả
-        const DUST_MS = 160;    // ms spawn dust
-
-        /* ── Quick bet ──────────────────────────────────── */
-        function qbet(v) {
-            const inp = document.getElementById('betInput');
-            inp.value = v;
-            inp.style.borderColor = 'rgba(245,200,66,.7)';
-            inp.style.boxShadow = '0 0 0 3px rgba(245,200,66,.12)';
-            setTimeout(() => { inp.style.borderColor = ''; inp.style.boxShadow = ''; }, 600);
-        }
-
-        /* ── Highlight track on select change ───────────── */
-        function setHighlight(idx) {
-            document.querySelectorAll('.track').forEach((t, i) => t.classList.toggle('bet-track', i === idx && !raceActive));
-        }
-        document.getElementById('animalSelect').addEventListener('change', function () {
-            setHighlight(parseInt(this.value) - 1);
+        let lastFocused = '#bet-1';
+        $(document).ready(function() {
+            $('.bet-input').focus(function() {
+                lastFocused = '#' + $(this).attr('id');
+            });
         });
 
-        /* ── Form submit ────────────────────────────────── */
-        document.getElementById('raceForm').addEventListener('submit', async function (e) {
-            e.preventDefault();
-            if (raceActive) return;
-
-            const animal = parseInt(document.getElementById('animalSelect').value);
-            const amount = parseInt(document.getElementById('betInput').value) || 0;
-
-            if (amount < 1) { flashInput(document.getElementById('betInput')); return; }
-
-            raceActive = true;
-            lockForm(true);
-            clearResult();
-
-            /* 1. Countdown */
-            await countdown();
-
-            /* 2. Fetch result (server random + save DB) */
-            let data;
-            try {
-                const fd = new FormData();
-                fd.append('animal', animal);
-                fd.append('amount', amount);
-                const res = await fetch('live_22.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
-                data = await res.json();
-            } catch (err) {
-                showBanner('❌ Lỗi kết nối!', 'error');
-                lockForm(false); raceActive = false; return;
+        function setBet(amount, event) {
+            $(lastFocused).val(amount);
+            $('.quick-btn').removeClass('active');
+            if (event && event.target) {
+                event.target.classList.add('active');
             }
+        }
 
-            if (!data.ok) {
-                showBanner(data.msg, 'error');
-                lockForm(false); raceActive = false;
-                document.getElementById('playAgainBtn').classList.add('show');
+        $('#play-btn').click(function() {
+            const bet1 = parseInt($('#bet-1').val()) || 0;
+            const bet2 = parseInt($('#bet-2').val()) || 0;
+            const bet3 = parseInt($('#bet-3').val()) || 0;
+            const bet4 = parseInt($('#bet-4').val()) || 0;
+            
+            if (bet1 + bet2 + bet3 + bet4 <= 0) {
+                Swal.fire('Lỗi', 'Vui lòng đặt cược', 'warning');
                 return;
             }
 
-            /* 3. Race animation — khán giả không biết kết quả cho đến khi ngựa về đích */
-            await raceAnimation(data);
+            const btn = $(this);
+            btn.prop('disabled', true).text('ĐANG ĐẾM...');
+            $('#status-text').text('Đang đếm hạt...');
 
-            /* 4. Reveal kết quả */
-            await sleep(REVEAL_LAG);
-            revealResult(data);
+            $.post('?action=play', { bet1: bet1, bet2: bet2, bet3: bet3, bet4: bet4 }, function(res) {
+                if (res.success) {
+                    let beadsHtml = '';
+                    for(let i=0; i<res.beadsCount; i++) {
+                        let delay = Math.random() * 0.5;
+                        beadsHtml += `<div class="bead" style="animation-delay: ${delay}s;"></div>`;
+                    }
+                    $('#beads-container').html(beadsHtml);
 
-            raceActive = false;
+                    setTimeout(() => {
+                        $('#balance-val').text(res.money);
+                        let resultColor = res.winAmount > 0 ? '#4ade80' : '#ef4444';
+                        $('#status-text').html(`Kết quả: <span style="color: ${resultColor}; font-size: 2.2rem;">${res.remainder} hạt!</span>`);
+
+                        if (res.winAmount > 0) {
+                            showBanner('THẮNG LỚN! +' + new Intl.NumberFormat().format(res.winAmount) + ' GTLM', 'win');
+                            if (window.GameEffects) window.GameEffects.showWin(res.winAmount);
+                        } else {
+                            showBanner('RẤT TIẾC! BẠN ĐÃ THUA', 'lose');
+                            if (window.GameEffects) window.GameEffects.showLoss(Math.abs(res.winAmount));
+                        }
+                        
+                        loadHistory();
+                        btn.prop('disabled', false).text('MỞ BÁT (COUNT)');
+                    }, 1500);
+                } else {
+                    Swal.fire('Lỗi', res.message, 'error');
+                    btn.prop('disabled', false).text('MỞ BÁT (COUNT)');
+                    $('#status-text').text('Đặt cược và cùng đếm hạt!');
+                }
+            }, 'json').fail(function() {
+                Swal.fire('Lỗi', 'Lỗi kết nối', 'error');
+                btn.prop('disabled', false).text('MỞ BÁT (COUNT)');
+            });
         });
 
-        /* ── Countdown ──────────────────────────────────── */
-        function countdown() {
-            return new Promise(resolve => {
-                const box = document.getElementById('countdownBox');
-                box.style.display = 'flex';
-                let n = 3;
-                box.textContent = n; pop(box);
-
-                const iv = setInterval(() => {
-                    n--;
-                    if (n > 0) { box.textContent = n; pop(box); }
-                    else {
-                        box.textContent = '🏁 GO!'; pop(box);
-                        clearInterval(iv);
-                        setTimeout(() => { box.style.display = 'none'; resolve(); }, 450);
-                    }
-                }, 900);
-            });
-        }
-        function pop(el) { el.classList.remove('pop'); el.offsetHeight; el.classList.add('pop'); }
-
-        /* ── Race animation ─────────────────────────────── */
-        function raceAnimation(data) {
-            return new Promise(resolve => {
-
-                // Reset tất cả tracks + animals
-                for (let i = 0; i < 8; i++) {
-                    const a = document.getElementById('animal' + i);
-                    const t = document.getElementById('track' + i);
-                    a.style.transition = 'none';
-                    a.style.left = '10px';
-                    a.className = 'animal state-idle';
-                    t.classList.remove('bet-track', 'win-track', 'lose-track');
-                }
-
-                // Nhỏ xíu pause để reset render xong
-                setTimeout(() => {
-
-                    // Tất cả chuyển sang state-race
-                    for (let i = 0; i < 8; i++) {
-                        document.getElementById('animal' + i).className = 'animal state-race';
-                    }
-
-                    // Áp dụng transition + vị trí đích cho từng con
-                    setTimeout(() => {
-                        for (let i = 0; i < 8; i++) {
-                            const a = document.getElementById('animal' + i);
-                            const trackEl = document.getElementById('track' + i);
-                            const tw = trackEl.clientWidth;
-                            const pct = data.positions[i];
-                            const targetPx = Math.min((pct / 100) * tw - 42, tw - 70);
-
-                            // Winner: đường cong burst rồi brake đẹp
-                            // Others: tốc độ random, easing hơi khác nhau
-                            const dur = i === data.winner ? RACE_DUR : RACE_DUR * (0.68 + Math.random() * 0.30);
-                            const ease = i === data.winner
-                                ? 'cubic-bezier(0.15, 0.85, 0.25, 1.0)'
-                                : 'cubic-bezier(0.28, 0.60, 0.55, 0.92)';
-
-                            a.style.transition = `left ${dur}ms ${ease}`;
-                            a.style.left = Math.max(targetPx, 10) + 'px';
-                        }
-                    }, 60);
-
-                    // Dust liên tục từ vị trí winner
-                    const dustIv = setInterval(() => spawnDust(data.winner), DUST_MS);
-
-                    // Khi xong race
-                    setTimeout(() => {
-                        clearInterval(dustIv);
-
-                        for (let i = 0; i < 8; i++) {
-                            const a = document.getElementById('animal' + i);
-                            const t = document.getElementById('track' + i);
-                            if (i === data.winner) {
-                                a.className = 'animal state-winner';
-                                t.classList.add('win-track');
-                            } else {
-                                a.className = 'animal state-loser';
-                                t.classList.add('lose-track');
-                            }
-                        }
-                        resolve();
-                    }, RACE_DUR + SETTLE);
-
-                }, 80);
-            });
-        }
-
-        /* ── Dust particle ──────────────────────────────── */
-        function spawnDust(idx) {
-            const track = document.getElementById('track' + idx);
-            const animal = document.getElementById('animal' + idx);
-            if (!track || !animal) return;
-            const lx = parseFloat(animal.style.left) || 10;
-            for (let i = 0; i < 3; i++) {
-                const d = document.createElement('div');
-                d.className = 'dust';
-                d.style.left = (lx + 6 + Math.random() * 14) + 'px';
-                d.style.top = (18 + Math.random() * 30) + 'px';
-                d.style.animationDelay = (Math.random() * .12) + 's';
-                track.appendChild(d);
-                setTimeout(() => d.remove(), 650);
-            }
-        }
-
-        /* ── Reveal result ──────────────────────────────── */
-        function revealResult(data) {
-            // Cập nhật Số Gtlm
-            currentMoney = data.newMoney;
-            const amt = document.getElementById('balanceAmt');
-            amt.textContent = currentMoney.toLocaleString('vi-VN') + ' gtlm';
-            const pill = document.getElementById('balancePill');
-            pill.classList.remove('pop'); pill.offsetHeight; pill.classList.add('pop');
-
-            // Screen flash
-            const fl = document.createElement('div');
-            fl.className = 'screen-flash ' + (data.isWin ? 'win' : 'lose');
-            document.body.appendChild(fl);
-            setTimeout(() => fl.remove(), 900);
-
-            // Banner
-            showBanner(data.msg, data.isWin ? 'win' : 'lose');
-
-            // Kích hoạt hiệu ứng thắng/thua của GameEffects
-            if (data.isWin) {
-                if (window.GameEffects) window.GameEffects.showWin(data.reward);
-            } else {
-                if (window.GameEffects) window.GameEffects.showLoss(data.betAmount);
-            }
-
-            // Play again
-            document.getElementById('playAgainBtn').classList.add('show');
-
-            // MAX button update
-            document.getElementById('maxBtn').onclick = () => qbet(currentMoney);
-
-            // Win effects
-            if (data.isWin) {
-                launchFireworks();
-                spawnFloat('+' + data.reward.toLocaleString('vi-VN') + ' gtlm');
-            }
-
-            // Highlight win track
-            for (let i = 0; i < 8; i++) {
-                const t = document.getElementById('track' + i);
-                t.classList.remove('win-track', 'lose-track', 'bet-track');
-            }
-            const sel = parseInt(document.getElementById('animalSelect').value) - 1;
-            document.getElementById('track' + sel).classList.add('bet-track');
-            lockForm(false);
-        }
-
-        /* ── Reset ──────────────────────────────────────── */
-        function resetGame() {
-            clearResult();
-            for (let i = 0; i < 8; i++) {
-                const a = document.getElementById('animal' + i);
-                a.style.transition = 'none'; a.style.left = '10px';
-                a.className = 'animal state-idle';
-                const t = document.getElementById('track' + i);
-                t.classList.remove('win-track', 'lose-track', 'bet-track');
-            }
-            const sel = parseInt(document.getElementById('animalSelect').value) - 1;
-            document.getElementById('track' + sel).classList.add('bet-track');
-            lockForm(false);
-        }
-
-        /* ── Helpers ────────────────────────────────────── */
-        function clearResult() {
-            const b = document.getElementById('resultBanner');
-            b.className = 'result-banner'; b.textContent = '';
-            document.getElementById('playAgainBtn').classList.remove('show');
-        }
         function showBanner(msg, type) {
             const b = document.getElementById('resultBanner');
             b.className = 'result-banner ' + type + ' show';
-            b.textContent = msg;
+            b.innerHTML = msg;
+            setTimeout(() => { b.classList.remove('show'); }, 3000);
         }
-        function lockForm(locked) {
-            document.getElementById('raceBtn').disabled = locked;
-            document.getElementById('betInput').disabled = locked;
-            document.getElementById('animalSelect').disabled = locked;
-            document.getElementById('raceBtn').textContent = locked ? '⏳ Đang đua…' : '🏁 Bắt đầu đua';
-        }
-        function flashInput(el) {
-            el.style.borderColor = 'rgba(255,61,87,.7)';
-            el.style.boxShadow = '0 0 0 3px rgba(255,61,87,.15)';
-            el.focus();
-            setTimeout(() => { el.style.borderColor = ''; el.style.boxShadow = ''; }, 700);
-        }
-        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-        /* ── Fireworks ──────────────────────────────────── */
-        function launchFireworks() {
-            const cv = document.getElementById('fireworks-canvas');
-            const ctx = cv.getContext('2d');
-            cv.width = window.innerWidth; cv.height = window.innerHeight;
-            const pal = ['#f5c842', '#00e676', '#40c4ff', '#ea80fc', '#ff7043', '#fff'];
-            const pts = [];
-            function burst(x, y) {
-                for (let i = 0; i < 60; i++) {
-                    const a = (Math.PI * 2 * i) / 60, spd = 1.5 + Math.random() * 5;
-                    pts.push({
-                        x, y, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd - 1.5,
-                        life: 1, decay: .010 + Math.random() * .013,
-                        size: 2 + Math.random() * 3.5, color: pal[Math.floor(Math.random() * pal.length)], trail: []
+        function loadHistory() {
+            $.getJSON('fantan.php?action=get_history', function(res) {
+                if(res.success && res.history) {
+                    let html = '';
+                    res.history.forEach(h => {
+                        html += `<tr>
+                            <td>${h.Time}</td>
+                            <td>${parseInt(h.Bet).toLocaleString()}</td>
+                            <td>${h.Result}</td>
+                            <td style="color: ${h.WinAmount > 0 ? '#4ade80' : (h.WinAmount < 0 ? '#ef4444' : '#fff')}">${parseInt(h.WinAmount).toLocaleString()}</td>
+                        </tr>`;
                     });
+                    $('#history-body').html(html);
                 }
-            }
-            [[.28, .30], [.72, .25], [.50, .18], [.15, .50], [.85, .45]]
-                .forEach(([x, y], i) => setTimeout(() => burst(window.innerWidth * x, window.innerHeight * y), i * 175));
-            let raf;
-            function draw() {
-                ctx.fillStyle = 'rgba(0,0,0,.13)'; ctx.fillRect(0, 0, cv.width, cv.height);
-                for (let i = pts.length - 1; i >= 0; i--) {
-                    const p = pts[i];
-                    p.trail.push({ x: p.x, y: p.y });
-                    if (p.trail.length > 8) p.trail.shift();
-                    p.x += p.vx; p.y += p.vy; p.vy += .065; p.vx *= .99; p.life -= p.decay;
-                    if (p.life <= 0) { pts.splice(i, 1); continue; }
-                    for (let t = 0; t < p.trail.length; t++) {
-                        ctx.globalAlpha = (t / p.trail.length) * p.life * .4;
-                        ctx.fillStyle = p.color; ctx.beginPath();
-                        ctx.arc(p.trail[t].x, p.trail[t].y, p.size * (t / p.trail.length), 0, Math.PI * 2); ctx.fill();
-                    }
-                    ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
-                    ctx.shadowBlur = 8; ctx.shadowColor = p.color;
-                    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
-                    ctx.shadowBlur = 0;
-                }
-                ctx.globalAlpha = 1;
-                if (pts.length > 0) raf = requestAnimationFrame(draw);
-                else ctx.clearRect(0, 0, cv.width, cv.height);
-            }
-            draw();
-            setTimeout(() => { cancelAnimationFrame(raf); ctx.clearRect(0, 0, cv.width, cv.height); }, 6000);
+            });
         }
-
-        /* ── Float reward ───────────────────────────────── */
-        function spawnFloat(text) {
-            const el = document.createElement('div');
-            el.className = 'float-reward'; el.textContent = text;
-            const r = document.getElementById('gameCard').getBoundingClientRect();
-            el.style.left = (r.left + r.width / 2 - 110) + 'px';
-            el.style.top = (r.top + 80) + 'px';
-            document.body.appendChild(el);
-            setTimeout(() => el.remove(), 2500);
-        }
+        $(document).ready(loadHistory);
     </script>
 
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="../threejs-background.js"></script>
-    <script src="../assets/js/game-effects.js"></script>
+    <?php require_once '../casino_help.php'; ?>
 
 
 
@@ -1463,6 +568,32 @@ $animalEmojis = ["🐶", "🐱", "🦁", "🐵", "🦓", "🐯", "🦊", "🐰"]
 
 
 
+
+    <!-- Premium Effects System -->
+    <canvas id="threejs-background"></canvas>
+    <script>
+        (function () {
+            window.themeConfig = {
+                particleCount: <?= $particleCount ?? 800 ?>,
+                particleSize: <?= $particleSize ?? 0.05 ?>,
+                particleColor: '<?= $particleColor ?? "#ffffff" ?>',
+                particleOpacity: <?= $particleOpacity ?? 0.6 ?>,
+                shapeCount: <?= $shapeCount ?? 10 ?>,
+                shapeColors: <?= json_encode($shapeColors ?? ["#667eea", "#764ba2", "#4facfe", "#00f2fe"]) ?>,
+                shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>,
+                bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>
+            };
+            const prefix = (window.location.pathname.includes('/games/') || window.location.pathname.includes('/LiveStream/')) ? '../' : '';
+            const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
+
+            scripts.forEach(src => {
+                const s = document.createElement('script');
+                s.src = prefix + src;
+                s.async = false;
+                document.head.appendChild(s);
+            });
+        })();
+    </script>
 
 
 <!-- AUTO-GENERATED BOT SCRIPT -->
@@ -1474,3 +605,7 @@ if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.clou
 <script src="../assets/js/bot_chat.js"></script>
 <script src="bots/bot_22.js"></script>
 
+<div class="result-banner" id="resultBanner"></div>
+</body>
+
+</html>

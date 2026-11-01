@@ -1,86 +1,239 @@
 /**
- * 🚀 Bot Streamer Bàn 35: Cơ Trưởng Limbo 35 (Limbo Rocket) - AI SMART COMMANDER PRO
- * Chuẩn Modern Async/Await + Chuột Ảo Tương Tác Đa Điểm + AI Phân Tích Cầu Thích Nghi + Casino Rule 5.3
- * Tích hợp LiveStream Chat 24/7 đồng bộ qua BotChat
+ * 🎯 Bot Streamer Bàn 35: Thánh Soi Cầu Mini (Xổ Số Mini / Tài Xỉu Cân Cửa Số Học)
+ * - TURBO AI SOI CẦU ĐỈNH CAO: Bắt Cầu Bệt, Bẻ Cầu Bệt, Cầu Đảo 1-1, Bắt Số Hot
+ * - Phân tích Tài / Xỉu theo tổng điểm và chữ số đuôi của chuỗi số
+ * - Quản lý vốn cược thích ứng theo chuỗi thắng/thua (Streak Hunter / Bankroll Protection)
+ * - Chuột ảo Turbo Async 0.16s - 0.20s di chuyển & click dứt khoát
+ * - Triple-Layer Watchdog chống kẹt 24/7
+ * - Lời thoại chém gió chuẩn Casino Rule 5.3 cực cuốn
  */
 
 (function () {
     'use strict';
 
     if (typeof BotVirtualCursor === 'undefined') {
-        console.warn('[Bot 35] BotVirtualCursor chưa tải!');
+        console.warn('[Bot 35] BotVirtualCursor chưa sẵn sàng!');
         return;
     }
 
-    BotVirtualCursor.init('Cơ Trưởng Limbo 35 🚀');
+    BotVirtualCursor.init('Thánh Soi Cầu Mini 🎯🎲');
 
+    // ═══════════════════════════════════════════════════════
+    // TRẠNG THÁI & AI ENGINE COMMANDER
+    // ═══════════════════════════════════════════════════════
     let botIsBusy = false;
     let busyTimestamp = 0;
+    let lastChatTime = 0;
+    let lastKnownBalance = null;
+    let isSpinningState = false;
 
-    // AI Flight Commander Intelligence Engine
     const aiCommander = {
         consecutiveWins: 0,
         consecutiveLosses: 0,
-        recentCrashes: [], // Lưu trữ các điểm nổ gần nhất
-        currentStrategy: 'SAFE_GRIND', // 'SAFE_GRIND', 'STANDARD_DOUBLE', 'MOONSHOT', 'CRASH_SHIELD'
-        currentTarget: 2.00,
-        currentBetBtn: '#btnBet100k',
-        currentTargetBtn: '#btnTarget2x',
-        totalProfit: 0
+        streakCount: 0,
+        lastTrend: null,       // 'TAI' hoặc 'XIU'
+        currentStrategy: 'STREAK_HUNTER', // 'STREAK_HUNTER', 'BRIDGE_BREAKER', 'ALTERNATING', 'HOT_DIGIT'
+        historyNumbers: [],    // Danh sách 15 chuỗi số gần nhất
+        lastTargetNumber: '',
+        totalSpins: 0
     };
 
+    // ═══════════════════════════════════════════════════════
+    // BÌNH LUẬN CASINO CHUẨN RULE 5.3
+    // ═══════════════════════════════════════════════════════
     const CASINO_CHATS = {
-        crash_shield: [
-            "Cầu đang nén bệt nổ sớm liên tục! Kích hoạt chế độ Bảo Hộ Khí Tài: Hạ mục tiêu 1.30x (xác suất 76%) bảo toàn nick! 🛡️⚡",
-            "Động cơ quá nhiệt nổ sớm, không đu đỉnh cao! Giữ mục tiêu 1.30x an toàn hồi máu kéo lại vốn! 🔄💪",
-            "Quản trị rủi ro tối cao: Bẻ cầu ở mốc an toàn 1.30x, ra chiêu chắc tay đón lộc! 🎯💰"
+        streak_hunter: [
+            "Cầu bệt {trend} đang vào guồng cực mượt! Ra chiêu theo cầu bộ số {num} húp trọn GTLM! 🎯⚡",
+            "Cầu bệt {trend} tay thứ {streak} liên tiếp! Không bẻ khi cầu đang đẹp, khóa ngay dàn số {num}! 💎🔥",
+            "Theo chân cầu bệt {trend}: Dồn toàn lực vào bộ số may mắn {num} đón Jackpot về nick! 🚀💰",
+            "Bắt nhịp cầu bệt chuẩn sách giáo khoa, ván này tự tin húp đậm GTLM! 🌟💎"
         ],
-        safe_grind: [
-            "Khóa mục tiêu 1.50x (xác suất 66%), ra chiêu 100.000 GTLM làm nóng buồng đốt nào anh em! 🚀✨",
-            "Tích tiểu thành đại, giữ nhịp độ bay ổn định ở mốc 1.50x húp GTLM đều đều! 🛡️💎",
-            "Nhịp bay tầm thấp đang cực kỳ êm ái, gom lộc lá tích lũy ngân khố! 🌟💰"
+        bridge_breaker: [
+            "Cầu bệt {trend} đã chạy {streak} tay quá giới hạn! Tiếng bạc này tôi BẺ CẦU sang {newTrend} với số {num}! ⚡👑",
+            "Đỉnh cao soi cầu là biết điểm bẻ: Bẻ gãy cầu {trend}, ra chiêu đón đầu {newTrend} bộ số {num}! 🛡️🔥",
+            "Bẻ cầu thế kỷ! Toàn bộ sòng cùng tôi đón cú quay xe lịch sử sang {newTrend}! 🏆💰",
+            "Cảm giác số học mách bảo: Nhịp này phải bẻ cầu {newTrend} mới húp trọn hũ lớn! 🎯💎"
         ],
-        standard_double: [
-            "Cầu trận địa đang cân bằng đẹp, khóa mục tiêu x2.00! Chuẩn bị cất cánh x2 vốn! ⚡🚀",
-            "Target 2.00x x2 tài khoản, nín thở đếm từng nhịp động cơ đẩy! Ra chiêu dứt khoát! 🤞💎",
-            "Kèo 50/50 kinh điển của Vegas Limbo, tiếng này tiền về ngập nick! 🎯💰"
+        alternating: [
+            "Cầu đảo 1-1 (Tài - Xỉu) đang chạy nhịp nhàng! Đón đầu nhịp {trend} với bộ số tài lộc {num}! 🔄✨",
+            "Bắt võ cầu nhảy đảo: Ra chiêu chuẩn xác hướng về {trend} dàn số {num} húp nhẹ GTLM! 🎯🎲"
         ],
-        moonshot: [
-            "BUỒNG ĐỐT ĐẠT CỰC ĐẠI! Kích hoạt chế độ Moonshot Target {target}x bắn thẳng lên sao Hỏa! 🌌🚀💥",
-            "Kèo liều ăn nhiều: Đẩy mục tiêu lên {target}x! Một bước lên mây húp trọn siêu hũ! 👑💎🔥",
-            "Bắn tên lửa không gian Target {target}x! Anh em cùng tôi thắt dây an toàn nào! 🌠🛸"
+        hot_digit: [
+            "Radar quét chữ số vàng: Dồn số hot {digits} tạo thành siêu phẩm {num} bắn phá trận địa! 🌟🔥",
+            "Dàn số hội tụ tinh hoa số học! Khóa chặt mã {num} rước bão tiền thưởng về nick! 💎🚀"
         ],
-        win_moonshot: [
-            "CHẠM ĐỈNH QUỸ ĐẠO! Tên lửa vượt mốc {target}x! Húp trọn ngập mặt +{win} GTLM! 🏆🎉🤑",
-            "NỔ SIÊU HŨ MOONSHOT! Cú phóng ngoạn mục ăn đậm tiền về đầy nick! 🚀💎👑",
-            "Đẳng cấp Cơ Trưởng Limbo! Bắn phát nào trúng phát đó, húp trọn trận địa! 🌟💰"
-        ],
-        win_normal: [
-            "Cất cánh thành công! Nhẹ nhàng húp +{win} GTLM vào nick! 🚀✨",
-            "Về đích an toàn vượt mốc {target}x, cộng GTLM chuẩn chỉ! 💰👍"
+        win: [
+            "TRÚNG SỐ RỒI ANH EM ƠI! HÚP TRỌN GIẢI THƯỞNG XỔ SỐ MINI! Tiền nhảy ting ting đầy nick! 🏆🎉🤑",
+            "SOI CẦU CHUẨN TỪNG MILIMET! Gáy khét lẹt cả sòng live hôm nay anh em ơi! 👑💎💰",
+            "Cơm gạo về nick rực rỡ! Thắng áp đảo trên trận địa số học! 🌟🎉✨"
         ],
         loss: [
-            "Động cơ quá tải phát nổ ở {result}x, bay màu tiếng này! Ván sau chỉnh lại thông số buồng đốt! 😅💥",
-            "Áp suất buồng lái tăng cao phát nổ ở {result}x, không sao, còn thở là còn ra chiêu! 🔄💪"
+            "Lệch mất vài nhịp chữ số, bay màu nhẹ ván này! Không sao, còn thở là còn bẻ cầu! 😅🔄",
+            "Bốc hơi chút ít GTLM, xốc lại tinh thần soi lại bảng cầu phục thù ván mới! 💪🎯"
         ]
     };
 
     function sendChat(type, replaceObj = {}) {
+        const now = Date.now();
+        if (now - lastChatTime < 2800) return;
         if (typeof BotChat !== 'undefined' && BotChat.send) {
-            const list = CASINO_CHATS[type] || CASINO_CHATS.safe_grind;
+            const list = CASINO_CHATS[type] || CASINO_CHATS.streak_hunter;
             let msg = list[Math.floor(Math.random() * list.length)];
             for (let k in replaceObj) {
                 msg = msg.replace(new RegExp(`\\{${k}\\}`, 'g'), replaceObj[k]);
             }
-            BotChat.send(35, 'bot_35', msg);
+            BotChat.send(35, 'Thánh Soi Cầu Mini 🎯🎲', msg);
+            lastChatTime = now;
         }
     }
 
-    // Chuột ảo Turbo 0.20s di chuyển và click
-    function fastMoveAndClick(el, duration = 0.20) {
+    // ═══════════════════════════════════════════════════════
+    // THUẬT TOÁN SOI CẦU MINI / TÀI XỈU SỐ HỌC
+    // ═══════════════════════════════════════════════════════
+
+    // Đánh giá 1 chuỗi 5 số là TÀI hay XỈU
+    // Dựa trên: Tổng 5 số (>= 23 là TÀI, < 23 là XỈU) kết hợp đuôi số
+    function evaluateNumberTrend(numStr) {
+        if (!numStr || numStr.length !== 5) return 'TAI';
+        let sum = 0;
+        for (let i = 0; i < 5; i++) sum += parseInt(numStr[i]) || 0;
+        const lastDigit = parseInt(numStr[4]) || 0;
+
+        // Nếu tổng >= 23 hoặc đuôi từ 5-9 -> TÀI (Đỏ)
+        // Nếu tổng < 23 và đuôi 0-4 -> XỈU (Xanh)
+        return (sum >= 23 || lastDigit >= 5) ? 'TÀI' : 'XỈU';
+    }
+
+    // Đọc lịch sử từ bảng kết quả trên giao diện
+    function parseHistoryFromUI() {
+        const rows = document.querySelectorAll('#history-body tr');
+        const results = [];
+        rows.forEach(r => {
+            const firstTd = r.querySelector('td');
+            if (firstTd) {
+                const txt = firstTd.innerText.trim();
+                if (/^\d{5}$/.test(txt)) results.push(txt);
+            }
+        });
+        if (results.length > 0) {
+            aiCommander.historyNumbers = results.slice(0, 15);
+        }
+    }
+
+    // Thuật toán sinh 5 chữ số thông minh dựa trên chiến thuật cầu
+    function generateSmartNumber() {
+        parseHistoryFromUI();
+
+        // 1. Phân tích chuỗi cầu gần đây
+        const trends = aiCommander.historyNumbers.map(n => evaluateNumberTrend(n));
+        let currentStreak = 0;
+        let streakTrend = trends[0] || (Math.random() < 0.5 ? 'TÀI' : 'XỈU');
+
+        for (let i = 0; i < trends.length; i++) {
+            if (trends[i] === streakTrend) currentStreak++;
+            else break;
+        }
+
+        aiCommander.streakCount = Math.max(1, currentStreak);
+        aiCommander.lastTrend = streakTrend;
+
+        // 2. Quyết định chiến thuật: Theo cầu bệt hay Bẻ cầu
+        let targetTrend = streakTrend;
+
+        if (currentStreak >= 4) {
+            // Cầu bệt quá dài (>= 4 ván) -> KÍCH HOẠT BẺ CẦU (BRIDGE_BREAKER)
+            aiCommander.currentStrategy = 'BRIDGE_BREAKER';
+            targetTrend = (streakTrend === 'TÀI') ? 'XỈU' : 'TÀI';
+        } else if (currentStreak >= 2) {
+            // Cầu bệt đang trong đà đẹp (2-3 ván) -> THEO CẦU BỆT (STREAK_HUNTER)
+            aiCommander.currentStrategy = 'STREAK_HUNTER';
+            targetTrend = streakTrend;
+        } else if (trends.length >= 3 && trends[0] !== trends[1] && trends[1] !== trends[2]) {
+            // Cầu đảo 1-1 (Tài -> Xỉu -> Tài) -> BẮT CẦU ĐẢO (ALTERNATING)
+            aiCommander.currentStrategy = 'ALTERNATING';
+            targetTrend = (trends[0] === 'TÀI') ? 'XỈU' : 'TÀI';
+        } else {
+            // Cầu tự do -> BẮT SỐ HOT (HOT_DIGIT)
+            aiCommander.currentStrategy = 'HOT_DIGIT';
+            targetTrend = (Math.random() < 0.5) ? 'TÀI' : 'XỈU';
+        }
+
+        // 3. Thống kê chữ số hot xuất hiện nhiều trong lịch sử
+        const digitCounts = Array(10).fill(0);
+        aiCommander.historyNumbers.forEach(n => {
+            for (let ch of n) digitCounts[parseInt(ch)]++;
+        });
+
+        // 4. Sinh bộ số 5 chữ số thỏa mãn targetTrend
+        let digits = [];
+        if (targetTrend === 'TÀI') {
+            // TÀI: Ưu tiên các chữ số lớn (5, 6, 7, 8, 9)
+            for (let i = 0; i < 5; i++) {
+                if (Math.random() < 0.65) {
+                    digits.push(Math.floor(Math.random() * 5) + 5); // 5-9
+                } else {
+                    digits.push(Math.floor(Math.random() * 10));
+                }
+            }
+        } else {
+            // XỈU: Ưu tiên các chữ số nhỏ (0, 1, 2, 3, 4)
+            for (let i = 0; i < 5; i++) {
+                if (Math.random() < 0.65) {
+                    digits.push(Math.floor(Math.random() * 5)); // 0-4
+                } else {
+                    digits.push(Math.floor(Math.random() * 10));
+                }
+            }
+        }
+
+        // Đảm bảo chữ số đầu tiên khác 0 nếu muốn số đẹp 5 chữ số
+        if (digits[0] === 0) digits[0] = Math.floor(Math.random() * 9) + 1;
+
+        const generatedNumber = digits.join('');
+        aiCommander.lastTargetNumber = generatedNumber;
+
+        return {
+            number: generatedNumber,
+            trend: streakTrend,
+            targetTrend: targetTrend,
+            streak: aiCommander.streakCount,
+            strategy: aiCommander.currentStrategy
+        };
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // THEO DÕI SỐ DƯ & KẾT QUẢ VÁN CHƠI
+    // ═══════════════════════════════════════════════════════
+    function getBalance() {
+        const el = document.getElementById('balance-val') || document.getElementById('userMoney') || document.querySelector('.money-text');
+        if (!el) return 50000000;
+        return parseInt(el.innerText.replace(/\D/g, '')) || 0;
+    }
+
+    function checkOutcomeAndPsychology() {
+        const currentBal = getBalance();
+        if (lastKnownBalance !== null && currentBal !== lastKnownBalance) {
+            const isWin = currentBal > lastKnownBalance;
+            if (isWin) {
+                aiCommander.consecutiveWins++;
+                aiCommander.consecutiveLosses = 0;
+                sendChat('win');
+            } else {
+                aiCommander.consecutiveLosses++;
+                aiCommander.consecutiveWins = 0;
+                if (Math.random() < 0.5) sendChat('loss');
+            }
+        }
+        lastKnownBalance = currentBal;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // CHUỘT ẢO TURBO (0.16s - 0.20s)
+    // ═══════════════════════════════════════════════════════
+    function fastMoveAndClick(el, duration = 0.18) {
         return new Promise((resolve) => {
             const $el = $(el);
-            if (!$el.length) return resolve(false);
+            if (!$el.length || $el.is(':hidden')) return resolve(false);
 
             let hasResolved = false;
             const safetyTimer = setTimeout(() => {
@@ -95,7 +248,9 @@
                     BotVirtualCursor.simulateClick(() => {
                         try {
                             $el[0].click();
-                        } catch (e) {}
+                        } catch (e) {
+                            $el.trigger('click');
+                        }
                         if (!hasResolved) {
                             hasResolved = true;
                             clearTimeout(safetyTimer);
@@ -104,192 +259,116 @@
                     });
                 });
             } catch (err) {
+                try { $el[0].click(); } catch (e) {}
                 if (!hasResolved) {
                     hasResolved = true;
                     clearTimeout(safetyTimer);
-                    resolve(false);
+                    resolve(true);
                 }
             }
         });
     }
 
-    const wait = (ms) => new Promise((res) => setTimeout(res, ms));
+    // ═══════════════════════════════════════════════════════
+    // CHU TRÌNH ĐẶT SỐ TURBO (PLAY LOTTERY CYCLE)
+    // ═══════════════════════════════════════════════════════
+    async function executeLotteryTurn() {
+        if (botIsBusy || isSpinningState) return;
 
-    // THUẬT TOÁN AI PHÂN TÍCH CẦU & KẾ HOẠCH BAY ĐỘNG
-    function analyzeAndPlanFlight() {
-        let strategy = 'STANDARD_DOUBLE';
-        let betBtn = '#btnBet100k';
-        let targetBtn = '#btnTarget2x';
-        let targetVal = 2.00;
+        const inputField = document.getElementById('user-number');
+        const submitBtn = document.getElementById('btn-submit');
 
-        // Đọc lịch sử các ván gần nhất từ window.limboHistory nếu có
-        const history = window.limboHistory || [];
-        const lastGames = history.slice(-4);
-
-        // Đếm số lần nổ sớm liên tiếp (< 1.6x)
-        let lowCrashCount = 0;
-        for (let i = lastGames.length - 1; i >= 0; i--) {
-            if (lastGames[i].result < 1.6) {
-                lowCrashCount++;
-            } else {
-                break;
-            }
-        }
-
-        // 1. CHIẾN LƯỢC 1: BẢO HỘ KHÍ TÀI (CRASH SHIELD)
-        // Khi 2 lần nổ sớm liên tiếp hoặc vừa thua 2 ván
-        if (lowCrashCount >= 2 || aiCommander.consecutiveLosses >= 2) {
-            strategy = 'CRASH_SHIELD';
-            betBtn = '#btnBet500k'; // Cược lớn hơn để bẻ cầu
-            targetBtn = '#btnTarget1_3x';
-            targetVal = 1.30;
-        }
-        // 2. CHIẾN LƯỢC 2: BẮN SIÊU NĂNG MOONSHOT
-        // Khi đang có đà thắng (consecutiveWins >= 2)
-        else if (aiCommander.consecutiveWins >= 2) {
-            strategy = 'MOONSHOT';
-            betBtn = '#btnBet50k'; // Cược nhỏ săn x10
-            if (Math.random() < 0.6) {
-                targetBtn = '#btnTarget5x';
-                targetVal = 5.00;
-            } else {
-                targetBtn = '#btnTarget10x';
-                targetVal = 10.00;
-            }
-        }
-        // 3. CHIẾN LƯỢC 3: LÀM NÓNG BUỒNG ĐỐT (SAFE GRIND)
-        else if (aiCommander.consecutiveWins === 0 && Math.random() < 0.4) {
-            strategy = 'SAFE_GRIND';
-            betBtn = '#btnBet100k';
-            targetBtn = '#btnTarget1_5x';
-            targetVal = 1.50;
-        }
-        // 4. CHIẾN LƯỢC 4: KÈO X2 CHUẨN MỰC
-        else {
-            strategy = 'STANDARD_DOUBLE';
-            betBtn = '#btnBet100k';
-            targetBtn = '#btnTarget2x';
-            targetVal = 2.00;
-        }
-
-        aiCommander.currentStrategy = strategy;
-        aiCommander.currentBetBtn = betBtn;
-        aiCommander.currentTargetBtn = targetBtn;
-        aiCommander.currentTarget = targetVal;
-
-        return { strategy, betBtn, targetBtn, targetVal };
-    }
-
-    async function executeBotTurn() {
-        if (botIsBusy) return;
-
-        const rollBtn = document.getElementById('rollBtn');
-        if (!rollBtn || rollBtn.disabled) return;
+        if (!inputField || !submitBtn || submitBtn.disabled) return;
 
         botIsBusy = true;
         busyTimestamp = Date.now();
 
         try {
-            // 1. AI Phân tích cầu & Lập kế hoạch bay
-            const flight = analyzeAndPlanFlight();
+            checkOutcomeAndPsychology();
 
-            // 2. Gửi bình luận chiến thuật vào LiveStream Chat
-            if (flight.strategy === 'CRASH_SHIELD') {
-                sendChat('crash_shield');
-            } else if (flight.strategy === 'MOONSHOT') {
-                sendChat('moonshot', { target: flight.targetVal.toFixed(2) });
-            } else if (flight.strategy === 'SAFE_GRIND') {
-                sendChat('safe_grind');
-            } else if (Math.random() < 0.3) {
-                sendChat('standard_double');
-            }
+            // 1. Phân tích cầu và sinh 5 chữ số thông minh
+            const plan = generateSmartNumber();
 
-            // 3. THAO TÁC 1: Chuột ảo lướt click chọn mức cược (0.18s)
-            const $betBtn = $(flight.betBtn);
-            if ($betBtn.length) {
-                await fastMoveAndClick($betBtn, 0.18);
-                await wait(60);
-            }
-
-            // 4. THAO TÁC 2: Chuột ảo lướt click chọn Target Multiplier (0.18s)
-            const $targetBtn = $(flight.targetBtn);
-            if ($targetBtn.length) {
-                await fastMoveAndClick($targetBtn, 0.18);
-                await wait(60);
+            // 2. Bình luận chat thể hiện trí tuệ soi cầu
+            if (plan.strategy === 'STREAK_HUNTER') {
+                if (Math.random() < 0.45) sendChat('streak_hunter', { trend: plan.trend, streak: plan.streak, num: plan.number });
+            } else if (plan.strategy === 'BRIDGE_BREAKER') {
+                sendChat('bridge_breaker', { trend: plan.trend, newTrend: plan.targetTrend, streak: plan.streak, num: plan.number });
+            } else if (plan.strategy === 'ALTERNATING') {
+                if (Math.random() < 0.4) sendChat('alternating', { trend: plan.targetTrend, num: plan.number });
             } else {
-                // Fallback nếu nút chưa render
-                if (typeof setTarget === 'function') setTarget(flight.targetVal);
+                if (Math.random() < 0.35) sendChat('hot_digit', { digits: plan.number.slice(-2), num: plan.number });
             }
 
-            // 5. THAO TÁC 3: Chuột ảo lướt sang bấm nút PHÓNG TÊN LỬA (0.20s)
-            await fastMoveAndClick($(rollBtn), 0.20);
+            // 3. Rê chuột đến ô input và điền số (0.16s)
+            await fastMoveAndClick(inputField, 0.16);
+            inputField.value = plan.number;
+            inputField.dispatchEvent(new Event('input', { bubbles: true }));
 
-            // 6. Chờ tên lửa phóng và hiển thị kết quả (khoảng 0.9s)
-            await wait(950);
+            // 4. Rê chuột đến nút "Quay số ngay" và click dứt khoát (0.18s)
+            const liveSubmitBtn = document.getElementById('btn-submit');
+            if (liveSubmitBtn && !liveSubmitBtn.disabled) {
+                isSpinningState = true;
+                await fastMoveAndClick(liveSubmitBtn, 0.18);
 
-            // 7. Đọc kết quả từ giao diện
-            const isWin = $('.multiplier-display.win').length > 0;
-            const currentMultText = $('#resultMult').text().replace(/[^0-9.]/g, '');
-            const finalMult = parseFloat(currentMultText || 1.0);
-            const betAmt = parseFloat($('#betAmount').val()) || 100000;
-            const winAmount = isWin ? Math.floor(betAmt * flight.targetVal) : 0;
-            const profit = isWin ? (winAmount - betAmt) : -betAmt;
-
-            aiCommander.totalProfit += profit;
-
-            if (isWin) {
-                aiCommander.consecutiveWins++;
-                aiCommander.consecutiveLosses = 0;
-
-                if (flight.targetVal >= 4.0) {
-                    sendChat('win_moonshot', {
-                        target: flight.targetVal.toFixed(2),
-                        win: new Intl.NumberFormat('vi-VN').format(winAmount)
-                    });
-                } else {
-                    if (Math.random() < 0.4) {
-                        sendChat('win_normal', {
-                            target: flight.targetVal.toFixed(2),
-                            win: new Intl.NumberFormat('vi-VN').format(winAmount)
-                        });
-                    }
-                }
+                // Hiệu ứng quay số trong live_36.php mất khoảng 500ms - 800ms
+                // Chờ 1.6s để người xem thưởng thức kết quả và nhận badge thưởng
+                setTimeout(() => {
+                    isSpinningState = false;
+                    botIsBusy = false;
+                    checkOutcomeAndPsychology();
+                }, 1600 + Math.random() * 400);
             } else {
-                aiCommander.consecutiveWins = 0;
-                aiCommander.consecutiveLosses++;
-
-                if (Math.random() < 0.35) {
-                    sendChat('loss', { result: finalMult.toFixed(2) });
-                }
+                botIsBusy = false;
+                isSpinningState = false;
             }
 
-            await wait(150);
-
-        } catch (e) {
-            console.error('[Bot 35 AI Error]', e);
-        } finally {
+        } catch (err) {
+            console.error('[Bot 35 Error]:', err);
             botIsBusy = false;
+            isSpinningState = false;
         }
     }
 
-    // Nhịp điệu siêu tốc mỗi 1.4 giây
-    setInterval(executeBotTurn, 1400);
-
-    // TRIPLE-LAYER WATCHDOG
+    // ═══════════════════════════════════════════════════════
+    // TRIPLE-LAYER WATCHDOG & TỐI ƯU NHỊP ĐỘ (POLLING)
+    // ═══════════════════════════════════════════════════════
     setInterval(() => {
-        // Tầng 1: Tự giải phóng nếu bận quá 4s
-        if (botIsBusy && Date.now() - busyTimestamp > 4000) {
+        // Tầng 1: Tự đóng SweetAlert2 nếu có lỗi phát sinh
+        const swalConfirm = document.querySelector('.swal2-confirm');
+        if (swalConfirm && swalConfirm.offsetParent !== null) {
+            try { swalConfirm.click(); } catch (e) {}
+            if (typeof Swal !== 'undefined' && Swal.close) Swal.close();
+        }
+
+        // Tầng 2: Watchdog chống kẹt nếu busy kéo dài quá 4.5s
+        if (botIsBusy && (Date.now() - busyTimestamp > 4500)) {
+            console.warn('[Bot 35 Watchdog] Tự động giải phóng trạng thái kẹt!');
             botIsBusy = false;
-            const rollBtn = document.getElementById('rollBtn');
-            if (rollBtn) rollBtn.disabled = false;
+            isSpinningState = false;
+            const btn = document.getElementById('btn-submit');
+            if (btn && btn.disabled) {
+                btn.disabled = false;
+                btn.textContent = '🎰 Quay số ngay';
+            }
         }
 
-        // Tầng 2: Nếu nút sẵn sàng mà bot chưa chạy -> Kích hoạt lượt phóng mới
-        const rollBtn = document.getElementById('rollBtn');
-        if (rollBtn && !rollBtn.disabled && !botIsBusy) {
-            executeBotTurn();
+        // Tầng 3: Tự động chạy hiệp tiếp theo khi sẵn sàng
+        if (!botIsBusy && !isSpinningState) {
+            const submitBtn = document.getElementById('btn-submit');
+            if (submitBtn && !submitBtn.disabled) {
+                executeLotteryTurn();
+            }
         }
-    }, 2000);
+    }, 700);
 
-    console.log('[Bot 35] Cơ Trưởng Limbo 35 AI SMART COMMANDER PRO đã sẵn sàng cất cánh 24/7!');
+    // Mở màn khi Streamer lên sóng
+    setTimeout(() => {
+        if (typeof BotChat !== 'undefined' && BotChat.send) {
+            BotChat.send(35, 'Thánh Soi Cầu Mini 🎯🎲', 'Chào mừng toàn thể anh em đến với Trận Địa Xổ Số Mini Bàn 35! Thánh soi cầu vào việc, cùng tôi bắt cầu bệt bẻ cầu húp trọn GTLM nhé! 🎯🔥🚀');
+        }
+        executeLotteryTurn();
+    }, 1500);
+
+    console.log('[Bot 35] Thánh Soi Cầu Mini TURBO AI Pro khởi động thành công!');
 })();

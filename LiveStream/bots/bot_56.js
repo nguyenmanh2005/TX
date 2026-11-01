@@ -1,21 +1,19 @@
 /**
- * 🤖 Bot AI Vietlott 6/45 Săn Jackpot Trăm Củ GTLM (ID: 56)
+ * 🤖 Bot AI Casino War - Trận Chiến Bài Tây (ID: 57)
  *
  * CHIẾN THUẬT & TRÍ TUỆ NHÂN TẠO:
- * 1. QUẢN LÝ VỐN & CHIẾN LƯỢC MUA VÉ:
- *    - Mỗi vé cược cố định 50.000 GTLM.
- *    - Tự động kiểm tra số dư ví GTLM của Streamer.
- * 2. CHIẾN THUẬT CHỌN SỐ PHONG THỦY & TÂM LINH:
- *    - Bot phân tích và lựa chọn bộ 5 đến 6 con số may mắn (1-45).
- *    - Sử dụng các dàn số phong thủy kinh điển (Lộc Phát, Thần Tài, Tam Hoa) kết hợp sinh số ngẫu nhiên tối ưu.
+ * 1. QUẢN LÝ VỐN & PHÂN BỔ CƯỢC:
+ *    - Theo dõi số dư ví GTLM của Streamer.
+ *    - Chọn mức cược an toàn (10K, 50K, 100K, 500K) qua các phỉnh cược.
+ *    - Tuyệt đối không click vào phỉnh MAX (all-in).
+ * 2. BẢN LĨNH CHIẾN TRƯỜNG KHI HÒA BÀI (TIE BATTLE):
+ *    - Khi hòa bài, bot có 75% quyết định THAM CHIẾN (WAR) để săn thưởng x2, và 25% chọn ĐẦU HÀNG để bảo toàn vốn.
  * 3. HỆ THỐNG CHUỘT ẢO CHUYÊN NGHIỆP (BotVirtualCursor):
- *    - Di chuyển mượt mà tới từng ô số .num-box trên bảng số 1-45.
- *    - Nhấp chọn từng số với nhịp độ tự nhiên (350ms - 500ms) như người thật đang soi cầu.
- *    - Rê chuột ảo tới nút MUA VÉ và kích hoạt quay thưởng.
+ *    - Di chuyển mượt mà tới các phỉnh cược, nút CHIA BÀI, nút THAM CHIẾN / ĐẦU HÀNG, và nút VÁN MỚI.
  * 4. BÌNH LUẬN & TƯƠNG TÁC CASINO SÔI NỔI:
- *    - Tự động phát ngôn nhận định cầu số, cổ vũ hồi hộp và ăn mừng khi trúng thưởng qua BotChat.send.
+ *    - Tự động phát ngôn nhận định thế trận, gáy chiến thắng hoặc than thở hóm hỉnh qua BotChat.send.
  * 5. WATCHDOG TIMER:
- *    - Tự động giải phóng trạng thái bận sau 10 giây nếu gặp gián đoạn.
+ *    - Tự động giải phóng trạng thái bận sau 8 giây nếu gặp gián đoạn.
  */
 
 (function () {
@@ -26,7 +24,7 @@
         return;
     }
 
-    BotVirtualCursor.init('Thần Tài Vietlott 56');
+    BotVirtualCursor.init('Thần Bài Casino War 57');
 
     // ═══════════════════════════════════════════════════════
     // TRẠNG THÁI VÀ BIẾN ĐIỀU KHIỂN
@@ -34,9 +32,8 @@
     let botIsBusy = false;
     let busyTimer = null;
     let lastChatTime = 0;
-    let lastResultRecorded = null;
 
-    function setBusy(val, timeoutMs = 10000) {
+    function setBusy(val, timeoutMs = 8000) {
         botIsBusy = val;
         if (busyTimer) clearTimeout(busyTimer);
         if (val) {
@@ -50,42 +47,38 @@
     // ═══════════════════════════════════════════════════════
     // BÌNH LUẬN & PHÁT NGÔN CASINO LIVESTREAM
     // ═══════════════════════════════════════════════════════
-    const jackpotPhrases = [
-        'JACKPOT PHÁT NỔ RỒI ANH EM ƠI! Húp trọn mâm to GTLM ngập tràn tài khoản! 👑💥💎',
-        'Trúng đậm 4-6 số siêu phẩm! Đẳng cấp soi cầu Vietlott là đây chứ đâu! 🏆✨',
-        'Thần tài giáng lâm! Bắt chuẩn dàn số vàng đổi đời ngọt ngào! 🚀💰',
-        'Lộc lá tưng bừng cả nhà ơi! Nổ giải thưởng kỷ lục ván này rồi! 🎉👑'
+    const warWinPhrases = [
+        'THAM CHIẾN TOÀN THẮNG! Húp trọn mâm to GTLM của Dealer! 👑💥⚔️',
+        'Đẳng cấp Casino War! Rút thêm lá bài quyết định đè bẹp nhà cái! 🏆✨',
+        'Chiến tranh bùng nổ và phần thắng thuộc về Streamer! Quá rực rỡ! 🚀💰'
     ];
 
     const normalWinPhrases = [
-        'Có lộc rồi anh em ơi! Trúng 1-2 số giải nhiệt ngọt ngào! 🎫✨',
-        'Húp nhẹ tiền thưởng Vietlott! Bảo toàn vốn lãi ròng! 💸🍀',
-        'Bắt đúng 2 nháy ngon ơ! Tích lũy săn Jackpot trăm củ ván kế tiếp! 🎯',
-        'Cầu số đang vào nhịp cực son, tiền thưởng cộng về ví rồi! ⚡'
+        'Một nốt nhạc hạ gục Dealer! Bài lớn hơn là có GTLM đút túi! 🃏✨',
+        'Thắng ngọt ngào tay chơi ơi! Cầu bài đang rất ủng hộ! 💸🍀',
+        'Lá bài tẩy đẹp mê ly, tiền thưởng cộng về ví rồi! ⚡'
     ];
 
-    const pickPhrases = [
-        'Cầu hôm nay sáng rực, chốt ngay dàn 6 số VIP săn Jackpot trăm củ! 🎯',
-        'Linh cảm mách bảo dàn số phong thủy này sẽ nổ rực rỡ! 🔥',
-        'Vào tiền dàn số tài lộc, anh em đón chờ tiếng bóng rơi nhé! 🍀',
-        'Vé 50K nhẹ nhàng đổi lấy cơ hội húp hàng chục triệu GTLM! 🚀'
+    const tiePhrases = [
+        'Hòa bài rồi anh em ơi! Căng như dây đàn, vào thế chiến tranh! ⚔️🔥',
+        'Cân kèo từng điểm số! Chuẩn bị tham chiến khô máu với Dealer! 🎯',
+        'Hòa rồi, phải ra đòn quyết định thôi!'
     ];
 
     const lossPhrases = [
-        'Lệch mất một hai con số chốt, ván sau làm lại mâm to hơn! 😤',
-        'Vé này nháp nhẹ lấy cảm giác, ván sau cầu số bùng nổ Jackpot! 💨',
-        'Bóng quay suýt trúng thêm 2 số nữa, ván sau vào lại bộ này! 🔥',
-        'Cầu đẹp đang tích tụ vận may, chuẩn bị săn giải độc đắc! 🎯'
+        'Gặp ngay lá bài cứng cựa của Dealer, ván sau gỡ lại mâm to hơn! 😤',
+        'Thua non nửa nút, không sao làm lại tay mới! 💨',
+        'Nhả nhẹ một ván, chuẩn bị vào thế trận lội ngược dòng! 🔥'
     ];
 
     function sendBotChat(type) {
         const now = Date.now();
         if (now - lastChatTime < 10000) return;
-        if (type !== 'jackpot' && Math.random() > 0.65) return;
+        if (type !== 'war_win' && Math.random() > 0.6) return;
 
-        let list = pickPhrases;
-        if (type === 'jackpot') list = jackpotPhrases;
-        else if (type === 'win') list = normalWinPhrases;
+        let list = normalWinPhrases;
+        if (type === 'war_win') list = warWinPhrases;
+        else if (type === 'tie') list = tiePhrases;
         else if (type === 'loss') list = lossPhrases;
 
         const msg = list[Math.floor(Math.random() * list.length)];
@@ -96,94 +89,19 @@
     }
 
     // ═══════════════════════════════════════════════════════
-    // BỘ DÀN SỐ PHONG THỦY & SINH SỐ
+    // QUẢN LÝ VỐN & CHỌN MỨC PHỈNH
     // ═══════════════════════════════════════════════════════
-    const luckySets = [
-        [6, 8, 9, 18, 28, 39],
-        [3, 7, 13, 21, 33, 45],
-        [1, 9, 19, 29, 39, 44],
-        [8, 16, 24, 32, 40, 42],
-        [5, 15, 25, 35, 41, 45],
-        [2, 12, 22, 32, 38, 43],
-        [7, 14, 21, 28, 35, 42],
-        [4, 11, 23, 31, 37, 45]
-    ];
+    function selectSafeChip() {
+        const chips = Array.from(document.querySelectorAll('.chip')).filter(c => {
+            const val = c.getAttribute('data-value');
+            return val !== 'allin' && !c.innerText.toUpperCase().includes('MAX');
+        });
 
-    function generateSmartNumbers() {
-        if (Math.random() < 0.5) {
-            const preset = luckySets[Math.floor(Math.random() * luckySets.length)];
-            return [...preset];
-        }
+        if (chips.length === 0) return null;
 
-        // Tạo 6 số ngẫu nhiên độc nhất từ 1 đến 45
-        const pool = [];
-        for (let i = 1; i <= 45; i++) pool.push(i);
-        const result = [];
-        const count = Math.random() < 0.15 ? 5 : 6;
-        while (result.length < count && pool.length > 0) {
-            const idx = Math.floor(Math.random() * pool.length);
-            result.push(pool.splice(idx, 1)[0]);
-        }
-        return result.sort((a, b) => a - b);
-    }
-
-    // ═══════════════════════════════════════════════════════
-    // QUY TRÌNH CHỌN SỐ VÀ MUA VÉ
-    // ═══════════════════════════════════════════════════════
-    function clearOldSelections(callback) {
-        if (typeof selectedNumbers === 'undefined' || selectedNumbers.length === 0) {
-            if (callback) callback();
-            return;
-        }
-
-        // Click bỏ các số đang chọn
-        const numsToUncheck = [...selectedNumbers];
-        let idx = 0;
-
-        function uncheckNext() {
-            if (idx >= numsToUncheck.length) {
-                if (callback) callback();
-                return;
-            }
-            const num = numsToUncheck[idx];
-            const box = document.querySelector(`.num-box[data-num="${num}"]`);
-            idx++;
-            if (box && box.classList.contains('selected')) {
-                box.click();
-            }
-            setTimeout(uncheckNext, 100);
-        }
-
-        uncheckNext();
-    }
-
-    function pickNumbersSequence(targetNumbers, onComplete) {
-        let index = 0;
-
-        function pickNext() {
-            if (index >= targetNumbers.length) {
-                if (onComplete) onComplete();
-                return;
-            }
-
-            const num = targetNumbers[index];
-            const box = document.querySelector(`.num-box[data-num="${num}"]`);
-            index++;
-
-            if (!box) {
-                pickNext();
-                return;
-            }
-
-            BotVirtualCursor.moveToElement($(box), 0.45, 0, () => {
-                BotVirtualCursor.simulateClick(() => {
-                    try { box.click(); } catch (e) {}
-                    setTimeout(pickNext, 350 + Math.random() * 200);
-                });
-            });
-        }
-
-        pickNext();
+        // Chọn các mức cược an toàn 10K, 50K, 100K, 500K
+        const safeChips = chips.slice(0, 4);
+        return safeChips[Math.floor(Math.random() * safeChips.length)];
     }
 
     // ═══════════════════════════════════════════════════════
@@ -192,104 +110,116 @@
     function runBotTurn() {
         if (botIsBusy) return;
 
-        // Nếu game đang trong hiệu ứng quay thưởng
-        if (typeof isSpinning !== 'undefined' && isSpinning) {
+        const betForm = document.getElementById('bet-form');
+        const dealBtn = document.getElementById('deal-btn');
+        const tieControls = document.getElementById('tie-controls');
+        const resultArea = document.getElementById('result-area');
+        const resetBtn = document.getElementById('reset-btn');
+
+        // GIAI ĐOẠN 1: Đặt cược & Bấm CHIA BÀI
+        if (betForm && $(betForm).is(':visible') && dealBtn && $(dealBtn).is(':visible')) {
+            setBusy(true, 8000);
+            console.log('[Bot 56] Chọn phỉnh cược và bấm Chia Bài...');
+
+            const chip = selectSafeChip();
+            if (chip && Math.random() < 0.6) {
+                BotVirtualCursor.moveToElement($(chip), 0.5, 0, () => {
+                    BotVirtualCursor.simulateClick(() => {
+                        try { chip.click(); } catch (e) {}
+
+                        setTimeout(() => {
+                            BotVirtualCursor.moveToElement($(dealBtn), 0.6, 0, () => {
+                                BotVirtualCursor.simulateClick(() => {
+                                    console.log('[Bot 56] Kích hoạt Chia Bài!');
+                                    try { dealBtn.click(); } catch (e) {}
+                                    setTimeout(() => { setBusy(false); }, 1500);
+                                });
+                            });
+                        }, 350);
+                    });
+                });
+            } else {
+                BotVirtualCursor.moveToElement($(dealBtn), 0.6, 0, () => {
+                    BotVirtualCursor.simulateClick(() => {
+                        console.log('[Bot 56] Kích hoạt Chia Bài trực tiếp!');
+                        try { dealBtn.click(); } catch (e) {}
+                        setTimeout(() => { setBusy(false); }, 1500);
+                    });
+                });
+            }
             return;
         }
 
-        const buyBtn = document.getElementById('buy-trigger');
-        if (!buyBtn || buyBtn.disabled) return;
+        // GIAI ĐOẠN 2: Xử lý HÒA BÀI (Tie Controls)
+        if (tieControls && $(tieControls).is(':visible')) {
+            setBusy(true, 8000);
+            sendBotChat('tie');
 
-        setBusy(true, 14000);
+            const warBtn = document.getElementById('war-btn');
+            const surrenderBtn = document.getElementById('surrender-btn');
 
-        // Trường hợp 1: Nếu chưa chọn số nào, hoặc sau 1 ván quay xong muốn chọn dàn mới
-        const currentCount = (typeof selectedNumbers !== 'undefined') ? selectedNumbers.length : 0;
+            // 75% chọn Tham Chiến (WAR), 25% chọn Đầu Hàng (Surrender)
+            const chooseWar = Math.random() < 0.75;
+            const targetBtn = chooseWar ? warBtn : surrenderBtn;
 
-        if (currentCount === 0 || Math.random() < 0.6) {
-            console.log('[Bot 56] Chuẩn bị soi cầu và chọn bộ số mới...');
-            
-            // Xóa bộ số cũ nếu có
-            clearOldSelections(() => {
-                const targetNumbers = generateSmartNumbers();
-                console.log('[Bot 56] Dàn số chốt:', targetNumbers);
+            console.log(`[Bot 56] Quyết định tình huống Hòa: ${chooseWar ? 'THAM CHIẾN (WAR)' : 'ĐẦU HÀNG'}`);
 
-                // Di chuột chọn từng số
-                pickNumbersSequence(targetNumbers, () => {
-                    // Sau khi chọn xong, gửi chat soi cầu
-                    setTimeout(() => {
-                        sendBotChat('pick');
-
-                        // Rê chuột tới nút MUA VÉ
-                        BotVirtualCursor.moveToElement($(buyBtn), 0.7, 0, () => {
-                            setTimeout(() => {
-                                BotVirtualCursor.simulateClick(() => {
-                                    console.log('[Bot 56] Kích hoạt Mua Vé Vietlott!');
-                                    try { buyBtn.click(); } catch (e) {}
-
-                                    // Chờ quay số (quay bóng 6 * 400ms = 2.4s + hiệu ứng 1s)
-                                    setTimeout(() => {
-                                        checkResultAndReact();
-                                    }, 3200);
-                                });
-                            }, 300);
+            if (targetBtn) {
+                setTimeout(() => {
+                    BotVirtualCursor.moveToElement($(targetBtn), 0.7, 0, () => {
+                        BotVirtualCursor.simulateClick(() => {
+                            try { targetBtn.click(); } catch (e) {}
+                            setTimeout(() => { setBusy(false); }, 1800);
                         });
-                    }, 500);
-                });
-            });
-        } else {
-            // Đã có số chọn sẵn, chỉ cần ấn mua vé
-            sendBotChat('pick');
-            BotVirtualCursor.moveToElement($(buyBtn), 0.7, 0, () => {
-                BotVirtualCursor.simulateClick(() => {
-                    console.log('[Bot 56] Mua Vé với dàn số sẵn có!');
-                    try { buyBtn.click(); } catch (e) {}
-
-                    setTimeout(() => {
-                        checkResultAndReact();
-                    }, 3200);
-                });
-            });
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════
-    // KIỂM TRA KẾT QUẢ VÀ PHẢN HỒI CẢM XÚC
-    // ═══════════════════════════════════════════════════════
-    function checkResultAndReact() {
-        const badge = document.getElementById('result-status-badge');
-        const statusBar = document.getElementById('status-bar');
-        const matchedBalls = document.querySelectorAll('.ball.matched');
-        const matchCount = matchedBalls ? matchedBalls.length : 0;
-
-        console.log(`[Bot 56] Kết quả quay: Trúng ${matchCount} số`);
-
-        if (matchCount >= 3) {
-            sendBotChat('jackpot');
-        } else if (matchCount >= 1) {
-            sendBotChat('win');
-        } else {
-            sendBotChat('loss');
-        }
-
-        // Nghỉ ngơi 3 - 5 giây sau ván chơi rồi mới mở lượt tiếp theo
-        setTimeout(() => {
-            // Có thể tự động xóa bỏ 1 vài số để làm mới
-            clearOldSelections(() => {
+                    });
+                }, 800);
+            } else {
                 setBusy(false);
-            });
-        }, 3500);
+            }
+            return;
+        }
+
+        // GIAI ĐOẠN 3: Kết thúc ván & Bấm VÁN MỚI
+        if (resultArea && $(resultArea).is(':visible') && resetBtn && $(resetBtn).is(':visible')) {
+            setBusy(true, 8000);
+
+            // Kiểm tra kết quả phản hồi chat
+            const badge = document.getElementById('result-status-badge');
+            if (badge) {
+                const txt = badge.innerText || '';
+                if (txt.includes('ĐẠI THẮNG CHIẾN TRANH')) {
+                    sendBotChat('war_win');
+                } else if (txt.includes('CHIẾN THẮNG')) {
+                    sendBotChat('win');
+                } else if (txt.includes('BAY MÀU') || txt.includes('THUA')) {
+                    sendBotChat('loss');
+                }
+            }
+
+            console.log('[Bot 56] Nghỉ ngơi chiêm ngưỡng kết quả, chuẩn bị Ván Mới...');
+            setTimeout(() => {
+                BotVirtualCursor.moveToElement($(resetBtn), 0.7, 0, () => {
+                    BotVirtualCursor.simulateClick(() => {
+                        console.log('[Bot 56] Kích hoạt Ván Mới!');
+                        try { resetBtn.click(); } catch (e) {}
+                        setTimeout(() => { setBusy(false); }, 1000);
+                    });
+                });
+            }, 3000);
+            return;
+        }
     }
 
     // ═══════════════════════════════════════════════════════
     // KHỞI CHẠY BOT ENGINE
     // ═══════════════════════════════════════════════════════
-    console.log('[Bot 56] Khởi động AI Vietlott 6/45 Săn Jackpot thành công!');
+    console.log('[Bot 56] Khởi động AI Casino War thành công!');
     setTimeout(() => {
         runBotTurn();
-    }, 2000);
+    }, 1500);
 
     setInterval(() => {
         runBotTurn();
-    }, 4500);
+    }, 3500);
 
 })();

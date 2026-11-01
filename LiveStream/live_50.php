@@ -2,167 +2,228 @@
 session_start();
 
 require_once __DIR__ . '/../db_connect.php';
+require_once __DIR__ . '/../game_history_helper.php';
+require_once __DIR__ . '/bot_streamer_helper.php';
 
-require_once '../game_history_helper.php';
-require_once 'bot_streamer_helper.php';
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_50', 50000000);
-$botUserId = $botUser['Iduser'];
+$botUserId = (int)($botUser['Iduser'] ?? 0);
 $_SESSION['Iduser_temp_bot'] = $botUserId;
-require_once '../include_css.php';
-$useBotTheme = $botUserId;
-include '../load_theme.php';
-require_once '../game_history_helper.php';
 
-// Fallback theme cho Bàn 50
-$particleColor = $particleColor ?? '#00f2fe';
-$shapeColors = $shapeColors ?? ['#00f2fe', '#712cf9', '#ff4757', '#c471ed'];
-$bgGradient = $bgGradient ?? ['#000000', '#050015', '#0a0025'];
+// Tự động bù tiền nếu số dư thấp để livestream 24/7
+if ($botUserId > 0) {
+    $balCheck = $conn->query("SELECT Money FROM users WHERE Iduser = $botUserId")->fetch_assoc();
+    if (!$balCheck || (float)$balCheck['Money'] < 2000000) {
+        $conn->query("UPDATE users SET Money = 50000000 WHERE Iduser = $botUserId");
+    }
+}
+
+$useBotTheme = $botUserId;
+require_once __DIR__ . '/../load_theme.php';
+
+// Fallback theme cho Bàn 50 (Sicbo Đỏ Ruby Neon)
+$particleColor = $particleColor ?? '#ff4757';
+$shapeColors = $shapeColors ?? ['#ff4757', '#ff6b81', '#70a1ff', '#ffa502'];
+$bgGradient = $bgGradient ?? ['#000000', '#12001a', '#250033'];
 if (empty($bgGradientCSS)) {
     $bgGradientCSS = 'linear-gradient(135deg, ' . $bgGradient[0] . ' 0%, ' . $bgGradient[1] . ' 50%, ' . ($bgGradient[2] ?? $bgGradient[1]) . ' 100%)';
 }
-if (!isset($botUserId)) {
-    header('Location: ../login.php');
-    exit;
-}
+
 $userId = $botUserId;
+// Auto-create history table
 $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
 $money = $user['Money'];
-$userName = $user['Name'];
 $stmt->close();
-$symbols = ['🍒' => 2, '🍋' => 5, '🔔' => 10, '⭐' => 20, '💎' => 50, '🎰' => 100];
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
     $action = $_GET['action'];
-    $response = ['success' => false];
-    if ($action === 'buy') {
-        $bet = (float) ($_POST['bet'] ?? 0);
-        if ($bet <= 0 || $bet > $money) {
-            $response['message'] = "gtlm cược không hợp lệ!";
-        } else {
-            $conn->begin_transaction();
-            $stmtLock = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
-            $stmtLock->bind_param("i", $userId);
-            $stmtLock->execute();
-            $lockedMoney = $stmtLock->get_result()->fetch_assoc()['Money'] ?? 0;
-            $stmtLock->close();
-            if ($bet > $lockedMoney) {
-                $conn->rollback();
-                echo json_encode(['success' => false, 'message' => 'Số dư không đủ hoặc thao tác quá nhanh!']);
-                exit;
-            }
-            $conn->query("UPDATE users SET Money = Money - $bet WHERE Iduser = $userId");
-            $grid = [];
-            $winAmount = 0;
-            $matchSymbol = '';
-            if (rand(1, 100) <= 35) {
-                $roll = rand(1, 100);
-                if ($roll <= 50)
-                    $matchSymbol = '🍒';
-                elseif ($roll <= 75)
-                    $matchSymbol = '🍋';
-                elseif ($roll <= 88)
-                    $matchSymbol = '🔔';
-                elseif ($roll <= 95)
-                    $matchSymbol = '⭐';
-                elseif ($roll <= 99)
-                    $matchSymbol = '💎';
-                else
-                    $matchSymbol = '🎰';
-                $winAmount = round($bet * $symbols[$matchSymbol]);
-                $grid = array_fill(0, 3, $matchSymbol);
-                $keys = array_keys($symbols);
-                while (count($grid) < 9) {
-                    $s = $keys[array_rand($keys)];
-                    if (count(array_keys($grid, $s)) < 2)
-                        $grid[] = $s;
-                }
-            } else {
-                $keys = array_keys($symbols);
-                while (count($grid) < 9) {
-                    $s = $keys[array_rand($keys)];
-                    if (count(array_keys($grid, $s)) < 2)
-                        $grid[] = $s;
-                }
-            }
-            shuffle($grid);
-            if ($winAmount > 0)
-                $conn->query("UPDATE users SET Money = Money + $winAmount WHERE Iduser = $userId");
-            $profit = $winAmount - $bet;
-            $resStr = "Result: " . implode('|', $grid);
-            $his = $conn->prepare("INSERT INTO history_scratch (Iduser, Bet, Result, WinAmount, Time) VALUES (?,?,?,?,NOW())");
-            $his->bind_param("idss", $userId, $bet, $resStr, $profit);
-            $his->execute();
-            logGameHistoryWithAll($conn, $userId, 'Scratch Card', $bet, $winAmount, $winAmount > 0);
-            $conn->commit();
-            $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
-            $response = [
-                'success' => true,
-                'grid' => $grid,
-                'winAmount' => number_format($winAmount, 0, ',', '.'),
-                'money' => number_format($newMoney, 0, ',', '.'),
-                'win' => ($winAmount > 0)
-            ];
+    if ($action === 'roll') {
+        $bets = json_decode($_POST['bets'], true); // Array of {type: 'small', amount: 1000}
+        $totalBet = 0;
+        foreach ($bets as $b)
+            $totalBet += (int) $b['amount'];
+        if ($totalBet <= 0 || $totalBet > $money) {
+            echo json_encode(['success' => false, 'message' => 'Cược không hợp lệ!']);
+            exit;
         }
+        $dice = [rand(1, 6), rand(1, 6), rand(1, 6)];
+        $sum = array_sum($dice);
+        sort($dice);
+        $diceStr = implode(',', $dice);
+        $counts = array_count_values($dice);
+        $isTriple = (count($counts) === 1);
+        $anyDouble = (count($counts) < 3);
+        $winAmount = -$totalBet;
+        $winLog = [];
+        $totalRevenue = 0;
+        foreach ($bets as $b) {
+            $type = $b['type'];
+            $amt = (int) $b['amount'];
+            $won = false;
+            $pay = 0;
+            if ($type === 'small') {
+                if ($sum >= 4 && $sum <= 10 && !$isTriple) {
+                    $won = true;
+                    $pay = 1;
+                }
+            } elseif ($type === 'big') {
+                if ($sum >= 11 && $sum <= 17 && !$isTriple) {
+                    $won = true;
+                    $pay = 1;
+                }
+            } elseif ($type === 'odd') {
+                if ($sum % 2 != 0 && !$isTriple) {
+                    $won = true;
+                    $pay = 1;
+                }
+            } elseif ($type === 'even') {
+                if ($sum % 2 == 0 && !$isTriple) {
+                    $won = true;
+                    $pay = 1;
+                }
+            } elseif ($type === 'any_triple') {
+                if ($isTriple) {
+                    $won = true;
+                    $pay = 30;
+                }
+            } elseif (strpos($type, 'triple_') === 0) {
+                $v = (int) str_replace('triple_', '', $type);
+                if ($isTriple && $dice[0] == $v) {
+                    $won = true;
+                    $pay = 180;
+                }
+            } elseif (strpos($type, 'double_') === 0) {
+                $v = (int) str_replace('double_', '', $type);
+                if ($counts[$v] >= 2) {
+                    $won = true;
+                    $pay = 10;
+                }
+            } elseif (strpos($type, 'total_') === 0) {
+                $v = (int) str_replace('total_', '', $type);
+                if ($sum == $v) {
+                    $won = true;
+                    $pArr = [4 => 60, 5 => 30, 6 => 18, 7 => 12, 8 => 8, 9 => 7, 10 => 6, 11 => 6, 12 => 7, 13 => 8, 14 => 12, 15 => 18, 16 => 30, 17 => 60];
+                    $pay = $pArr[$v] ?? 0;
+                }
+            } elseif (strpos($type, 'single_') === 0) {
+                $v = (int) str_replace('single_', '', $type);
+                if (isset($counts[$v])) {
+                    $won = true;
+                    $pay = $counts[$v];
+                } // 1x, 2x, 3x
+            }
+            if ($won) {
+                $revenue = $amt * ($pay + 1);
+                $winAmount += $revenue;
+                $totalRevenue += $revenue;
+                $typeNames = [
+                    'small' => 'Xanh',
+                    'big' => 'Đỏ',
+                    'odd' => 'Lẻ',
+                    'even' => 'Chẵn',
+                    'any_triple' => 'Bất kỳ bộ ba'
+                ];
+                $displayName = $typeNames[$type] ?? $type;
+                if (strpos($type, 'single_') === 0) {
+                    $displayName = 'Số ' . str_replace('single_', '', $type);
+                } elseif (strpos($type, 'total_') === 0) {
+                    $displayName = 'Tổng ' . str_replace('total_', '', $type);
+                } elseif (strpos($type, 'double_') === 0) {
+                    $displayName = 'Cặp ' . str_replace('double_', '', $type);
+                } elseif (strpos($type, 'triple_') === 0) {
+                    $displayName = 'Bộ ba ' . str_replace('triple_', '', $type);
+                }
+                $winLog[] = "$displayName (Thắng x$pay): +" . number_format($revenue, 0, ',', '.');
+            }
+        }
+        $newMoney = $money + $winAmount;
+        $stmt = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
+        $stmt->bind_param("di", $newMoney, $userId);
+        $stmt->execute();
+        $stmt->close();
+        // History bảng riêng
+        $his = $conn->prepare("INSERT INTO history_sicbo (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
+        $his->bind_param("idss", $userId, $totalBet, $diceStr, $winAmount);
+        $his->execute();
+        $his->close();
+
+        // Ghi nhận game_history (Rule 5.2)
+        $isWin = ($winAmount > 0) ? 1 : 0;
+        logGameHistory($conn, $userId, 'Sicbo', $totalBet, $totalRevenue, $isWin);
+        echo json_encode([
+            'success' => true,
+            'dice' => $dice,
+            'sum' => $sum,
+            'winAmount' => $winAmount,
+            'totalRevenue' => $totalRevenue,
+            'winLog' => $winLog,
+            'money' => number_format($newMoney, 0, ',', '.'),
+            'rawMoney' => $newMoney
+        ]);
+        exit;
+    } elseif ($action === 'get_history') {
+        $stmt = $conn->prepare("SELECT Bet, Result, WinAmount, Time FROM history_sicbo WHERE Iduser = ? ORDER BY Time DESC LIMIT 10");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $res = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        echo json_encode(['success' => true, 'history' => $res]);
+        exit;
     }
-    echo json_encode($response);
-    exit;
 }
 ?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Scratch Card Premium - Vegas Royale</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <title>Sic Bo - Đỉnh Cao Xúc Xắc</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../assets/css/main.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;500;700&display=swap"
-        rel="stylesheet">
-    <?php echo getCSSIncludes(['special_effects' => true]); ?>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         :root {
-            --primary: #c471ed;
-            --accent: #f1c40f;
-            --glass: rgba(255, 255, 255, 0.1)
+            --primary: #ef4444;
+            --secondary: #6ee7b7;
+            --accent: #fbbf24;
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
         body {
             margin: 0;
             background: <?= $bgGradientCSS ?>;
             background-attachment: fixed;
             color: #fff;
-            font-family: 'Inter', sans-serif;
-            overflow: hidden;
-            cursor: url('../img/chuot.png'), auto !important
+            font-family: 'Exo 2', system-ui, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: url('../img/chuot.png'), auto !important;
         }
-        * {
-            cursor: inherit
-        }
-        button,
-        a,
-        input,
-        select,
-        .btn-help-game,
-        .help-close-x,
-        .scratch-tile,
-        .scrapper-cover {
-            cursor: url('../img/tay.png'), pointer !important
+        * { cursor: inherit; }
+        button, a, input, select, .bet-item, .btn-quick-bet, .btn-roll {
+            cursor: url('../img/tay.png'), pointer !important;
         }
         #threejs-background {
             position: fixed;
             top: 0;
             left: 0;
-            z-index: -1;
             width: 100%;
             height: 100%;
+            z-index: -1;
             pointer-events: none;
         }
 
-        /* 🏆 Badge Thông Báo Thắng / Thua Giống Game ID 1 */
+        /* 🏆 Badge Thông Báo Thắng / Thua Chuẩn Game ID 1 */
         #result-status-badge {
             display: none;
             position: fixed;
@@ -179,7 +240,7 @@ if (isset($_GET['action'])) {
             -webkit-backdrop-filter: blur(25px);
             border: 2px solid rgba(255, 255, 255, 0.2);
             box-shadow: 0 25px 80px rgba(0, 0, 0, 0.85);
-            font-family: 'Orbitron', 'Inter', sans-serif;
+            font-family: 'Orbitron', 'Exo 2', sans-serif;
             transition: transform 0.4s cubic-bezier(0.17, 0.89, 0.32, 1.49), opacity 0.4s;
             opacity: 0;
         }
@@ -211,212 +272,197 @@ if (isset($_GET['action'])) {
             opacity: 0.75;
             margin-top: 6px;
             max-width: 320px;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Exo 2', system-ui, sans-serif;
         }
         .main-container {
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            box-sizing: border-box
+            position: relative;
+            z-index: 1;
+            width: 96%;
+            max-width: 960px;
+            margin: 0.5rem auto 1rem;
+            text-align: center;
+        }
+        .game-title {
+            font-size: clamp(1.8rem, 4vw, 2.4rem);
+            font-weight: 900;
+            color: var(--primary);
+            text-shadow: 0 0 25px rgba(239, 68, 68, 0.4);
+            margin-bottom: 0.2rem;
+            text-transform: uppercase;
+            letter-spacing: 6px;
         }
         .glass-card {
             background: var(--glass);
             backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 2rem;
-            padding: 3rem;
-            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
-            width: 95%;
-            max-width: 1100px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 3rem;
-            overflow: hidden
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 1.8rem;
+            padding: 1.2rem 1.6rem;
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5);
+            margin-bottom: 0.8rem;
         }
-        .sidebar,
-        .game-area {
-            min-width: 0
+        .balance-pill {
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid var(--accent);
+            padding: 0.4rem 1.4rem;
+            border-radius: 50px;
+            display: inline-block;
+            margin-bottom: 0.8rem;
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 0.85rem;
         }
-        /* Scratch Grid */
-        .scratch-area {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 14px;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 18px;
-            border-radius: 1.5rem;
-            position: relative;
-            max-width: 450px;
-            margin: 0 auto;
-            width: 100%
+        .dice-area {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            min-height: 65px;
         }
-        .scratch-tile {
+        .die {
+            width: clamp(50px, 8vw, 65px);
             aspect-ratio: 1;
-            background: linear-gradient(135deg, #3d3d3d, #1a1a1a);
-            border-radius: 14px;
+            background: #fff;
+            border-radius: 0.8rem;
+            color: #000;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2.8rem;
-            position: relative;
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            transition: transform 0.2s, box-shadow 0.2s;
-            overflow: hidden
+            font-size: clamp(2rem, 4vw, 2.6rem);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+            transition: transform 0.1s;
         }
-        .scratch-tile:hover:not(.revealed) {
-            transform: scale(1.05);
-            border-color: rgba(196, 113, 237, 0.5);
-            box-shadow: 0 0 20px rgba(196, 113, 237, 0.3)
-        }
-        .scratch-tile span {
-            display: none
-        }
-        .scratch-tile.revealed {
-            background: rgba(255, 255, 255, 0.05);
-            border-color: rgba(255, 255, 255, 0.08)
-        }
-        .scratch-tile.revealed span {
-            display: block;
-            animation: symbolPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.6) both
-        }
-        @keyframes symbolPop {
-            0% {
-                transform: scale(0) rotate(-15deg);
-                opacity: 0
-            }
-            70% {
-                transform: scale(1.3) rotate(4deg);
-                opacity: 1
-            }
-            100% {
-                transform: scale(1) rotate(0deg)
-            }
-        }
-        .scratch-tile.match-highlight {
-            animation: matchGlow 0.45s ease infinite
-        }
-        @keyframes matchGlow {
-            0%,
-            100% {
-                transform: scale(1);
-                box-shadow: 0 0 10px #f1c40f
-            }
-            50% {
-                transform: scale(1.14);
-                box-shadow: 0 0 40px #f1c40f, 0 0 80px rgba(241, 196, 15, 0.5)
-            }
-        }
-        .scrapper-cover {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #8e44ad, #c0392b);
-            border-radius: 12px;
-            z-index: 2
-        }
-        /* Sidebar */
-        .sidebar {
+        .chip-selector {
             display: flex;
-            flex-direction: column;
-            gap: 1.5rem
-        }
-        .input-group {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 1.2rem;
-            border-radius: 1.2rem;
-            border: 1px solid rgba(255, 255, 255, 0.05)
-        }
-        .input-group label {
-            display: block;
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #888;
-            margin-bottom: 0.5rem
-        }
-        .input-group input {
-            background: none;
-            border: none;
-            color: #fff;
-            font-size: 1.5rem;
-            font-weight: 900;
-            width: 100%;
-            outline: none
-        }
-        .paytable {
-            background: rgba(0, 0, 0, 0.2);
-            padding: 1rem;
-            border-radius: 1rem;
-            font-size: 0.88rem
-        }
-        .paytable-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05)
-        }
-        .paytable-item:last-child {
-            border: none
-        }
-        .btn-buy {
-            background: linear-gradient(135deg, var(--primary), #12c2e9);
-            color: #fff;
-            border: none;
-            padding: 1.5rem;
-            border-radius: 1.2rem;
-            font-size: 1.4rem;
-            font-weight: 900;
-            transition: 0.3s;
-            text-transform: uppercase;
-            box-shadow: 0 10px 30px rgba(196, 113, 237, 0.3);
-            width: 100%;
-            position: relative;
-            overflow: hidden
-        }
-        .btn-buy::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transform: translateX(-100%);
-            transition: 0.5s
-        }
-        .btn-buy:hover:not(:disabled)::after {
-            transform: translateX(100%)
-        }
-        .btn-buy:hover:not(:disabled) {
-            transform: translateY(-3px);
-            filter: brightness(1.1)
-        }
-        .btn-buy:disabled {
-            opacity: 0.5;
-            cursor: not-allowed !important
-        }
-        .game-area {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            justify-content: center
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
         }
         .btn-quick-bet {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
             color: #fff;
-            padding: 8px;
-            border-radius: 8px;
+            padding: 6px 12px;
+            border-radius: 6px;
             cursor: url('../img/tay.png'), pointer !important;
             font-weight: 600;
             transition: 0.3s;
-            font-size: 0.75rem;
+            font-size: 0.78rem;
         }
-        .btn-quick-bet:hover {
-            background: var(--primary);
+        .btn-quick-bet:hover, .btn-quick-bet.sel {
+            background: var(--accent);
             color: #000;
-            border-color: var(--primary);
+            border-color: var(--accent);
+        }
+        .bet-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+            gap: 0.6rem;
+            margin-bottom: 1.2rem;
+        }
+        .bet-item {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 0.9rem;
+            padding: 0.7rem 0.4rem;
+            cursor: url('../img/tay.png'), pointer !important;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .bet-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        .bet-item.active {
+            border-color: var(--accent);
+            background: rgba(251, 191, 36, 0.1);
+        }
+        .bet-item .label {
+            font-size: 0.76rem;
+            font-weight: 800;
+            color: #fca5a5;
+            margin-bottom: 3px;
+            text-transform: uppercase;
+        }
+        .bet-item .odds {
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.4);
+            font-weight: 600;
+        }
+        .chip-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: var(--accent);
+            color: #000;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            font-size: 0.62rem;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+            z-index: 2;
+        }
+        .btn-roll {
+            background: linear-gradient(135deg, var(--primary) 0%, #7f1d1d 100%);
+            border: none;
+            padding: 0.85rem 3.5rem;
+            border-radius: 50px;
+            color: #fff;
+            font-size: 1.15rem;
+            font-weight: 900;
+            cursor: url('../img/tay.png'), pointer !important;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            width: 100%;
+            max-width: 320px;
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+        }
+        .btn-roll:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(239, 68, 68, 0.6);
+        }
+        .btn-roll:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .history-section {
+            display: none;
+            background: var(--glass);
+            border-radius: 2.5rem;
+            padding: 2.5rem;
+            border: 1px solid var(--glass-border);
+        }
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        .history-table th {
+            color: rgba(255, 255, 255, 0.4);
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            padding: 1.2rem;
+            border-bottom: 2px solid var(--glass-border);
+        }
+        .history-table td {
+            padding: 1.2rem;
+            border-bottom: 1px solid var(--glass-border);
+            font-weight: 600;
+        }
+        @media (max-width: 768px) {
+            .bet-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .btn-roll {
+                padding: 1rem 2rem;
+                font-size: 1.2rem;
+            }
         }
     </style>
 </head>
@@ -424,136 +470,223 @@ if (isset($_GET['action'])) {
     <!-- 🏆 Badge thông báo thắng/thua giống game ID 1 -->
     <div id="result-status-badge">
         <div id="result-badge-icon">🏆</div>
-        <div id="result-badge-title">THẮNG CÀO VÉ!</div>
+        <div id="result-badge-title">THẮNG SIC BO!</div>
         <div id="result-badge-amount">+100,000 GTLM</div>
-        <div id="result-badge-msg">Khớp 3 biểu tượng - Nổ thưởng lớn!</div>
+        <div id="result-badge-msg">Nổ thưởng xúc xắc rực rỡ!</div>
     </div>
     <div class="main-container">
+        <h1 class="game-title">SIC BO</h1>
+        <div class="balance-pill">💰 Số Gtlm: <span id="balance-val"><?= number_format($money, 0, ',', '.') ?></span>
+            gtlm
+        </div>
         <div class="glass-card">
-            <div class="sidebar">
-                <h1 style="margin:0;font-size:2rem;font-weight:900;color:var(--primary);font-family:'Orbitron'">SCRATCH
-                    CARD</h1>
-                <p style="margin:0;opacity:0.5">Cào Vé Số - Thắng Lớn ✨</p>
-                <div class="input-group">
-                    <label>gtlm mua vé</label>
-                    <input type="number" id="betAmount" value="10000" min="1000">
-                    <div class="quick-bets" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 10px;">
-                        <button class="btn-quick-bet" onclick="setBet(10000)">10K</button>
-                        <button class="btn-quick-bet" onclick="setBet(50000)">50K</button>
-                        <button class="btn-quick-bet" onclick="setBet(100000)">100K</button>
-                        <button class="btn-quick-bet" onclick="setBet(500000)">500K</button>
-                        <button class="btn-quick-bet" onclick="setBet(1000000)">1M</button>
-                        <button class="btn-quick-bet" onclick="setBet(5000000)">5M</button>
-                        <button class="btn-quick-bet" onclick="setBet('ALLIN')" style="grid-column: span 3; background: var(--primary); color:#000; border:none; font-weight:800;">ALL IN</button>
-                    </div>
+            <div class="dice-area" id="dice-container">
+                <div class="die">🎲</div>
+                <div class="die">🎲</div>
+                <div class="die">🎲</div>
+            </div>
+            <div class="chip-selector" style="display: flex; justify-content: center; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 2.5rem;">
+                <button type="button" class="btn-quick-bet sel" data-val="10000">10K</button>
+                <button type="button" class="btn-quick-bet" data-val="50000">50K</button>
+                <button type="button" class="btn-quick-bet" data-val="100000">100K</button>
+                <button type="button" class="btn-quick-bet" data-val="500000">500K</button>
+                <button type="button" class="btn-quick-bet" data-val="1000000">1M</button>
+                <button type="button" class="btn-quick-bet" data-val="5000000">5M</button>
+                <button type="button" class="btn-quick-bet" data-val="ALL">ALL IN</button>
+                <button type="button" onclick="clearBets()" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid var(--glass-border); border-radius: 8px; cursor: pointer; padding: 8px 15px; font-weight: 800; font-size: 0.75rem; transition: 0.3s; text-transform: uppercase;">DỌN BÀN</button>
+            </div>
+            <div class="bet-grid">
+                <div class="bet-item" data-type="small">
+                    <div class="label">Ác quỷ (4-10)</div>
+                    <div class="odds">1:1</div>
                 </div>
-                <div class="paytable">
-                    <b style="display:block;margin-bottom:10px;color:var(--accent)">BẢNG THƯỞNG (x3 khớp)</b>
-                    <div class="paytable-item"><span>🍒 Cherry</span><b>x2</b></div>
-                    <div class="paytable-item"><span>🍋 Lemon</span><b>x5</b></div>
-                    <div class="paytable-item"><span>🔔 Bell</span><b>x10</b></div>
-                    <div class="paytable-item"><span>⭐ Star</span><b>x20</b></div>
-                    <div class="paytable-item"><span>💎 Diamond</span><b>x50</b></div>
-                    <div class="paytable-item"><span>🎰 Jackpot</span><b>x100</b></div>
+                <div class="bet-item" data-type="odd">
+                    <div class="label">LẺ</div>
+                    <div class="odds">1:1</div>
                 </div>
-                <button id="buyBtn" class="btn-buy" onclick="handleMainButton()">🎫 Mua Vé</button>
-                <button id="btn-howto"
-                    style="background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.2);padding:0.9rem;border-radius:1rem;font-size:0.9rem;font-weight:700;width:100%;cursor:pointer;transition:0.2s;margin-top:4px"
-                    onmouseover="this.style.background='rgba(196,113,237,0.2)'"
-                    onmouseout="this.style.background='rgba(255,255,255,0.08)'">📖 Hướng Dẫn Chơi</button>
-                <div style="margin-top:auto;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.1)">
-                    <div style="display:flex;justify-content:space-between;align-items:center">
-                        <span style="opacity:0.5">Số Gtlm:</span>
-                        <span id="userMoney"
-                            style="font-weight:900;color:var(--accent);font-size:1.5rem"><?php echo number_format($money, 0, ',', '.'); ?>
-                            gtlm</span>
-                    </div>
+                <div class="bet-item" data-type="any_triple" style="grid-column: span 2;">
+                    <div class="label">BẤT KỲ BỘ BA</div>
+                    <div class="odds">1:30</div>
+                </div>
+                <div class="bet-item" data-type="even">
+                    <div class="label">CHẴN</div>
+                    <div class="odds">1:1</div>
+                </div>
+                <div class="bet-item" data-type="big">
+                    <div class="label">Thiên thần (11-17)</div>
+                    <div class="odds">1:1</div>
+                </div>
+                <div class="bet-item" data-type="single_1">
+                    <div class="label">Số 1</div>
+                    <div class="odds">x1,x2,x3</div>
+                </div>
+                <div class="bet-item" data-type="single_2">
+                    <div class="label">Số 2</div>
+                    <div class="odds">x1,x2,x3</div>
+                </div>
+                <div class="bet-item" data-type="single_3">
+                    <div class="label">Số 3</div>
+                    <div class="odds">x1,x2,x3</div>
+                </div>
+                <div class="bet-item" data-type="single_4">
+                    <div class="label">Số 4</div>
+                    <div class="odds">x1,x2,x3</div>
+                </div>
+                <div class="bet-item" data-type="single_5">
+                    <div class="label">Số 5</div>
+                    <div class="odds">x1,x2,x3</div>
+                </div>
+                <div class="bet-item" data-type="single_6">
+                    <div class="label">Số 6</div>
+                    <div class="odds">x1,x2,x3</div>
+                </div>
+                <div class="bet-item" data-type="total_9">
+                    <div class="label">Tổng 9</div>
+                    <div class="odds">1:7</div>
+                </div>
+                <div class="bet-item" data-type="total_10">
+                    <div class="label">Tổng 10</div>
+                    <div class="odds">1:6</div>
+                </div>
+                <div class="bet-item" data-type="total_11">
+                    <div class="label">Tổng 11</div>
+                    <div class="odds">1:6</div>
+                </div>
+                <div class="bet-item" data-type="total_12">
+                    <div class="label">Tổng 12</div>
+                    <div class="odds">1:7</div>
+                </div>
+                <div class="bet-item" data-type="total_4">
+                    <div class="label">Tổng 4</div>
+                    <div class="odds">1:60</div>
+                </div>
+                <div class="bet-item" data-type="total_17">
+                    <div class="label">Tổng 17</div>
+                    <div class="odds">1:60</div>
                 </div>
             </div>
-            <div class="game-area">
-                <div class="scratch-area" id="scratchGrid">
-                    <?php for ($i = 0; $i < 9; $i++): ?>
-                        <div class="scratch-tile" onclick="revealTile(this)">
-                            <div class="scrapper-cover" id="cover-<?php echo $i; ?>"></div>
-                            <span id="symbol-<?php echo $i; ?>">?</span>
-                        </div>
-                    <?php endfor; ?>
-                </div>
-                <p style="text-align:center;margin-top:15px;opacity:0.5;font-size:0.8rem">Nhấp vào từng ô để cào và nhận
-                    thưởng! ✋</p>
-                <div style="text-align:center">
-                    <a href="../index.php" style="color:#fff;text-decoration:none;font-size:0.8rem;opacity:0.3">← Quay
-                        về Dashboard</a>
-                </div>
+            <button id="roll-btn" class="btn-roll" data-allow-bot="true">LẮC XÚC XẮC</button>
+        </div>
+        <div class="history-section">
+            <h2 style="font-size: 1.2rem; letter-spacing: 2px; margin-bottom: 1rem;">LỊCH SỬ GẦN ĐÂY</h2>
+            <div style="overflow-x: auto;">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Thời gian</th>
+                            <th>gtlm cược</th>
+                            <th>Kết quả</th>
+                            <th>Thắng/Thua</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body"></tbody>
+                </table>
             </div>
         </div>
+        <div style="margin-top: 1rem; margin-bottom: 2rem;"><a href="../index.php"
+                style="color: var(--primary); text-decoration: none; font-weight: 700; border: 1px solid var(--primary); padding: 0.5rem 1.8rem; border-radius: 50px; font-size: 0.85rem; transition: 0.3s;">🏠
+                QUAY LẠI SẢNH</a></div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/confetti.browser.min.js"></script>
+    <?php require_once '../casino_help.php'; ?>
     <script>
-        let currentGrid = [];
-        let revealedCount = 0;
-        let isBuying = false;
-        let lastResult = null;
-        let isAutoRevealing = false;
-        function setBet(amount) {
-            const money = parseFloat($('#userMoney').text().replace(/\./g, ''));
-            if (amount === 'ALLIN') {
-                $('#betAmount').val(money);
+        let currentChip = 10000;
+        let bets = {};
+        let isRolling = false;
+        $('.btn-quick-bet').click(function() {
+            if ($(this).data('val') === undefined) return;
+            $('.btn-quick-bet').removeClass('sel');
+            $(this).addClass('sel');
+            currentChip = $(this).data('val');
+        });
+        $('.bet-item').click(function() {
+            if (isRolling) return;
+            let type = $(this).data('type');
+            let moneyText = $('#balance-val').text().replace(/\./g, '');
+            let maxMoney = parseInt(moneyText);
+            let currentTotalBet = Object.values(bets).reduce((a,b) => a+b, 0);
+            let addAmount = currentChip;
+            if (currentChip === 'ALL') {
+                addAmount = maxMoney - currentTotalBet;
             } else {
-                $('#betAmount').val(amount);
+                addAmount = parseInt(currentChip);
             }
-        }
-        function handleMainButton() {
-            if (isBuying || isAutoRevealing) return;
-            if (currentGrid.length > 0 && revealedCount < 9) {
-                // Auto reveal all remaining
-                isAutoRevealing = true;
-                $('#buyBtn').prop('disabled', true).text('ĐANG CÀO...');
-                $('.scratch-tile:not(.revealed)').each(function (index) {
-                    const el = this;
-                    setTimeout(() => {
-                        revealTile(el);
-                    }, index * 100);
-                });
-            } else {
-                buyCard();
+            if (addAmount <= 0 || (currentTotalBet + addAmount > maxMoney)) {
+                Swal.fire('Lỗi', 'Không đủ GTLM!', 'error');
+                return;
             }
+            bets[type] = (bets[type] || 0) + addAmount;
+            $(this).addClass('active');
+            let badge = $(this).find('.bet-amount-badge');
+            if (badge.length === 0) {
+                $(this).append(`<div class="bet-amount-badge chip-badge"></div>`);
+                badge = $(this).find('.bet-amount-badge');
+            }
+            let displayBet = bets[type];
+            if (displayBet >= 1000) {
+                displayBet = (displayBet / 1000) + 'K';
+            }
+            badge.text(displayBet).show();
+        });
+        function clearBets() {
+            if (isRolling) return;
+            bets = {};
+            $('.bet-item').removeClass('active');
+            $('.bet-amount-badge').remove();
         }
-        function buyCard() {
-            const bet = $('#betAmount').val();
-            isBuying = true;
-            $('#buyBtn').prop('disabled', true).text('ĐANG XỬ LÝ...');
-            // Reset tiles
-            gsap.to('.scrapper-cover', { scale: 1, opacity: 1, rotation: 0, duration: 0.3 });
-            $('.scratch-tile').removeClass('revealed match-highlight');
-            revealedCount = 0;
-            $.post('?action=buy', { bet }, function (res) {
-                if (res.success) {
-                    currentGrid = res.grid;
-                    lastResult = res;
-                    isBuying = false;
-                    isAutoRevealing = false;
-                    $('#buyBtn').prop('disabled', false).text('⚡ Cào Nhanh (Mở Hết)');
-                    $('#userMoney').text(res.money + ' gtlm');
-                } else {
-                    Swal.fire('Lỗi', res.message, 'error');
-                    isBuying = false;
-                    $('#buyBtn').prop('disabled', false).text('🎫 Mua Vé');
+        $('#roll-btn').click(function() {
+            if (isRolling || Object.keys(bets).length === 0) {
+                if (Object.keys(bets).length === 0) Swal.fire('Lỗi', 'Vui lòng đặt cược trước khi lắc!', 'error');
+                return;
+            }
+            isRolling = true;
+            $('#roll-btn').prop('disabled', true);
+            let betArray = [];
+            for (let type in bets) {
+                betArray.push({ type: type, amount: bets[type] });
+            }
+            $.post('?action=roll', { bets: JSON.stringify(betArray) }, function(data) {
+                if (!data.success) {
+                    console.warn('[Sicbo 51]', data.message);
+                    isRolling = false;
+                    $('#roll-btn').prop('disabled', false);
+                    return;
                 }
+                let diceEls = document.querySelectorAll('.die');
+                diceEls.forEach((el, idx) => {
+                    el.textContent = data.dice[idx];
+                    el.style.transform = 'scale(1.2)';
+                    setTimeout(() => el.style.transform = 'scale(1)', 200);
+                });
+                setTimeout(() => {
+                    isRolling = false;
+                    $('#roll-btn').prop('disabled', false);
+                    $('#balance-val').text(data.money);
+                    clearBets();
+                    if (data.winAmount > 0) {
+                        try {
+                            if (typeof confetti !== 'undefined') {
+                                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                            }
+                        } catch(e) { console.error(e); }
+                        if (window.GameEffects) {
+                            if (data.winAmount >= 500000) window.GameEffects.showBigWin(data.winAmount);
+                            else window.GameEffects.showWin(data.winAmount);
+                        }
+                        showResultBadge(true, data.winAmount, 'Tổng thu về: ' + Number(data.totalRevenue).toLocaleString('vi-VN') + ' GTLM');
+                    } else {
+                        const totalLossAmt = Math.abs(data.winAmount) || 10000;
+                        if (window.GameEffects) window.GameEffects.showLoss(totalLossAmt);
+                        showResultBadge(false, totalLossAmt, 'Trắng tay rồi - Chúc may mắn ván sau nhé!');
+                    }
+                }, 1000);
+            }, 'json').fail(function(xhr) {
+                isRolling = false;
+                $('#roll-btn').prop('disabled', false);
+                console.error('[Sicbo 51] Không thể kết nối đến máy chủ');
             });
-        }
-        function revealTile(el) {
-            if (isBuying || currentGrid.length === 0) return;
-            const idx = $(el).index();
-            if ($(el).hasClass('revealed')) return;
-            $(el).addClass('revealed');
-            $(el).find('span').text(currentGrid[idx]);
-            // Glitter!
-            if (window.GameEffects) window.GameEffects.glitterReveal(el);
-            const cover = $(el).find('.scrapper-cover');
-            gsap.to(cover, { scale: 0, opacity: 0, rotation: 40, duration: 0.45, ease: 'power2.out' });
-            revealedCount++;
-            if (revealedCount === 9) setTimeout(finishGame, 600);
-        }
+        });
+
         function showResultBadge(isWin, winAmount, statusMsg) {
             const badge = document.getElementById('result-status-badge');
             const icon  = document.getElementById('result-badge-icon');
@@ -567,7 +700,7 @@ if (isset($_GET['action'])) {
                 badge.style.borderColor = '#f1c40f';
                 badge.style.boxShadow   = '0 25px 80px rgba(0,0,0,0.85), 0 0 80px rgba(241,196,15,0.6)';
                 icon.textContent  = '🏆';
-                title.textContent = 'THẮNG CÀO VÉ!';
+                title.textContent = 'THẮNG SIC BO!';
                 title.style.color = '#f1c40f';
                 amtEl.textContent = '+' + parseInt(winAmount).toLocaleString('vi-VN') + ' GTLM';
                 amtEl.style.color = '#4ade80';
@@ -594,40 +727,7 @@ if (isset($_GET['action'])) {
                 setTimeout(() => { badge.style.display = 'none'; }, 400);
             }, 3500);
         }
-
-        function finishGame() {
-            if (!lastResult) return;
-            const win = lastResult.win;
-            const betAmt = parseInt($('#betAmount').val()) || 10000;
-            const rawWin = parseInt((lastResult.winAmount + '').replace(/[^0-9]/g, '')) || 0;
-
-            if (win) {
-                // Highlight matching tiles
-                const counts = {};
-                currentGrid.forEach(s => counts[s] = (counts[s] || 0) + 1);
-                const matchSym = Object.keys(counts).find(k => counts[k] >= 3);
-                if (matchSym) {
-                    $('.scratch-tile').each(function (i) {
-                        if (currentGrid[i] === matchSym) $(this).addClass('match-highlight');
-                    });
-                    setTimeout(() => $('.match-highlight').removeClass('match-highlight'), 3500);
-                }
-                if (window.GameEffects) {
-                    if (rawWin >= 500000) window.GameEffects.showBigWin(rawWin);
-                    else window.GameEffects.showWin(rawWin);
-                }
-                showResultBadge(true, rawWin, 'Khớp 3 biểu tượng - Nổ quà rực rỡ!');
-            } else {
-                if (window.GameEffects) window.GameEffects.showLoss(betAmt);
-                showResultBadge(false, betAmt, 'Không khớp 3 biểu tượng - Vé sau gom lộc!');
-            }
-            $('#buyBtn').prop('disabled', false).text('🎫 Mua Vé Tiếp');
-            currentGrid = [];
-            isAutoRevealing = false;
-        }
     </script>
-    <?php require_once '../casino_help.php'; ?>
-    <script src="../assets/js/scratch-tutorial.js"></script>
 
     <!-- Premium Three.js Effects System -->
     <canvas id="threejs-background"></canvas>
@@ -635,12 +735,12 @@ if (isset($_GET['action'])) {
         window.themeConfig = {
             particleCount: <?= $particleCount ?? 800 ?>,
             particleSize: <?= $particleSize ?? 0.05 ?>,
-            particleColor: '<?= $particleColor ?? "#00f2fe" ?>',
+            particleColor: '<?= $particleColor ?? "#ff4757" ?>',
             particleOpacity: <?= $particleOpacity ?? 0.6 ?>,
             shapeCount: <?= $shapeCount ?? 15 ?>,
-            shapeColors: <?= json_encode($shapeColors ?? ["#00f2fe", "#712cf9", "#ff4757", "#c471ed"]) ?>,
+            shapeColors: <?= json_encode($shapeColors ?? ["#ff4757", "#ff6b81", "#70a1ff", "#ffa502"]) ?>,
             shapeOpacity: <?= $shapeOpacity ?? 0.35 ?>,
-            bgGradient: <?= json_encode($bgGradient ?? ["#000000", "#050015", "#0a0025"]) ?>
+            bgGradient: <?= json_encode($bgGradient ?? ["#000000", "#12001a", "#250033"]) ?>
         };
     </script>
     <script src="../threejs-background.js"></script>
@@ -653,6 +753,7 @@ if (isset($_GET['action'])) {
     if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
     </script>
     <script src="../assets/js/bot_virtual_cursor.js"></script>
+    <script src="../assets/js/bot_chat.js"></script>
     <script src="bots/bot_50.js"></script>
 </body>
 </html>

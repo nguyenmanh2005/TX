@@ -8,438 +8,159 @@ $botUser = getOrCreateBotStreamerUser($conn, 'bot_43', 50000000);
 $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
 
-
-
-
-// AJAX history endpoint
-$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
-
-if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_history') {
-    header('Content-Type: application/json; charset=utf-8');
-    
-    $id = $botUserId ?? 0;
-    $sql = "SELECT * FROM history_poker WHERE Iduser = ? ORDER BY Time DESC LIMIT 20";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    $history = [];
-    while ($row = $result->fetch_assoc()) {
-        $history[] = $row;
-    }
-    $stmt->close();
-    
-    echo json_encode([
-        'success' => true,
-        'history' => $history
-    ], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
 require_once '../load_theme.php';
 
-/** @var int $particleCount */
-/** @var float $particleSize */
-/** @var string $particleColor */
-/** @var float $particleOpacity */
-/** @var int $shapeCount */
-/** @var array $shapeColors */
-/** @var float $shapeOpacity */
-/** @var array $bgGradient */
-/** @var string $bgGradientCSS */
 
 $userId = $botUserId;
-$sql = "SELECT Money, Name FROM users WHERE Iduser = ?";
-$stmt = $conn->prepare($sql);
+$stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
-$result = $stmt->get_result();
-$user = $result->fetch_assoc();
-
-
-// Get statistics from database for chart
-$gameThang = 0;
-$gameThua = 0;
-$sqlStats = "SELECT COUNT(*) as total, SUM(CASE WHEN WinAmount > 0 THEN 1 ELSE 0 END) as wins FROM history_poker WHERE Iduser = ?";
-$stmtStats = $conn->prepare($sqlStats);
-$stmtStats->bind_param("i", $userId);
-$stmtStats->execute();
-$resultStats = $stmtStats->get_result();
-if ($rowStats = $resultStats->fetch_assoc()) {
-    $gameThang = $rowStats['wins'] ?? 0;
-    $gameThua = ($rowStats['total'] ?? 0) - $gameThang;
-}
-$stmtStats->close();
-
-
-$soDu = $user['Money'];
-$tenNguoiChoi = $user['Name'];
-
-// Khởi tạo gtlm Bot hiển thị ban đầu (Tầm vài triệu - tỷ phú)
-$initBotMoney = [1 => 0, 2 => 0, 3 => 0];
-if (isset($_SESSION['texas_holdem'])) {
-    $gameS = $_SESSION['texas_holdem'];
-    for ($i = 1; $i <= 3; $i++) {
-        $m = $gameS["bot{$i}_money"] ?? 0;
-        if ($m < 1000000)
-            $m = rand(10, 1000) * 1000000; // Reset nếu quá nghèo
-        $initBotMoney[$i] = $m;
-        $_SESSION['texas_holdem']["bot{$i}_money"] = $m; // Cập nhật lại session luôn
-    }
-} else {
-    $initBotMoney = [
-        1 => rand(10, 1000) * 1000000,
-        2 => rand(10, 1000) * 1000000,
-        3 => rand(10, 1000) * 1000000
-    ];
-}
-
-// --- TEXAS HOLD'EM ENGINE ---
-
-function evaluateHand7($cards)
-{
-    if (count($cards) < 5)
-        return [0, 0, "N/A"];
-    $suits = ['♠', '♥', '♦', '♣'];
-    $vals = ["2" => 2, "3" => 3, "4" => 4, "5" => 5, "6" => 6, "7" => 7, "8" => 8, "9" => 9, "10" => 10, "J" => 11, "Q" => 12, "K" => 13, "A" => 14];
-
-    $pCards = [];
-    foreach ($cards as $c) {
-        $v = mb_substr($c, 0, -1, 'UTF-8');
-        $s = mb_substr($c, -1, 1, 'UTF-8');
-        if (!isset($vals[$v]))
-            continue;
-        $pCards[] = ['v' => $vals[$v], 's' => $s, 'orig' => $c];
-    }
-    usort($pCards, function ($a, $b) {
-        return $b['v'] - $a['v'];
-    });
-
-    // Flush check
-    $flushSuit = null;
-    $countsS = [];
-    foreach ($pCards as $c) {
-        $countsS[$c['s']] = ($countsS[$c['s']] ?? 0) + 1;
-    }
-    foreach ($countsS as $s => $count) {
-        if ($count >= 5)
-            $flushSuit = $s;
-    }
-
-    if ($flushSuit) {
-        $fCards = array_filter($pCards, function ($c) use ($flushSuit) {
-            return $c['s'] === $flushSuit;
-        });
-        $straight = checkStraight($fCards);
-        if ($straight) {
-            if ($straight['high'] == 14)
-                return [10, 1000, "Royal Flush"];
-            return [9, 900 + $straight['high'], "Straight Flush"];
-        }
-        return [6, 600 + $fCards[0]['v'], "Flush"];
-    }
-
-    $countsV = [];
-    foreach ($pCards as $c) {
-        $countsV[$c['v']] = ($countsV[$c['v']] ?? 0) + 1;
-    }
-    arsort($countsV);
-
-    $keys = array_keys($countsV);
-    $max = reset($countsV);
-    $val = key($countsV);
-
-    if ($max === 4)
-        return [8, 800 + $val, "Four of a Kind"];
-    if ($max === 3) {
-        if (isset($keys[1]) && $countsV[$keys[1]] >= 2)
-            return [7, 700 + $val, "Full House"];
-        $st = checkStraight($pCards);
-        if ($st)
-            return [5, 500 + $st['high'], "Straight"];
-        return [4, 400 + $val, "Three of a Kind"];
-    }
-    if ($max === 2) {
-        if (isset($keys[1]) && $countsV[$keys[1]] >= 2)
-            return [3, 300 + $val, "Two Pair"];
-        $st = checkStraight($pCards);
-        if ($st)
-            return [5, 500 + $st['high'], "Straight"];
-        return [2, 200 + $val, "One Pair"];
-    }
-    $st = checkStraight($pCards);
-    if ($st)
-        return [5, 500 + $st['high'], "Straight"];
-    return [1, 100 + $pCards[0]['v'], "High Card"];
-}
-
-function checkStraight($cards)
-{
-    if (count($cards) < 5)
-        return null;
-    $vals = array_unique(array_column($cards, 'v'));
-    sort($vals);
-    if (in_array(14, $vals) && in_array(2, $vals) && in_array(3, $vals) && in_array(4, $vals) && in_array(5, $vals))
-        return ['high' => 5];
-    $consecutive = 1;
-    $maxHigh = 0;
-    for ($i = 0; $i < count($vals) - 1; $i++) {
-        if ($vals[$i + 1] == $vals[$i] + 1) {
-            $consecutive++;
-            if ($consecutive >= 5)
-                $maxHigh = $vals[$i + 1];
-        } else {
-            $consecutive = 1;
-        }
-    }
-    return $maxHigh ? ['high' => $maxHigh] : null;
-}
-
-// --- AJAX HANDLER ---
+$user = $stmt->get_result()->fetch_assoc();
+$money = $user['Money'];
+$userName = $user['Name'];
+$stmt->close();
+// history table
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
     $action = $_GET['action'];
-    $response = ['success' => false, 'message' => ''];
-
-    if ($action === 'start_game') {
-        $bet = (int) ($_POST['bet'] ?? 10000);
-        if ($bet <= 0 || $bet > $soDu) {
-            $response['message'] = "⚠️ Số Gtlm không đủ!";
+    $response = ['success' => false];
+    if ($action === 'deal') {
+        $bet = (float) ($_POST['bet'] ?? 0);
+        if ($bet <= 0 || $bet > $money) {
+            $response['message'] = "gtlm cược không hợp lệ!";
         } else {
-            $suits = ['♠', '♥', '♦', '♣'];
-            $faces = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
-            $deck = [];
-            foreach ($suits as $s)
-                foreach ($faces as $f)
-                    $deck[] = $f . $s;
-            shuffle($deck);
-
-            // Khởi tạo gtlm Bot khủng (Vài triệu -> 1 tỷ)
-            $botMoney = [
-                1 => rand(5, 1000) * 1000000,
-                2 => rand(5, 1000) * 1000000,
-                3 => rand(5, 1000) * 1000000
-            ];
-
-            $gameState = [
-                'deck' => $deck,
-                'player_money' => $soDu - $bet,
-                'bet_per_player' => $bet,
-                'community' => [],
-                'player_hand' => array_splice($deck, 0, 2),
-                'bot1_hand' => array_splice($deck, 0, 2),
-                'bot2_hand' => array_splice($deck, 0, 2),
-                'bot3_hand' => array_splice($deck, 0, 2),
-                'bot1_money' => $botMoney[1] - $bet,
-                'bot2_money' => $botMoney[2] - $bet,
-                'bot3_money' => $botMoney[3] - $bet,
-                'bot1_folded' => false,
-                'bot2_folded' => false,
-                'bot3_folded' => false,
-                'pot' => $bet * 4,
-                'state' => 'pre-flop',
-                'folded_players' => [],
-                'win_amount' => 0
-            ];
-            $_SESSION['texas_holdem'] = $gameState;
-            $newMoney = $soDu - $bet;
-            $conn->query("UPDATE users SET Money = $newMoney WHERE Iduser = $userId");
-        
-            // Insert vào history_poker table logic placeholder
-            $historyStmt = $conn->prepare("INSERT INTO history_poker (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-            if ($historyStmt) {
-                $resStr = 'Pre-flop';
-                $win = 0;
-                $historyStmt->bind_param("iisi", $userId, $bet, $resStr, $win);
-                $historyStmt->execute();
-                $historyStmt->close();
-            }
-
-            $response = [
-                'success' => true,
-                'state' => 'pre-flop',
-                'playerHand' => $gameState['player_hand'],
-                'pot' => number_format($gameState['pot']) . ' gtlm',
-                'balance' => number_format($newMoney) . ' gtlm',
-                'bots' => [
-                    1 => ['money' => number_format($gameState['bot1_money']), 'folded' => false],
-                    2 => ['money' => number_format($gameState['bot2_money']), 'folded' => false],
-                    3 => ['money' => number_format($gameState['bot3_money']), 'folded' => false],
-                ],
-                'message' => 'Vòng Pre-flop: Hãy xem bài riêng của bạn.'
-            ];
-        }
-    } elseif ($action === 'play_action') {
-        if (!isset($_SESSION['texas_holdem']))
-            exit;
-        $game = &$_SESSION['texas_holdem'];
-        $userAction = $_POST['type'] ?? 'call';
-
-        if ($userAction === 'fold') {
-            $game['folded_players'][] = 0;
-            $game['state'] = 'showdown';
-            $response = [
-                'success' => true,
-                'state' => 'showdown',
-                'folded' => true,
-                'message' => '🏳️ Bạn đã bỏ bài.',
-                'allHands' => ['player' => $game['player_hand'], 'bot1' => $game['bot1_hand'], 'bot2' => $game['bot2_hand'], 'bot3' => $game['bot3_hand']]
-            ];
-            echo json_encode($response);
-            exit;
-        }
-
-        // Logic của Bot sau mỗi lượt
-        $botDecisions = [];
-        for ($i = 1; $i <= 3; $i++) {
-            if ($game["bot{$i}_folded"])
-                continue;
-
-            $hand = array_merge($game["bot{$i}_hand"], $game['community']);
-            $res = evaluateHand7($hand);
-            $strength = $res[0]; // 1-10
-
-            $shouldFold = false;
-            // Bot fold logic
-            if ($game['state'] === 'pre-flop') {
-                if ($strength == 1 && $res[1] < 110) { // Dưới J High
-                    if (rand(1, 100) < 30)
-                        $shouldFold = true;
-                }
-            } else {
-                if ($strength == 1) {
-                    if (rand(1, 100) < 50)
-                        $shouldFold = true;
-                }
-            }
-
-            if ($shouldFold) {
-                $game["bot{$i}_folded"] = true;
-                $game['folded_players'][] = $i;
-                $botDecisions[$i] = 'fold';
-            } else {
-                $botDecisions[$i] = 'call';
-            }
-        }
-
-        switch ($game['state']) {
-            case 'pre-flop':
-                $game['community'] = array_splice($game['deck'], 0, 3);
-                $game['state'] = 'flop';
-                $msg = "Flop: 3 lá bài chung đã lật!";
-                break;
-            case 'flop':
-                $game['community'][] = array_splice($game['deck'], 0, 1)[0];
-                $game['state'] = 'turn';
-                $msg = "Turn: Lá bài thứ 4 xuất hiện!";
-                break;
-            case 'turn':
-                $game['community'][] = array_splice($game['deck'], 0, 1)[0];
-                $game['state'] = 'river';
-                $msg = "River: Lá bài cuối cùng đã lật!";
-                break;
-            case 'river':
-                $results = [];
-                for ($i = 0; $i < 4; $i++) {
-                    if (in_array($i, $game['folded_players']))
-                        continue;
-                    $key = ($i === 0) ? 'player_hand' : "bot{$i}_hand";
-                    $res = evaluateHand7(array_merge($game[$key], $game['community']));
-                    $results[] = ['id' => $i, 'res' => $res, 'name' => ($i === 0 ? 'Bạn' : "Bot $i")];
-                }
-
-                if (empty($results)) {
-                    $winner = ['id' => 0, 'name' => 'Bạn', 'res' => [0, 0, 'Mọi người đã bỏ bài']];
-                } else {
-                    usort($results, function ($a, $b) {
-                        if ($a['res'][0] != $b['res'][0])
-                            return $b['res'][0] - $a['res'][0];
-                        return $b['res'][1] - $a['res'][1];
-                    });
-                    $winner = $results[0];
-                }
-
-                $game['state'] = 'showdown';
-                $isWin = ($winner['id'] === 0);
-                if ($isWin) {
-                    $winAmount = $game['pot'];
-                    $conn->query("UPDATE users SET Money = Money + $winAmount WHERE Iduser = $userId");
-                    $msg = "🏆 CHIẾN THẮNG: " . number_format($winAmount) . " gtlm (" . $winner['res'][2] . ")";
-                } else {
-                    $msg = "💀 THẤT BẠI: " . $winner['name'] . " thắng với " . $winner['res'][2];
-                }
-
-                $response = [
-                    'success' => true,
-                    'state' => 'showdown',
-                    'winner' => $winner,
-                    'allHands' => [
-                        'player' => $game['player_hand'],
-                        'bot1' => $game['bot1_hand'],
-                        'bot2' => $game['bot2_hand'],
-                        'bot3' => $game['bot3_hand']
-                    ],
-                    'message' => $msg,
-                    'isWin' => $isWin,
-                    'newBalance' => number_format($isWin ? ($game['player_money'] + $game['pot']) : $game['player_money']) . ' gtlm',
-                    'bots' => [
-                        1 => ['money' => number_format($game['bot1_money']), 'folded' => $game['bot1_folded']],
-                        2 => ['money' => number_format($game['bot2_money']), 'folded' => $game['bot2_folded']],
-                        3 => ['money' => number_format($game['bot3_money']), 'folded' => $game['bot3_folded']],
-                    ]
-                ];
-                echo json_encode($response);
+            $conn->begin_transaction();
+            $stmtLock = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+            $stmtLock->bind_param("i", $userId);
+            $stmtLock->execute();
+            $lockedMoney = $stmtLock->get_result()->fetch_assoc()['Money'] ?? 0;
+            $stmtLock->close();
+            if ($bet > $lockedMoney) {
+                $conn->rollback();
+                echo json_encode(['success' => false, 'message' => 'Số dư không đủ hoặc thao tác quá nhanh!']);
                 exit;
+            }
+            $conn->query("UPDATE users SET Money = Money - $bet WHERE Iduser = $userId");
+            // Standard deck
+            $suits = ['s', 'c', 'h', 'd'];
+            $deck = [];
+            foreach (['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'] as $v) {
+                foreach ($suits as $s)
+                    $deck[] = $v . $s;
+            }
+            shuffle($deck);
+            $playerHand = array_slice($deck, 0, 2);
+            $dealerHand = array_slice($deck, 2, 2);
+            $_SESSION['pontoon_bet'] = $bet;
+            $_SESSION['pontoon_player'] = $playerHand;
+            $_SESSION['pontoon_dealer'] = $dealerHand;
+            $_SESSION['pontoon_deck'] = array_slice($deck, 4);
+            $response = ['success' => true, 'player' => $playerHand, 'money' => number_format($money - $bet, 0, ',', '.')];
         }
-
-        $response = [
-            'success' => true,
-            'state' => $game['state'],
-            'community' => $game['community'],
-            'message' => $msg,
-            'bots' => [
-                1 => ['money' => number_format($game['bot1_money']), 'folded' => $game['bot1_folded']],
-                2 => ['money' => number_format($game['bot2_money']), 'folded' => $game['bot2_folded']],
-                3 => ['money' => number_format($game['bot3_money']), 'folded' => $game['bot3_folded']],
-            ]
-        ];
+    } elseif ($action === 'twist') {
+        $deck = $_SESSION['pontoon_deck'];
+        $player = $_SESSION['pontoon_player'];
+        $card = array_shift($deck);
+        $player[] = $card;
+        $_SESSION['pontoon_player'] = $player;
+        $_SESSION['pontoon_deck'] = $deck;
+        $response = ['success' => true, 'card' => $card, 'isBust' => (calculatePontoonScore($player) > 21)];
+        if ($response['isBust']) {
+            resolvePontoon(false, "Quá 21 điểm! Bạn đã thua.");
+        }
+    } elseif ($action === 'stick') {
+        $player = $_SESSION['pontoon_player'];
+        $dealer = $_SESSION['pontoon_dealer'];
+        $deck = $_SESSION['pontoon_deck'];
+        // Dealer logic: Deal until 17+
+        while (calculatePontoonScore($dealer) < 17) {
+            $dealer[] = array_shift($deck);
+        }
+        $pScore = calculatePontoonScore($player);
+        $dScore = calculatePontoonScore($dealer);
+        $win = false;
+        $msg = "";
+        if ($dScore > 21) {
+            $win = true;
+            $msg = "Dealer Quá 21 điểm! Bạn THẮNG.";
+        } elseif ($pScore > $dScore) {
+            $win = true;
+            $msg = "Bạn thắng Dealer với điểm cao hơn ($pScore vs $dScore).";
+        } elseif (count($player) >= 5 && $pScore <= 21) {
+            $win = true;
+            $msg = "5-Card Trick! Bạn thắng tuyệt đối.";
+        } else {
+            $win = false;
+            $msg = "Dealer thắng ($dScore vs $pScore). Bạn đã thua.";
+        }
+        // House Edge: 10% chance to force loss even if technically won
+        if ($win && rand(1, 10) === 1) {
+            $win = false;
+            $msg = "Dealer có bộ bài ẩn mạnh hơn! Bạn đã thua.";
+        }
+        $res = resolvePontoon($win, $msg, $dealer);
+        $response = array_merge(['success' => true], $res);
     }
     echo json_encode($response);
     exit;
 }
+function calculatePontoonScore($hand)
+{
+    $score = 0;
+    $aces = 0;
+    foreach ($hand as $c) {
+        $v = substr($c, 0, -1);
+        if ($v === 'A') {
+            $aces++;
+            $score += 11;
+        } elseif (in_array($v, ['J', 'Q', 'K']))
+            $score += 10;
+        else
+            $score += (int) $v;
+    }
+    while ($score > 21 && $aces > 0) {
+        $score -= 10;
+        $aces--;
+    }
+    return $score;
+}
+function resolvePontoon($win, $msg, $dealer = null)
+{
+    global $conn, $userId;
+    $bet = $_SESSION['pontoon_bet'];
+    $winAmount = $win ? $bet * 2 : 0;
+    if ($winAmount > 0)
+        $conn->query("UPDATE users SET Money = Money + $winAmount WHERE Iduser = $userId");
+    $profit = $winAmount - $bet;
+    $his = $conn->prepare("INSERT INTO history_pontoon (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
+    $his->bind_param("idss", $userId, $bet, $msg, $profit);
+    $his->execute();
+    unset($_SESSION['pontoon_bet']);
+    $conn->commit();
+            $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
+    return ['win' => $win, 'message' => $msg, 'dealer' => $dealer, 'winAmount' => number_format($winAmount, 0, ',', '.'), 'money' => number_format($newMoney, 0, ',', '.')];
+}
 ?>
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
-    <title>Texas Hold'em - Premium UI</title>
+    <title>Pontoon - UK Blackjack Royale</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.6.0/confetti.browser.min.js"></script>
     <script src="../assets/js/game-effects.js"></script>
-    <link rel="stylesheet" href="../assets/css/main.css">
-    <link rel="stylesheet" href="../assets/css/components.css">
-    <link rel="stylesheet" href="../assets/css/game-ui-enhancements.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         body {
-            margin: 0;
-            cursor: url('../img/chuot.png'), auto !important;
-            font-family: 'Poppins', sans-serif;
             background: transparent;
+            background-attachment: fixed;
+            color: #fff;
+            font-family: 'Exo 2', sans-serif;
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            align-items: center;
-            color: white;
-            overflow-x: hidden;
-            overflow-y: auto;
-            padding-top: 20px;
         }
-
         #threejs-background {
             position: fixed;
             top: 0;
@@ -447,264 +168,63 @@ if (isset($_GET['action'])) {
             width: 100%;
             height: 100%;
             z-index: -1;
-            background: #072a1a;
+            background: <?= $bgGradientCSS ?>;
         }
-
-        .poker-table {
-            background:
-                radial-gradient(circle at center, rgba(26, 116, 71, 0.9) 0%, rgba(7, 42, 26, 0.95) 80%),
-                url('https://www.transparenttextures.com/patterns/felt.png');
-            width: 1000px;
-            height: 550px;
-            border: 12px solid #3d2b1f;
-            border-radius: 300px;
-            position: relative;
-            box-shadow:
-                0 30px 100px rgba(0, 0, 0, 0.8),
-                inset 0 0 120px rgba(0, 0, 0, 0.6),
-                0 0 40px rgba(255, 215, 0, 0.1);
-            backdrop-filter: blur(10px);
-            border-style: double;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-shrink: 0;
-        }
-
-        .poker-table::after {
-            content: '';
-            position: absolute;
-            inset: 35px;
+        .glass {
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 230px;
-            pointer-events: none;
+            border-radius: 2rem;
         }
-
-        .seat {
-            position: absolute;
-            width: 160px;
+        .card {
+            width: 90px;
+            height: 130px;
+            background: #fff;
+            border-radius: 10px;
+            color: #000;
             display: flex;
-            flex-direction: column;
             align-items: center;
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 10;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
-
-        .seat-top {
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+        .card.back {
+            background: linear-gradient(135deg, #12c2e9, #c471ed, #f64f59);
+            color: transparent;
         }
-
-        .seat-left {
-            left: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-
-        .seat-right {
-            right: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-
-        .seat-bottom {
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            flex-direction: column-reverse;
-        }
-
-        .player-info {
-            background: rgba(0, 0, 0, 0.85);
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 13px;
-            margin-top: 5px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-            min-width: 120px;
-            text-align: center;
-            backdrop-filter: blur(10px);
-            line-height: 1.2;
-        }
-
         .hand {
             display: flex;
+            gap: 10px;
             justify-content: center;
-            gap: -20px;
+            margin: 2rem 0;
+            min-height: 140px;
         }
-
-        .card {
-            width: 75px;
-            height: 105px;
-            background: #ffffff;
-            border-radius: 10px;
-            color: #1e272e;
-            font-weight: 900;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 20px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
-            position: relative;
-            padding: 8px;
-            user-select: none;
-        }
-
-        .card.hidden {
-            background: linear-gradient(135deg, #1e272e 0%, #000 100%);
-            color: transparent;
-            border: 2px solid #3d2b1f;
-        }
-
-        .card.red { color: #eb4d4b; }
-
-        .community-area {
-            position: absolute;
-            top: 55%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            display: flex;
-            gap: 12px;
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 12px;
-            min-height: 125px;
-            width: 450px;
-            justify-content: center;
-            align-items: center;
-            border: 1px dashed rgba(255, 255, 255, 0.1);
-        }
-
-        .pot-container {
-            position: absolute;
-            top: 35%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            z-index: 5;
-        }
-
-        .pot-val {
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(10px);
-            padding: 5px 20px;
-            border-radius: 20px;
-            border: 1px solid rgba(255, 215, 0, 0.4);
-            color: #ffd700;
-            font-weight: 700;
-            font-size: 18px;
-        }
-
-        .controls {
-            margin: 20px 0;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 15px;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(20px);
-            padding: 20px 40px;
-            border-radius: 50px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        }
-
-        .btn-poker {
-            padding: 12px 30px;
-            border-radius: 30px;
+        .btn-premium {
+            padding: 1.2rem 2.5rem;
             border: none;
-            font-weight: 700;
+            border-radius: 50px;
+            font-weight: 900;
             cursor: pointer;
             transition: 0.3s;
             text-transform: uppercase;
-            font-size: 14px;
         }
-
-        .btn-premium { background: linear-gradient(135deg, #ffd700, #d4af37); color: #000; }
-        .btn-next { background: #2ecc71; color: #fff; }
-        .btn-fold { background: #e74c3c; color: #fff; }
-        .btn-secondary { background: rgba(255, 255, 255, 0.1); color: #fff; text-decoration: none; display: flex; align-items: center; }
-
-        .status-box {
-            background: rgba(0, 0, 0, 0.8);
-            padding: 10px 40px;
-            border-radius: 30px;
-            color: #ffd700;
-            margin-bottom: 20px;
-            border: 1px solid rgba(255, 215, 0, 0.3);
-            font-weight: 600;
-        }
-        
-        .game-wrapper {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .game-header {
-            width: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 15px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid #d4af37;
-            margin-bottom: 20px;
-            box-sizing: border-box;
-            backdrop-filter: blur(10px);
-        }
-
-        .game-header .back-btn {
-            color: #d4af37;
-            text-decoration: none;
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
-
-        .game-header .game-info {
-            text-align: center;
-        }
-
-        .game-header .game-info h1 {
-            margin: 0;
-            color: #fff;
-            font-size: 1.5rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .game-header .help-btn {
-            background: transparent;
-            border: 2px solid #d4af37;
-            color: #d4af37;
-            border-radius: 50%;
-            width: 35px;
-            height: 35px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .game-header .help-btn:hover {
-            background: #d4af37;
+        .btn-twist {
+            background: #00d2ff;
             color: #000;
         }
-
+        .btn-stick {
+            background: #f1c40f;
+            color: #000;
+        }
         .chip-selector {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
             justify-content: center;
-            margin-bottom: 15px;
+            margin-bottom: 25px;
             width: 100%;
         }
-
         .chip {
             padding: 8px 18px;
             background: rgba(255,255,255,0.1);
@@ -717,202 +237,90 @@ if (isset($_GET['action'])) {
             transition: 0.3s;
             user-select: none;
         }
-
         .chip:hover, .chip.active {
-            background: #d4af37;
+            background: #00d2ff;
             color: #000;
-            border-color: #d4af37;
+            border-color: #00d2ff;
             transform: scale(1.1);
-            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
+            box-shadow: 0 5px 15px rgba(0, 210, 255, 0.4);
         }
     </style>
 </head>
-
 <body>
-    <div class="game-wrapper">
-        <div class="game-header">
-            <a href="../index.php" class="back-btn">← Trang chủ</a>
-            <div class="game-info">
-                <h1>TEXAS HOLD'EM POKER</h1>
-                <div class="balance-box">
-                    <span>Ngân khố:</span>
-                    <strong id="balance-val" style="color: #ffd700;"><?= number_format($soDu) ?></strong> GTLM
+    <div class="game-wrapper" style="max-width:800px; margin:2rem auto; position:relative; z-index:1; padding: 0 15px; width: 100%;">
+        <div class="glass" style="padding: 2.5rem; text-align: center; border-radius: 2rem; width: 100%;">
+            <h1 style="margin: 0 0 1rem; font-size: 2.5rem; font-weight: 900; color: #12c2e9; text-transform: uppercase; letter-spacing: 2px;">PONTOON</h1>
+            <div style="background: rgba(0,0,0,0.3); padding: 10px 25px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.2); display: inline-block; margin-bottom: 2rem; max-width: 100%;">
+                <span style="opacity: 0.8; font-size: 0.9rem; margin-right: 5px;">SỐ GTLM:</span>
+                <span id="userMoney" style="font-weight: 900; font-size: clamp(14px, 3vw, 1.5rem); color: #f1c40f; word-break: break-all;"><?php echo number_format($money, 0, ',', '.'); ?> gtlm</span>
+            </div>
+            <h3 style="margin-bottom:10px; opacity:0.8; font-size:1rem;">BÀI NHÀ CÁI (DEALER)</h3>
+            <div id="dealerHand" class="hand">
+                <div class="card back"></div>
+                <div class="card back"></div>
+            </div>
+            <h3 style="margin-top:20px; margin-bottom:10px; opacity:0.8; font-size:1rem;">BÀI CỦA BẠN</h3>
+            <div id="playerHand" class="hand">
+                <div class="card back"></div>
+                <div class="card back"></div>
+            </div>
+            <div class="betting-area" style="display:flex; flex-direction:column; align-items:center;">
+                <div class="chip-selector" id="chipSelector">
+                    <div class="chip active" data-value="10000">10K</div>
+                    <div class="chip" data-value="50000">50K</div>
+                    <div class="chip" data-value="100000">100K</div>
+                    <div class="chip" data-value="500000">500K</div>
+                    <div class="chip" data-value="1000000">1M</div>
+                    <div class="chip" data-value="5000000">5M</div>
+                    <div class="chip" data-value="allin">MAX</div>
+                </div>
+                <div class="controls" style="display:flex; gap:20px; justify-content:center; align-items:center; flex-wrap: wrap;">
+                    <div style="background: rgba(0,0,0,0.3); padding: 5px 15px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; gap: 10px;">
+                        <span style="font-weight: bold; opacity: 0.8;">CƯỢC:</span>
+                        <input type="number" id="betAmount" value="10000" style="background: transparent; color:#fff; outline:none; font-size:1.3rem; font-weight:900; text-align:center; width:120px; border: none;">
+                    </div>
+                    <button class="btn-premium btn-twist" id="dealBtn" onclick="deal()">CHIA BÀI</button>
+                    <button class="btn-premium btn-twist" id="twistBtn" style="display:none" onclick="twist()">TWIST (RÚT THÊM)</button>
+                    <button class="btn-premium btn-stick" id="stickBtn" style="display:none" onclick="stick()">STICK (DỪNG)</button>
+                    <button class="btn-premium btn-stick" id="newBtn" style="display:none" onclick="newGame()">VÁN MỚI</button>
                 </div>
             </div>
-            <button class="help-btn" onclick="Swal.fire({title: 'Luật chơi', text: 'Poker Texas Hold\\'em...', background: '#1a1a1a', color: '#fff'})">?</button>
-        </div>
-
-        <div class="status-box" id="status-box">Chào mừng đến với Poker Texas Hold'em!</div>
-
-    <div class="poker-table">
-        <div class="pot-container">
-            <div class="pot-val" id="pot-val">Pot: 0</div>
-        </div>
-        <div class="seat seat-left" id="seat-bot1">
-            <div class="player-info"><b>Bot 1</b><br><span id="bot1-money"><?= number_format($initBotMoney[1]) ?> gtlm</span></div>
-            <div class="status-badge">ĐÃ BỎ BÀI</div>
-            <div class="hand" id="bot1-hand"></div>
-        </div>
-        <div class="seat seat-top" id="seat-bot2">
-            <div class="player-info"><b>Bot 2</b><br><span id="bot2-money"><?= number_format($initBotMoney[2]) ?> gtlm</span></div>
-            <div class="status-badge">ĐÃ BỎ BÀI</div>
-            <div class="hand" id="bot2-hand"></div>
-        </div>
-        <div class="seat seat-right" id="seat-bot3">
-            <div class="player-info"><b>Bot 3</b><br><span id="bot3-money"><?= number_format($initBotMoney[3]) ?> gtlm</span></div>
-            <div class="status-badge">ĐÃ BỎ BÀI</div>
-            <div class="hand" id="bot3-hand"></div>
-        </div>
-        <div class="community-area" id="community-area"></div>
-        <div class="seat seat-bottom">
-            <div class="hand" id="player-hand"></div>
-            <div class="player-info"><b><?= htmlspecialchars($tenNguoiChoi) ?></b><br><span id="balance-val" style="color: #ffd700;"><?= number_format($soDu) ?> gtlm</span></div>
-        </div>
-    </div>
-
-    <div class="controls">
-        <div id="start-controls" style="display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%;">
-            <input type="hidden" id="bet-amount" value="10000">
-            <div class="chip-selector" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                <div class="chip active" data-value="10000">10K</div>
-                <div class="chip" data-value="50000">50K</div>
-                <div class="chip" data-value="100000">100K</div>
-                <div class="chip" data-value="500000">500K</div>
-                <div class="chip" data-value="1000000">1M</div>
-                <div class="chip" data-value="5000000">5M</div>
-                <div class="chip" data-value="<?= $soDu ?>">MAX</div>
+            <div style="margin-top: 3rem;">
+                <a href="../index.php" style="color:#fff; text-decoration:none; border:1px solid rgba(255,255,255,0.2); padding:0.8rem 2rem; border-radius:50px; font-weight: bold; background: rgba(0,0,0,0.2); transition: 0.3s; display: inline-block;">🏠 THOÁT VỀ SẢNH</a>
             </div>
-            <button id="btn-start" class="btn-poker btn-premium">🃏 KHAI CUỘC</button>
-        </div>
-        <div id="play-controls" style="display: none; gap: 10px;">
-            <button id="btn-call" class="btn-poker btn-next">✅ THEO (CALL/CHECK)</button>
-            <button id="btn-fold" class="btn-poker btn-fold">🏳️ BỎ BÀI (FOLD)</button>
         </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const btnStart = document.getElementById('btn-start'), btnCall = document.getElementById('btn-call'), btnFold = document.getElementById('btn-fold'), statusBox = document.getElementById('status-box'), potVal = document.getElementById('pot-val'), balanceVal = document.getElementById('balance-val'), betInput = document.getElementById('bet-amount'), pHand = document.getElementById('player-hand'), b1Hand = document.getElementById('bot1-hand'), b2Hand = document.getElementById('bot2-hand'), b3Hand = document.getElementById('bot3-hand'), commArea = document.getElementById('community-area');
-
-            function renderCard(card, isHidden = false, delay = 0) {
-                const el = document.createElement('div');
-                el.className = 'card card-img' + (isHidden ? ' hidden' : '');
-                el.style.animation = `deal 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards ${delay}s`;
-                el.style.background = 'transparent';
-                el.style.padding = '0';
-                el.style.border = 'none';
-                el.style.boxShadow = 'none';
-                
-                let url;
-                if (!isHidden) {
-                    const suitMap = {'♥': 'hearts', '♦': 'diamonds', '♣': 'clubs', '♠': 'spades'};
-                    const suitStr = suitMap[card.slice(-1)];
-                    let valStr = card.slice(0, -1);
-                    if (!isNaN(valStr) && parseInt(valStr) < 10) valStr = '0' + parseInt(valStr);
-                    url = `img/anh-bai/PNG/Cards (large)/card_${suitStr}_${valStr}.png`;
-                } else {
-                    url = `img/anh-bai/PNG/Cards (large)/card_back.png`;
-                }
-                el.innerHTML = `<img src="${url}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.4);">`;
-                return el;
-            }
-
-            // Chip Selection Logic
-            document.querySelectorAll('.chip').forEach(chip => {
-                chip.addEventListener('click', () => {
-                    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-                    chip.classList.add('active');
-                    betInput.value = chip.dataset.value;
-                    
-                    // Chip click effect
-                    if (window.GameEffects && typeof GameEffects.coinBlast === 'function') {
-                        try {
-                            const cx = (typeof event !== 'undefined' && event && event.clientX) ? event.clientX : window.innerWidth / 2;
-                            const cy = (typeof event !== 'undefined' && event && event.clientY) ? event.clientY : window.innerHeight / 2;
-                            GameEffects.coinBlast(cx, cy, 10);
-                        } catch (e) {}
-                    }
-                });
-            });
-
-            btnStart.addEventListener('click', async () => {
-                const bet = betInput.value; const fd = new FormData(); fd.append('bet', bet);
-                const res = await fetch('?action=start_game', { method: 'POST', body: fd }); const data = await res.json();
-                if (data.success) {
-                    pHand.innerHTML = ''; b1Hand.innerHTML = ''; b2Hand.innerHTML = ''; b3Hand.innerHTML = ''; commArea.innerHTML = '';
-                    document.querySelectorAll('.seat').forEach(s => s.classList.remove('folded'));
-                    data.playerHand.forEach((c, i) => pHand.appendChild(renderCard(c, false, i * 0.15)));
-                    for (let i = 0; i < 2; i++) { b1Hand.appendChild(renderCard(null, true, 0.3 + i * 0.15)); b2Hand.appendChild(renderCard(null, true, 0.6 + i * 0.15)); b3Hand.appendChild(renderCard(null, true, 0.9 + i * 0.15)); }
-                    potVal.textContent = 'Pot: ' + data.pot; balanceVal.textContent = data.balance; statusBox.textContent = data.message;
-                    document.getElementById('start-controls').style.display = 'none'; document.getElementById('play-controls').style.display = 'flex';
-                } else Swal.fire('Lỗi', data.message, 'error');
-            });
-
-            btnCall.addEventListener('click', async () => {
-                btnCall.disabled = true; statusBox.textContent = 'Bots đang suy nghĩ...';
-                setTimeout(async () => {
-                    const fd = new FormData(); fd.append('type', 'call');
-                    const res = await fetch('?action=play_action', { method: 'POST', body: fd }); const data = await res.json();
-                    btnCall.disabled = false; handleResponse(data);
-                }, 800);
-            });
-
-            btnFold.addEventListener('click', async () => {
-                const fd = new FormData(); fd.append('type', 'fold');
-                const res = await fetch('?action=play_action', { method: 'POST', body: fd }); const data = await res.json();
-                handleResponse(data);
-            });
-
-            function handleResponse(data) {
-                if (data.success) {
-                    statusBox.textContent = data.message;
-                    if (data.community) {
-                        commArea.innerHTML = '';
-                        data.community.forEach((c, i) => commArea.appendChild(renderCard(c, false, i * 0.1)));
-                    }
-                    if (data.bots) {
-                        for (let i = 1; i <= 3; i++) {
-                            const b = data.bots[i];
-                            document.getElementById(`bot${i}-money`).textContent = b.money + ' gtlm';
-                            if (b.folded) document.getElementById(`seat-bot${i}`).classList.add('folded');
-                        }
-                    }
-                    if (data.state === 'showdown' && data.allHands) {
-                        b1Hand.innerHTML = ''; data.allHands.bot1.forEach(c => b1Hand.appendChild(renderCard(c)));
-                        b2Hand.innerHTML = ''; data.allHands.bot2.forEach(c => b2Hand.appendChild(renderCard(c)));
-                        b3Hand.innerHTML = ''; data.allHands.bot3.forEach(c => b3Hand.appendChild(renderCard(c)));
-                        document.getElementById('start-controls').style.display = 'flex'; document.getElementById('play-controls').style.display = 'none';
-                        if (data.newBalance) balanceVal.textContent = data.newBalance;
-                        
-                        if (data.isWin) { 
-                            if (window.GameEffects) GameEffects.showWin(data.message.replace('🏆 CHIẾN THẮNG: ', '')); 
-                        } else if (!data.folded) {
-                            Swal.fire({
-                                toast: true,
-                                position: 'top-end',
-                                icon: 'info',
-                                title: data.message,
-                                showConfirmButton: false,
-                                timer: 3000,
-                                background: '#1a1a1a',
-                                color: '#fff'
-                            });
-                        }
-                    }
-                    if (data.folded) { 
-                        document.getElementById('start-controls').style.display = 'flex'; 
-                        document.getElementById('play-controls').style.display = 'none'; 
-                    }
-                }
-            }
-        });
-    </script>
+    <?php require_once '../casino_help.php'; ?>
+    <!-- Badge thông báo thắng/thua giống game ID 1 -->
+    <div id="result-status-badge" style="
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.5);
+        background: rgba(0,0,0,0.88);
+        border-radius: 20px;
+        padding: 28px 52px;
+        text-align: center;
+        z-index: 10000;
+        pointer-events: none;
+        backdrop-filter: blur(22px);
+        border: 2px solid rgba(255,255,255,0.15);
+        box-shadow: 0 25px 80px rgba(0,0,0,0.8);
+        font-family: 'Outfit', 'Exo 2', sans-serif;
+        transition: transform 0.4s cubic-bezier(0.17, 0.89, 0.32, 1.49), opacity 0.4s;
+        opacity: 0;
+    ">
+        <div id="result-badge-icon" style="font-size: 3.5rem; margin-bottom: 8px;"></div>
+        <div id="result-badge-title" style="font-size: 1.8rem; font-weight: 800; letter-spacing: 2px; margin-bottom: 6px;"></div>
+        <div id="result-badge-amount" style="font-size: 1.3rem; font-weight: 700; opacity: 0.9;"></div>
+        <div id="result-badge-msg" style="font-size: 0.85rem; opacity: 0.65; margin-top: 6px; max-width: 320px;"></div>
+    </div>
 
     <!-- Premium Effects System -->
     <canvas id="threejs-background"></canvas>
     <script>
-        (function () {
+        (function() {
             window.themeConfig = {
                 particleCount: <?= $particleCount ?? 800 ?>,
                 particleSize: <?= $particleSize ?? 0.05 ?>,
@@ -923,7 +331,6 @@ if (isset($_GET['action'])) {
                 shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>,
                 bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>
             };
-            // Fix: Load trực tiếp theo đường dẫn chuẩn thay vì prefix detection
             ['../threejs-background.js', '../assets/js/game-effects-auto.js'].forEach(src => {
                 const s = document.createElement('script');
                 s.src = src;
@@ -931,6 +338,139 @@ if (isset($_GET['action'])) {
                 document.head.appendChild(s);
             });
         })();
+
+        // === Badge kết quả giống game ID 1 ===
+        function showResultBadge(isWin, winAmount, statusMsg) {
+            const badge = document.getElementById('result-status-badge');
+            const icon  = document.getElementById('result-badge-icon');
+            const title = document.getElementById('result-badge-title');
+            const amtEl = document.getElementById('result-badge-amount');
+            const msgEl = document.getElementById('result-badge-msg');
+
+            if (isWin) {
+                badge.style.borderColor = '#f1c40f';
+                badge.style.boxShadow   = '0 25px 80px rgba(0,0,0,0.8), 0 0 80px rgba(241,196,15,0.5)';
+                icon.textContent  = '🏆';
+                title.textContent = 'THẮNG!';
+                title.style.color = '#f1c40f';
+                amtEl.textContent = '+' + parseInt(winAmount).toLocaleString('vi-VN') + ' GTLM';
+                amtEl.style.color = '#f1c40f';
+            } else {
+                badge.style.borderColor = '#e74c3c';
+                badge.style.boxShadow   = '0 25px 80px rgba(0,0,0,0.8), 0 0 60px rgba(231,76,60,0.4)';
+                icon.textContent  = '❌';
+                title.textContent = 'THUA!';
+                title.style.color = '#e74c3c';
+                amtEl.textContent = '';
+                amtEl.style.color = '#e74c3c';
+            }
+            msgEl.textContent = statusMsg || '';
+
+            badge.style.display = 'block';
+            requestAnimationFrame(() => {
+                badge.style.transform = 'translate(-50%, -50%) scale(1.05)';
+                badge.style.opacity   = '1';
+                setTimeout(() => { badge.style.transform = 'translate(-50%, -50%) scale(1)'; }, 150);
+            });
+            setTimeout(() => {
+                badge.style.transform = 'translate(-50%, -50%) scale(0.8)';
+                badge.style.opacity   = '0';
+                setTimeout(() => { badge.style.display = 'none'; }, 400);
+            }, 3500);
+        }
+        // Pontoon Game Logic
+        $(document).ready(function() {
+            $('.chip').click(function() {
+                if ($('#dealBtn').is(':hidden')) return; // Khóa phỉnh khi đang chơi
+                $('.chip').removeClass('active');
+                $(this).addClass('active');
+                const val = $(this).data('value');
+                if (val === 'allin') {
+                    $('#betAmount').val(<?= $money ?>);
+                } else {
+                    $('#betAmount').val(val);
+                }
+            });
+        });
+        function getSuitSymbol(cardStr) {
+            if (!cardStr) return '';
+            let s = cardStr.slice(-1);
+            let v = cardStr.slice(0, -1);
+            let symbol = s === 'h' ? '♥' : (s === 'd' ? '♦' : (s === 'c' ? '♣' : '♠'));
+            let color = (s === 'h' || s === 'd') ? '#dc2626' : '#1e293b';
+            return `<div style="position:relative; width:100%; height:100%;"><div style="color:${color}; font-size:1.5rem; position:absolute; top:8px; left:12px;">${v}</div><div style="color:${color}; font-size:4rem; margin-top:30px; line-height:1;">${symbol}</div></div>`;
+        }
+        function addCard(containerId, cardStr, isBack = false) {
+            let content = isBack ? '' : getSuitSymbol(cardStr);
+            let cls = isBack ? 'card back' : 'card';
+            $(containerId).append(`<div class="${cls}" data-card="${cardStr || ''}">${content}</div>`);
+        }
+        function resetCards() {
+            $('#dealerHand, #playerHand').empty();
+        }
+        function deal() {
+            const bet = $('#betAmount').val();
+            if (bet < 1000) return Swal.fire('Lỗi', 'Cược tối thiểu 1,000 gtlm!', 'error');
+            $.post('?action=deal', { bet: bet }, function(res) {
+                if (!res.success) return Swal.fire('Lỗi', res.message, 'error');
+                resetCards();
+                addCard('#dealerHand', '', true);
+                addCard('#dealerHand', '', true);
+                res.player.forEach(c => addCard('#playerHand', c));
+                $('#userMoney').text(res.money + ' gtlm');
+                $('#dealBtn').hide();
+                $('#chipSelector').css('opacity', '0.5').css('pointer-events', 'none');
+                $('#betAmount').prop('disabled', true);
+                $('#twistBtn').show();
+                $('#stickBtn').show();
+            });
+        }
+        function twist() {
+            $.get('?action=twist', function(res) {
+                if (!res.success) return;
+                addCard('#playerHand', res.card);
+                if (res.isBust) {
+                    $('#twistBtn').hide();
+                    $('#stickBtn').hide();
+                    $('#newBtn').show();
+                    showResultBadge(false, 0, 'Quá 21 điểm! Bạn đã thua.');
+                    if (typeof GameEffects !== 'undefined') GameEffects.showLoss(parseInt($('#betAmount').val()) || 10000);
+                }
+            });
+        }
+        function stick() {
+            $.get('?action=stick', function(res) {
+                if (!res.success) return;
+                $('#dealerHand').empty();
+                res.dealer.forEach(c => addCard('#dealerHand', c));
+                $('#userMoney').text(res.money + ' gtlm');
+                const winAmount = parseInt(String(res.winAmount).replace(/\D/g, '')) || 0;
+                setTimeout(() => {
+                    if (res.win) {
+                        showResultBadge(true, winAmount, res.message);
+                        if (typeof GameEffects !== 'undefined') GameEffects.showWin(winAmount);
+                        if (typeof confetti === 'function') confetti({ particleCount: 150, spread: 80, origin: { y: 0.5 } });
+                    } else {
+                        showResultBadge(false, 0, res.message);
+                        if (typeof GameEffects !== 'undefined') GameEffects.showLoss(parseInt($('#betAmount').val()) || 10000);
+                    }
+                }, 400);
+                $('#twistBtn').hide();
+                $('#stickBtn').hide();
+                $('#newBtn').show();
+            });
+        }
+        function newGame() {
+            resetCards();
+            addCard('#dealerHand', '', true);
+            addCard('#dealerHand', '', true);
+            addCard('#playerHand', '', true);
+            addCard('#playerHand', '', true);
+            $('#newBtn').hide();
+            $('#dealBtn').show();
+            $('#chipSelector').css('opacity', '1').css('pointer-events', 'auto');
+            $('#betAmount').prop('disabled', false);
+        }
     </script>
 
 <!-- Bot AI Script -->

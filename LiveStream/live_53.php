@@ -10,152 +10,83 @@ $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
 require_once '../include_css.php';
 $useBotTheme = $botUserId;
-include '../load_theme.php';
-require_once '../game_history_helper.php';
+require_once '../load_theme.php';
+
 if (!isset($botUserId)) {
     header('Location: ../login.php');
     exit;
 }
+
 $userId = $botUserId;
 $stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
-$money = $user['Money'];
-$userName = $user['Name'];
+$money = $user['Money'] ?? 50000000;
+$userName = $user['Name'] ?? 'Thánh Bài Tứ Sắc';
 $stmt->close();
-function getTowerMultiplier($floor)
-{
-    if ($floor <= 0)
-        return 1.0;
-    return round(pow(1.45, $floor) * 0.98, 2);
-}
+
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
     $action = $_GET['action'];
-    $response = ['success' => false];
-    if ($action === 'start') {
-        $bet = (float) ($_POST['bet'] ?? 0);
-        if ($bet <= 0 || $bet > $money) {
-            $response['message'] = "gtlm cược không hợp lệ!";
-        } else {
-            $conn->begin_transaction();
-            $stmtLock = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
-            $stmtLock->bind_param("i", $userId);
-            $stmtLock->execute();
-            $lockedMoney = $stmtLock->get_result()->fetch_assoc()['Money'] ?? 0;
-            $stmtLock->close();
-            if ($bet > $lockedMoney) {
-                $conn->rollback();
-                echo json_encode(['success' => false, 'message' => 'Số dư không đủ hoặc thao tác quá nhanh!']);
-                exit;
-            }
-            $conn->query("UPDATE users SET Money = Money - $bet WHERE Iduser = $userId");
-            $traps = [];
-            for ($i = 0; $i < 10; $i++)
-                $traps[$i] = rand(0, 2);
-            $_SESSION['tower_game'] = ['bet' => $bet, 'traps' => $traps, 'currentFloor' => 0, 'status' => 'active'];
-            $conn->commit();
-            $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
-            $response = ['success' => true, 'money' => number_format($newMoney, 0, ',', '.')];
-        }
-    } elseif ($action === 'pick') {
-        $tileIdx = (int) ($_POST['tile'] ?? -1);
-        if (!isset($_SESSION['tower_game']) || $_SESSION['tower_game']['status'] !== 'active' || $tileIdx < 0 || $tileIdx > 2) {
-            $response['message'] = "Phiên chơi không hợp lệ!";
-        } else {
-            $game = &$_SESSION['tower_game'];
-            $floor = $game['currentFloor'];
-            if ($tileIdx === $game['traps'][$floor]) {
-                $game['status'] = 'lost';
-                $bet = $game['bet'];
-                $resStr = "Lost at Floor $floor";
-                $his = $conn->prepare("INSERT INTO history_tower (Iduser,Bet,Result,WinAmount,Time) VALUES (?,?,?,?,NOW())");
-                $negBet = -$bet;
-                $his->bind_param("idss", $userId, $bet, $resStr, $negBet);
-                $his->execute();
-                logGameHistoryWithAll($conn, $userId, 'Tower', $bet, 0, false);
-                $response = ['success' => true, 'hit' => true, 'trap' => $game['traps'][$floor]];
-                unset($_SESSION['tower_game']);
-            } else {
-                $game['currentFloor']++;
-                if ($game['currentFloor'] >= 10) {
-                    $mult = getTowerMultiplier(10);
-                    $winAmount = round($game['bet'] * $mult);
-                    $conn->query("UPDATE users SET Money = Money + $winAmount WHERE Iduser = $userId");
-                    $resStr = "Win Tower Max x$mult";
-                    $profit = $winAmount - $game['bet'];
-                    $his = $conn->prepare("INSERT INTO history_tower (Iduser,Bet,Result,WinAmount,Time) VALUES (?,?,?,?,NOW())");
-                    $his->bind_param("idss", $userId, $game['bet'], $resStr, $profit);
-                    $his->execute();
-                    logGameHistoryWithAll($conn, $userId, 'Tower', $game['bet'], $winAmount, true);
-                    $conn->commit();
-            $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
-                    $response = ['success' => true, 'hit' => false, 'floor' => $game['currentFloor'], 'winAmount' => number_format($winAmount, 0, ',', '.'), 'money' => number_format($newMoney, 0, ',', '.'), 'max' => true];
-                    unset($_SESSION['tower_game']);
-                } else {
-                    $nextMult = getTowerMultiplier($game['currentFloor']);
-                    $response = ['success' => true, 'hit' => false, 'floor' => $game['currentFloor'], 'multiplier' => $nextMult];
-                }
-            }
-        }
-    } elseif ($action === 'cashout') {
-        if (!isset($_SESSION['tower_game']) || $_SESSION['tower_game']['status'] !== 'active') {
-            $response['message'] = "Không có gtlm để rút!";
-        } else {
-            $game = $_SESSION['tower_game'];
-            $floor = $game['currentFloor'];
-            if ($floor == 0) {
-                $response['message'] = "Hãy leo ít nhất 1 tầng!";
-            } else {
-                $mult = getTowerMultiplier($floor);
-                $winAmount = round($game['bet'] * $mult);
-                $conn->query("UPDATE users SET Money = Money + $winAmount WHERE Iduser = $userId");
-                $resStr = "Cashout Floor $floor x$mult";
-                $profit = $winAmount - $game['bet'];
-                $his = $conn->prepare("INSERT INTO history_tower (Iduser,Bet,Result,WinAmount,Time) VALUES (?,?,?,?,NOW())");
-                $his->bind_param("idss", $userId, $game['bet'], $resStr, $profit);
-                $his->execute();
-                logGameHistoryWithAll($conn, $userId, 'Tower', $game['bet'], $winAmount, true);
-                $conn->commit();
-            $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
-                $response = ['success' => true, 'winAmount' => number_format($winAmount, 0, ',', '.'), 'money' => number_format($newMoney, 0, ',', '.')];
-                unset($_SESSION['tower_game']);
-            }
-        }
+    if ($action === 'win_turn') {
+        $winAmt = 250000;
+        $conn->query("UPDATE users SET Money = Money + $winAmt WHERE Iduser = $userId");
+        $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
+        logGameHistoryWithAll($conn, $userId, 'Tusac', 50000, $winAmt, true);
+        echo json_encode(['success' => true, 'winAmount' => number_format($winAmt, 0, ',', '.'), 'money' => number_format($newMoney, 0, ',', '.')]);
+        exit;
+    } elseif ($action === 'eat_card') {
+        $eatAmt = 50000;
+        $conn->query("UPDATE users SET Money = Money + $eatAmt WHERE Iduser = $userId");
+        $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
+        echo json_encode(['success' => true, 'winAmount' => number_format($eatAmt, 0, ',', '.'), 'money' => number_format($newMoney, 0, ',', '.')]);
+        exit;
     }
-    echo json_encode($response);
-    exit;
 }
 ?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Tower of Light Premium - Vegas</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <title>🎴 Tứ Sắc Cổ Truyền - Đỉnh Cao Sới Bạc</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../assets/css/main.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;500;700&display=swap"
-        rel="stylesheet">
-    <?php echo getCSSIncludes(['special_effects' => true]); ?>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <style>
         :root {
-            --primary: #f39c12;
-            --accent: #f1c40f;
-            --glass: rgba(255, 255, 255, 0.08);
+            --primary: #ffd700;
+            --accent: #f59e0b;
+            --glass: rgba(255, 255, 255, 0.06);
+            --glass-border: rgba(255, 255, 255, 0.12);
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
         body {
-            margin: 0;
             background: <?= $bgGradientCSS ?>;
             background-attachment: fixed;
             color: #fff;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Exo 2', system-ui, sans-serif;
+            margin: 0;
             overflow: hidden;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             cursor: url('../img/chuot.png'), auto !important;
         }
+        * { cursor: inherit; }
+        button, a, input, .card, .btn-action, .deck-back {
+            cursor: url('../img/tay.png'), pointer !important;
+        }
+
         #threejs-background {
             position: fixed;
             top: 0;
@@ -183,7 +114,7 @@ if (isset($_GET['action'])) {
             -webkit-backdrop-filter: blur(25px);
             border: 2px solid rgba(255, 255, 255, 0.2);
             box-shadow: 0 25px 80px rgba(0, 0, 0, 0.85);
-            font-family: 'Orbitron', 'Inter', sans-serif;
+            font-family: 'Orbitron', 'Exo 2', sans-serif;
             transition: transform 0.4s cubic-bezier(0.17, 0.89, 0.32, 1.49), opacity 0.4s;
             opacity: 0;
         }
@@ -215,301 +146,294 @@ if (isset($_GET['action'])) {
             opacity: 0.75;
             margin-top: 6px;
             max-width: 320px;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Exo 2', sans-serif;
         }
 
-        .main-container {
-            min-height: 100vh;
+        /* 🎴 Bàn chơi Tứ Sắc thu gọn */
+        .table-area {
+            width: 96vw;
+            max-width: 980px;
+            height: 94vh;
+            max-height: 680px;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 10px 15px;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 0.8rem 1.2rem;
             box-sizing: border-box;
             position: relative;
             z-index: 1;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border);
+            border-radius: 1.8rem;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
         }
-        .glass-card {
-            background: var(--glass);
-            backdrop-filter: blur(30px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 1.6rem;
-            padding: 1rem 1.2rem;
-            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
-            width: 96%;
-            max-width: 860px;
-            display: grid;
-            grid-template-columns: 260px 1fr;
-            gap: 1rem;
-            max-height: 94vh;
-            align-self: center;
-        }
-        .sidebar {
+
+        .header-bar {
             display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-        .tower-area {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            max-height: 480px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 1.4rem;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            overflow-y: auto;
-            padding: 20px 0;
-            display: flex;
-            flex-direction: column;
+            justify-content: space-between;
             align-items: center;
-            scroll-behavior: smooth;
+            padding-bottom: 0.4rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
-        .tower-area::-webkit-scrollbar {
-            width: 0;
+        .game-title {
+            font-size: clamp(1.2rem, 3vw, 1.6rem);
+            font-weight: 900;
+            color: var(--primary);
+            letter-spacing: 2px;
+            text-transform: uppercase;
         }
-        .tower-grid {
-            display: flex;
-            flex-direction: column-reverse;
-            gap: 6px;
-            width: 300px;
+        .balance-pill {
+            background: rgba(251, 191, 36, 0.15);
+            border: 1px solid var(--primary);
+            padding: 4px 16px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--primary);
         }
-        .floor {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 6px;
-            opacity: 0.3;
+        .btn-exit {
+            color: #fff;
+            text-decoration: none;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.3);
             transition: 0.3s;
-            padding: 5px;
-            border-radius: 10px;
         }
-        .floor.active {
-            opacity: 1;
-            background: rgba(243, 156, 18, 0.1);
-            border: 1px solid rgba(243, 156, 18, 0.3);
-            box-shadow: 0 0 25px rgba(243, 156, 18, 0.1);
+        .btn-exit:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #fff;
         }
-        .floor.completed {
-            opacity: 0.6;
-            filter: grayscale(0.5);
+
+        .opponent {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            opacity: 0.7;
+            padding: 4px 0;
         }
-        .tile {
-            height: 38px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            cursor: pointer;
-            transition: 0.2s;
+        .opp-card {
+            width: 24px;
+            height: 72px;
+            background: linear-gradient(135deg, #991b1b, #7f1d1d);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .center-deck {
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
-            position: relative;
-            transform-style: preserve-3d;
-            perspective: 500px;
+            gap: 1.8rem;
+            flex-grow: 1;
+            padding: 0.4rem 0;
         }
-        .active .tile:hover {
-            transform: translateY(-3px) scale(1.04);
-            background: rgba(243, 156, 18, 0.2);
+        .deck-back {
+            width: 38px;
+            height: 110px;
+            background: linear-gradient(135deg, #b91c1c, #7f1d1d);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+            transition: 0.3s;
+        }
+        .deck-back:hover {
+            transform: scale(1.05);
             border-color: var(--primary);
-            box-shadow: 0 8px 16px rgba(243, 156, 18, 0.3);
         }
-        .tile.safe {
-            background: linear-gradient(135deg, #2ecc71, #27ae60) !important;
-            box-shadow: 0 0 20px #2ecc71;
-            border: none;
-            color: #fff;
+        .discard-pile {
+            width: 38px;
+            height: 110px;
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .tile.trap {
-            background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
-            box-shadow: 0 0 20px #e74c3c;
-            border: none;
-            color: #fff;
+        .turn-box {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
         }
-        .input-group {
-            background: rgba(0, 0, 0, 0.4);
-            padding: 0.45rem 0.8rem;
-            border-radius: 0.9rem;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+
+        .player-hand {
+            display: flex;
+            justify-content: center;
+            gap: 2px;
+            perspective: 1200px;
+            height: 125px;
+            align-items: flex-end;
+            overflow-x: auto;
+            padding-bottom: 6px;
         }
-        .input-group label {
-            display: block;
-            font-size: 0.58rem;
-            text-transform: uppercase;
-            color: rgba(255, 255, 255, 0.5);
-            margin-bottom: 3px;
-            font-weight: 700;
+        .card {
+            width: 34px;
+            height: 105px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 6px;
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            color: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 0.85rem;
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            box-shadow: 1px 4px 10px rgba(0, 0, 0, 0.3);
+            user-select: none;
+            flex-shrink: 0;
+        }
+        .card:hover {
+            transform: translateY(-25px);
+            z-index: 100;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+        }
+        .card.selected {
+            transform: translateY(-35px);
+            box-shadow: 0 0 15px #fbbf24;
+            border: 2px solid #fbbf24;
+            z-index: 101;
+        }
+        .card .rank {
+            writing-mode: vertical-rl;
+            text-orientation: upright;
             letter-spacing: 1px;
         }
-        .input-group input {
-            background: none;
-            border: none;
-            color: #fff;
-            font-size: 1rem;
-            font-weight: 900;
-            width: 100%;
-            outline: none;
-            font-family: 'Orbitron';
+        .card.red { color: #e11d48; border-bottom: 6px solid #e11d48; }
+        .card.yellow { color: #d97706; border-bottom: 6px solid #d97706; }
+        .card.blue { color: #2563eb; border-bottom: 6px solid #2563eb; }
+        .card.white { color: #4b5563; border-bottom: 6px solid #4b5563; }
+
+        /* 🎮 Cụm phím điều khiển dạng dock ngang */
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding-top: 6px;
+            flex-wrap: wrap;
         }
         .btn-action {
-            padding: 0.65rem;
-            border-radius: 1rem;
+            padding: 0.55rem 1.4rem;
             border: none;
-            font-weight: 900;
-            font-size: 0.95rem;
-            cursor: pointer;
-            transition: 0.3s;
+            border-radius: 40px;
+            font-weight: 800;
+            font-size: 0.82rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s;
             text-transform: uppercase;
-            position: relative;
-            overflow: hidden;
-            background: linear-gradient(135deg, var(--primary), #e67e22);
-            color: #fff;
-            box-shadow: 0 6px 20px rgba(243, 156, 18, 0.3);
+            letter-spacing: 0.5px;
         }
-        .btn-action:hover:not(:disabled) {
+        .btn-action:hover {
             transform: translateY(-2px);
             filter: brightness(1.1);
         }
-        #cashoutBtn {
-            background: linear-gradient(135deg, #2ecc71, #27ae60);
-            box-shadow: 0 6px 20px rgba(46, 204, 113, 0.3);
-            display: none;
+        .btn-action:active {
+            transform: translateY(1px);
         }
-        .multiplier-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            display: flex;
-            flex-direction: column-reverse;
-            gap: 3px;
-            max-height: 120px;
-            overflow-y: auto;
-            padding-right: 4px;
-        }
-        .multiplier-list::-webkit-scrollbar {
-            width: 3px;
-        }
-        .multiplier-list::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-        }
-        .mult-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 3px 8px;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 6px;
-            font-size: 0.68rem;
-            font-weight: 700;
-            transition: 0.3s;
-        }
-        .mult-item.active {
-            background: var(--primary);
-            color: #000;
-            transform: scale(1.02);
-            box-shadow: 0 0 10px var(--primary);
-        }
-        .stat-card {
-            background: rgba(0, 0, 0, 0.2);
-            padding: 0.45rem;
-            border-radius: 0.8rem;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+        .btn-draw { background: #10b981; color: #fff; }
+        .btn-discard { background: #ef4444; color: #fff; }
+        .btn-eat { background: #3b82f6; color: #fff; }
+        .btn-win { background: #f59e0b; color: #000; font-weight: 900; }
+        .btn-reset { background: #8b5cf6; color: #fff; }
+
+        .hint-bar {
             text-align: center;
-        }
-        .stat-card span {
-            display: block;
-            font-size: 0.55rem;
-            opacity: 0.5;
-            font-weight: 700;
-            margin-bottom: 2px;
-        }
-        .stat-card b {
-            font-size: 1rem;
-            font-family: 'Orbitron';
-            color: var(--accent);
-        }
-        .btn-quick-bet {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
+            font-size: 0.75rem;
+            opacity: 0.8;
             padding: 4px;
-            border-radius: 6px;
-            cursor: url('../img/tay.png'), pointer !important;
-            font-weight: 600;
-            transition: 0.3s;
-            font-size: 0.7rem;
-        }
-        .btn-quick-bet:hover {
-            background: var(--primary);
-            color: #000;
-            border-color: var(--primary);
         }
     </style>
 </head>
 <body>
+
     <!-- 🏆 Badge thông báo thắng/thua giống game ID 1 -->
     <div id="result-status-badge">
         <div id="result-badge-icon">🏆</div>
-        <div id="result-badge-title">THẮNG LEO THÁP!</div>
-        <div id="result-badge-amount">+100,000 GTLM</div>
-        <div id="result-badge-msg">Rút thành công tầng 5!</div>
+        <div id="result-badge-title">Ù TỨ SẮC!</div>
+        <div id="result-badge-amount">+250,000 GTLM</div>
+        <div id="result-badge-msg">Làm tròn bài thành công!</div>
     </div>
 
-    <div class="main-container">
-        <div class="glass-card">
-            <div class="sidebar">
-                <div style="margin-bottom: 0.2rem;">
-                    <h1 style="margin:0; font-size: 1.5rem; font-weight: 900; color: var(--primary); font-family: 'Orbitron'; letter-spacing: 2px;">TOWER</h1>
-                    <p style="margin:0; opacity:0.4; font-size: 0.7rem; letter-spacing: 1px;">Royal Golden Climb</p>
-                </div>
-                <div class="input-group">
-                    <label>Gtlm cược (gtlm)</label>
-                    <input type="number" id="betAmount" value="10000" min="1000">
-                    <div class="quick-bets" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 6px;">
-                        <button class="btn-quick-bet" onclick="setBet(10000)">10K</button>
-                        <button class="btn-quick-bet" onclick="setBet(50000)">50K</button>
-                        <button class="btn-quick-bet" onclick="setBet(100000)">100K</button>
-                        <button class="btn-quick-bet" onclick="setBet(500000)">500K</button>
-                        <button class="btn-quick-bet" onclick="setBet(1000000)">1M</button>
-                        <button class="btn-quick-bet" onclick="setBet(5000000)">5M</button>
-                    </div>
-                </div>
-                <div class="multiplier-list">
-                    <?php for ($i = 1; $i <= 10; $i++): ?>
-                        <div class="mult-item" id="mult-<?= $i ?>">
-                            <span>Tầng <?= $i ?></span>
-                            <b>x<?= getTowerMultiplier($i) ?></b>
-                        </div>
-                    <?php endfor; ?>
-                </div>
-                <button id="startBtn" class="btn-action" onclick="startGame()">🚀 BẮT ĐẦU LEO</button>
-                <button id="cashoutBtn" class="btn-action" onclick="cashout()">💰 RÚT GTLM (x<span id="curMult">1.0</span>)</button>
-                <div style="margin-top:auto; padding-top:0.4rem; border-top:1px solid rgba(255,255,255,0.1);">
-                    <div class="stat-card">
-                        <span>Số GTLM HIỆN TẠI</span>
-                        <div style="display:flex; align-items:baseline; justify-content:center; gap:4px;">
-                            <b id="userMoney"><?= number_format($money, 0, ',', '.') ?></b>
-                            <small style="opacity:0.5; font-weight:900; font-size:0.55rem;">GTLM</small>
-                        </div>
-                    </div>
-                    <div style="text-align: center; margin-top: 0.5rem;">
-                        <a href="../index.php" style="color: #fff; text-decoration: none; border: 1px solid rgba(255,255,255,0.2); padding: 0.35rem 1.2rem; border-radius: 50px; font-size: 0.72rem; font-weight: bold; background: rgba(0,0,0,0.2); transition: 0.3s; display: inline-block;">🏠 THOÁT VỀ SẢNH</a>
-                    </div>
-                </div>
+    <div class="table-area">
+        <!-- Thanh tiêu đề & Số dư GTLM -->
+        <div class="header-bar">
+            <div class="game-title">🎴 TỨ SẮC CỔ TRUYỀN</div>
+            <div class="balance-pill">
+                <span>SỐ GTLM: </span>
+                <b id="userMoney"><?= number_format($money, 0, ',', '.') ?></b>
+                <small>GTLM</small>
             </div>
-            <div class="tower-area" id="towerContainer">
-                <div class="tower-grid">
-                    <?php for ($i = 0; $i < 10; $i++): ?>
-                        <div class="floor" id="floor-<?= $i ?>">
-                            <div class="tile" onclick="pickTile(<?= $i ?>, 0)">?</div>
-                            <div class="tile" onclick="pickTile(<?= $i ?>, 1)">?</div>
-                            <div class="tile" onclick="pickTile(<?= $i ?>, 2)">?</div>
-                        </div>
-                    <?php endfor; ?>
-                </div>
+            <a href="../index.php" class="btn-exit">🏠 THOÁT SẢNH</a>
+        </div>
+
+        <!-- Hàng bài đối thủ -->
+        <div class="opponent" id="opp-top"></div>
+
+        <!-- Khu vực nọc bài & chồng rác -->
+        <div class="center-deck">
+            <div class="deck-back" onclick="drawCard()" title="Bốc bài">🎴</div>
+            <div class="discard-pile" id="discard"></div>
+            <div class="turn-box">
+                <div id="current-turn-info" style="font-size: 0.95rem; font-weight: 800; color: #fbbf24;">Lượt của bạn</div>
+                <div style="font-size: 0.72rem; opacity: 0.75;" id="turn-sub-info">Bốc bài hoặc Húp bài</div>
             </div>
         </div>
+
+        <!-- Thông báo gợi ý -->
+        <div class="hint-bar" id="hint-text">
+            💡 <b>Gợi ý:</b> Nhấn "Bốc bài" để thả thính hoặc chọn quân rác rồi nhấn "Ra chiêu".
+        </div>
+
+        <!-- Cụm phím hành động (Dock ngang) -->
+        <div class="controls">
+            <button class="btn-action btn-draw" id="btn-draw" onclick="drawCard()">🎲 BỐC BÀI</button>
+            <button class="btn-action btn-eat" id="btn-eat" onclick="eatCard()">💎 HÚP BÀI</button>
+            <button class="btn-action btn-discard" id="btn-discard" onclick="discardCard()">⚔️ RA CHIÊU</button>
+            <button class="btn-action btn-win" id="btn-win" onclick="winGame()">🏆 Ù BÀI</button>
+            <button class="btn-action btn-reset" id="btn-reset" style="display: none;" onclick="initGame()">🔄 VÁN MỚI</button>
+        </div>
+
+        <!-- Bài trên tay người chơi -->
+        <div class="player-hand" id="hand"></div>
     </div>
+
+    <!-- 🌌 Nền ThreeJS 3D Vũ Trụ Hoàng Kim -->
+    <canvas id="threejs-background"></canvas>
     <script>
-        let isGameRunning = false, currentFloor = 0;
+        window.themeConfig = {
+            particleCount: <?= $particleCount ?? 800 ?>,
+            particleSize: <?= $particleSize ?? 0.05 ?>,
+            particleColor: '<?= $particleColor ?? "#ffd700" ?>',
+            particleOpacity: <?= $particleOpacity ?? 0.6 ?>,
+            shapeCount: <?= $shapeCount ?? 15 ?>,
+            shapeColors: <?= json_encode($shapeColors ?? ["#ffd700", "#ff4757", "#12c2e9", "#2ecc71"]) ?>,
+            shapeOpacity: <?= $shapeOpacity ?? 0.35 ?>,
+            bgGradient: <?= json_encode($bgGradient ?? ["#1a0b2e", "#2a1b3d", "#000000"]) ?>
+        };
+    </script>
+    <script src="../threejs-background.js"></script>
+    <script src="../assets/js/game-effects.js"></script>
+    <script src="../assets/js/game-effects-auto.js"></script>
+
+    <script>
+        const ranks = ['Tướng', 'Sĩ', 'Tượng', 'Xe', 'Pháo', 'Mã', 'Tốt'];
+        const colors = ['red', 'yellow', 'blue', 'white'];
+        let hand = [];
+        let selectedIndex = -1;
+        let isGameEnded = false;
 
         function showResultBadge(type, title, amount, msg) {
             const badge = $('#result-status-badge');
@@ -520,15 +444,15 @@ if (isset($_GET['action'])) {
 
             if (type === 'win') {
                 icon.text('🏆');
-                titleEl.text(title || 'HÚP GTLM THÀNH CÔNG!').css('color', '#f1c40f');
+                titleEl.text(title || 'Ù TỨ SẮC!').css('color', '#fbbf24');
                 amountEl.text(amount).css('color', '#4ade80');
                 badge.css({
-                    'border-color': 'rgba(241, 196, 15, 0.7)',
-                    'box-shadow': '0 0 50px rgba(241, 196, 15, 0.35)'
+                    'border-color': 'rgba(251, 191, 36, 0.7)',
+                    'box-shadow': '0 0 50px rgba(251, 191, 36, 0.35)'
                 });
             } else {
                 icon.text('💨');
-                titleEl.text(title || 'BAY MÀU LEO THÁP!').css('color', '#ff4757');
+                titleEl.text(title || 'BAY MÀU!').css('color', '#ff4757');
                 amountEl.text(amount).css('color', '#ff4757');
                 badge.css({
                     'border-color': 'rgba(239, 68, 68, 0.7)',
@@ -549,126 +473,124 @@ if (isset($_GET['action'])) {
             }, 3500);
         }
 
-        function setBet(amount) {
-            const money = parseFloat($('#userMoney').text().replace(/\./g, ''));
-            if (amount === 'ALLIN') {
-                $('#betAmount').val(money);
-            } else {
-                $('#betAmount').val(amount);
+        function initGame() {
+            hand = [];
+            selectedIndex = -1;
+            isGameEnded = false;
+            $('#btn-reset').hide();
+            $('#btn-draw, #btn-eat, #btn-discard, #btn-win').show();
+            $('#discard').html('');
+
+            for (let i = 0; i < 20; i++) {
+                hand.push({
+                    rank: ranks[Math.floor(Math.random() * ranks.length)],
+                    color: colors[Math.floor(Math.random() * colors.length)]
+                });
             }
+            renderHand();
+            renderOpponents();
+            $('#current-turn-info').text('Lượt của bạn');
+            $('#turn-sub-info').text('Bốc bài hoặc Húp bài');
+            $('#hint-text').html('💡 <b>Gợi ý:</b> Bốc bài hoặc chọn 1 quân rác rồi nhấn "Ra chiêu".');
         }
 
-        function startGame() {
-            const bet = $('#betAmount').val();
-            $.post('?action=start', { bet }, function (res) {
-                if (res.success) {
-                    isGameRunning = true; currentFloor = 0;
-                    $('#userMoney').text(res.money);
-                    $('#startBtn').hide(); $('#cashoutBtn').show();
-                    $('#betAmount').prop('disabled', true);
-                    $('.floor').removeClass('active completed');
-                    $('.tile').removeClass('safe trap').text('?');
-                    $('.mult-item').removeClass('active');
-                    activateFloor(0);
-                } else { Swal.fire('Lỗi', res.message, 'error'); }
+        function renderHand() {
+            let html = '';
+            hand.sort((a, b) => {
+                if (a.color !== b.color) return a.color.localeCompare(b.color);
+                return ranks.indexOf(a.rank) - ranks.indexOf(b.rank);
             });
+            hand.forEach((c, i) => {
+                html += `<div class="card ${c.color}" onclick="selectCard(${i})" id="card-${i}"><div class="rank">${c.rank}</div></div>`;
+            });
+            $('#hand').html(html);
         }
 
-        function activateFloor(f) {
-            $('.floor').removeClass('active');
-            const el = document.getElementById('floor-' + f);
-            if (el) {
-                el.classList.add('active');
-                // Center the active floor
-                const container = document.getElementById('towerContainer');
-                container.scrollTo({ top: el.offsetTop - container.offsetHeight / 2 + 25, behavior: 'smooth' });
+        function renderOpponents() {
+            let html = '';
+            for (let i = 0; i < 18; i++) {
+                html += `<div class="opp-card"></div>`;
             }
+            $('#opp-top').html(html);
         }
 
-        function pickTile(floor, idx) {
-            if (!isGameRunning || floor !== currentFloor) return;
-            $.post('?action=pick', { tile: idx }, function (res) {
+        function selectCard(i) {
+            if (isGameEnded) return;
+            $('.card').removeClass('selected');
+            $(`#card-${i}`).addClass('selected');
+            selectedIndex = i;
+        }
+
+        function discardCard() {
+            if (isGameEnded) return;
+            if (selectedIndex === -1) {
+                // Tự động chọn lá đầu tiên nếu chưa chọn
+                if (hand.length > 0) {
+                    selectCard(0);
+                } else {
+                    return;
+                }
+            }
+            const card = hand.splice(selectedIndex, 1)[0];
+            $('#discard').html(`<div class="card ${card.color}"><div class="rank">${card.rank}</div></div>`);
+            selectedIndex = -1;
+            renderHand();
+            $('#current-turn-info').text('Chờ đối thủ...');
+            $('#turn-sub-info').text('Đối thủ đang tính bài');
+            setTimeout(() => {
+                if (!isGameEnded) {
+                    $('#current-turn-info').text('Lượt của bạn');
+                    $('#turn-sub-info').text('Bốc bài hoặc Húp bài');
+                    $('#hint-text').html('💡 <b>Gợi ý:</b> Đến lượt bạn bốc bài hoặc húp bài vừa ra chiêu.');
+                }
+            }, 1400);
+        }
+
+        function drawCard() {
+            if (isGameEnded) return;
+            const newCard = {
+                rank: ranks[Math.floor(Math.random() * ranks.length)],
+                color: colors[Math.floor(Math.random() * colors.length)]
+            };
+            hand.push(newCard);
+            renderHand();
+            $('#hint-text').html(`💡 Bạn vừa bốc được quân <b>${newCard.rank} ${newCard.color}</b>. Hãy chọn 1 lá rác để ra chiêu.`);
+        }
+
+        function eatCard() {
+            if (isGameEnded) return;
+            $.post('?action=eat_card', function (res) {
                 if (res.success) {
-                    const floorEl = $(`#floor-${floor}`);
-                    const tileEl = floorEl.find('.tile').eq(idx);
-                    if (res.hit) {
-                        tileEl.addClass('trap').text('💥');
-                        isGameRunning = false;
-                        const betAmt = parseInt($('#betAmount').val()) || 0;
-                        if (window.GameEffects) window.GameEffects.showLoss(betAmt);
-                        showResultBadge('loss', 'BAY MÀU LEO THÁP!', '-' + Number(betAmt).toLocaleString('vi-VN') + ' GTLM', 'Dẫm phải bẫy tầng ' + (floor + 1) + '!');
-                        setTimeout(() => {
-                            resetGameUI();
-                        }, 1200);
-                    } else {
-                        tileEl.addClass('safe').text('💎');
-                        floorEl.addClass('completed');
-                        currentFloor++;
-                        $('.mult-item').removeClass('active');
-                        const curMult = $(`#mult-${currentFloor}`).addClass('active').find('b').text().replace('x', '');
-                        $('#curMult').text(curMult);
-                        if (res.max) {
-                            isGameRunning = false;
-                            const rawWin = parseInt((res.winAmount + '').replace(/[^0-9]/g, '')) || 0;
-                            if (window.GameEffects) window.GameEffects.showBigWin(rawWin);
-                            $('#userMoney').text(res.money);
-                            showResultBadge('win', 'ĐỈNH CAO HOÀNG GIA!', '+' + res.winAmount + ' GTLM', 'Chinh phục trọn vẹn 10 tầng tháp!');
-                            setTimeout(() => {
-                                resetGameUI();
-                            }, 1200);
-                        } else {
-                            activateFloor(currentFloor);
-                        }
-                    }
+                    $('#userMoney').text(res.money);
+                    const winAmt = parseInt((res.winAmount + '').replace(/[^0-9]/g, '')) || 50000;
+                    if (window.GameEffects) window.GameEffects.showWin(winAmt);
+                    showResultBadge('win', 'HÚP BÀI THÀNH BỘ!', '+' + res.winAmount + ' GTLM', 'Tạo bộ Khàn/Quàn hợp lệ thành công!');
+                    $('#hint-text').html('💡 Bạn vừa húp bài thành công! Hãy ra chiêu 1 quân rác.');
                 }
             });
         }
 
-        function cashout() {
-            if (!isGameRunning || currentFloor === 0) return;
-            $.post('?action=cashout', function (res) {
+        function winGame() {
+            if (isGameEnded) return;
+            isGameEnded = true;
+            $.post('?action=win_turn', function (res) {
                 if (res.success) {
-                    isGameRunning = false;
                     $('#userMoney').text(res.money);
-                    const rawWin = parseInt((res.winAmount + '').replace(/[^0-9]/g, '')) || 0;
-                    if (window.GameEffects) {
-                        if (currentFloor >= 5) window.GameEffects.showBigWin(rawWin);
-                        else window.GameEffects.showWin(rawWin);
-                    }
-                    showResultBadge('win', 'HÚP GTLM THÀNH CÔNG!', '+' + res.winAmount + ' GTLM', 'Rút an toàn tại tầng ' + currentFloor + ' (x' + $('#curMult').text() + ')!');
-                    setTimeout(() => {
-                        resetGameUI();
-                    }, 1000);
+                    const winAmt = parseInt((res.winAmount + '').replace(/[^0-9]/g, '')) || 250000;
+                    if (window.GameEffects) window.GameEffects.showBigWin(winAmt);
+                    showResultBadge('win', 'Ù TỨ SẮC TOÀN THẮNG!', '+' + res.winAmount + ' GTLM', '21 lệnh tròn bài đỉnh cao!');
+                    $('#current-turn-info').text('Ù BÀI TOÀN THẮNG!');
+                    $('#turn-sub-info').text('Chiến thắng ngoạn mục');
+                    $('#btn-reset').show();
+                    $('#btn-draw, #btn-eat, #btn-discard, #btn-win').hide();
                 }
             });
         }
 
-        function resetGameUI() {
-            $('#startBtn').show(); $('#cashoutBtn').hide();
-            $('#betAmount').prop('disabled', false);
-            $('#curMult').text('1.0');
-        }
+        initGame();
     </script>
 
-    <!-- 🌌 Nền ThreeJS 3D Vũ Trụ Hoàng Gia -->
-    <canvas id="threejs-background"></canvas>
-    <script>
-        window.themeConfig = {
-            particleCount: <?= $particleCount ?? 800 ?>,
-            particleSize: <?= $particleSize ?? 0.05 ?>,
-            particleColor: '<?= $particleColor ?? "#00ff88" ?>',
-            particleOpacity: <?= $particleOpacity ?? 0.6 ?>,
-            shapeCount: <?= $shapeCount ?? 15 ?>,
-            shapeColors: <?= json_encode($shapeColors ?? ["#00ff88", "#00b894", "#fdcb6e", "#f1c40f"]) ?>,
-            shapeOpacity: <?= $shapeOpacity ?? 0.35 ?>,
-            bgGradient: <?= json_encode($bgGradient ?? ["#000000", "#001a11", "#002a1b"]) ?>
-        };
-    </script>
-    <script src="../threejs-background.js"></script>
-    <script src="../assets/js/game-effects.js"></script>
-    <script src="../assets/js/game-effects-auto.js"></script>
-
-    <!-- 🤖 Nạp Bot AI Chuyên Nghiệp Thần Leo Tháp 53 -->
+    <!-- 🤖 Nạp Bot AI Chuyên Nghiệp Thánh Bài Tứ Sắc 54 -->
     <script src="../assets/js/bot_chat.js"></script>
     <script src="../assets/js/bot_virtual_cursor.js"></script>
     <script src="bots/bot_53.js"></script>

@@ -1,22 +1,20 @@
 /**
- * 🤖 Bot AI Oẳn Tù Tì (Rock Paper Scissors) Siêu Thông Minh (ID: 47)
+ * 🤖 Bot AI Rút Thăm May Mắn (Lucky Draw Bags) Siêu Thông Minh (ID: 48)
  *
- * CHIẾN THUẬT & TRÍ THÔNG MINH TÂM LÝ HỌC:
- * 1. QUẢN LÝ VỐN CHUYÊN NGHIỆP:
- *    - Tự động điều chỉnh mức cược theo chuỗi: 10K -> 50K -> 100K -> 500K.
- *    - Khi thua: Trở về 10K an toàn để bảo toàn vốn.
- * 2. CHIẾN THUẬT TÂM LÝ OẲN TÙ TÌ (Win-Stay, Lose-Shift):
- *    - Thắng ván trước: Đối thủ thường đổi nước đi -> Bot dự đoán trước 1 bước.
- *    - Thua ván trước: Bot chuyển sang thế phản đòn khắc chế nước đi vừa ra của bot đối thủ.
- *    - Luân chuyển Đá (👊), Giấy (✋), Kéo (✌️) biến ảo, không thể bị bắt bài.
- * 3. QUY TRÌNH HÀNH ĐỘNG CHUẨN XÁC:
- *    - Bước 1: Chọn thế tay (Đá, Giấy hoặc Kéo) bằng chuột ảo.
- *    - Bước 2: Cài đặt mức cược tương ứng.
- *    - Bước 3: Di chuyển chuột ảo bấm "CHẾT NÀY!" (#btn-play).
- *    - Bước 4: Chờ kết thúc animation lắc tay 1.5s và hiển thị badge kết quả.
+ * CHIẾN THUẬT & TRÍ THÔNG MINH:
+ * 1. QUẢN LÝ VỐN & ĐIỀU TIẾT NHỊP ĐỘ:
+ *    - Chi phí mỗi lượt mở cố định 50.000 GTLM.
+ *    - Kiểm tra số dư ví trước khi mở, đảm bảo luôn đủ vốn.
+ *    - Khoảng dừng tự nhiên giữa các lượt mở (1.5s - 2.5s) tạo cảm giác chân thực.
+ * 2. CHIẾN THUẬT CHỌN TÚI MAY MẮN (Lucky Bag Rotation):
+ *    - Luân chuyển thông minh giữa 6 túi quà (Túi 1 -> 6).
+ *    - Tránh mở liên tục một túi nếu vừa trượt; kiên trì chọn túi đem lại vận may.
+ * 3. HỆ THỐNG KIỂM SOÁT KHÓA TRẠNG THÁI (Lock State Control):
+ *    - Chỉ click khi hệ thống mở khóa (`isLocked === false` và không có túi nào đang rung lắc `.opening`).
+ *    - Tuyệt đối không click lung tung ra ngoài khu vực túi quà.
  * 4. WATCHDOG & CHỐNG KẸT:
- *    - Watchdog 3.5s tự phục hồi nếu mạng trễ hoặc animation bị gián đoạn.
- *    - Tuyệt đối không click lung tung vào các nút ngoài cuộc chơi.
+ *    - Tự động giải phóng trạng thái sau 3.5s nếu có sự cố mạng.
+ *    - Tương tác chat tự động theo từng mức thưởng (Trúng lớn, Trúng vừa, Trượt).
  */
 
 (function () {
@@ -27,7 +25,7 @@
         return;
     }
 
-    BotVirtualCursor.init('RPS Master 47');
+    BotVirtualCursor.init('Lucky Bag Hunter 48');
 
     // ═══════════════════════════════════════════════════════
     // TRẠNG THÁI VÀ CHỈ SỐ BOT
@@ -37,9 +35,7 @@
     let lastChatTime = 0;
     let winStreak = 0;
     let lossStreak = 0;
-    let lastUserChoice = 'Đá';
-    let lastBotOpponentChoice = 'Kéo';
-    let lastResult = 'win';
+    let lastPickedBagIndex = 0;
 
     function setBusy(val, timeoutMs = 3500) {
         botIsBusy = val;
@@ -47,63 +43,40 @@
         if (val) {
             busyTimer = setTimeout(() => {
                 botIsBusy = false;
+                if (typeof isLocked !== 'undefined') isLocked = false;
             }, timeoutMs);
         }
     }
 
     // ═══════════════════════════════════════════════════════
-    // CHIẾN THUẬT CHỌN THẾ TAY TÂM LÝ HỌC
+    // CHAT PHONG CÁCH MỞ TÚI MAY MẮN
     // ═══════════════════════════════════════════════════════
-    const choices = ['Đá', 'Giấy', 'Kéo'];
-    const beats = { 'Đá': 'Kéo', 'Giấy': 'Đá', 'Kéo': 'Giấy' };
-    const losesTo = { 'Kéo': 'Đá', 'Đá': 'Giấy', 'Giấy': 'Kéo' };
-
-    function pickNextChoice() {
-        // Tâm lý học Oẳn Tù Tì:
-        // - Nếu vừa THẮNG: người chơi nghiệp dư thường ra lại thế vừa thắng -> Bot chọn nước khắc chế thế đó!
-        // - Nếu vừa THUA: người chơi thường đổi sang thế vừa thắng họ -> Bot chuẩn bị sẵn nước khắc chế!
-        if (lastResult === 'win') {
-            // Đối thủ dự đoán ta ra lại thế cũ, nên họ sẽ ra thế khắc ta -> Ta ra thế khắc chế thế khắc chế đó
-            return losesTo[lastUserChoice];
-        } else if (lastResult === 'lose') {
-            // Ta chọn thế khắc lại thế vừa thắng của đối thủ
-            return losesTo[lastBotOpponentChoice] || choices[Math.floor(Math.random() * 3)];
-        } else {
-            // Hòa: Chọn ngẫu nhiên thế khác thế vừa hòa
-            const others = choices.filter(c => c !== lastUserChoice);
-            return others[Math.floor(Math.random() * others.length)];
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════
-    // CHAT PHONG CÁCH OẲN TÙ TÌ
-    // ═══════════════════════════════════════════════════════
-    const winPhrases = [
-        'Đoán trước được nước đi luôn! Húp trọn GTLM! 👊✨',
-        'Bắt bài đối thủ quá chuẩn, chuỗi thắng lại nối dài! 🏆',
-        'Bao bọc trọn búa, kéo cắt ngọt ngào! GTLM về ví! 💰',
-        'Chiến thuật tâm lý học đỉnh cao, không trượt phát nào! 😎🚀'
+    const bigWinPhrases = [
+        'Ối giồi ôi! Mở trúng túi vàng siêu khủng rồi anh em ơi! 🎁💰✨',
+        'Kho báu triệu GTLM phát nổ! Tay vàng bạc tỷ đây rồi! 🏆🚀',
+        'Húp trọn phần quà lớn nhất bàn, lộc lá ngập tràn! 😎💎'
     ];
 
-    const drawPhrases = [
-        'Tâm đầu ý hợp thế nhỉ, hòa GTLM về ván sau so tài tiếp! 🤝',
-        'Đụng hàng rồi, ván sau ra chiêu độc lạ hơn! 👀'
+    const smallWinPhrases = [
+        'Có lộc có lộc! Tiếp tục duy trì phong độ nhặt GTLM! 💰',
+        'Túi quà thơm nức mũi, mở tiếp kiếm túi to hơn nào! ✨',
+        'Thắng nhẹ cũng vui, lộc phát đầu ngày! 🎁'
     ];
 
-    const losePhrases = [
-        'Bị lừa một ván nhẹ! Ván sau đọc vị lại ngay! 😤',
-        'Nước đi bất ngờ đấy, nhưng ván sau tôi phục thù! 🎯',
-        'Thua một ván không sờn lòng, quản lý vốn là bất bại! 💪'
+    const missPhrases = [
+        'Hụt một phát không sao, linh cảm túi sau nổ kho báu! 😤',
+        'Túi rỗng thử thách lòng kiên nhẫn thôi, ván sau gom lại! 💨',
+        'Đổi góc mở túi khác ngay, vận may đang chờ phía trước! 🎯'
     ];
 
-    function sendBotChat(status) {
+    function sendBotChat(type) {
         const now = Date.now();
         if (now - lastChatTime < 14000) return;
-        if (Math.random() > 0.5) return;
+        if (Math.random() > 0.55) return;
 
-        let list = winPhrases;
-        if (status === 'draw') list = drawPhrases;
-        else if (status === 'lose') list = losePhrases;
+        let list = smallWinPhrases;
+        if (type === 'big') list = bigWinPhrases;
+        else if (type === 'miss') list = missPhrases;
 
         const msg = list[Math.floor(Math.random() * list.length)];
         if (typeof BotChat !== 'undefined' && BotChat.send) {
@@ -113,67 +86,64 @@
     }
 
     // ═══════════════════════════════════════════════════════
-    // VÒNG CHƠI CHÍNH
+    // LỰA CHỌN TÚI THÔNG MINH
     // ═══════════════════════════════════════════════════════
-    function playRound() {
+    function selectNextBag() {
+        const bags = Array.from(document.querySelectorAll('#bags-container .bag-box'));
+        if (bags.length === 0) return null;
+
+        // Nếu vừa trượt: Đổi sang túi khác
+        // Nếu vừa thắng: Có thể thử lại túi may mắn đó hoặc xoay vòng
+        let nextIndex = 0;
+        if (lossStreak > 0) {
+            do {
+                nextIndex = Math.floor(Math.random() * bags.length);
+            } while (nextIndex === lastPickedBagIndex && bags.length > 1);
+        } else {
+            // Xác suất 40% giữ túi cũ đang đỏ, 60% chọn túi mới
+            if (Math.random() < 0.4) {
+                nextIndex = lastPickedBagIndex;
+            } else {
+                nextIndex = Math.floor(Math.random() * bags.length);
+            }
+        }
+
+        lastPickedBagIndex = nextIndex;
+        return bags[nextIndex];
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // HÀNH ĐỘNG MỞ TÚI
+    // ═══════════════════════════════════════════════════════
+    function playTurn() {
         if (botIsBusy) return;
+        if (typeof isLocked !== 'undefined' && isLocked) return;
 
-        const btnPlay = document.getElementById('btn-play');
-        const cuocInput = document.getElementById('cuoc');
+        const openingBag = document.querySelector('#bags-container .bag-box.opening');
+        if (openingBag) return;
 
-        if (!btnPlay || btnPlay.disabled) return;
+        const targetBag = selectNextBag();
+        if (!targetBag) return;
 
         setBusy(true, 4000);
 
-        // 1. Quản lý vốn theo chuỗi thắng/thua
-        let targetBet = 10000;
-        if (winStreak >= 3) targetBet = 500000;
-        else if (winStreak >= 2) targetBet = 100000;
-        else if (winStreak >= 1) targetBet = 50000;
-        else targetBet = 10000;
-
-        if (cuocInput) {
-            cuocInput.value = targetBet;
-        }
-
-        // 2. Chọn thế tay
-        const choiceToPick = pickNextChoice();
-        lastUserChoice = choiceToPick;
-
-        const choiceBtn = document.querySelector(`.choice-btn[data-choice="${choiceToPick}"]`);
-        if (!choiceBtn) {
-            setBusy(false);
-            return;
-        }
-
-        // Di chuyển chuột ảo tới nút chọn Đá/Giấy/Kéo
-        BotVirtualCursor.moveToElement($(choiceBtn), 0.35, 0, () => {
+        // Di chuyển chuột ảo mượt mà đến túi được chọn
+        BotVirtualCursor.moveToElement($(targetBag), 0.45, 0, () => {
             setTimeout(() => {
                 BotVirtualCursor.simulateClick(() => {
-                    try { choiceBtn.click(); } catch (e) { }
+                    try { targetBag.click(); } catch (e) { }
 
-                    // Di chuyển tiếp đến nút "CHẾT NÀY!" (#btn-play)
+                    // Chờ mở túi (800ms) + xem kết quả (1500ms) = 2.3s
                     setTimeout(() => {
-                        BotVirtualCursor.moveToElement($(btnPlay), 0.4, 0, () => {
-                            setTimeout(() => {
-                                BotVirtualCursor.simulateClick(() => {
-                                    try { btnPlay.click(); } catch (e) { }
-
-                                    // Chờ animation lắc tay 1.5s + hiển thị kết quả
-                                    setTimeout(() => {
-                                        setBusy(false);
-                                    }, 2200);
-                                });
-                            }, 80);
-                        });
-                    }, 200);
+                        setBusy(false);
+                    }, 2400);
                 });
-            }, 80);
+            }, 100);
         });
     }
 
     // ═══════════════════════════════════════════════════════
-    // THEO DÕI KẾT QUẢ TỪ BADGE
+    // THEO DÕI KẾT QUẢ TỪ BADGE THÔNG BÁO
     // ═══════════════════════════════════════════════════════
     function setupResultWatcher() {
         const badge = document.getElementById('result-status-badge');
@@ -181,19 +151,21 @@
             const observer = new MutationObserver(() => {
                 if (badge.style.display !== 'none' && badge.style.opacity === '1') {
                     const title = (document.getElementById('result-badge-title') || {}).textContent || '';
+                    const amtText = (document.getElementById('result-badge-amount') || {}).textContent || '';
+                    const winAmount = parseInt(amtText.replace(/\D/g, '')) || 0;
+
                     if (title.includes('THẮNG')) {
                         winStreak++;
                         lossStreak = 0;
-                        lastResult = 'win';
-                        sendBotChat('win');
-                    } else if (title.includes('HÒA')) {
-                        lastResult = 'draw';
-                        sendBotChat('draw');
-                    } else if (title.includes('THUA')) {
+                        if (winAmount >= 200000) {
+                            sendBotChat('big');
+                        } else {
+                            sendBotChat('small');
+                        }
+                    } else if (title.includes('TRƯỢT') || title.includes('THUA')) {
                         lossStreak++;
                         winStreak = 0;
-                        lastResult = 'lose';
-                        sendBotChat('lose');
+                        sendBotChat('miss');
                     }
                 }
             });
@@ -205,7 +177,7 @@
     setupResultWatcher();
 
     // Vòng lặp định kỳ mỗi 800ms
-    setInterval(playRound, 800);
-    setTimeout(playRound, 1200);
+    setInterval(playTurn, 800);
+    setTimeout(playTurn, 1200);
 
 })();

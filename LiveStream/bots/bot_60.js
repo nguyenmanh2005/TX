@@ -1,22 +1,25 @@
 /**
- * 🤖 Bot AI Plinko Royale V3 - Bậc Thầy Hoàng Gia 60 👑 (ID: 60)
+ * 🤖 Bot AI Tháp Thần Bài - Leo Tháp Vô Cực (Bàn Live ID: 61)
  *
  * CHIẾN THUẬT & TRÍ TUỆ NHÂN TẠO CAO CẤP:
- * 1. QUẢN LÝ TÀI CHÍNH HOÀNG GIA (SMART ROYALE BANKROLL):
- *    - Theo dõi số dư ví GTLM của Streamer qua #plinkoBalance.
- *    - Phân bổ chip cược an toàn (10K, 50K, 100K, 500K) tương xứng với số dư ví.
- *    - Tuyệt đối không cược quá 5% số dư ví trên mỗi đợt Multi-Drop, giữ nhịp livestream bền bỉ.
- * 2. CHIẾN LƯỢC THEO CHUỖI KẾT HỢP MULTI-DROP:
- *    - Đang Thắng / Nổ Hũ: Chuyển sang chế độ "Royale Frenzy" - chọn 16 hàng đinh, Risk HIGH X1000, Multi-Drop 25-50 bóng để bùng nổ vũ trụ Plinko.
- *    - Đang Bay Màu: Lùi về chế độ "Bảo Toàn Hoàng Gia" - chọn 12 hàng đinh, Risk Royale Vàng (medium), 10 bóng để hồi vốn an toàn.
- *    - Nhịp độ tự nhiên: 70% số ván rê chuột trực tiếp vào nút Thả Bóng để giữ nhịp độ sôi động; 30% số ván xoay chuyển chiến thuật thông minh.
+ * 1. QUẢN LÝ ĐỘI HÌNH & TƯỚNG LEO THÁP THÔNG MINH:
+ *    - Tầng thường (1-9, 11-19...): Luân chuyển linh hoạt các tướng farm tài nguyên & duy trì sức mạnh (Thần Tài, Đạo Tặc, Giả Kim, Kiếm Thánh).
+ *    - Tầng Boss (10, 20, 30...): Tự động đổi tướng chuyên diệt Boss (Kiếm Thánh, Cuồng Sĩ, Ninja, Pháp Sư).
+ *    - Tuyệt kỹ Lãnh Tụ (#btnSkill): Tự động kích hoạt khi vào tầng Boss hoặc khi sẵn sàng để tối đa hóa cơ hội chiến thắng.
+ * 2. TƯƠNG TÁC GIAO DIỆN & VÒNG ĐỜI TRẬN ĐẤU CHUẨN XÁC:
+ *    - Trạng thái Chiến Đấu: Tự động chờ đợi trận chiến 3v3 kết thúc (3.5s snappy animation).
+ *    - Màn hình Kết Quả (#ovResult):
+ *      + Thắng: Chat ăn mừng chuẩn Casino Rule 5.3 (húp GTLM, quét sạch quái...), di chuyển chuột ảo tới nút Lên Tầng (#btnAdvanceFloor / .btn-advance-floor) và click.
+ *      + Thua: Chat an ủi (bay màu, còn thở là còn gỡ...), di chuyển chuột ảo tới nút Thử Lại (#btnRetryFloor / .btn-retry-floor) và click.
+ *      + Kèm cơ chế tự giải cứu trực tiếp (Direct Fallback Action) gọi Game.nextFloor() / Game.closeOverlay() nếu giao diện trễ.
+ *    - Sảnh Đấu (Ready Phase): Di chuyển chuột ảo tới #btnStart và click dứt khoát.
  * 3. HỆ THỐNG CHUỘT ẢO AN TOÀN TUYỆT ĐỐI (BotVirtualCursor):
- *    - Di chuyển mượt mà tới các phím Hàng Đinh, Mức Rủi Ro, Số Bóng, Phím Cược và nút Thả Bóng.
- *    - Fallback Safety Timeout tích hợp 100% ngăn ngừa treo Promise/Async.
- * 4. BÌNH LUẬN & PHÁT NGÔN CASINO HOÀNG GIA (BotChat.send):
- *    - Tuân thủ 100% bảng từ lóng Rule 5.3: húp GTLM, bay màu, ra chiêu, chiến, giao lưu, trận địa...
- * 5. DUAL-LAYER WATCHDOG TIMER & ANTI-STUCK:
- *    - Giám sát trạng thái bận và mở khóa nút #btnDropMain sau 9 giây nếu xảy ra bất kỳ sự cố lag mạng nào.
+ *    - moveAndClick dạng Promise với Safety Timeout tích hợp 100%, không phụ thuộc jQuery :visible, không bao giờ đơ hay deadlock.
+ * 4. BÌNH LUẬN & PHÁT NGÔN CASINO SÔI NỔI (BotChat.send / api_spectator.php / postMessage):
+ *    - Tuân thủ 100% Bảng thuật ngữ Casino Rule 5.3: húp GTLM, bay màu, ra chiêu, chiến, giao lưu, trận địa...
+ * 5. TRIPLE-LAYER WATCHDOG TIMER & ANTI-STUCK:
+ *    - Giám sát trạng thái bận giải phóng sau 12 giây.
+ *    - Định kỳ 2s kiểm tra nếu #ovResult active quá 4s hoặc #btnStart sẵn sàng quá 4s mà chưa đánh thì lập tức kích hoạt lượt chơi.
  */
 
 (function () {
@@ -27,7 +30,7 @@
         return;
     }
 
-    BotVirtualCursor.init('Bậc Thầy Hoàng Gia 60 👑');
+    BotVirtualCursor.init('Đại Hiệp Leo Tháp 61 🗼');
 
     // ═══════════════════════════════════════════════════════
     // TRẠNG THÁI VÀ BIẾN ĐIỀU KHIỂN
@@ -35,24 +38,18 @@
     let botIsBusy = false;
     let busyTimer = null;
     let lastChatTime = 0;
+    let turnCount = 0;
     let winStreak = 0;
     let loseStreak = 0;
-    let turnCount = 0;
-    let lastKnownWin = 0;
-    let lastKnownBet = 0;
+    let lastFloor = 0;
 
-    function setBusy(val, timeoutMs = 10000) {
+    function setBusy(val, timeoutMs = 12000) {
         botIsBusy = val;
         if (busyTimer) clearTimeout(busyTimer);
         if (val) {
             busyTimer = setTimeout(() => {
-                console.log('[Bot 60] Watchdog giải phóng trạng thái bận!');
+                console.warn('[Bot 60 Watchdog] Tự động giải phóng trạng thái bận!');
                 botIsBusy = false;
-                const btn = document.getElementById('btnDropMain');
-                if (btn && btn.disabled) {
-                    btn.disabled = false;
-                    btn.innerHTML = '💥 THẢ BÓNG ROYALE';
-                }
             }, timeoutMs);
         }
     }
@@ -60,100 +57,88 @@
     // ═══════════════════════════════════════════════════════
     // PHÁT NGÔN & BÌNH LUẬN CASINO CHUẨN RULE 5.3
     // ═══════════════════════════════════════════════════════
-    const royaleJackpotPhrases = [
-        'X1000 ROYALE JACKPOT ĐÃ BÙNG NỔ! Húp trọn cơn mưa hàng chục triệu GTLM ngập tràn nick rồi anh em ơi! 👑💥🔥',
-        'Đẳng cấp Hoàng Gia Plinko V3! Bắn multi-drop nổ siêu hũ x1000 phê chữ ê kéo dài! 🏆✨',
-        'Chiêm ngưỡng siêu phẩm x1000! Thần may mắn độ nick streamer ăn ngập mặt hôm nay! 🚀💰',
-        'Quả bóng chạm mép x1000 huyền thoại! Cả phòng live lấy vía đại phú quý nào! 💎🎉'
+    const CHAT_START = [
+        "Chiến nào ae ơi, tầng này quyết không lùi bước!",
+        "Vào trận địa, quét sạch toàn bộ quái vật nào ae!",
+        "Đội hình đã dàn trận xong, ae cùng theo dõi và húp lộc nhé!",
+        "Ra chiêu rực lửa, quyết tâm chinh phục đỉnh tháp Thần Bài!",
+        "Giao lưu nhẹ với quái tầng này xem bản lĩnh tới đâu!",
+        "Lên đồ và sẵn sàng chiến đấu, chúc toàn thể ae húp đậm GTLM!"
     ];
 
-    const normalWinPhrases = [
-        'Húp nhẹ mâm Royale! Cơn mưa bóng rơi trúng khe tài lộc quá ngọt ngào! 🎱✨',
-        'Multi-drop nảy tưng bừng! Lãi ròng GTLM cộng dồn về nick rồi! 💸🍀',
-        'Trọng lực Hoàng Gia dẫn lối, bóng lượn êm ru húp đều tay! ⚡',
-        'Ra chiêu Multi-Drop nhịp nhàng là có quà, anh em vỗ tay lấy vía nào! 🎯',
-        'Trận địa nảy đinh quá chuẩn, GTLM nhảy số liên hồi ngọt lịm! 💰'
+    const CHAT_WIN = [
+        "Húp trọn GTLM tầng này rồi ae ơi, quá ngọt ngào!",
+        "Đội hình càn quét sạch sẽ trận địa, húp no nê phúc lộc!",
+        "Quét sạch quái rồi, lên tầng tiếp theo chiến tiếp thôi ae!",
+        "Ra chiêu chuẩn chỉ, húp GTLM nhẹ nhàng êm ái!",
+        "Chiến thắng giòn giã, leo tầng thần tốc ae ơi!",
+        "Đại thắng rực rỡ, phúc lộc đầy tay!"
     ];
 
-    const lossPhrases = [
-        'Cơn mưa bóng lượn góc hiểm làm bay màu nhẹ một tay, ván sau ra chiêu lớn săn lại x1000! 😤🔥',
-        'Giao lưu nhả nhẹ một tay cho ấm đinh, ván sau xả 50 bóng phục thù mâm to! 💨',
-        'Góc nảy chưa tối ưu một chút, set lại dàn đinh chiến tiếp! 🎲',
-        'Bay màu một tay không sao cả, phong độ Hoàng Gia chỉ cần một quả x1000 là về bờ! ⚡'
+    const CHAT_LOSE = [
+        "Cay quá ae ơi, bay màu ở tầng này rồi!",
+        "Trận địa khốc liệt quá, bay màu toàn bộ đội hình rồi ae!",
+        "Không sao ae, còn thở là còn gỡ, làm lại kèo mới từ tầng 1!",
+        "Giao lưu lại từ tầng 1 để tích lũy thêm nội lực phục thù!",
+        "Bay màu một hiệp để lấy đà leo cao hơn, ae đừng lo!"
     ];
 
-    const actionPhrases = [
-        'Chuẩn bị xả cơn mưa bóng Multi-Drop vào trận địa Plinko Royale, anh em sẵn sàng húp vía nào! 🎯👑',
-        'Căn góc 16 hàng đinh cực bén, ván này tự tin nổ hũ Hoàng Gia! 🍀🔥',
-        'Khí thế đang lên, chuẩn bị kích hoạt bão bóng quét sạch các khe x1000! 🚀'
+    const CHAT_BOSS = [
+        "Gặp Boss tầng rồi ae ơi, kích hoạt tuyệt kỹ lãnh tụ khô máu!",
+        "Boss tầng xuất hiện, toàn đội đồng loạt ra chiêu tối thượng!",
+        "Trận địa Boss rực lửa, ae cùng cổ vũ để húp hũ Boss nhé!"
     ];
 
     function sendBotChat(type, extraMsg) {
         const now = Date.now();
-        if (now - lastChatTime < 8000) return;
-        if (type === 'normal' && Math.random() > 0.6) return;
+        if (now - lastChatTime < 6000 && type !== 'boss' && type !== 'win') return;
 
-        let list = normalWinPhrases;
-        if (type === 'jackpot') list = royaleJackpotPhrases;
-        else if (type === 'loss') list = lossPhrases;
-        else if (type === 'action') list = actionPhrases;
+        let list = CHAT_START;
+        if (type === 'win') list = CHAT_WIN;
+        else if (type === 'lose') list = CHAT_LOSE;
+        else if (type === 'boss') list = CHAT_BOSS;
 
         const msg = extraMsg || list[Math.floor(Math.random() * list.length)];
+        lastChatTime = now;
+
+        // 1. BotChat toàn cục nếu có
         if (typeof BotChat !== 'undefined' && BotChat.send) {
             BotChat.send(60, 'bot_60', msg);
-            lastChatTime = now;
         }
+
+        // 2. Spectator API POST
+        try {
+            fetch('api_spectator.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    action: 'send_chat',
+                    table_id: 61,
+                    message: '🎙️ ' + msg
+                })
+            }).catch(() => {});
+        } catch (e) {}
+
+        // 3. PostMessage gửi tới cha nếu nằm trong iframe
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: 'bot_chat', text: msg, tableId: 61 }, '*');
+            }
+        } catch (e) {}
     }
 
-    // ═══════════════════════════════════════════════════════
-    // QUẢN LÝ VỐN & CHIẾN LƯỢC ROYALE V3
-    // ═══════════════════════════════════════════════════════
-    function getBalanceNumber() {
-        const txt = $('#plinkoBalance').text().replace(/\D/g, '').trim();
-        const val = parseFloat(txt);
-        return isNaN(val) || val <= 0 ? 50000000 : val;
-    }
-
-    function decideStrategy() {
-        const balance = getBalanceNumber();
-        turnCount++;
-
-        // 1. Phân bổ chip cược an toàn theo số dư ví
-        let safeBet = 10000;
-        if (balance >= 50000000) {
-            safeBet = Math.random() > 0.5 ? 50000 : (Math.random() > 0.6 ? 100000 : 10000);
-        } else if (balance >= 15000000) {
-            safeBet = Math.random() > 0.6 ? 50000 : 10000;
-        } else {
-            safeBet = 10000;
-        }
-
-        // 2. Thích ứng theo chuỗi Thắng / Bay Màu
-        let rows = '16';
-        let risk = 'high';
-        let balls = '10';
-
-        if (winStreak >= 2) {
-            // Đang đỏ rực: Royale Frenzy săn x1000
-            rows = '16';
-            risk = 'high';
-            balls = Math.random() > 0.5 ? '25' : '50';
-        } else if (loseStreak >= 2) {
-            // Đang đen: Bảo toàn vốn, giảm rủi ro
-            rows = Math.random() > 0.5 ? '12' : '16';
-            risk = 'medium';
-            balls = '10';
-            safeBet = 10000;
-        } else {
-            // Xoay vòng kịch bản cân bằng
-            const c = turnCount % 4;
-            if (c === 0) { rows = '16'; risk = 'high'; balls = '10'; }
-            else if (c === 1) { rows = '16'; risk = 'high'; balls = '25'; }
-            else if (c === 2) { rows = '12'; risk = 'medium'; balls = '10'; }
-            else { rows = '16'; risk = 'high'; balls = '50'; }
-        }
-
-        return { rows, risk, balls, bet: safeBet };
+    function sendBotReaction(emoji) {
+        try {
+            fetch('api_spectator.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    action: 'send_reaction',
+                    table_id: 61,
+                    emoji: emoji
+                })
+            }).catch(() => {});
+        } catch (e) {}
     }
 
     // ═══════════════════════════════════════════════════════
@@ -174,134 +159,209 @@
                 }
             };
 
-            // Safety timeout: Đảm bảo luôn resolve tối đa sau (duration*1000 + 450ms)
+            // Safety timeout đảm bảo luôn giải phóng
             const safetyTimer = setTimeout(() => {
-                try { el.click(); } catch (e) { }
+                try { el.click(); } catch (e) {}
                 finish();
-            }, (duration * 1000) + 450);
+            }, (duration * 1000) + 400);
 
             try {
                 BotVirtualCursor.moveToElement($(el), duration, 0, () => {
                     BotVirtualCursor.simulateClick(() => {
                         clearTimeout(safetyTimer);
-                        try { el.click(); } catch (e) { }
-                        setTimeout(finish, 150);
+                        try { el.click(); } catch (e) {}
+                        setTimeout(finish, 120);
                     });
                 });
             } catch (err) {
                 clearTimeout(safetyTimer);
-                try { el.click(); } catch (e) { }
+                try { el.click(); } catch (e) {}
                 finish();
             }
         });
     }
 
     // ═══════════════════════════════════════════════════════
-    // VÒNG LẶP CHƠI GAME TỰ ĐỘNG CỦA BOT
+    // VÒNG ĐIỀU KHIỂN AI CHÍNH CỦA BOT
     // ═══════════════════════════════════════════════════════
     async function executeBotTurn() {
         if (botIsBusy) return;
 
-        const dropBtn = document.getElementById('btnDropMain');
-        if (!dropBtn || dropBtn.disabled) return;
+        // 1. KIỂM TRA MÀN HÌNH KẾT QUẢ OVERLAY (#ovResult)
+        const ovResult = document.getElementById('ovResult');
+        if (ovResult && ovResult.classList.contains('active')) {
+            setBusy(true, 5000);
 
+            const btnAdvance = ovResult.querySelector('.btn-advance-floor, #btnAdvanceFloor');
+            const btnRetry   = ovResult.querySelector('.btn-retry-floor, #btnRetryFloor');
+
+            if (btnAdvance) {
+                winStreak++;
+                loseStreak = 0;
+                sendBotChat('win');
+                sendBotReaction('🔥');
+
+                await new Promise(r => setTimeout(r, 600));
+                await moveAndClick(btnAdvance, 0.45);
+
+                // Fallback trực tiếp để không bao giờ bị kẹt overlay
+                try {
+                    if (window.Game && window.Game.nextFloor) window.Game.nextFloor();
+                } catch(e) {}
+                ovResult.classList.remove('active');
+
+                await new Promise(r => setTimeout(r, 300));
+                setBusy(false);
+                setTimeout(executeBotTurn, 250);
+                return;
+            } else if (btnRetry) {
+                loseStreak++;
+                winStreak = 0;
+                sendBotChat('lose');
+                sendBotReaction('💀');
+
+                await new Promise(r => setTimeout(r, 600));
+                await moveAndClick(btnRetry, 0.45);
+
+                // Fallback trực tiếp
+                try {
+                    if (window.Game && window.Game.closeOverlay) window.Game.closeOverlay();
+                } catch(e) {}
+                ovResult.classList.remove('active');
+
+                await new Promise(r => setTimeout(r, 300));
+                setBusy(false);
+                setTimeout(executeBotTurn, 250);
+                return;
+            } else {
+                // Overlay trống hoặc chưa render nút
+                ovResult.classList.remove('active');
+                setBusy(false);
+                return;
+            }
+        }
+
+        // 2. KIỂM TRA TRẠNG THÁI ĐANG CHIẾN ĐẤU
+        if (window.Game && window.Game.isBattling && window.Game.isBattling()) {
+            return;
+        }
+
+        const btnStart = document.getElementById('btnStart');
+        if (!btnStart || btnStart.disabled) {
+            return;
+        }
+
+        // 3. SẴN SÀNG Ở SẢNH TẦNG (READY PHASE)
         setBusy(true, 10000);
+        turnCount++;
 
         try {
-            const strat = decideStrategy();
+            const floorEl = document.getElementById('floorNum');
+            const currentFloor = floorEl ? (parseInt(floorEl.textContent) || 1) : 1;
+            const isBoss = (currentFloor % 10 === 0);
 
-            if (turnCount % 7 === 0) {
-                sendBotChat('action');
-            }
-
-            // 70% thời gian: Giữ nguyên cài đặt và bấm THẢ BÓNG ngay để nhịp game dồn dập
-            // 30% thời gian: Rê chuột điều chỉnh chiến thuật (Hàng / Risk / Bóng / Cược)
-            const shouldTweakSettings = (turnCount === 1 || Math.random() < 0.35 || winStreak >= 2 || loseStreak >= 2);
-
-            if (shouldTweakSettings) {
-                // 1. Số Hàng Đinh
-                const rowBtn = document.querySelector(`.btn-row-select[data-rows="${strat.rows}"]`);
-                if (rowBtn && !rowBtn.classList.contains('active')) {
-                    await moveAndClick(rowBtn, 0.35);
+            // CHIẾN THUẬT CHỌN TƯỚNG & TUYỆT KỸ
+            if (isBoss) {
+                // Tầng Boss: Ưu tiên sát thủ / tanker
+                const bossPicks = ['kiem_thanh', 'cuong_chien_si', 'phap_su', 'ninja'];
+                const chosen = bossPicks[Math.floor(Math.random() * bossPicks.length)];
+                const charBtn = document.getElementById('btnChar_' + chosen);
+                if (charBtn && !charBtn.classList.contains('active')) {
+                    await moveAndClick(charBtn, 0.35);
                 }
 
-                // 2. Mức Rủi Ro
-                const riskBtn = document.querySelector(`.btn-risk-select[data-risk="${strat.risk}"]`);
-                if (riskBtn && !riskBtn.classList.contains('active')) {
-                    await moveAndClick(riskBtn, 0.35);
+                // Kích hoạt Tuyệt Kỹ nếu sẵn sàng
+                const btnSkill = document.getElementById('btnSkill');
+                if (btnSkill && btnSkill.classList.contains('ready') && !btnSkill.disabled) {
+                    sendBotChat('boss');
+                    sendBotReaction('⚡');
+                    await moveAndClick(btnSkill, 0.35);
                 }
-
-                // 3. Số Lượng Bóng
-                const ballBtn = document.querySelector(`.btn-ball-select[data-count="${strat.balls}"]`);
-                if (ballBtn && !ballBtn.classList.contains('active')) {
-                    await moveAndClick(ballBtn, 0.3);
-                }
-
-                // 4. Phím Cược Nhanh
-                const quickBtn = document.querySelector(`.btn-bet-quick[data-bet="${strat.bet}"]`);
-                if (quickBtn && !quickBtn.classList.contains('active')) {
-                    await moveAndClick(quickBtn, 0.3);
+            } else if (currentFloor !== lastFloor && Math.random() < 0.25) {
+                // Tầng thường: Thỉnh thoảng đổi tướng farm GTLM
+                const farmPicks = ['than_tai', 'dao_tac', 'gia_kim', 'kiem_thanh'];
+                const chosen = farmPicks[Math.floor(Math.random() * farmPicks.length)];
+                const charBtn = document.getElementById('btnChar_' + chosen);
+                if (charBtn && !charBtn.classList.contains('active')) {
+                    await moveAndClick(charBtn, 0.3);
                 }
             }
 
-            // 5. Rê chuột tới nút THẢ BÓNG ROYALE và click dứt khoát
-            const activeDropBtn = document.getElementById('btnDropMain');
-            if (activeDropBtn && !activeDropBtn.disabled) {
-                await moveAndClick(activeDropBtn, 0.45);
+            lastFloor = currentFloor;
 
-                const numBalls = parseInt(strat.balls) || 10;
-                const waitTime = Math.min(6500, 2200 + (numBalls * 45));
+            // Chat mở đầu (chu kỳ 4 trận hoặc khi gặp Boss)
+            if (turnCount % 4 === 0 || isBoss) {
+                sendBotChat('start');
+            }
 
+            // Bấm vào nút CHIẾN ĐẤU
+            const activeBtnStart = document.getElementById('btnStart');
+            if (activeBtnStart && !activeBtnStart.disabled) {
+                await moveAndClick(activeBtnStart, 0.45);
+
+                // Fallback nếu sau 1.2s vẫn chưa kích hoạt chiến đấu
                 setTimeout(() => {
-                    // Đánh giá kết quả từ session profit và celebratory overlay
-                    const profitText = $('#sessionProfitEl').text().replace(/\./g, '').replace(/,/g, '').trim();
-                    const profitVal = parseFloat(profitText) || 0;
-
-                    const celOverlay = document.getElementById('royaleCelebrationOverlay');
-                    const hasJackpot = celOverlay && celOverlay.classList.contains('active');
-
-                    if (hasJackpot) {
-                        winStreak++;
-                        loseStreak = 0;
-                        sendBotChat('jackpot');
-                    } else if (profitVal > 0) {
-                        winStreak++;
-                        loseStreak = 0;
-                        sendBotChat('normal');
-                    } else if (profitVal < 0) {
-                        loseStreak++;
-                        winStreak = 0;
-                        sendBotChat('loss');
+                    const checkBtn = document.getElementById('btnStart');
+                    if (checkBtn && !checkBtn.disabled && (!window.Game || !window.Game.isBattling || !window.Game.isBattling())) {
+                        try {
+                            if (window.Game && window.Game.startBattle) window.Game.startBattle();
+                        } catch(e) {}
                     }
-
-                    setBusy(false);
-                }, waitTime);
-            } else {
-                setBusy(false);
+                }, 1200);
             }
+
+            // Đợi trận chiến hoàn thành (combat animation mất ~3.5s)
+            // Nhả busy sau 4.2s để chu kỳ kế tiếp có thể xử lý overlay kết quả ngay lập tức
+            setTimeout(() => {
+                setBusy(false);
+            }, 4200);
+
         } catch (err) {
-            console.error('[Bot 60] Lỗi thực thi lượt chơi:', err);
+            console.error('[Bot 60] Lỗi thực thi lượt leo tháp:', err);
             setBusy(false);
         }
     }
 
     // ═══════════════════════════════════════════════════════
-    // DUAL-LAYER ANTI-STUCK WATCHDOG TIMER
+    // TRIPLE-LAYER ANTI-STUCK WATCHDOG TIMER
     // ═══════════════════════════════════════════════════════
-    let disabledSeconds = 0;
+    let overlayStuckSeconds = 0;
+    let readyStuckSeconds = 0;
+
     setInterval(() => {
-        const btn = document.getElementById('btnDropMain');
-        if (btn && btn.disabled) {
-            disabledSeconds += 2;
-            if (disabledSeconds >= 8) {
-                console.warn('[Bot 60] Anti-stuck Watchdog: Khôi phục nút thả bóng!');
-                btn.disabled = false;
-                btn.innerHTML = '💥 THẢ BÓNG ROYALE';
+        const ovResult = document.getElementById('ovResult');
+        if (ovResult && ovResult.classList.contains('active')) {
+            overlayStuckSeconds += 2;
+            if (overlayStuckSeconds >= 4) {
+                console.warn('[Bot 60 Watchdog] Tự động giải phóng màn hình kết quả sau 4s!');
+                const btnAdvance = ovResult.querySelector('.btn-advance-floor, #btnAdvanceFloor');
+                const btnRetry   = ovResult.querySelector('.btn-retry-floor, #btnRetryFloor');
+                if (btnAdvance) {
+                    try { window.Game.nextFloor(); } catch(e) { btnAdvance.click(); }
+                } else if (btnRetry) {
+                    try { window.Game.closeOverlay(); } catch(e) { btnRetry.click(); }
+                } else {
+                    ovResult.classList.remove('active');
+                }
                 botIsBusy = false;
-                disabledSeconds = 0;
+                overlayStuckSeconds = 0;
+            }
+            return;
+        } else {
+            overlayStuckSeconds = 0;
+        }
+
+        const btnStart = document.getElementById('btnStart');
+        if (btnStart && !btnStart.disabled && (!window.Game || !window.Game.isBattling || !window.Game.isBattling())) {
+            readyStuckSeconds += 2;
+            if (readyStuckSeconds >= 4) {
+                console.warn('[Bot 60 Watchdog] Nút bắt đầu đang sẵn sàng mà bot nghỉ quá 4s, tự kích hoạt!');
+                botIsBusy = false;
+                readyStuckSeconds = 0;
+                executeBotTurn();
             }
         } else {
-            disabledSeconds = 0;
+            readyStuckSeconds = 0;
         }
     }, 2000);
 
@@ -309,9 +369,9 @@
     // KHỞI ĐỘNG VÒNG ĐIỀU KHIỂN ĐỊNH KỲ
     // ═══════════════════════════════════════════════════════
     $(document).ready(() => {
-        console.log('[Bot 60] Bậc Thầy Hoàng Gia 60 khởi động thành công! 👑');
-        setTimeout(() => { executeBotTurn(); }, 1800);
-        setInterval(() => { executeBotTurn(); }, 4000);
+        console.log('[Bot 60] 🗼 Đại Hiệp Leo Tháp 61 khởi động thành công!');
+        setTimeout(() => { executeBotTurn(); }, 1600);
+        setInterval(() => { executeBotTurn(); }, 3200);
     });
 
 })();

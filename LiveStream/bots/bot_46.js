@@ -1,274 +1,211 @@
 /**
- * 🤖 Bot Streamer 46 - Roulette Royal Intelligence Engine
- * Tự động đặt cược bàn Roulette chuyên nghiệp, chân thực như streamer thật.
- * Tuyệt đối không click lung tung hay ấn nhầm nút chức năng.
+ * 🤖 Bot AI Oẳn Tù Tì (Rock Paper Scissors) Siêu Thông Minh (ID: 47)
+ *
+ * CHIẾN THUẬT & TRÍ THÔNG MINH TÂM LÝ HỌC:
+ * 1. QUẢN LÝ VỐN CHUYÊN NGHIỆP:
+ *    - Tự động điều chỉnh mức cược theo chuỗi: 10K -> 50K -> 100K -> 500K.
+ *    - Khi thua: Trở về 10K an toàn để bảo toàn vốn.
+ * 2. CHIẾN THUẬT TÂM LÝ OẲN TÙ TÌ (Win-Stay, Lose-Shift):
+ *    - Thắng ván trước: Đối thủ thường đổi nước đi -> Bot dự đoán trước 1 bước.
+ *    - Thua ván trước: Bot chuyển sang thế phản đòn khắc chế nước đi vừa ra của bot đối thủ.
+ *    - Luân chuyển Đá (👊), Giấy (✋), Kéo (✌️) biến ảo, không thể bị bắt bài.
+ * 3. QUY TRÌNH HÀNH ĐỘNG CHUẨN XÁC:
+ *    - Bước 1: Chọn thế tay (Đá, Giấy hoặc Kéo) bằng chuột ảo.
+ *    - Bước 2: Cài đặt mức cược tương ứng.
+ *    - Bước 3: Di chuyển chuột ảo bấm "CHẾT NÀY!" (#btn-play).
+ *    - Bước 4: Chờ kết thúc animation lắc tay 1.5s và hiển thị badge kết quả.
+ * 4. WATCHDOG & CHỐNG KẸT:
+ *    - Watchdog 3.5s tự phục hồi nếu mạng trễ hoặc animation bị gián đoạn.
+ *    - Tuyệt đối không click lung tung vào các nút ngoài cuộc chơi.
  */
-(function() {
-    if (typeof BotVirtualCursor === "undefined") {
-        console.warn("[Bot_46] BotVirtualCursor chưa sẵn sàng.");
+
+(function () {
+    'use strict';
+
+    if (typeof BotVirtualCursor === 'undefined') {
+        console.warn('[Bot 46] BotVirtualCursor chưa được nạp!');
         return;
     }
 
-    BotVirtualCursor.init("Bậc Thầy Cò Quay 🎡💎");
+    BotVirtualCursor.init('RPS Master 47');
 
-    const CASINO_CHATS = {
-        bet: [
-            "Vòng quay Roulette Hoàng Gia! Ra chiêu điều phối phỉnh cược vào ô đỏ đen chuẩn chỉ! 🎡💎🔥",
-            "Cò quay đang thuận cầu chẵn lẻ, vào tiền tự tin húp trọn ván giao lưu! 🎯⚡",
-            "Bắt trọn góc bàn Roulette! Khóa chặt con số định mệnh rước bão GTLM! 🌟💰",
-            "Ra chiêu chiến lược rải góc xác suất cao bảo vệ nick! 🛡️💎"
-        ],
-        spin: [
-            "Thả bóng xoay tròn! Quả bóng bạc dừng lại ở ô may mắn nào! 🎡⚪✨",
-            "Bóng quay tít mù! Cả sòng nín thở chờ kết quả! 😱⚡"
-        ],
-        win: [
-            "BÓNG RƠI ĐÚNG Ô CƯỢC! HÚP TRỌN VÁN ROULETTE! GTLM cộng dồn ngập nick! 🏆🎡🤑",
-            "Gáy khét lẹt cả sòng Roulette Royal hôm nay! Chiến thắng áp đảo! 👑💎💰",
-            "Thần cò quay hiển linh! Tiền nhảy ting ting vào tài khoản! 💎🎉"
-        ],
-        loss: [
-            "Bóng nảy sang ô bên cạnh, bay màu tiếng này hơi tiếc! 😅🔄",
-            "Bốc hơi nhẹ, còn thở là còn bẻ cầu Roulette! Hiệp sau gỡ lại! 💪🎡"
-        ]
-    };
-
-    function sendChat(type) {
-        if (typeof BotChat !== 'undefined' && BotChat.send) {
-            const list = CASINO_CHATS[type] || CASINO_CHATS.bet;
-            const msg = list[Math.floor(Math.random() * list.length)];
-            BotChat.send(46, 'Bậc Thầy Cò Quay 🎡💎', msg);
-        }
-    }
-
+    // ═══════════════════════════════════════════════════════
+    // TRẠNG THÁI VÀ CHỈ SỐ BOT
+    // ═══════════════════════════════════════════════════════
     let botIsBusy = false;
-    let roundState = 'idle'; // 'idle' -> 'betting' -> 'spinning' -> 'cooldown'
-    let recentResults = []; // boolean: true = win, false = loss
-    let lastBalance = null;
-    let plan = null;
-    let currentStep = 0;
+    let busyTimer = null;
+    let lastChatTime = 0;
+    let winStreak = 0;
+    let lossStreak = 0;
+    let lastUserChoice = 'Đá';
+    let lastBotOpponentChoice = 'Kéo';
+    let lastResult = 'win';
 
-    function getBalance() {
-        const balEl = document.getElementById('balance-val');
-        if (!balEl) return 0;
-        return parseInt(balEl.innerText.replace(/\D/g, '')) || 0;
-    }
-
-    function updatePsychology() {
-        const balance = getBalance();
-        if (lastBalance !== null && balance !== lastBalance) {
-            const isWin = balance > lastBalance;
-            recentResults.push(isWin);
-            if (recentResults.length > 10) recentResults.shift();
-            if (isWin && Math.random() < 0.6) sendChat('win');
-            else if (!isWin && Math.random() < 0.5) sendChat('loss');
+    function setBusy(val, timeoutMs = 3500) {
+        botIsBusy = val;
+        if (busyTimer) clearTimeout(busyTimer);
+        if (val) {
+            busyTimer = setTimeout(() => {
+                botIsBusy = false;
+            }, timeoutMs);
         }
-        lastBalance = balance;
-        return balance;
     }
 
-    function currentLoseStreak() {
-        let streak = 0;
-        for (let i = recentResults.length - 1; i >= 0; i--) {
-            if (recentResults[i] === false) streak++;
-            else break;
-        }
-        return streak;
-    }
+    // ═══════════════════════════════════════════════════════
+    // CHIẾN THUẬT CHỌN THẾ TAY TÂM LÝ HỌC
+    // ═══════════════════════════════════════════════════════
+    const choices = ['Đá', 'Giấy', 'Kéo'];
+    const beats = { 'Đá': 'Kéo', 'Giấy': 'Đá', 'Kéo': 'Giấy' };
+    const losesTo = { 'Kéo': 'Đá', 'Đá': 'Giấy', 'Giấy': 'Kéo' };
 
-    function currentWinStreak() {
-        let streak = 0;
-        for (let i = recentResults.length - 1; i >= 0; i--) {
-            if (recentResults[i] === true) streak++;
-            else break;
-        }
-        return streak;
-    }
-
-    /**
-     * Lập kế hoạch cược thông minh cho ván roulette
-     */
-    function createBettingPlan() {
-        const balance = updatePsychology();
-        if (balance < 10000) return null;
-
-        const loseStreak = currentLoseStreak();
-        const winStreak = currentWinStreak();
-
-        // 1. Chọn mức chip phù hợp theo vốn và tâm lý
-        let chipValue = "10000";
-        if (balance >= 20000000) {
-            chipValue = Math.random() < 0.7 ? "500000" : "1000000";
-        } else if (balance >= 5000000) {
-            chipValue = Math.random() < 0.6 ? "100000" : "500000";
-        } else if (balance >= 1000000) {
-            chipValue = Math.random() < 0.6 ? "50000" : "100000";
+    function pickNextChoice() {
+        // Tâm lý học Oẳn Tù Tì:
+        // - Nếu vừa THẮNG: người chơi nghiệp dư thường ra lại thế vừa thắng -> Bot chọn nước khắc chế thế đó!
+        // - Nếu vừa THUA: người chơi thường đổi sang thế vừa thắng họ -> Bot chuẩn bị sẵn nước khắc chế!
+        if (lastResult === 'win') {
+            // Đối thủ dự đoán ta ra lại thế cũ, nên họ sẽ ra thế khắc ta -> Ta ra thế khắc chế thế khắc chế đó
+            return losesTo[lastUserChoice];
+        } else if (lastResult === 'lose') {
+            // Ta chọn thế khắc lại thế vừa thắng của đối thủ
+            return losesTo[lastBotOpponentChoice] || choices[Math.floor(Math.random() * 3)];
         } else {
-            chipValue = "10000";
+            // Hòa: Chọn ngẫu nhiên thế khác thế vừa hòa
+            const others = choices.filter(c => c !== lastUserChoice);
+            return others[Math.floor(Math.random() * others.length)];
         }
-
-        // 2. Chọn chiến thuật cược Roulette thực tế
-        const targetCells = [];
-        const strat = Math.random();
-
-        if (strat < 0.45) {
-            // Chiến thuật A: Cược Vùng Lớn (Đỏ/Đen, Chẵn/Lẻ, Tài/Xỉu)
-            const outsideTypes = [
-                '.cell[data-type="red"]',
-                '.cell[data-type="black"]',
-                '.cell[data-type="even"]',
-                '.cell[data-type="odd"]',
-                '.cell[data-type="low"]',
-                '.cell[data-type="high"]'
-            ];
-            const pick = outsideTypes[Math.floor(Math.random() * outsideTypes.length)];
-            const el = document.querySelector(pick);
-            if (el) targetCells.push(el);
-
-            // 50% cơ hội kèm thêm 1 số may mắn (straight bet)
-            if (Math.random() < 0.5) {
-                const luckyNum = Math.floor(Math.random() * 37);
-                const straightEl = document.querySelector(`.cell[data-type="straight"][data-val="${luckyNum}"]`);
-                if (straightEl) targetCells.push(straightEl);
-            }
-        } else if (strat < 0.75) {
-            // Chiến thuật B: Cược Tá (Dozens) hoặc Cột (Columns)
-            const groupTypes = [
-                '.cell[data-type="dozen"][data-val="1"]',
-                '.cell[data-type="dozen"][data-val="2"]',
-                '.cell[data-type="dozen"][data-val="3"]',
-                '.cell[data-type="column"][data-val="1"]',
-                '.cell[data-type="column"][data-val="2"]',
-                '.cell[data-type="column"][data-val="3"]'
-            ];
-            const pick = groupTypes[Math.floor(Math.random() * groupTypes.length)];
-            const el = document.querySelector(pick);
-            if (el) targetCells.push(el);
-
-            // Kèm thêm 1-2 con số cảm tính
-            const numCount = 1 + Math.floor(Math.random() * 2);
-            for (let i = 0; i < numCount; i++) {
-                const luckyNum = Math.floor(Math.random() * 37);
-                const straightEl = document.querySelector(`.cell[data-type="straight"][data-val="${luckyNum}"]`);
-                if (straightEl && !targetCells.includes(straightEl)) targetCells.push(straightEl);
-            }
-        } else {
-            // Chiến thuật C: Săn Số Độc Đắc (Straight Numbers Hunter)
-            const favNums = [0, 7, 8, 11, 17, 21, 23, 26, 29, 32, 35];
-            const numCount = 2 + Math.floor(Math.random() * 2); // 2-3 số
-            for (let i = 0; i < numCount; i++) {
-                const n = Math.random() < 0.6 ? favNums[Math.floor(Math.random() * favNums.length)] : Math.floor(Math.random() * 37);
-                const straightEl = document.querySelector(`.cell[data-type="straight"][data-val="${n}"]`);
-                if (straightEl && !targetCells.includes(straightEl)) targetCells.push(straightEl);
-            }
-        }
-
-        if (targetCells.length === 0) {
-            const defaultCell = document.querySelector('.cell[data-type="red"]');
-            if (defaultCell) targetCells.push(defaultCell);
-        }
-
-        return {
-            chipValue: chipValue,
-            targetCells: targetCells
-        };
     }
 
-    // Vòng lặp điều khiển chính của Bot
-    setInterval(() => {
-        // Kiểm tra nếu vòng quay đang chạy
-        if (window.isSpinning) {
-            roundState = 'spinning';
-            return;
-        }
+    // ═══════════════════════════════════════════════════════
+    // CHAT PHONG CÁCH OẲN TÙ TÌ
+    // ═══════════════════════════════════════════════════════
+    const winPhrases = [
+        'Đoán trước được nước đi luôn! Húp trọn GTLM! 👊✨',
+        'Bắt bài đối thủ quá chuẩn, chuỗi thắng lại nối dài! 🏆',
+        'Bao bọc trọn búa, kéo cắt ngọt ngào! GTLM về ví! 💰',
+        'Chiến thuật tâm lý học đỉnh cao, không trượt phát nào! 😎🚀'
+    ];
 
+    const drawPhrases = [
+        'Tâm đầu ý hợp thế nhỉ, hòa GTLM về ván sau so tài tiếp! 🤝',
+        'Đụng hàng rồi, ván sau ra chiêu độc lạ hơn! 👀'
+    ];
+
+    const losePhrases = [
+        'Bị lừa một ván nhẹ! Ván sau đọc vị lại ngay! 😤',
+        'Nước đi bất ngờ đấy, nhưng ván sau tôi phục thù! 🎯',
+        'Thua một ván không sờn lòng, quản lý vốn là bất bại! 💪'
+    ];
+
+    function sendBotChat(status) {
+        const now = Date.now();
+        if (now - lastChatTime < 14000) return;
+        if (Math.random() > 0.5) return;
+
+        let list = winPhrases;
+        if (status === 'draw') list = drawPhrases;
+        else if (status === 'lose') list = losePhrases;
+
+        const msg = list[Math.floor(Math.random() * list.length)];
+        if (typeof BotChat !== 'undefined' && BotChat.send) {
+            BotChat.send(46, 'bot_46', msg);
+            lastChatTime = now;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // VÒNG CHƠI CHÍNH
+    // ═══════════════════════════════════════════════════════
+    function playRound() {
         if (botIsBusy) return;
 
-        // Nếu vừa quay xong, chờ một lát để thưởng thức hiệu ứng thắng/thua
-        if (roundState === 'spinning') {
-            roundState = 'cooldown';
-            botIsBusy = true;
-            setTimeout(() => {
-                roundState = 'idle';
-                botIsBusy = false;
-            }, 2000 + Math.random() * 1500);
+        const btnPlay = document.getElementById('btn-play');
+        const cuocInput = document.getElementById('cuoc');
+
+        if (!btnPlay || btnPlay.disabled) return;
+
+        setBusy(true, 4000);
+
+        // 1. Quản lý vốn theo chuỗi thắng/thua
+        let targetBet = 10000;
+        if (winStreak >= 3) targetBet = 500000;
+        else if (winStreak >= 2) targetBet = 100000;
+        else if (winStreak >= 1) targetBet = 50000;
+        else targetBet = 10000;
+
+        if (cuocInput) {
+            cuocInput.value = targetBet;
+        }
+
+        // 2. Chọn thế tay
+        const choiceToPick = pickNextChoice();
+        lastUserChoice = choiceToPick;
+
+        const choiceBtn = document.querySelector(`.choice-btn[data-choice="${choiceToPick}"]`);
+        if (!choiceBtn) {
+            setBusy(false);
             return;
         }
 
-        if (roundState === 'idle') {
-            plan = createBettingPlan();
-            if (!plan || plan.targetCells.length === 0) return;
+        // Di chuyển chuột ảo tới nút chọn Đá/Giấy/Kéo
+        BotVirtualCursor.moveToElement($(choiceBtn), 0.35, 0, () => {
+            setTimeout(() => {
+                BotVirtualCursor.simulateClick(() => {
+                    try { choiceBtn.click(); } catch (e) { }
 
-            roundState = 'betting';
-            currentStep = 0;
-            if (Math.random() < 0.35) sendChat('bet');
-        }
-
-        if (roundState === 'betting' && plan) {
-            // Bước 0: Chọn Chip
-            if (currentStep === 0) {
-                const chipEl = document.querySelector(`.chip[data-value="${plan.chipValue}"]`);
-                if (chipEl && !chipEl.classList.contains('active')) {
-                    botIsBusy = true;
-                    BotVirtualCursor.moveToElement($(chipEl), 0.6, 0, () => {
-                        setTimeout(() => {
-                            BotVirtualCursor.simulateClick(() => {
-                                try { chipEl.click(); } catch(e) {}
-                                currentStep++;
-                                botIsBusy = false;
-                            });
-                        }, 200 + Math.random() * 200);
-                    });
-                    return;
-                } else {
-                    currentStep++; // Chip đã đúng, chuyển sang bước đặt cược
-                }
-            }
-
-            // Bước 1..N: Lần lượt đặt cược vào các ô trên bàn
-            const cellIndex = currentStep - 1;
-            if (cellIndex < plan.targetCells.length) {
-                const targetCell = plan.targetCells[cellIndex];
-                if (targetCell) {
-                    botIsBusy = true;
-                    BotVirtualCursor.moveToElement($(targetCell), 0.5 + Math.random() * 0.3, 0, () => {
-                        setTimeout(() => {
-                            BotVirtualCursor.simulateClick(() => {
-                                try { targetCell.click(); } catch(e) {}
-                                currentStep++;
-                                botIsBusy = false;
-                            });
-                        }, 250 + Math.random() * 200);
-                    });
-                    return;
-                } else {
-                    currentStep++;
-                }
-            }
-
-            // Bước cuối: Nhấn Quay Bàn (PLACE BETS & SPIN)
-            if (currentStep > plan.targetCells.length) {
-                const spinBtn = document.getElementById('btn-spin');
-                if (spinBtn && !spinBtn.disabled) {
-                    // Kiểm tra xem đã có cược hợp lệ chưa
-                    if (window.currentBets && window.currentBets.length > 0) {
-                        botIsBusy = true;
-                        BotVirtualCursor.moveToElement($(spinBtn), 0.7, 0, () => {
+                    // Di chuyển tiếp đến nút "CHẾT NÀY!" (#btn-play)
+                    setTimeout(() => {
+                        BotVirtualCursor.moveToElement($(btnPlay), 0.4, 0, () => {
                             setTimeout(() => {
                                 BotVirtualCursor.simulateClick(() => {
-                                    try { spinBtn.click(); } catch(e) {}
-                                    if (Math.random() < 0.45) sendChat('spin');
-                                    roundState = 'spinning';
-                                    botIsBusy = false;
-                                    plan = null;
+                                    try { btnPlay.click(); } catch (e) { }
+
+                                    // Chờ animation lắc tay 1.5s + hiển thị kết quả
+                                    setTimeout(() => {
+                                        setBusy(false);
+                                    }, 2200);
                                 });
-                            }, 300 + Math.random() * 250);
+                            }, 80);
                         });
-                        return;
+                    }, 200);
+                });
+            }, 80);
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // THEO DÕI KẾT QUẢ TỪ BADGE
+    // ═══════════════════════════════════════════════════════
+    function setupResultWatcher() {
+        const badge = document.getElementById('result-status-badge');
+        if (badge) {
+            const observer = new MutationObserver(() => {
+                if (badge.style.display !== 'none' && badge.style.opacity === '1') {
+                    const title = (document.getElementById('result-badge-title') || {}).textContent || '';
+                    if (title.includes('THẮNG')) {
+                        winStreak++;
+                        lossStreak = 0;
+                        lastResult = 'win';
+                        sendBotChat('win');
+                    } else if (title.includes('HÒA')) {
+                        lastResult = 'draw';
+                        sendBotChat('draw');
+                    } else if (title.includes('THUA')) {
+                        lossStreak++;
+                        winStreak = 0;
+                        lastResult = 'lose';
+                        sendBotChat('lose');
                     }
                 }
-            }
+            });
+            observer.observe(badge, { attributes: true, attributeFilter: ['style'] });
         }
-    }, 400);
+    }
+
+    // Khởi tạo
+    setupResultWatcher();
+
+    // Vòng lặp định kỳ mỗi 800ms
+    setInterval(playRound, 800);
+    setTimeout(playRound, 1200);
 
 })();

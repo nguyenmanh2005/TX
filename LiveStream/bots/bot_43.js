@@ -1,20 +1,22 @@
 /**
- * 🤖 Bot AI Texas Hold'em Poker Siêu Thông Minh (ID: 43)
+ * 🤖 Bot AI Pontoon (UK Blackjack Royale) Thông Minh (ID: 44)
  *
  * CHIẾN THUẬT & TRÍ THÔNG MINH:
- * 1. QUẢN LÝ VỐN CHUYÊN NGHIỆP (Bankroll Management):
- *    - Đọc số dư ví & chuỗi thắng/thua để nâng/hạ mức cược linh hoạt (10K -> 50K -> 100K -> 500K).
- *    - Thắng chuỗi -> Tăng cược ép sân các bot đối thủ.
- *    - Thua -> Tự động hạ về mức cơ sở an toàn (10K).
- * 2. ĐỌC VÒNG BÀI (Street Awareness):
- *    - Nhận biết từng vòng: Pre-Flop (0 lá chung) -> Flop (3 lá) -> Turn (4 lá) -> River (5 lá) -> Showdown.
- *    - Thời gian suy nghĩ tự nhiên theo từng vòng cược (Pre-flop nhanh, River cân nhắc kỹ).
- * 3. BẢO TOÀN LỢI THẾ CƯỢC:
- *    - Luôn Call/Check qua từng vòng để tối đa hóa cơ hội ăn trọn Pot x4 ở Showdown.
- *    - Tuyệt đối không tự Fold bỏ GTLM oan uổng.
- * 4. HỆ THỐNG WATCHDOG & CHỐNG KẸT:
- *    - Tự động đóng popup cản trở, phục hồi trạng thái sau 3s nếu có gián đoạn mạng.
- *    - Tương tác chat chuẩn phong cách Poker sảnh VIP.
+ * 1. QUẢN LÝ VỐN THÔNG MINH (Bankroll Management):
+ *    - Tự động thay đổi cược dựa trên chuỗi thắng/thua: 10K -> 50K -> 100K -> 500K.
+ *    - Khi thua: Trở về mức cơ bản an toàn 10K.
+ * 2. CHIẾN LƯỢC CHƠI BÀI PONTOON CHUẨN XÁC:
+ *    - Luật Pontoon: Dưới 15 điểm BẮT BUỘC phải RÚT (Twist).
+ *    - Từ 15 - 16 điểm:
+ *        + Nếu đã có 4 lá: Rút tiếp để săn 5-Card Trick (thắng tuyệt đối).
+ *        + Nếu 2-3 lá: Cân nhắc dừng (Stick) để tránh quắc (bust).
+ *    - Từ 17 điểm trở lên: DỪNG (Stick) ngay để bảo toàn điểm số cạnh tranh với Dealer.
+ * 3. HỆ THỐNG VÒNG LẶP & ĐIỀU KHIỂN:
+ *    - Nhận biết 3 trạng thái: IDLE (Chia bài) -> IN_HAND (Rút/Dừng) -> FINISHED (Ván mới).
+ *    - Không bao giờ click bừa vào nút không hợp lệ.
+ * 4. WATCHDOG & CHỐNG KẸT:
+ *    - Tự động giải phóng bot sau 3s nếu có sự cố.
+ *    - Chat tương tác phong cách dân chơi Casino thượng lưu.
  */
 
 (function () {
@@ -25,7 +27,7 @@
         return;
     }
 
-    BotVirtualCursor.init('Poker Pro 43');
+    BotVirtualCursor.init('Pontoon Master 44');
 
     // ═══════════════════════════════════════════════════════
     // TRẠNG THÁI VÀ CHỈ SỐ BOT
@@ -35,8 +37,6 @@
     let lastChatTime = 0;
     let winStreak = 0;
     let lossStreak = 0;
-    let currentRoundActionCount = 0;
-    let lastProcessedState = '';
 
     function setBusy(val, timeoutMs = 3000) {
         botIsBusy = val;
@@ -49,82 +49,97 @@
     }
 
     // ═══════════════════════════════════════════════════════
-    // PHÁT HIỆN TRẠNG THÁI BÀN POKER
+    // TÍNH ĐIỂM BÀI PONTOON CỦA NGƯỜI CHƠI
     // ═══════════════════════════════════════════════════════
-    const STATE = { START: 'start', PLAY: 'play', NONE: 'none' };
+    function getPlayerCardsAndScore() {
+        const cardEls = Array.from(document.querySelectorAll('#playerHand .card:not(.back)'));
+        let cards = [];
 
-    function detectState() {
-        // Đóng các popup SweetAlert nếu có che phủ
-        if (typeof Swal !== 'undefined' && Swal.isVisible && Swal.isVisible()) {
-            try { Swal.close(); } catch (e) { }
+        cardEls.forEach(el => {
+            const dataCard = el.getAttribute('data-card');
+            if (dataCard) {
+                cards.push(dataCard);
+            } else {
+                // Fallback đọc từ text content
+                const valEl = el.querySelector('div div:first-child');
+                const val = valEl ? valEl.textContent.trim() : '';
+                if (val) cards.push(val + 's');
+            }
+        });
+
+        let score = 0;
+        let aces = 0;
+
+        cards.forEach(c => {
+            let v = c.slice(0, -1);
+            if (v === 'A') {
+                aces++;
+                score += 11;
+            } else if (['J', 'Q', 'K'].includes(v)) {
+                score += 10;
+            } else {
+                score += parseInt(v) || 0;
+            }
+        });
+
+        while (score > 21 && aces > 0) {
+            score -= 10;
+            aces--;
         }
 
-        const startCtrl = document.getElementById('start-controls');
-        const playCtrl = document.getElementById('play-controls');
+        return { cards, count: cards.length, score };
+    }
 
-        const startVisible = startCtrl && window.getComputedStyle(startCtrl).display !== 'none';
-        const playVisible = playCtrl && window.getComputedStyle(playCtrl).display !== 'none';
+    // ═══════════════════════════════════════════════════════
+    // PHÁT HIỆN TRẠNG THÁI GAME
+    // ═══════════════════════════════════════════════════════
+    const STATE = { DEAL: 'deal', IN_HAND: 'in_hand', NEW_GAME: 'new_game', NONE: 'none' };
 
-        if (startVisible) return STATE.START;
-        if (playVisible) return STATE.PLAY;
+    function detectState() {
+        const dealBtn = document.getElementById('dealBtn');
+        const twistBtn = document.getElementById('twistBtn');
+        const stickBtn = document.getElementById('stickBtn');
+        const newBtn = document.getElementById('newBtn');
+
+        if (newBtn && window.getComputedStyle(newBtn).display !== 'none') {
+            return STATE.NEW_GAME;
+        }
+
+        if (twistBtn && stickBtn && window.getComputedStyle(twistBtn).display !== 'none') {
+            return STATE.IN_HAND;
+        }
+
+        if (dealBtn && window.getComputedStyle(dealBtn).display !== 'none') {
+            return STATE.DEAL;
+        }
+
         return STATE.NONE;
     }
 
-    // Xác định đang ở vòng nào dựa trên số lá bài chung trên bàn
-    function getCurrentStreet() {
-        const commCards = document.querySelectorAll('#community-area .card');
-        const count = commCards.length;
-        if (count === 0) return 'pre-flop';
-        if (count === 3) return 'flop';
-        if (count === 4) return 'turn';
-        if (count === 5) return 'river';
-        return 'unknown';
-    }
-
     // ═══════════════════════════════════════════════════════
-    // CHAT PHONG CÁCH POKER MASTER
+    // CHAT PHONG CÁCH CASINO ROYALE
     // ═══════════════════════════════════════════════════════
     const winPhrases = [
-        'Bài tẩy giấu kỹ quá, Showdown ăn trọn Pot x4! 🏆💰',
-        'Flush/Straight kết nối quá đẹp, húp sạch Pot bàn này! ♠♦',
-        'Poker Master ra chiêu, các bot khác chỉ biết ngậm ngùi! 😎✨',
-        'GTLM về ví như thác đổ, ván sau tất tay tiếp! 🚀',
-        'Đọc bài chuẩn xác từng vòng, chiến thắng thuyết phục! 🃏'
+        'Húp trọn ván Pontoon ngọt ngào! Điểm cao hơn Dealer là lúa về ví! 🃏💰',
+        'Chiến thuật đếm nút chuẩn chỉnh, Dealer chỉ biết ngậm ngùi! ✨',
+        'Pontoon 21 nút hoặc 5-Card Trick, húp sạch GTLM bàn! 🏆',
+        'Dừng đúng lúc, ăn GTLM đúng chỗ! GTLM về như suối! 🚀',
+        'Thần bài tái xuất, chuỗi thắng lại tiếp tục! 😎'
     ];
 
     const losePhrases = [
-        'River bẻ kèo hiểm thật, tạm thời bay màu nhẹ! 😅',
-        'Bot bạn cầm đôi to quá, ván sau phục thù gom lại Pot! 😤',
-        'Thua một ván không sao, quản lý vốn tốt là đường dài thắng lớn! 💪',
-        'Gặp bad beat nhẹ, ván sau bắt bài gom lại cả vốn lẫn lời! 🎯'
+        'Quá tam ba bận, ván sau bắt bài Dealer gom lại! 😤',
+        'Tham thì thâm, ráng rút thêm tí là quắc! Không sao ván sau phục thù! 😅',
+        'Dealer quái chiêu thật, ván sau tất tay lấy lại vốn! 🎯',
+        'Thua một ván không sờn lòng, quản lý vốn là đường dài vô địch! 💪'
     ];
 
-    const streetPhrases = {
-        'flop': [
-            'Flop kết nối ổn áp, check xem Turn thế nào! 👀',
-            'Flop có cửa bắt sảnh, theo tiếp không bỏ! 🃏'
-        ],
-        'turn': [
-            'Turn xuất hiện đúng lá bài mong đợi, tự tin theo! 🔥',
-            'Bài đang mạnh dần lên, giữ vững thế trận! 💰'
-        ],
-        'river': [
-            'River chốt hạ rồi, sẵn sàng mở bài Showdown! ⚡',
-            'Đến River là không ngán ai, lật bài nào anh em! 🏆'
-        ]
-    };
-
-    function sendBotChat(type, street = '') {
+    function sendBotChat(isWin) {
         const now = Date.now();
         if (now - lastChatTime < 14000) return;
         if (Math.random() > 0.5) return;
 
-        let list = [];
-        if (type === 'win') list = winPhrases;
-        else if (type === 'lose') list = losePhrases;
-        else if (type === 'street' && streetPhrases[street]) list = streetPhrases[street];
-        else list = winPhrases;
-
+        const list = isWin ? winPhrases : losePhrases;
         const msg = list[Math.floor(Math.random() * list.length)];
         if (typeof BotChat !== 'undefined' && BotChat.send) {
             BotChat.send(43, 'bot_43', msg);
@@ -133,29 +148,22 @@
     }
 
     // ═══════════════════════════════════════════════════════
-    // GIAI ĐOẠN 1: CHỌN MỨC CƯỢC & BẤM KHAI CUỘC
+    // HÀNH ĐỘNG 1: CHỌN CHIP VÀ CHIA BÀI
     // ═══════════════════════════════════════════════════════
-    function doStart() {
-        const btnStart = document.getElementById('btn-start');
-        if (!btnStart || btnStart.disabled) return;
+    function doDeal() {
+        const dealBtn = document.getElementById('dealBtn');
+        if (!dealBtn || dealBtn.disabled) return;
 
         setBusy(true, 3000);
-        currentRoundActionCount = 0;
 
-        // 1. Quản lý vốn thông minh (Smart Bankroll):
-        // Chọn chip theo chuỗi thắng / thua
+        // Quản lý vốn theo chuỗi thắng
         let targetValue = 10000;
-        if (winStreak >= 3) {
-            targetValue = 500000; // Đang trên đà hưng phấn -> Đánh lớn 500K
-        } else if (winStreak >= 2) {
-            targetValue = 100000; // Thắng 2 ván liên tiếp -> Đánh 100K
-        } else if (winStreak >= 1) {
-            targetValue = 50000;  // Thắng 1 ván -> Nâng lên 50K
-        } else {
-            targetValue = 10000;  // Cơ bản an toàn 10K
-        }
+        if (winStreak >= 3) targetValue = 500000;
+        else if (winStreak >= 2) targetValue = 100000;
+        else if (winStreak >= 1) targetValue = 50000;
+        else targetValue = 10000;
 
-        const chips = Array.from(document.querySelectorAll('#start-controls .chip'));
+        const chips = Array.from(document.querySelectorAll('#chipSelector .chip'));
         let targetChip = chips.find(c => parseInt(c.getAttribute('data-value') || '0') === targetValue);
         if (!targetChip) {
             targetChip = chips.find(c => {
@@ -164,34 +172,31 @@
             }) || chips[0];
         }
 
-        // Chọn chip với con trỏ ảo mượt mà
         if (targetChip) {
             BotVirtualCursor.moveToElement($(targetChip), 0.4, 0, () => {
                 setTimeout(() => {
                     BotVirtualCursor.simulateClick(() => {
                         try { targetChip.click(); } catch (e) { }
 
-                        // Di chuyển tiếp đến nút KHAI CUỘC
                         setTimeout(() => {
-                            BotVirtualCursor.moveToElement($(btnStart), 0.45, 0, () => {
+                            BotVirtualCursor.moveToElement($(dealBtn), 0.45, 0, () => {
                                 setTimeout(() => {
                                     BotVirtualCursor.simulateClick(() => {
-                                        try { btnStart.click(); } catch (e) { }
-                                        setTimeout(() => { setBusy(false); }, 600);
+                                        try { dealBtn.click(); } catch (e) { }
+                                        setTimeout(() => { setBusy(false); }, 700);
                                     });
                                 }, 80);
                             });
-                        }, 200);
+                        }, 180);
                     });
                 }, 80);
             });
         } else {
-            // Nhấp thẳng KHAI CUỘC
-            BotVirtualCursor.moveToElement($(btnStart), 0.45, 0, () => {
+            BotVirtualCursor.moveToElement($(dealBtn), 0.45, 0, () => {
                 setTimeout(() => {
                     BotVirtualCursor.simulateClick(() => {
-                        try { btnStart.click(); } catch (e) { }
-                        setTimeout(() => { setBusy(false); }, 600);
+                        try { dealBtn.click(); } catch (e) { }
+                        setTimeout(() => { setBusy(false); }, 700);
                     });
                 }, 80);
             });
@@ -199,42 +204,56 @@
     }
 
     // ═══════════════════════════════════════════════════════
-    // GIAI ĐOẠN 2: CHƠI VÒNG CƯỢC (THEO / CALL / CHECK)
+    // HÀNH ĐỘNG 2: XỬ LÝ LƯỢT CHƠI (TWIST HOẶC STICK)
     // ═══════════════════════════════════════════════════════
-    function doPlay() {
-        const btnCall = document.getElementById('btn-call');
-        if (!btnCall || btnCall.disabled) return;
+    function doInHand() {
+        const twistBtn = document.getElementById('twistBtn');
+        const stickBtn = document.getElementById('stickBtn');
 
-        setBusy(true, 3500);
-        currentRoundActionCount++;
+        if (!twistBtn || !stickBtn) return;
 
-        const currentStreet = getCurrentStreet();
+        const handInfo = getPlayerCardsAndScore();
+        const score = handInfo.score;
+        const cardCount = handInfo.count;
 
-        // Chat ngẫu nhiên tạo tương tác chân thực
-        if (Math.random() < 0.25) {
-            sendBotChat('street', currentStreet);
+        // Nếu chưa nạp xong bài lên DOM thì chờ
+        if (cardCount < 2) return;
+
+        setBusy(true, 3000);
+
+        let shouldTwist = false;
+
+        // Luật Pontoon:
+        // - Dưới 15 điểm: BẮT BUỘC RÚT
+        if (score < 15) {
+            shouldTwist = true;
+        }
+        // - Đạt 15 hoặc 16 điểm:
+        else if (score === 15 || score === 16) {
+            // Nếu đã có 4 lá, rút thêm lá thứ 5 để săn 5-Card Trick (thắng tuyệt đối)
+            if (cardCount === 4) {
+                shouldTwist = true;
+            } else {
+                // Đủ 15 điểm thì có thể dừng an toàn
+                shouldTwist = false;
+            }
+        }
+        // - Từ 17 điểm trở lên: DỪNG (Stick) để không bị quắc
+        else {
+            shouldTwist = false;
         }
 
-        // Tính thời gian suy nghĩ tự nhiên theo từng vòng bài
-        let thinkMs = 400;
-        if (currentStreet === 'pre-flop') thinkMs = 350 + Math.random() * 250;
-        else if (currentStreet === 'flop') thinkMs = 450 + Math.random() * 300;
-        else if (currentStreet === 'turn') thinkMs = 500 + Math.random() * 350;
-        else if (currentStreet === 'river') thinkMs = 600 + Math.random() * 400;
+        const targetBtn = shouldTwist ? twistBtn : stickBtn;
+
+        // Thời gian suy nghĩ tự nhiên
+        const thinkMs = 350 + Math.random() * 300;
 
         setTimeout(() => {
-            // Tái kiểm tra nút Call trước khi click
-            if (!btnCall || btnCall.disabled) {
-                setBusy(false);
-                return;
-            }
-
-            BotVirtualCursor.moveToElement($(btnCall), 0.4, 0, () => {
+            BotVirtualCursor.moveToElement($(targetBtn), 0.4, 0, () => {
                 setTimeout(() => {
                     BotVirtualCursor.simulateClick(() => {
-                        try { btnCall.click(); } catch (e) { }
-                        // Chờ server phản hồi xong mới mở khóa
-                        setTimeout(() => { setBusy(false); }, 800);
+                        try { targetBtn.click(); } catch (e) { }
+                        setTimeout(() => { setBusy(false); }, 650);
                     });
                 }, 80);
             });
@@ -242,29 +261,50 @@
     }
 
     // ═══════════════════════════════════════════════════════
-    // THEO DÕI KẾT QUẢ SHOWDOWN
+    // HÀNH ĐỘNG 3: VÁN MỚI (NEW GAME)
+    // ═══════════════════════════════════════════════════════
+    function doNewGame() {
+        const newBtn = document.getElementById('newBtn');
+        if (!newBtn) return;
+
+        setBusy(true, 3000);
+
+        // Chờ 1.5s cho hiệu ứng thông báo và người xem nhìn kết quả
+        setTimeout(() => {
+            BotVirtualCursor.moveToElement($(newBtn), 0.45, 0, () => {
+                setTimeout(() => {
+                    BotVirtualCursor.simulateClick(() => {
+                        try { newBtn.click(); } catch (e) { }
+                        setTimeout(() => { setBusy(false); }, 600);
+                    });
+                }, 80);
+            });
+        }, 1500);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // THEO DÕI KẾT QUẢ TỪ BADGE HOẶC DOM
     // ═══════════════════════════════════════════════════════
     function setupResultWatcher() {
-        const statusBox = document.getElementById('status-box');
-        if (!statusBox) return;
-
-        const observer = new MutationObserver(() => {
-            const txt = (statusBox.textContent || '').trim();
-            if (!txt || txt === lastProcessedState) return;
-            lastProcessedState = txt;
-
-            if (txt.includes('CHIẾN THẮNG')) {
-                winStreak++;
-                lossStreak = 0;
-                sendBotChat('win');
-            } else if (txt.includes('THẤT BẠI')) {
-                lossStreak++;
-                winStreak = 0;
-                sendBotChat('lose');
-            }
-        });
-
-        observer.observe(statusBox, { childList: true, subtree: true, characterData: true });
+        // Lắng nghe sự kiện custom hoặc badge
+        const badge = document.getElementById('result-status-badge');
+        if (badge) {
+            const observer = new MutationObserver(() => {
+                if (badge.style.display !== 'none' && badge.style.opacity === '1') {
+                    const title = (document.getElementById('result-badge-title') || {}).textContent || '';
+                    if (title.includes('THẮNG')) {
+                        winStreak++;
+                        lossStreak = 0;
+                        sendBotChat(true);
+                    } else if (title.includes('THUA')) {
+                        lossStreak++;
+                        winStreak = 0;
+                        sendBotChat(false);
+                    }
+                }
+            });
+            observer.observe(badge, { attributes: true, attributeFilter: ['style'] });
+        }
     }
 
     // ═══════════════════════════════════════════════════════
@@ -274,10 +314,12 @@
         if (botIsBusy) return;
 
         const state = detectState();
-        if (state === STATE.START) {
-            doStart();
-        } else if (state === STATE.PLAY) {
-            doPlay();
+        if (state === STATE.DEAL) {
+            doDeal();
+        } else if (state === STATE.IN_HAND) {
+            doInHand();
+        } else if (state === STATE.NEW_GAME) {
+            doNewGame();
         }
     }
 

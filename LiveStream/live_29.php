@@ -9,659 +9,494 @@ $botUser = getOrCreateBotStreamerUser($conn, 'bot_29', 50000000);
 $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
 
-
-// Kiểm tra đăng nhập
-
-// AJAX history endpoint
-$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
-
-if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_history') {
-    header('Content-Type: application/json; charset=utf-8');
-    
-    $id = $botUserId ?? 0;
-    $sql = "SELECT * FROM history_hopmu WHERE Iduser = ? ORDER BY Time DESC LIMIT 20";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    $history = [];
-    while ($row = $result->fetch_assoc()) {
-        $history[] = $row;
-    }
-    $stmt->close();
-    
-    echo json_encode([
-        'success' => true,
-        'history' => $history
-    ], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-if (isset($_GET['action']) && $_GET['action'] === 'open_bag') {
-    $bypassThemeScripts = true;
-}
-require_once '../load_theme.php';
-
-
-
-
-
-$userId = $botUserId;
-$sql = "SELECT Money, Name FROM users WHERE Iduser = ?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $userId);
-$stmt->execute();
-$result = $stmt->get_result();
-$user = $result->fetch_assoc();
-
-
-// Get statistics from database for chart
-$gameThang = 0;
-$gameThua = 0;
-$sqlStats = "SELECT COUNT(*) as total, SUM(CASE WHEN WinAmount > 0 THEN 1 ELSE 0 END) as wins FROM history_hopmu WHERE Iduser = ?";
-$stmtStats = $conn->prepare($sqlStats);
-$stmtStats->bind_param("i", $userId);
-$stmtStats->execute();
-$resultStats = $stmtStats->get_result();
-if ($rowStats = $resultStats->fetch_assoc()) {
-    $gameThang = $rowStats['wins'] ?? 0;
-    $gameThua = ($rowStats['total'] ?? 0) - $gameThang;
-}
-$stmtStats->close();
-
-
-if (!$user) {
-    die("User not found");
-}
-
-$currentBalance = $user['Money'];
-$userName = $user['Name'];
-
-// Mức phí mỗi lần bóc
-$cost = 50000;
-
-// Xử lý AJAX request
-if (isset($_GET['action']) && $_GET['action'] === 'open_bag') {
-    header('Content-Type: application/json');
-
-    if ($currentBalance < $cost) {
-        echo json_encode([
-            'success' => false,
-            'message' => "⚠️ Bạn không đủ Số Gtlm. Cần " . number_format($cost) . " gtlm."
-        ]);
-        exit;
-    }
-
-    // Trừ phí
-    $newBalanceAfterCost = $currentBalance - $cost;
-
-    // Danh sách phần thưởng (Tỉ lệ trượt cao ~80%, thưởng lớn cực hiếm)
-    $bags = [
-        ["label" => "Trượt!", "reward" => 0],
-        ["label" => "Trượt!", "reward" => 0],
-        ["label" => "Trượt!", "reward" => 0],
-        ["label" => "Trượt!", "reward" => 0],
-        ["label" => "Trượt!", "reward" => 0],
-        ["label" => "Trượt!", "reward" => 0],
-        ["label" => "Trượt!", "reward" => 0],
-        ["label" => "Trượt!", "reward" => 0],
-        ["label" => "Trượt!", "reward" => 0],
-        ["label" => "Trượt!", "reward" => 0],
-        ["label" => "Trượt!", "reward" => 0],
-        ["label" => "Trượt!", "reward" => 0],
-        ["label" => "Trượt!", "reward" => 0],
-        ["label" => "Trượt!", "reward" => 0],
-        ["label" => "Trượt!", "reward" => 0],
-        ["label" => "Trượt!", "reward" => 0],
-        ["label" => "Trượt!", "reward" => 0],
-        ["label" => "Trượt!", "reward" => 0],
-        ["label" => "Trượt!", "reward" => 0],
-        ["label" => "Trượt!", "reward" => 0],
-        ["label" => "10.000 gtlm", "reward" => 10000],
-        ["label" => "10.000 gtlm", "reward" => 10000],
-        ["label" => "10.000 gtlm", "reward" => 10000],
-        ["label" => "50.000 gtlm", "reward" => 50000],
-        ["label" => "100.000 gtlm", "reward" => 100000],
-    ];
-
-    // Thêm các phần thưởng lớn vào pool với xác suất thấp (Jackpot style)
-    if (rand(1, 100) <= 5) { // 5% cơ hội trúng quà cực cực lớn
-        $jackpot = [
-            ["label" => "200.000 gtlm", "reward" => 200000],
-            ["label" => "500.000 gtlm", "reward" => 500000],
-            ["label" => "1.000.000 gtlm", "reward" => 1000000],
-        ];
-        $randomBag = $jackpot[array_rand($jackpot)];
-    } else {
-        $randomBag = $bags[array_rand($bags)];
-    }
-
-    $rewardText = $randomBag['label'];
-    $rewardAmount = $randomBag['reward'];
-    $isWin = $rewardAmount > 0;
-
-    $finalBalance = $newBalanceAfterCost + $rewardAmount;
-
-    // Cập nhật DB
-    $update = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
-    $update->bind_param("di", $finalBalance, $userId);
-    $update->execute();
-    $update->close();
-
-    // Lưu lịch sử
-    require_once '../game_history_helper.php';
-    logGameHistory($conn, $userId, 'Hộp Mù', $cost, $rewardAmount, $isWin);
-
-    $historyStmt = $conn->prepare("INSERT INTO history_hopmu (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-    if ($historyStmt) {
-        $historyStmt->bind_param("iisi", $userId, $cost, $rewardText, $rewardAmount);
-        $historyStmt->execute();
-        $historyStmt->close();
-    }
-
-    echo json_encode([
-        'success' => true,
-        'isWin' => $isWin,
-        'message' => $isWin ? "🎉 Xin chúc mừng! Bạn nhận được: <b>$rewardText</b>" : "😢 Rất tiếc! Bạn đã bóc trượt. Thử lại nhé!",
-        'newBalance' => number_format($finalBalance, 0, ',', '.'),
-        'rewardAmount' => $rewardAmount
-    ]);
-    exit;
-}
-
-$message = "";
-
 ?>
-
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
-    <title>Bóc Túi Mù</title>
-    <link rel="stylesheet" href="../assets/css/main.css">
-    <link rel="stylesheet" href="../assets/css/components.css">
-    <link rel="stylesheet" href="../assets/css/responsive.css">
-    <link rel="stylesheet" href="../assets/css/loading.css">
-    <link rel="stylesheet" href="../assets/css/animations.css">
-    <link rel="stylesheet" href="../assets/css/game-effects.css">
-    <link rel="stylesheet" href="../assets/css/game-ui-enhancements.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.6.0/confetti.browser.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đua Ngựa Pari-Mutuel | GTLM Gaming</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --bg: #020617;
+            --panel: rgba(15, 23, 42, 0.7);
+            --primary: #6366f1;
+            --secondary: #a855f7;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --gold: #fbbf24;
+            --text: #f8fafc;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
         body {
-            position: relative;
-            cursor: url('../img/chuot.png'), auto !important;
-            font-family: 'Segoe UI', sans-serif;
-            background:
-                <?= $bgGradientCSS ?>
-            ;
-            text-align: center;
-            padding: 40px 20px;
+            background: var(--bg);
+            background-image: 
+                radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 100% 100%, rgba(168, 85, 247, 0.1) 0%, transparent 40%);
+            color: var(--text);
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            padding: 0;
             min-height: 100vh;
             overflow-x: hidden;
         }
 
-        * {
-            cursor: inherit;
-        }
-
-        button,
-        a,
-        input[type="button"],
-        input[type="submit"],
-        label,
-        select {
-            cursor: url('../img/tay.png'), pointer !important;
-        }
-
-        .game-container {
-            max-width: 600px;
+        .container {
+            max-width: 1200px;
             margin: 0 auto;
-            background: rgba(255, 255, 255, 0.98);
-            padding: 40px;
-            border-radius: var(--border-radius-lg);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
-            border: 2px solid rgba(255, 255, 255, 0.5);
+            padding: 20px;
         }
 
-        h1 {
-            color: var(--primary-color);
-            font-size: 32px;
-            font-weight: 700;
-            margin-bottom: 20px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        /* --- Header --- */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            background: var(--panel);
+            padding: 20px 30px;
+            border-radius: 24px;
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
         }
 
-        .balance-display {
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--success-color);
-            padding: 15px;
-            background: rgba(232, 245, 233, 0.5);
-            border-radius: var(--border-radius);
-            border: 2px solid var(--success-color);
-            margin: 20px 0;
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        .cost-info {
-            font-size: 18px;
+        .user-stats {
+            display: flex;
+            gap: 20px;
             font-weight: 600;
-            color: var(--warning-color);
-            padding: 12px;
-            background: rgba(243, 156, 18, 0.1);
-            border-radius: var(--border-radius);
-            border: 2px solid var(--warning-color);
-            margin: 20px 0;
         }
 
-        button {
-            background: linear-gradient(135deg, #00796b 0%, #004d40 100%);
-            color: white;
-            font-size: 20px;
-            font-weight: 700;
-            padding: 16px 40px;
-            border: none;
-            border-radius: var(--border-radius);
-            cursor: pointer;
-            margin-top: 30px;
-            box-shadow: 0 4px 15px rgba(0, 121, 107, 0.4);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        .money-box {
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--success);
+            padding: 8px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        /* --- Track --- */
+        .race-track-container {
+            background: var(--panel);
+            border-radius: 32px;
+            padding: 40px;
+            border: 1px solid var(--glass-border);
+            margin-bottom: 30px;
             position: relative;
             overflow: hidden;
         }
 
-        button::before {
-            content: '';
+        .track-lane {
+            height: 60px;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .track-lane:last-child { border-bottom: none; }
+
+        .horse {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.3);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
+            left: 0;
+            width: 50px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            transition: left 0.1s linear;
+            z-index: 10;
         }
 
-        button:hover::before {
-            width: 300px;
-            height: 300px;
+        .horse::after {
+            content: attr(data-num);
+            position: absolute;
+            top: -15px;
+            font-size: 10px;
+            font-weight: 800;
+            background: rgba(0,0,0,0.5);
+            padding: 2px 6px;
+            border-radius: 4px;
         }
 
-        button:hover:not(:disabled) {
-            transform: translateY(-4px) scale(1.05);
-            box-shadow: 0 8px 25px rgba(0, 121, 107, 0.6);
-            background: linear-gradient(135deg, #004d40 0%, #00796b 100%);
+        .finish-line {
+            position: absolute;
+            right: 50px;
+            top: 40px;
+            bottom: 40px;
+            width: 4px;
+            background: repeating-linear-gradient(0deg, #fff, #fff 10px, #000 10px, #000 20px);
+            box-shadow: 0 0 20px rgba(255,255,255,0.2);
         }
 
-        button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed !important;
-        }
-
-        .result {
-            font-size: 22px;
-            font-weight: 700;
-            margin-top: 30px;
-            padding: 20px;
-            border-radius: var(--border-radius);
-            animation: messageAppear 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            line-height: 1.8;
-        }
-
-        .result.win {
-            color: #00ff00;
-            background: rgba(40, 167, 69, 0.2);
-            border: 3px solid #28a745;
-            box-shadow: 0 0 25px rgba(40, 167, 69, 0.6);
-            animation: messageAppear 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55), winPulse 1.5s ease infinite;
-        }
-
-        .result.lose {
-            color: #ff6b6b;
-            background: rgba(220, 53, 69, 0.2);
-            border: 3px solid #dc3545;
-        }
-
-        @keyframes messageAppear {
-            0% {
-                opacity: 0;
-                transform: translateY(-30px) scale(0.8);
-            }
-
-            50% {
-                transform: translateY(5px) scale(1.1);
-            }
-
-            100% {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        @keyframes winPulse {
-
-            0%,
-            100% {
-                transform: scale(1);
-                box-shadow: 0 0 25px rgba(40, 167, 69, 0.6);
-            }
-
-            50% {
-                transform: scale(1.02);
-                box-shadow: 0 0 40px rgba(40, 167, 69, 0.9);
-            }
-        }
-
-        a {
-            display: inline-block;
-            margin-top: 25px;
-            padding: 12px 24px;
-            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--secondary-dark) 100%);
-            color: white;
-            text-decoration: none;
-            border-radius: var(--border-radius);
-            font-weight: 600;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
-        }
-
-        a:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.5);
-        }
-
-        .bag-icon {
-            font-size: 80px;
-            margin: 20px 0;
-            animation: bagShake 2s ease-in-out infinite;
-        }
-
-        @keyframes bagShake {
-
-            0%,
-            100% {
-                transform: translateY(0) rotate(0deg);
-            }
-
-            10%,
-            30%,
-            50%,
-            70%,
-            90% {
-                transform: translateY(-5px) rotate(-3deg);
-            }
-
-            20%,
-            40%,
-            60%,
-            80% {
-                transform: translateY(-5px) rotate(3deg);
-            }
-        }
-
-        .bag-icon.opening {
-            animation: bagOpening 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
-        }
-
-        @keyframes bagOpening {
-            0% {
-                transform: scale(1) rotate(0deg);
-            }
-
-            20% {
-                transform: scale(1.2) rotate(-10deg);
-            }
-
-            40% {
-                transform: scale(1.2) rotate(10deg);
-            }
-
-            60% {
-                transform: scale(1.4) rotate(0deg);
-                opacity: 1;
-                filter: brightness(1);
-            }
-
-            80% {
-                transform: scale(1.6) rotate(0deg);
-                opacity: 0.5;
-                filter: brightness(2);
-            }
-
-            100% {
-                transform: scale(2) rotate(0deg);
-                opacity: 0;
-                filter: brightness(3);
-            }
-        }
-
-        .result {
-            opacity: 0;
-            transform: translateY(20px);
-            transition: all 0.5s ease-out;
-        }
-
-        .result.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    
-        /* Statistics Container */
-        .stats-container {
+        /* --- Betting Panel --- */
+        .betting-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .horse-bet-card {
+            background: var(--panel);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .horse-bet-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .horse-info {
+            display: flex;
+            align-items: center;
             gap: 15px;
-            margin-bottom: 20px;
         }
-        
-        .stat-item {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 15px;
-            text-align: center;
-            transition: all 0.3s ease;
+
+        .horse-num-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 20px;
+            background: var(--primary);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
         }
-        
-        .stat-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
+
+        .horse-odds {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--gold);
         }
-        
-        .stat-item.wins {
-            border-left: 4px solid #4ade80;
-        }
-        
-        .stat-item.losses {
-            border-left: 4px solid #ff6b6b;
-        }
-        
-        .stat-item .label {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.6);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 8px;
-        }
-        
-        .stat-item .value {
-            font-size: 28px;
-            font-weight: 700;
-            color: #ffd700;
-        }
-        
-        .chart-box {
+
+        .bet-controls {
             display: flex;
             flex-direction: column;
+            gap: 8px;
+            text-align: right;
         }
-        
-        .chart-box canvas {
-            margin-top: 20px;
+
+        .bet-input-group {
+            display: flex;
+            gap: 8px;
         }
+
+        .bet-input {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--glass-border);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 10px;
+            width: 80px;
+            font-weight: 600;
+            outline: none;
+        }
+
+        .bet-btn {
+            background: var(--primary);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .bet-btn:hover { filter: brightness(1.2); }
+        .bet-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .my-bet-info {
+            font-size: 12px;
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        /* --- Status Info --- */
+        .status-bar {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .countdown {
+            font-size: 32px;
+            color: var(--gold);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* --- Overlays --- */
+        #result-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .result-content {
+            text-align: center;
+            background: var(--panel);
+            padding: 60px;
+            border-radius: 40px;
+            border: 2px solid var(--gold);
+            box-shadow: 0 0 100px rgba(251, 191, 36, 0.2);
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .winner-announcement {
+            font-size: 60px;
+            font-weight: 800;
+            color: var(--gold);
+            margin-bottom: 20px;
+        }
+
+        /* --- Colors for horses --- */
+        .h-1 { color: #ff4e50; }
+        .h-2 { color: #f9d423; }
+        .h-3 { color: #34e89e; }
+        .h-4 { color: #00d2ff; }
+        .h-5 { color: #a445b2; }
+        .h-6 { color: #ff0099; }
 
     </style>
 </head>
-
 <body>
-    <!-- Premium Effects System -->
-    <canvas id="threejs-background" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;"></canvas>
-    <script>
-        (function() {
-            window.themeConfig = {
-                particleCount: <?= $particleCount ?? 800 ?>,
-                particleSize: <?= $particleSize ?? 0.05 ?>,
-                particleColor: '<?= $particleColor ?? "#ffffff" ?>',
-                particleOpacity: <?= $particleOpacity ?? 0.6 ?>,
-                shapeCount: <?= $shapeCount ?? 10 ?>,
-                shapeColors: <?= json_encode($shapeColors ?? ["#667eea", "#764ba2", "#4facfe", "#00f2fe"]) ?>,
-                shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>,
-                bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>
-            };
-            const prefix = (window.location.pathname.includes('/games/') || window.location.pathname.includes('/LiveStream/')) ? '../' : '';
-            const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
-            scripts.forEach(src => {
-                const s = document.createElement('script');
-                s.src = prefix + src;
-                s.async = false;
-                document.head.appendChild(s);
-            });
-        })();
-    </script>
 
-    <div class="game-container">
-        <h1>🎁 Bóc Túi Mù</h1>
-        <p style="font-size: 18px; margin: 10px 0;">Xin chào
-            <strong><?= htmlspecialchars($userName, ENT_QUOTES, 'UTF-8') ?></strong>
-        </p>
-        <div class="balance-display">💰 Số Gtlm hiện tại: <strong
-                id="user-balance"><?= number_format($currentBalance, 0, ',', '.') ?> gtlm</strong></div>
-        <div class="cost-info">💸 Chi phí mỗi lần bóc: <strong><?= number_format($cost, 0, ',', '.') ?> gtlm</strong>
+<div class="container">
+    <div class="header">
+        <div>
+            <a href="../index.php" style="color: #64748b; text-decoration: none; font-size: 14px; display: block; margin-bottom: 5px;"><i class="fa fa-arrow-left"></i> Về sảnh</a>
+            <h1>RACING DERBY</h1>
         </div>
-
-        <div class="bag-icon">🎁</div>
-
-        <div id="result-container"></div>
-
-        <form id="bagForm">
-            <button type="submit" id="submitBtn" data-allow-bot="true">👉 Bóc túi ngay!</button>
-        </form>
-        <p><a href="../index.php">🏠 Quay Lại Trang Chủ</a></p>
-
-
+        <div class="user-stats">
+            <div class="money-box"><i class="fa fa-coins"></i> <span id="user-money">0</span> GTLM</div>
+        </div>
     </div>
 
-    <script>
-        // Đảm bảo cursor luôn hoạt động
-        document.addEventListener('DOMContentLoaded', function () {
-            document.body.style.cursor = "url('../img/chuot.png'), auto";
+    <div class="status-bar">
+        <span id="phase-text">GIAI ĐOẠN CƯỢC</span>: <span class="countdown" id="timer">00:60</span>
+    </div>
 
-            const interactiveElements = document.querySelectorAll('button, a, input, label, select');
-            interactiveElements.forEach(el => {
-                el.style.cursor = "url('../img/tay.png'), pointer";
-            });
-        });
-    </script>
+    <div class="race-track-container">
+        <div class="finish-line"></div>
+        <div class="track-lane"><div class="horse h-1" id="horse-1" data-num="1">🐎</div></div>
+        <div class="track-lane"><div class="horse h-2" id="horse-2" data-num="2">🐎</div></div>
+        <div class="track-lane"><div class="horse h-3" id="horse-3" data-num="3">🐎</div></div>
+        <div class="track-lane"><div class="horse h-4" id="horse-4" data-num="4">🐎</div></div>
+        <div class="track-lane"><div class="horse h-5" id="horse-5" data-num="5">🐎</div></div>
+        <div class="track-lane"><div class="horse h-6" id="horse-6" data-num="6">🐎</div></div>
+    </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const form = document.getElementById('bagForm');
-            const submitBtn = document.getElementById('submitBtn');
-            const bag = document.querySelector('.bag-icon');
-            const resultContainer = document.getElementById('result-container');
-            const balanceEl = document.getElementById('user-balance');
+    <div class="betting-grid">
+        <!-- 6 horse cards -->
+        <?php for($i=1; $i<=6; $i++): ?>
+        <div class="horse-bet-card">
+            <div class="horse-info">
+                <div class="horse-num-circle h-<?= $i ?>"><?= $i ?></div>
+                <div>
+                    <div class="horse-odds" id="odds-<?= $i ?>">x10.0</div>
+                    <div style="font-size: 11px; color: #64748b;">Tổng cược: <span id="pool-<?= $i ?>">0</span></div>
+                </div>
+            </div>
+            <div class="bet-controls">
+                <div class="my-bet-info" id="my-bet-<?= $i ?>">Chưa cược</div>
+                <div class="bet-input-group">
+                    <input type="number" class="bet-input" id="input-<?= $i ?>" placeholder="Số GTLM" min="1000" step="1000">
+                    <button class="bet-btn" onclick="placeBet(<?= $i ?>)">CƯỢC</button>
+                </div>
+            </div>
+        </div>
+        <?php endfor; ?>
+    </div>
+</div>
 
-            if (form) {
-                form.addEventListener('submit', async function (e) {
-                    e.preventDefault();
+<div id="result-overlay">
+    <div class="result-content">
+        <div style="font-size: 24px; font-weight: 700; color: #94a3b8; margin-bottom: 10px;">WINNER IS</div>
+        <div class="winner-announcement" id="winner-text">HORSE #1</div>
+        <div id="win-message" style="font-size: 20px; color: var(--success); font-weight: 700; display: none;">BẠN ĐÃ THẮNG +<span id="win-amount">0</span> GTLM!</div>
+    </div>
+</div>
 
-                    if (submitBtn.disabled) return;
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    let currentPhase = 'betting';
+    let raceId = 0;
+    let winnerHorse = null;
+    let isRacing = false;
+    let pollInterval = null;
+    let animationIntervals = [];
 
-                    // Reset trạng thái
-                    submitBtn.disabled = true;
-                    submitBtn.innerHTML = 'đang mở... 🎁';
-                    bag.classList.add('opening');
-                    resultContainer.innerHTML = '';
+    function formatMoney(n) {
+        return Number(n).toLocaleString();
+    }
 
-                    try {
-                        const response = await fetch('?action=open_bag');
+    function updateStatus() {
+        $.get('../api_horse_race.php?action=get_status&is_bot=1', function(data) {
+            if (!data.success) return;
 
-                        if (!response.ok) {
-                            throw new Error('Server responded with ' + response.status);
-                        }
+            raceId = data.race_id;
+            currentPhase = data.status;
+            winnerHorse = data.winner_horse;
+            
+            $('#user-money').text(formatMoney(data.user_money));
+            $('#timer').text(data.time_left);
+            
+            // Update Odds & Pools
+            for (let i = 1; i <= 6; i++) {
+                $(`#odds-${i}`).text('x' + data.odds[i]);
+                $(`#pool-${i}`).text(formatMoney(data.horse_pools[i]));
+                if (data.user_bets[i]) {
+                    $(`#my-bet-${i}`).text('Đã cược: ' + formatMoney(data.user_bets[i]));
+                } else {
+                    $(`#my-bet-${i}`).text('Chưa cược');
+                }
+            }
 
-                        const text = await response.text();
-                        let data;
-                        try {
-                            data = JSON.parse(text);
-                        } catch (e) {
-                            console.error('Phản hồi không phải JSON:', text);
-                            throw new Error('Lỗi dữ liệu từ server');
-                        }
-
-                        // Chờ hiệu ứng animation (0.5s)
-                        setTimeout(() => {
-                            bag.classList.remove('opening');
-                            submitBtn.disabled = false;
-                            submitBtn.innerHTML = '👉 Bóc túi ngay!';
-
-                            if (data.success) {
-                                // Cập nhật Số Gtlm
-                                balanceEl.textContent = data.newBalance + ' gtlm';
-
-                                // Hiển thị kết quả
-                                resultContainer.innerHTML = `
-                                    <div class="result ${data.isWin ? 'win' : 'lose'} show">
-                                        ${data.message}
-                                    </div>
-                                `;
-
-                                // Nếu thắng thì bắn pháo giấy
-                                if (data.isWin && typeof confetti === 'function') {
-                                    confetti({
-                                        particleCount: 150,
-                                        spread: 100,
-                                        origin: { y: 0.6 },
-                                        colors: ['#ffd700', '#ffffff', '#ff6b6b', '#4facfe']
-                                    });
-                                }
-                            } else {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Thông báo',
-                                    text: data.message,
-                                    timer: 1500,
-                                    showConfirmButton: false
-                                });
-                            }
-                        }, 450);
-
-                    } catch (error) {
-                        console.error('Lỗi khi mở túi:', error);
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = '👉 Bóc túi ngay!';
-                        bag.classList.remove('opening');
-                    }
-                });
-
-                window.openBagStreamer = function() {
-                    const btn = document.getElementById('submitBtn');
-                    if (btn && !btn.disabled) {
-                        form.dispatchEvent(new Event('submit', { cancelable: true }));
-                    }
-                };
+            if (currentPhase === 'betting') {
+                $('#phase-text').text('GIAI ĐOẠN CƯỢC');
+                $('#result-overlay').hide();
+                $('.bet-btn').prop('disabled', false);
+                resetHorses();
+                isRacing = false;
+            } else if (currentPhase === 'racing') {
+                $('#phase-text').text('ĐANG ĐUA...');
+                $('.bet-btn').prop('disabled', true);
+                if (!isRacing) startRaceAnimation(winnerHorse);
+            } else if (currentPhase === 'result') {
+                $('#phase-text').text('KẾT QUẢ');
+                showResult(winnerHorse);
             }
         });
-    </script>
+    }
 
-    <!-- NẠP THƯ VIỆN BẮT BUỘC CHO CHUỘT ẢO GSAP VÀ JQUERY -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    function resetHorses() {
+        animationIntervals.forEach(clearInterval);
+        animationIntervals = [];
+        $('.horse').css('transition', 'none');
+        $('.horse').css('left', '0%');
+        setTimeout(() => $('.horse').css('transition', 'left 0.1s linear'), 50);
+    }
 
-    <!-- BOT STREAMER SCRIPT -->
-    <script src="../assets/js/bot_virtual_cursor.js"></script>
-    <script src="../assets/js/bot_chat.js"></script>
-    <script src="bots/bot_29.js"></script>
+    function startRaceAnimation(winner) {
+        isRacing = true;
+        const trackWidth = $('.race-track-container').width() - 100;
+        const finishLinePos = trackWidth;
+
+        // Animate each horse with some randomness
+        for (let i = 1; i <= 6; i++) {
+            const isWinner = (i == winner);
+            
+            // Simulate progress
+            let currentPos = 0;
+            const interval = setInterval(() => {
+                if (currentPos >= 100 || !isRacing) {
+                    clearInterval(interval);
+                    return;
+                }
+                
+                // Winner pulls ahead at the end, others lag slightly
+                let step = Math.random() * 0.7; // Takes ~28s to reach 100%
+                if (isWinner && currentPos > 70) step += 0.5;
+                if (!isWinner && currentPos > 85) step *= 0.5;
+                
+                currentPos += step;
+                if (currentPos > 95 && !isWinner) currentPos = 95; // Don't cross finish yet
+                if (currentPos > 100) currentPos = 100;
+                
+                $(`#horse-${i}`).css('left', `calc(${currentPos}% - 50px)`);
+            }, 100);
+            animationIntervals.push(interval);
+        }
+    }
+
+    function showResult(winner) {
+        $('#winner-text').text('HORSE #' + winner);
+        $('#result-overlay').css('display', 'flex');
+        
+        // Optional: check if user won this race (would need another API call or data in get_status)
+        // For simplicity, I'll just show the winner.
+    }
+
+    function placeBet(horseNum) {
+        const amount = $(`#input-${horseNum}`).val();
+        if (!amount || amount < 1000) {
+            Swal.fire('Lỗi', 'Số GTLM cược tối thiểu là 1,000 GTLM', 'error');
+            return;
+        }
+
+        $.post('../api_horse_race.php?action=place_bet', {
+            horse_num: horseNum,
+            amount: amount,
+            is_bot: 1
+        }, function(data) {
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Đặt cược thành công',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000
+                });
+                $(`#input-${horseNum}`).val('');
+                updateStatus();
+            } else {
+                Swal.fire('Lỗi', data.message, 'error');
+            }
+        });
+    }
+
+    $(document).ready(function() {
+        updateStatus();
+        pollInterval = setInterval(updateStatus, 1000);
+    });
+
+</script>
+
+<!-- AUTO-GENERATED BOT SCRIPT -->
+<script>
+if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
+if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
+</script>
+<script src="../assets/js/bot_virtual_cursor.js"></script>
+<script src="bots/bot_29.js"></script>
+
 </body>
 </html>

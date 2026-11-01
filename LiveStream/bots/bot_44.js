@@ -1,22 +1,21 @@
 /**
- * 🤖 Bot AI Pontoon (UK Blackjack Royale) Thông Minh (ID: 44)
+ * 🤖 Bot AI Red Dog Poker (Spread Betting) Thông Minh (ID: 45)
  *
- * CHIẾN THUẬT & TRÍ THÔNG MINH:
- * 1. QUẢN LÝ VỐN THÔNG MINH (Bankroll Management):
- *    - Tự động thay đổi cược dựa trên chuỗi thắng/thua: 10K -> 50K -> 100K -> 500K.
- *    - Khi thua: Trở về mức cơ bản an toàn 10K.
- * 2. CHIẾN LƯỢC CHƠI BÀI PONTOON CHUẨN XÁC:
- *    - Luật Pontoon: Dưới 15 điểm BẮT BUỘC phải RÚT (Twist).
- *    - Từ 15 - 16 điểm:
- *        + Nếu đã có 4 lá: Rút tiếp để săn 5-Card Trick (thắng tuyệt đối).
- *        + Nếu 2-3 lá: Cân nhắc dừng (Stick) để tránh quắc (bust).
- *    - Từ 17 điểm trở lên: DỪNG (Stick) ngay để bảo toàn điểm số cạnh tranh với Dealer.
+ * CHIẾN THUẬT & TOÁN HỌC RED DOG:
+ * 1. CHIẾN THUẬT RIDE / SHOW TỐI ƯU TOÁN HỌC:
+ *    - Trong Red Dog, lá thứ 3 phải nằm GIỮA 2 lá đầu tiên (Khoảng / Spread).
+ *    - Khoảng (Spread) từ 1 đến 11:
+ *        + Spread >= 7: Tỉ lệ thắng > 54% -> TOÁN HỌC TỐI ƯU LÀ RIDE (Gấp đôi cược)!
+ *        + Spread < 7 (hoặc = 0): Tỉ lệ thắng thấp (< 46%) -> CHỌN SHOW (Mở bài giữ nguyên cược để bảo toàn vốn)!
+ * 2. QUẢN LÝ VỐN CHUYÊN NGHIỆP:
+ *    - Mức cược tăng theo chuỗi thắng: 10K -> 50K -> 100K -> 500K.
+ *    - Khi thua: Tự động hạ về 10K an toàn.
  * 3. HỆ THỐNG VÒNG LẶP & ĐIỀU KHIỂN:
- *    - Nhận biết 3 trạng thái: IDLE (Chia bài) -> IN_HAND (Rút/Dừng) -> FINISHED (Ván mới).
- *    - Không bao giờ click bừa vào nút không hợp lệ.
+ *    - Nhận biết 3 trạng thái: DEAL (Chia bài) -> DECIDE (Ra quyết định Ride/Show) -> NEW_GAME (Ván mới).
+ *    - Không bao giờ click lung tung hay nhấn nút ngoài lượt.
  * 4. WATCHDOG & CHỐNG KẸT:
- *    - Tự động giải phóng bot sau 3s nếu có sự cố.
- *    - Chat tương tác phong cách dân chơi Casino thượng lưu.
+ *    - Tự động đóng popup cản trở, phục hồi trạng thái sau 3s nếu có sự cố.
+ *    - Chat tương tác phong cách dân chơi Poker thượng lưu.
  */
 
 (function () {
@@ -27,7 +26,7 @@
         return;
     }
 
-    BotVirtualCursor.init('Pontoon Master 44');
+    BotVirtualCursor.init('Red Dog Pro 45');
 
     // ═══════════════════════════════════════════════════════
     // TRẠNG THÁI VÀ CHỈ SỐ BOT
@@ -49,64 +48,33 @@
     }
 
     // ═══════════════════════════════════════════════════════
-    // TÍNH ĐIỂM BÀI PONTOON CỦA NGƯỜI CHƠI
+    // ĐỌC KHOẢNG SPREAD HIỆN TẠI
     // ═══════════════════════════════════════════════════════
-    function getPlayerCardsAndScore() {
-        const cardEls = Array.from(document.querySelectorAll('#playerHand .card:not(.back)'));
-        let cards = [];
-
-        cardEls.forEach(el => {
-            const dataCard = el.getAttribute('data-card');
-            if (dataCard) {
-                cards.push(dataCard);
-            } else {
-                // Fallback đọc từ text content
-                const valEl = el.querySelector('div div:first-child');
-                const val = valEl ? valEl.textContent.trim() : '';
-                if (val) cards.push(val + 's');
-            }
-        });
-
-        let score = 0;
-        let aces = 0;
-
-        cards.forEach(c => {
-            let v = c.slice(0, -1);
-            if (v === 'A') {
-                aces++;
-                score += 11;
-            } else if (['J', 'Q', 'K'].includes(v)) {
-                score += 10;
-            } else {
-                score += parseInt(v) || 0;
-            }
-        });
-
-        while (score > 21 && aces > 0) {
-            score -= 10;
-            aces--;
-        }
-
-        return { cards, count: cards.length, score };
+    function getCurrentSpread() {
+        const spreadEl = document.getElementById('spreadValue');
+        if (!spreadEl) return 0;
+        return parseInt(spreadEl.textContent.trim()) || 0;
     }
 
     // ═══════════════════════════════════════════════════════
     // PHÁT HIỆN TRẠNG THÁI GAME
     // ═══════════════════════════════════════════════════════
-    const STATE = { DEAL: 'deal', IN_HAND: 'in_hand', NEW_GAME: 'new_game', NONE: 'none' };
+    const STATE = { DEAL: 'deal', DECIDE: 'decide', NEW_GAME: 'new_game', NONE: 'none' };
 
     function detectState() {
         const dealBtn = document.getElementById('dealBtn');
-        const twistBtn = document.getElementById('twistBtn');
-        const stickBtn = document.getElementById('stickBtn');
+        const rideBtn = document.getElementById('rideBtn');
+        const showBtn = document.getElementById('showBtn');
         const newBtn = document.getElementById('newBtn');
 
         if (newBtn && window.getComputedStyle(newBtn).display !== 'none') {
             return STATE.NEW_GAME;
         }
 
-        if (twistBtn && stickBtn && window.getComputedStyle(twistBtn).display !== 'none') {
-            return STATE.IN_HAND;
+        const showVisible = showBtn && window.getComputedStyle(showBtn).display !== 'none';
+        const rideVisible = rideBtn && window.getComputedStyle(rideBtn).display !== 'none';
+        if (showVisible || rideVisible) {
+            return STATE.DECIDE;
         }
 
         if (dealBtn && window.getComputedStyle(dealBtn).display !== 'none') {
@@ -117,21 +85,21 @@
     }
 
     // ═══════════════════════════════════════════════════════
-    // CHAT PHONG CÁCH CASINO ROYALE
+    // CHAT PHONG CÁCH CASINO RED DOG
     // ═══════════════════════════════════════════════════════
     const winPhrases = [
-        'Húp trọn ván Pontoon ngọt ngào! Điểm cao hơn Dealer là lúa về ví! 🃏💰',
-        'Chiến thuật đếm nút chuẩn chỉnh, Dealer chỉ biết ngậm ngùi! ✨',
-        'Pontoon 21 nút hoặc 5-Card Trick, húp sạch GTLM bàn! 🏆',
-        'Dừng đúng lúc, ăn GTLM đúng chỗ! GTLM về như suối! 🚀',
-        'Thần bài tái xuất, chuỗi thắng lại tiếp tục! 😎'
+        'Lá thứ 3 lọt thỏm ngay giữa khoảng, húp trọn GTLM! 🃏💰',
+        'Khoảng cách rộng quá, Ride gấp đôi ăn to anh em ơi! ✨',
+        'Thần bài Red Dog ra chiêu, GTLM về đầy túi! 🏆',
+        'Đọc tỉ lệ toán học chuẩn xác, thắng đẹp mắt! 🚀',
+        'Chuỗi thắng lại tiếp diễn, ván sau bung lụa tiếp! 😎'
     ];
 
     const losePhrases = [
-        'Quá tam ba bận, ván sau bắt bài Dealer gom lại! 😤',
-        'Tham thì thâm, ráng rút thêm tí là quắc! Không sao ván sau phục thù! 😅',
-        'Dealer quái chiêu thật, ván sau tất tay lấy lại vốn! 🎯',
-        'Thua một ván không sờn lòng, quản lý vốn là đường dài vô địch! 💪'
+        'Lá thứ 3 lệch mất 1 nút, tiếc hùi hụi! Không sao ván sau gỡ lại! 😅',
+        'Khoảng hẹp hơi đen, ván sau phục thù! 😤',
+        'Thua nhẹ một ván không sờn lòng, quản lý vốn tốt là đường dài thắng! 💪',
+        'Ván sau gặp khoảng rộng là tất tay húp lại cả vốn lẫn lời! 🎯'
     ];
 
     function sendBotChat(isWin) {
@@ -156,7 +124,7 @@
 
         setBusy(true, 3000);
 
-        // Quản lý vốn theo chuỗi thắng
+        // Quản lý vốn thông minh
         let targetValue = 10000;
         if (winStreak >= 3) targetValue = 500000;
         else if (winStreak >= 2) targetValue = 100000;
@@ -204,56 +172,41 @@
     }
 
     // ═══════════════════════════════════════════════════════
-    // HÀNH ĐỘNG 2: XỬ LÝ LƯỢT CHƠI (TWIST HOẶC STICK)
+    // HÀNH ĐỘNG 2: RA QUYẾT ĐỊNH RIDE (GẤP ĐÔI) HOẶC SHOW (MỞ BÀI)
     // ═══════════════════════════════════════════════════════
-    function doInHand() {
-        const twistBtn = document.getElementById('twistBtn');
-        const stickBtn = document.getElementById('stickBtn');
+    function doDecide() {
+        const rideBtn = document.getElementById('rideBtn');
+        const showBtn = document.getElementById('showBtn');
 
-        if (!twistBtn || !stickBtn) return;
+        const rideAvailable = rideBtn && window.getComputedStyle(rideBtn).display !== 'none';
+        const showAvailable = showBtn && window.getComputedStyle(showBtn).display !== 'none';
 
-        const handInfo = getPlayerCardsAndScore();
-        const score = handInfo.score;
-        const cardCount = handInfo.count;
-
-        // Nếu chưa nạp xong bài lên DOM thì chờ
-        if (cardCount < 2) return;
+        if (!rideAvailable && !showAvailable) return;
 
         setBusy(true, 3000);
 
-        let shouldTwist = false;
+        const spread = getCurrentSpread();
 
-        // Luật Pontoon:
-        // - Dưới 15 điểm: BẮT BUỘC RÚT
-        if (score < 15) {
-            shouldTwist = true;
-        }
-        // - Đạt 15 hoặc 16 điểm:
-        else if (score === 15 || score === 16) {
-            // Nếu đã có 4 lá, rút thêm lá thứ 5 để săn 5-Card Trick (thắng tuyệt đối)
-            if (cardCount === 4) {
-                shouldTwist = true;
-            } else {
-                // Đủ 15 điểm thì có thể dừng an toàn
-                shouldTwist = false;
-            }
-        }
-        // - Từ 17 điểm trở lên: DỪNG (Stick) để không bị quắc
-        else {
-            shouldTwist = false;
+        // 🧠 CHIẾN THUẬT TOÁN HỌC CHUẨN XÁC:
+        // Nếu khoảng từ 7 trở lên (tỉ lệ thắng > 54%) và có nút RIDE -> Chọn RIDE (Gấp đôi)!
+        // Ngược lại nếu khoảng < 7 (tỉ lệ thắng < 46%) -> Chọn SHOW (Mở bài giữ nguyên cược)!
+        let targetBtn = showBtn;
+        if (spread >= 7 && rideAvailable) {
+            targetBtn = rideBtn;
+        } else if (showAvailable) {
+            targetBtn = showBtn;
+        } else if (rideAvailable) {
+            targetBtn = rideBtn;
         }
 
-        const targetBtn = shouldTwist ? twistBtn : stickBtn;
-
-        // Thời gian suy nghĩ tự nhiên
-        const thinkMs = 350 + Math.random() * 300;
+        const thinkMs = 400 + Math.random() * 350;
 
         setTimeout(() => {
             BotVirtualCursor.moveToElement($(targetBtn), 0.4, 0, () => {
                 setTimeout(() => {
                     BotVirtualCursor.simulateClick(() => {
                         try { targetBtn.click(); } catch (e) { }
-                        setTimeout(() => { setBusy(false); }, 650);
+                        setTimeout(() => { setBusy(false); }, 800);
                     });
                 }, 80);
             });
@@ -269,7 +222,7 @@
 
         setBusy(true, 3000);
 
-        // Chờ 1.5s cho hiệu ứng thông báo và người xem nhìn kết quả
+        // Chờ 1.5s cho hiệu ứng thông báo hiển thị rõ ràng
         setTimeout(() => {
             BotVirtualCursor.moveToElement($(newBtn), 0.45, 0, () => {
                 setTimeout(() => {
@@ -283,10 +236,9 @@
     }
 
     // ═══════════════════════════════════════════════════════
-    // THEO DÕI KẾT QUẢ TỪ BADGE HOẶC DOM
+    // THEO DÕI KẾT QUẢ TỪ BADGE
     // ═══════════════════════════════════════════════════════
     function setupResultWatcher() {
-        // Lắng nghe sự kiện custom hoặc badge
         const badge = document.getElementById('result-status-badge');
         if (badge) {
             const observer = new MutationObserver(() => {
@@ -316,8 +268,8 @@
         const state = detectState();
         if (state === STATE.DEAL) {
             doDeal();
-        } else if (state === STATE.IN_HAND) {
-            doInHand();
+        } else if (state === STATE.DECIDE) {
+            doDecide();
         } else if (state === STATE.NEW_GAME) {
             doNewGame();
         }

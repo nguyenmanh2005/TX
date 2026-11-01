@@ -1,34 +1,30 @@
 if (typeof BotVirtualCursor !== "undefined") {
-    BotVirtualCursor.init("Kỵ Mã Siêu Tốc 🐎🏁");
+    BotVirtualCursor.init("Bậc Thầy Fan-Tan 🀄");
     let lastKnownBalance = null;
 
     const CASINO_CHATS = {
-        race: [
-            "Trường đua rực lửa! Ra chiêu chọn tuấn mã xung phong giật cúp! 🐎🏁🔥",
-            "Ép ga hết cỡ! Khí thế áp đảo đường đua rước bão GTLM! ⚡🏆",
-            "Vào tiền chắc tay, ủng hộ tuấn mã về nhất nào anh em! 🌟💎",
-            "Dàn thú đua vào vị trí xuất phát! Ra chiêu quyết thắng! 🏇🚀"
-        ],
-        racing: [
-            "Bứt tốc ngoạn mục ở khúc cua! Nước rút thần sầu nào! 🐎💨",
-            "Đua căng thẳng từng mét! Tiến lên về đích húp trọn giải thưởng! 😱🏁"
+        bet: [
+            "Trận địa Fan-Tan truyền thống! Ra chiêu bốc hạt chia 4 đón lộc GTLM! 🀄⚡",
+            "Cầu nút đang bệt cửa đẹp, vào tiền bắt trọn hạt dư cuối cùng! 💎🔥",
+            "Ra chiêu dứt khoát vào cửa số đẹp, anh em cùng đếm hạt nào! 🌟💰",
+            "Đếm hạt như thần, tiếng này cửa sáng vào tiền không ngần ngại! 🎯🀄"
         ],
         win: [
-            "HÚP TRỌN GIẢI NHẤT ĐUA THÚ! Tuấn mã cán đích rực rỡ, tiền cộng đầy nick! 🏆🐎🤑",
-            "Chiến thắng vang dội trường đua! Gáy khét lẹt cả sảnh! 👑🔥💰",
-            "Đỉnh cao soi kèo thú đua! GTLM cộng dồn rực rỡ! 💎✨"
+            "ĐÚNG NÚT DƯ RỒI! Húp trọn ván Fan-Tan, GTLM về nick ngập tràn! 🏆🀄🤑",
+            "Bậc thầy đếm hạt ra tay! Gáy khét lẹt cả sảnh hôm nay! 👑💎💰",
+            "Cơm gạo về nick! Thắng đậm ván giao lưu Fan-Tan! 🌟🎉"
         ],
         loss: [
-            "Bị ép cua phút chót hụt mất giải nhất, bay màu tiếng này! 😭💔",
-            "Bốc hơi nhẹ, ván sau chọn lại thần mã phục thù! 💪🔄"
+            "Dư lệch mất 1 hạt, bay màu ván này rồi! Ván sau phục thù! 😅🔄",
+            "Bốc hơi chút ít, xốc lại tinh thần đếm hạt ván mới! 💪🀄"
         ]
     };
 
     function sendChat(type) {
         if (typeof BotChat !== 'undefined' && BotChat.send) {
-            const list = CASINO_CHATS[type] || CASINO_CHATS.race;
+            const list = CASINO_CHATS[type] || CASINO_CHATS.bet;
             const msg = list[Math.floor(Math.random() * list.length)];
-            BotChat.send(22, 'Kỵ Mã Siêu Tốc 🐎🏁', msg);
+            BotChat.send(22, 'Bậc Thầy Fan-Tan 🀄', msg);
         }
     }
 
@@ -46,79 +42,76 @@ if (typeof BotVirtualCursor !== "undefined") {
         lastKnownBalance = curBal;
     }
 
-    function runRacingBot() {
+    // Lặp mỗi 2-4 giây
+    setInterval(() => {
         checkBalance();
-        const raceBtn = document.getElementById('raceBtn');
-        if (!raceBtn || raceBtn.disabled || (typeof raceActive !== 'undefined' && raceActive)) {
-            setTimeout(runRacingBot, 1500);
-            return;
-        }
+        const playBtn = document.getElementById("play-btn");
+        if (!playBtn || playBtn.disabled || playBtn.offsetParent === null) return;
 
-        // 80% cơ hội giữ nguyên mức cược và con vật, chỉ bấm ĐUA luôn
-        if (Math.random() < 0.80) {
-            clickRace(raceBtn);
-            return;
-        }
+        let totalBet = (parseInt(document.getElementById('bet-1')?.value) || 0) +
+            (parseInt(document.getElementById('bet-2')?.value) || 0) +
+            (parseInt(document.getElementById('bet-3')?.value) || 0) +
+            (parseInt(document.getElementById('bet-4')?.value) || 0);
 
-        // 20% cơ hội đổi con vật
-        if (Math.random() < 0.50) {
-            const animalSelect = document.getElementById('animalSelect');
-            if (animalSelect && !animalSelect.disabled) {
-                BotVirtualCursor.moveToElement($(animalSelect), 0.3, 0, () => {
+        // Cơ hội 80% giữ nguyên cược, chỉ bấm nút Chơi
+        if (Math.random() < 0.80 && totalBet > 0) {
+            BotVirtualCursor.moveToElement($(playBtn), 1, 0, () => {
+                setTimeout(() => {
                     BotVirtualCursor.simulateClick(() => {
-                        try {
-                            const newAnimal = Math.floor(Math.random() * 8) + 1;
-                            animalSelect.value = newAnimal;
-                            animalSelect.dispatchEvent(new Event('change'));
+                        try { 
+                            playBtn.click(); 
+                            if (Math.random() < 0.35) sendChat('bet');
                         } catch (e) { }
                     });
-                    setTimeout(chooseRacingBet, 400);
-                });
-                return;
-            }
-        }
-
-        chooseRacingBet();
-    }
-
-    function chooseRacingBet() {
-        const betBtns = Array.from(document.querySelectorAll('.qbtn')).filter(b => b.id !== 'maxBtn');
-        if (betBtns.length > 0) {
-            const maxIdx = Math.min(betBtns.length, 5);
-            let targetBet = betBtns[Math.floor(Math.random() * maxIdx)];
-
-            BotVirtualCursor.moveToElement($(targetBet), 0.4, 0, () => {
-                setTimeout(() => {
-                    BotVirtualCursor.simulateClick(() => { try { targetBet.click(); } catch (e) { } });
-                    setTimeout(() => clickRace(document.getElementById('raceBtn')), 300);
-                }, 200);
+                }, 500);
             });
-        } else {
-            clickRace(document.getElementById('raceBtn'));
+            return;
         }
-    }
 
-    function clickRace(raceBtn) {
-        if (raceBtn && !raceBtn.disabled) {
-            BotVirtualCursor.moveToElement($(raceBtn), 0.4, 0, () => {
+        // 20% Cơ hội đi đổi GTLM cược
+        // 1. Chọn ngẫu nhiên cửa cược (1, 2, 3, 4)
+        const betBoxes = Array.from(document.querySelectorAll('.bet-box'));
+        if (betBoxes.length > 0) {
+            const randomBox = betBoxes[Math.floor(Math.random() * betBoxes.length)];
+
+            BotVirtualCursor.moveToElement($(randomBox), 1, 0, () => {
                 setTimeout(() => {
-                    BotVirtualCursor.simulateClick(() => { 
-                        try { 
-                            raceBtn.click(); 
-                            if (Math.random() < 0.35) sendChat('race');
-                            setTimeout(() => {
-                                if (Math.random() < 0.4) sendChat('racing');
-                            }, 3500);
-                        } catch (e) { } 
+                    BotVirtualCursor.simulateClick(() => {
+                        try { randomBox.click(); } catch (e) { }
+
+                        // 2. Chọn ngẫu nhiên phỉnh cược (tránh nút MAX cuối cùng)
+                        setTimeout(() => {
+                            const quickBtns = Array.from(document.querySelectorAll('.quick-btn'));
+                            if (quickBtns.length > 0) quickBtns.pop();
+
+                            if (quickBtns.length > 0) {
+                                const randomChip = quickBtns[Math.floor(Math.random() * quickBtns.length)];
+                                BotVirtualCursor.moveToElement($(randomChip), 1, 0, () => {
+                                    setTimeout(() => {
+                                        BotVirtualCursor.simulateClick(() => {
+                                            try { randomChip.click(); } catch (e) { }
+
+                                            // 3. Bấm Play
+                                            setTimeout(() => {
+                                                BotVirtualCursor.moveToElement($(playBtn), 1, 0, () => {
+                                                    setTimeout(() => {
+                                                        BotVirtualCursor.simulateClick(() => {
+                                                            try { 
+                                                                playBtn.click(); 
+                                                                if (Math.random() < 0.35) sendChat('bet');
+                                                            } catch (e) { }
+                                                        });
+                                                    }, 300);
+                                                });
+                                            }, 500);
+                                        });
+                                    }, 400);
+                                });
+                            }
+                        }, 400);
                     });
-                    setTimeout(runRacingBot, 8000 + Math.random() * 2000);
-                }, 200);
+                }, 300);
             });
-        } else {
-            setTimeout(runRacingBot, 1500);
         }
-    }
-
-    // Bắt đầu chu trình
-    setTimeout(runRacingBot, 2000);
+    }, 2500 + Math.random() * 2000);
 }

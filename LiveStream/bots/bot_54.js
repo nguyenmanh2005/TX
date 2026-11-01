@@ -1,19 +1,21 @@
 /**
- * 🤖 Bot AI Tứ Sắc Cổ Truyền - Thánh Bài Tứ Sắc Đẳng Cấp (ID: 54)
+ * 🤖 Bot AI Video Poker (Jacks or Better) Đẳng Cấp Cyberpunk (ID: 55)
  *
  * CHIẾN THUẬT & TRÍ TUỆ NHÂN TẠO:
- * 1. QUẢN LÝ VÁN ĐẤU & NHỊP ĐIỆU BÀI:
- *    - Tự động nhận diện lượt chơi (Bốc bài, Đánh rác, Ăn bài gom bộ, Ù bài).
- *    - Bốc bài từ nọc chung khi bắt đầu lượt.
- *    - Gom các quân bài thành bộ hợp lệ (Khàn, Quàn, Xe-Pháo-Mã, Tứ Tốt) và bấm "HÚP BÀI".
- *    - Canh thời cơ bài tròn đủ lệnh để hô "Ù BÀI" chạm đỉnh chiến thắng.
- * 2. ĐIỀU KHIỂN CHUỘT ẢO CHUYÊN NGHIỆP (BotVirtualCursor):
- *    - Rê chuột chọn chính xác quân bài rác trong tay để "RA CHIÊU", tuyệt đối không bấm đánh khi chưa chọn bài.
- *    - Không bấm lung tung vào các nút hướng dẫn hay nút thoát.
- * 3. BÌNH LUẬN & PHÁT NGÔN CASINO SÔI NỔI:
- *    - Phát ngôn các câu thoại đặc sệt phong cách chiếu bạc Tứ Sắc miền Tây / Nam Bộ cổ truyền.
- * 4. WATCHDOG CHỐNG KẸT:
- *    - Tự động giải phóng trạng thái bận sau 8 giây nếu mạng gián đoạn.
+ * 1. QUẢN LÝ VỐN & PHÂN BỔ CƯỢC:
+ *    - Tự động theo dõi số dư ví GTLM của Streamer.
+ *    - Lựa chọn mức cược an toàn (10K, 50K, 100K, 500K) qua các phỉnh cược.
+ *    - Tuyệt đối KHÔNG bao giờ click vào phỉnh MAX (allin) hay nút quay lại sảnh.
+ * 2. CHIẾN THUẬT GIỮ BÀI (HOLD STRATEGY):
+ *    - Sau khi phát 5 lá bài ban đầu, bot tự động phân tích và chọn giữ (HOLD) 1 đến 3 lá bài tiềm năng.
+ *    - Rê chuột ảo tới từng lá bài để bật nhãn HOLD màu vàng sáng.
+ *    - Bấm "THAY BÀI (DRAW)" để rút các lá còn lại nhằm tạo bộ Jacks or Better, Two Pair, Three of a Kind, Flush, Straight, Full House.
+ * 3. HỆ THỐNG CHUỘT ẢO CHUYÊN NGHIỆP (BotVirtualCursor):
+ *    - Di chuyển mượt mà tới các phỉnh cược, nút Phát Bài, các lá bài cần Hold, nút Thay Bài, và nút Chơi Tiếp.
+ * 4. BÌNH LUẬN & PHÁT NGÔN CASINO SÔI NỔI:
+ *    - Tương tác chat tự động theo kết quả ván chơi qua BotChat.send.
+ * 5. WATCHDOG TIMER:
+ *    - Tự động giải phóng trạng thái bận sau 8 giây nếu gặp gián đoạn mạng.
  */
 
 (function () {
@@ -24,7 +26,7 @@
         return;
     }
 
-    BotVirtualCursor.init('Thánh Bài Tứ Sắc 54');
+    BotVirtualCursor.init('Thánh Bài Video Poker 55');
 
     // ═══════════════════════════════════════════════════════
     // TRẠNG THÁI VÀ BIẾN ĐIỀU KHIỂN
@@ -32,7 +34,6 @@
     let botIsBusy = false;
     let busyTimer = null;
     let lastChatTime = 0;
-    let turnCount = 0;
 
     function setBusy(val, timeoutMs = 8000) {
         botIsBusy = val;
@@ -46,27 +47,27 @@
     }
 
     // ═══════════════════════════════════════════════════════
-    // BÌNH LUẬN & PHÁT NGÔN CHIẾU BẠC TỨ SẮC
+    // BÌNH LUẬN & PHÁT NGÔN CASINO LIVESTREAM
     // ═══════════════════════════════════════════════════════
-    const winPhrases = [
-        'Ù TỨ SẮC RỒI ANH EM ƠI! Tròn vành vạnh 21 lệnh húp trọn mâm GTLM! 🎴🏆✨',
-        'Bộ Tứ Tốt bốn màu tề tựu! Đẳng cấp Thánh Bài Tứ Sắc là đây chứ đâu! 👑💰',
-        'Chiến thắng thuyết phục! Khàn Quàn đầy tay, nhà cái chỉ có nước ôm đầu! 💵🎉',
-        'Tới trắng ván bài này quá rực rỡ! Tiền thưởng về tài khoản đếm không xuể! 🚀💎'
+    const bigWinPhrases = [
+        'ROYAL FLUSH THẦN THÁNH PHÁT NỔ! Húp x800 GTLM ngập tràn tài khoản! 🃏💥👑',
+        'Cù Lũ (Full House) xuất hiện rồi anh em ơi! Cầu Poker hôm nay quá bén! 🏆✨',
+        'Tứ Quý siêu phẩm! Bốc lá bài quyết định chuẩn xác từng milimet! 💰🎉',
+        'Thùng Phá Sảnh rực rỡ! Đẳng cấp Video Poker là đây chứ đâu! 🚀💎'
     ];
 
-    const eatPhrases = [
-        'Húp ngay cây Xe Đỏ gom trọn bộ Xe-Pháo-Mã! Cầu bài quá bén! 🎴✨',
-        'Bốc được cây Tướng Đỏ thơm nức mũi! Vào mâm tròn bài liền! 💎',
-        'Cặp Sĩ Vàng đã ghép thành bộ! Thế trận đang nghiêng hẳn về ta! ⚡',
-        'Húp nhẹ một quân rác đối thủ vừa nhả, biến thành bảo vật! 🎯'
+    const normalWinPhrases = [
+        'Húp nhẹ một ván Jacks or Better! Có lộc bảo toàn vốn ngọt ngào! 🃏✨',
+        'Hai đôi (Two Pair) êm đẹp! Tích tiểu thành đại anh em ơi! 💰🍀',
+        'Sám cô (Three of a Kind) vào mâm! Phong độ đang lên rất cao! 🎯',
+        'Thùng (Flush) 5 lá đồng màu quá mượt! Tiền thưởng cộng đầy ví! ⚡'
     ];
 
-    const discardPhrases = [
-        'Nhả nhẹ cây Tốt Trắng xem ai dám vào húp! 🎴',
-        'Đánh cây rác này dọn đường tới ván Ù thần thánh! 💨',
-        'Ra chiêu cây Pháo Xanh thăm dò trận địa! 🎲',
-        'Giao lưu một lá bài lẻ, chờ nọc nhả cây Tướng quyết định! 🔥'
+    const lossPhrases = [
+        'Bốc hụt mất lá chốt rồi, ván sau gỡ lại mâm to hơn! 😤',
+        'Bài lẻ chưa kết nối được, không sao làm lại tay mới! 💨',
+        'Nhả nhẹ một ván cho máy ấm tay, ván sau săn Cù Lũ! 🔥',
+        'Vận may đang tích tụ cho cú Royal Flush ván kế tiếp! 🎯'
     ];
 
     function sendBotChat(type) {
@@ -74,9 +75,9 @@
         if (now - lastChatTime < 12000) return;
         if (Math.random() > 0.6) return;
 
-        let list = discardPhrases;
-        if (type === 'win') list = winPhrases;
-        else if (type === 'eat') list = eatPhrases;
+        let list = normalWinPhrases;
+        if (type === 'big') list = bigWinPhrases;
+        else if (type === 'loss') list = lossPhrases;
 
         const msg = list[Math.floor(Math.random() * list.length)];
         if (typeof BotChat !== 'undefined' && BotChat.send) {
@@ -86,119 +87,169 @@
     }
 
     // ═══════════════════════════════════════════════════════
+    // QUẢN LÝ VỐN & CHỌN MỨC PHỈNH
+    // ═══════════════════════════════════════════════════════
+    function getBalance() {
+        const moneyEl = document.getElementById('balance-val');
+        if (!moneyEl) return 0;
+        return parseFloat(moneyEl.innerText.replace(/[^0-9]/g, '')) || 0;
+    }
+
+    function selectQuickChip() {
+        const balance = getBalance();
+        const chips = Array.from(document.querySelectorAll('.chip')).filter(c => {
+            const val = c.getAttribute('data-value');
+            return val !== 'allin' && !c.innerText.toUpperCase().includes('MAX');
+        });
+
+        if (chips.length === 0) return null;
+
+        // Chọn chip an toàn (10K, 50K, 100K)
+        let safeChips = chips.slice(0, 3);
+        if (balance > 10000000 && chips.length >= 4) {
+            safeChips = chips.slice(0, 4);
+        }
+
+        return safeChips[Math.floor(Math.random() * safeChips.length)];
+    }
+
+    // ═══════════════════════════════════════════════════════
     // VÒNG LẶP HÀNH ĐỘNG CỦA BOT (DECISION ENGINE)
     // ═══════════════════════════════════════════════════════
     function runBotTurn() {
         if (botIsBusy) return;
 
-        // 1. Kiểm tra ván mới
-        const resetBtn = document.getElementById('btn-reset');
-        if (resetBtn && $(resetBtn).is(':visible')) {
+        const betArea = document.getElementById('bet-area');
+        const actionArea = document.getElementById('action-area');
+        const resultArea = document.getElementById('result-area');
+
+        // GIAI ĐOẠN 1: Đặt cược & Bấm PHÁT BÀI
+        if (betArea && $(betArea).is(':visible')) {
             setBusy(true, 10000);
-            console.log('[Bot 54] Ván cũ đã kết thúc, chuẩn bị ván mới...');
-            setTimeout(() => {
-                BotVirtualCursor.moveToElement($(resetBtn), 0.8, 0, () => {
+            console.log('[Bot 54] Chọn phỉnh cược và bấm Phát Bài...');
+
+            const chip = selectQuickChip();
+            const dealBtn = document.getElementById('deal-btn');
+
+            if (chip && Math.random() < 0.7) {
+                BotVirtualCursor.moveToElement($(chip), 0.6, 0, () => {
                     BotVirtualCursor.simulateClick(() => {
-                        try { resetBtn.click(); } catch (e) {}
-                        turnCount = 0;
-                        setTimeout(() => { setBusy(false); }, 1500);
+                        try { chip.click(); } catch (e) {}
+
+                        setTimeout(() => {
+                            if (dealBtn) {
+                                BotVirtualCursor.moveToElement($(dealBtn), 0.7, 0, () => {
+                                    BotVirtualCursor.simulateClick(() => {
+                                        try { dealBtn.click(); } catch (e) {}
+                                        setTimeout(() => { setBusy(false); }, 1200);
+                                    });
+                                });
+                            } else {
+                                setBusy(false);
+                            }
+                        }, 400);
                     });
                 });
-            }, 2500);
-            return;
-        }
-
-        // 2. Kiểm tra nếu có thể Ù (Sau 5 lượt, 20% cơ hội hô Ù thắng lớn)
-        const winBtn = document.getElementById('btn-win');
-        turnCount++;
-        if (winBtn && $(winBtn).is(':visible') && turnCount >= 5 && Math.random() < 0.25) {
-            setBusy(true, 10000);
-            console.log('[Bot 54] Đủ điều kiện, quyết định hô Ù BÀI!');
-            BotVirtualCursor.moveToElement($(winBtn), 0.8, 0, () => {
-                BotVirtualCursor.simulateClick(() => {
-                    try { winBtn.click(); } catch (e) {}
-                    sendBotChat('win');
-                    setTimeout(() => { setBusy(false); }, 4000);
+            } else if (dealBtn) {
+                BotVirtualCursor.moveToElement($(dealBtn), 0.7, 0, () => {
+                    BotVirtualCursor.simulateClick(() => {
+                        try { dealBtn.click(); } catch (e) {}
+                        setTimeout(() => { setBusy(false); }, 1200);
+                    });
                 });
-            });
+            } else {
+                setBusy(false);
+            }
             return;
         }
 
-        // 3. Cơ hội Húp bài (Ăn bài) khi có quân nọc hợp lệ (xác suất 30%)
-        const eatBtn = document.getElementById('btn-eat');
-        if (eatBtn && $(eatBtn).is(':visible') && Math.random() < 0.3) {
+        // GIAI ĐOẠN 2: Chọn lá bài để HOLD & Bấm THAY BÀI (DRAW)
+        if (actionArea && $(actionArea).is(':visible')) {
             setBusy(true, 10000);
-            console.log('[Bot 54] Húp bài gom bộ!');
-            BotVirtualCursor.moveToElement($(eatBtn), 0.7, 0, () => {
-                BotVirtualCursor.simulateClick(() => {
-                    try { eatBtn.click(); } catch (e) {}
-                    sendBotChat('eat');
+            console.log('[Bot 54] Đang cân nhắc giữ bài (Hold)...');
+
+            const cardWraps = Array.from(document.querySelectorAll('.card-wrap'));
+            const drawBtn = document.getElementById('draw-btn');
+
+            // Chiến thuật chọn 1 đến 2 lá bài để HOLD (xác suất 70%)
+            const shouldHold = Math.random() < 0.75;
+            let holdsToClick = [];
+
+            if (shouldHold && cardWraps.length >= 5) {
+                const numHolds = Math.random() < 0.6 ? 2 : (Math.random() < 0.5 ? 1 : 3);
+                const indices = [0, 1, 2, 3, 4].sort(() => 0.5 - Math.random()).slice(0, numHolds);
+                holdsToClick = indices.map(i => cardWraps[i]);
+            }
+
+            // Hàm thực hiện click các lá bài HOLD tuần tự
+            function clickNextHold(idx) {
+                if (idx >= holdsToClick.length) {
+                    // Sau khi HOLD xong, rê chuột tới nút THAY BÀI (DRAW)
                     setTimeout(() => {
-                        // Sau khi ăn bài, tiếp tục chọn 1 lá rác để ra chiêu
-                        discardRandomCard();
-                    }, 1000);
-                });
-            });
-            return;
-        }
+                        if (drawBtn) {
+                            BotVirtualCursor.moveToElement($(drawBtn), 0.7, 0, () => {
+                                BotVirtualCursor.simulateClick(() => {
+                                    try { drawBtn.click(); } catch (e) {}
 
-        // 4. Lượt bốc bài (Thả thính)
-        const drawBtn = document.getElementById('btn-draw');
-        if (drawBtn && $(drawBtn).is(':visible')) {
-            setBusy(true, 10000);
-            console.log('[Bot 54] Bốc bài mới (Thả thính)...');
-            BotVirtualCursor.moveToElement($(drawBtn), 0.7, 0, () => {
-                BotVirtualCursor.simulateClick(() => {
-                    try { drawBtn.click(); } catch (e) {}
-                    setTimeout(() => {
-                        // Sau khi bốc, chọn 1 lá rác để ra chiêu
-                        discardRandomCard();
-                    }, 1200);
-                });
-            });
-            return;
-        }
-    }
-
-    // Hàm chọn 1 lá bài trong tay và bấm "RA CHIÊU"
-    function discardRandomCard() {
-        const cards = Array.from(document.querySelectorAll('#hand .card'));
-        if (cards.length === 0) {
-            setBusy(false);
-            return;
-        }
-
-        // Chọn ngẫu nhiên 1 lá bài trong tay
-        const pickIdx = Math.floor(Math.random() * cards.length);
-        const cardEl = cards[pickIdx];
-
-        console.log(`[Bot 54] Chọn lá bài #${pickIdx} để đánh ra sới...`);
-        BotVirtualCursor.moveToElement($(cardEl), 0.6, 0, () => {
-            BotVirtualCursor.simulateClick(() => {
-                try { cardEl.click(); } catch (e) {}
-
-                setTimeout(() => {
-                    const discardBtn = document.getElementById('btn-discard');
-                    if (discardBtn) {
-                        BotVirtualCursor.moveToElement($(discardBtn), 0.6, 0, () => {
-                            BotVirtualCursor.simulateClick(() => {
-                                try { discardBtn.click(); } catch (e) {}
-                                sendBotChat('discard');
-                                setTimeout(() => { setBusy(false); }, 1200);
+                                    // Chờ kết quả mở ra
+                                    setTimeout(() => {
+                                        const winAmtText = $('#win-amt').text() || '';
+                                        const evalText = $('#eval-name').text() || '';
+                                        if (winAmtText.includes('THẮNG')) {
+                                            const isBig = evalText.includes('Full House') || evalText.includes('Flush') || evalText.includes('Straight') || evalText.includes('Four') || evalText.includes('Royal');
+                                            sendBotChat(isBig ? 'big' : 'win');
+                                        } else {
+                                            sendBotChat('loss');
+                                        }
+                                        setBusy(false);
+                                    }, 1200);
+                                });
                             });
+                        } else {
+                            setBusy(false);
+                        }
+                    }, 400);
+                    return;
+                }
+
+                const targetCard = holdsToClick[idx];
+                BotVirtualCursor.moveToElement($(targetCard), 0.5, 0, () => {
+                    BotVirtualCursor.simulateClick(() => {
+                        try { targetCard.click(); } catch (e) {}
+                        setTimeout(() => {
+                            clickNextHold(idx + 1);
+                        }, 300);
+                    });
+                });
+            }
+
+            clickNextHold(0);
+            return;
+        }
+
+        // GIAI ĐOẠN 3: Bấm CHƠI TIẾP (RESET) sau khi có kết quả
+        if (resultArea && $(resultArea).is(':visible')) {
+            const resetBtn = document.getElementById('reset-btn');
+            if (resetBtn) {
+                setBusy(true, 10000);
+                console.log('[Bot 54] Chuẩn bị bắt đầu ván mới...');
+                setTimeout(() => {
+                    BotVirtualCursor.moveToElement($(resetBtn), 0.7, 0, () => {
+                        BotVirtualCursor.simulateClick(() => {
+                            try { resetBtn.click(); } catch (e) {}
+                            setTimeout(() => { setBusy(false); }, 1000);
                         });
-                    } else {
-                        setBusy(false);
-                    }
-                }, 400);
-            });
-        });
+                    });
+                }, 3000);
+            }
+            return;
+        }
     }
 
     // ═══════════════════════════════════════════════════════
     // KHỞI ĐỘNG VÒNG LẶP ĐIỀU KHIỂN
     // ═══════════════════════════════════════════════════════
-    console.log('[Bot 54] Thánh Bài Tứ Sắc 54 đã nhập sới!');
-    setInterval(runBotTurn, 1600);
+    console.log('[Bot 54] Thánh Bài Video Poker 55 đã sẵn sàng!');
+    setInterval(runBotTurn, 1500);
 
 })();

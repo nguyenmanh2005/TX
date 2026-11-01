@@ -8,379 +8,373 @@ require_once 'bot_streamer_helper.php';
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_26', 50000000);
 $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
+require_once '../load_theme.php';
+require_once '../game_history_helper.php';
+/** @var int $particleCount */
+/** @var float $particleSize */
+/** @var string $particleColor */
+/** @var float $particleOpacity */
+/** @var int $shapeCount */
+/** @var array $shapeColors */
+/** @var float $shapeOpacity */
+/** @var array $bgGradient */
+/** @var string $bgGradientCSS */
 
-if (!isset($botUserId)) {
-    header('Location: ../login.php');
-    exit;
-}
 $userId = $botUserId;
-$stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
+$stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
-$userMoney = $stmt->get_result()->fetch_assoc()['Money'];
-
-require_once '../load_theme.php';
-if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
-    $bgGradientCSS = 'linear-gradient(135deg, #1a1c29 0%, #2a2d3e 100%)';
+$user = $stmt->get_result()->fetch_assoc();
+$money = $user['Money'];
+$userName = $user['Name'];
+$stmt->close();
+// Auto-create history table
+// Get statistics for chart
+$gameThang = 0;
+$gameThua = 0;
+$sqlStats = "SELECT COUNT(*) as total, SUM(CASE WHEN WinAmount > 0 THEN 1 ELSE 0 END) as wins FROM history_hilo WHERE Iduser = ?";
+$stmtStats = $conn->prepare($sqlStats);
+$stmtStats->bind_param("i", $userId);
+$stmtStats->execute();
+$resultStats = $stmtStats->get_result();
+if ($rowStats = $resultStats->fetch_assoc()) {
+    $gameThang = $rowStats['wins'] ?? 0;
+    $gameThua = ($rowStats['total'] ?? 0) - $gameThang;
+}
+$stmtStats->close();
+if (isset($_GET['action'])) {
+    header('Content-Type: application/json');
+    $action = $_GET['action'];
+    $response = ['success' => false];
+    if ($action === 'start') {
+        $bet = (float) ($_POST['bet'] ?? 0);
+        if ($bet <= 0 || $bet > $money) {
+            $response['message'] = "Gtlm cược không hợp lệ!";
+        } else {
+            $conn->begin_transaction();
+            $stmtLock = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+            $stmtLock->bind_param("i", $userId);
+            $stmtLock->execute();
+            $lockedMoney = $stmtLock->get_result()->fetch_assoc()['Money'] ?? 0;
+            $stmtLock->close();
+            if ($bet > $lockedMoney) {
+                $conn->rollback();
+                echo json_encode(['success' => false, 'message' => 'Số dư không đủ hoặc thao tác quá nhanh!']);
+                exit;
+            }
+            $conn->query("UPDATE users SET Money = Money - $bet WHERE Iduser = $userId");
+            $card = rand(1, 13);
+            $_SESSION['hilo_bet'] = $bet;
+            $_SESSION['hilo_card'] = $card;
+            $_SESSION['hilo_mult'] = 1.0;
+            $response = ['success' => true, 'card' => $card, 'money' => number_format($money - $bet, 0, ',', '.')];
+        }
+    } elseif ($action === 'guess') {
+        $guess = $_POST['guess'];
+        $oldCard = $_SESSION['hilo_card'];
+        $bet = $_SESSION['hilo_bet'];
+        $newCard = rand(1, 13);
+        $win = false;
+        if ($guess === 'higher' && $newCard >= $oldCard) $win = true;
+        if ($guess === 'lower' && $newCard <= $oldCard) $win = true;
+        if ($win) {
+            $multAdd = ($oldCard == $newCard) ? 0.1 : 0.5;
+            $_SESSION['hilo_mult'] += $multAdd;
+            $_SESSION['hilo_card'] = $newCard;
+            $response = ['success' => true, 'win' => true, 'card' => $newCard, 'mult' => number_format($_SESSION['hilo_mult'], 2)];
+        } else {
+            $resStr = "Lost at x" . number_format($_SESSION['hilo_mult'], 2);
+            $his = $conn->prepare("INSERT INTO history_hilo (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
+            $negBet = -$bet;
+            $his->bind_param("idss", $userId, $bet, $resStr, $negBet);
+            $his->execute();
+            logGameHistoryWithAll($conn, $userId, 'Hi-Lo', $bet, 0, false);
+            unset($_SESSION['hilo_bet']);
+            $response = ['success' => true, 'win' => false, 'card' => $newCard];
+        }
+    } elseif ($action === 'collect') {
+        $bet = $_SESSION['hilo_bet'];
+        $mult = $_SESSION['hilo_mult'];
+        $winAmount = round($bet * $mult);
+        $conn->query("UPDATE users SET Money = Money + $winAmount WHERE Iduser = $userId");
+        $resStr = "Collect at x" . round($mult, 2);
+        $his = $conn->prepare("INSERT INTO history_hilo (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
+        $profit = $winAmount - $bet;
+        $his->bind_param("idss", $userId, $bet, $resStr, $profit);
+        $his->execute();
+        logGameHistoryWithAll($conn, $userId, 'Hi-Lo', $bet, $winAmount, true);
+        unset($_SESSION['hilo_bet']);
+        $conn->commit();
+            $newMoney = $conn->query("SELECT Money FROM users WHERE Iduser = $userId")->fetch_assoc()['Money'];
+        $response = ['success' => true, 'winAmount' => number_format($winAmount, 0, ',', '.'), 'money' => number_format($newMoney, 0, ',', '.')];
+    }
+    echo json_encode($response);
+    exit;
 }
 ?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
+    <title>Hi-Lo - Dự Đoán Đỉnh Cao</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hang Động Tham Lam - VIP</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/main.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <link rel="stylesheet" href="../assets/css/main.css">
     <style>
+        :root {
+            --primary-color: #00d2ff;
+            --accent-color: #f1c40f;
+            --glass: rgba(255, 255, 255, 0.05);
+        }
+        h1 {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
         body {
-            font-family: 'Outfit', sans-serif;
             background: <?= $bgGradientCSS ?>;
+            background-attachment: fixed;
             color: #fff;
             min-height: 100vh;
-        }
-
-        .game-container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 10px;
-        }
-
-        .game-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 25px;
-            background: rgba(15, 17, 21, 0.8);
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 16px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-
-        .market-title {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 2rem;
-            font-weight: 800;
-            background: linear-gradient(90deg, #38bdf8, #818cf8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-family: 'Exo 2', sans-serif;
             margin: 0;
         }
-        .game-subtitle { color: #94a3b8; font-size: 1rem; }
-        .back-btn { color: #94a3b8; text-decoration: none; margin-bottom: 10px; display: inline-block; transition: 0.2s; }
-        .back-btn:hover { color: #fff; }
-
-        .user-balance {
-            background: rgba(255,255,255,0.05); 
-            padding: 15px 25px; 
-            border-radius: 12px; 
-            border: 1px solid rgba(255,255,255,0.1);
-            text-align: right;
-        }
-        .user-balance span { font-size: 1.5rem; font-family: 'Space Grotesk'; font-weight: bold; color: #fbbf24; }
-
-
-
-        .cave-wrapper {
+        .footer-container {
             display: flex;
-            justify-content: center;
-        }
-
-        .cave-container {
-            width: 100%;
-            max-width: 800px;
-            background: radial-gradient(circle at 50% 100%, #1a1005 0%, #050505 100%);
-            border-radius: 20px;
-            padding: 20px;
-            box-shadow: inset 0 0 100px rgba(0,0,0,0.9), 0 20px 50px rgba(0,0,0,0.5);
-            position: relative;
-            overflow: hidden;
-            text-align: center;
-            border: 2px solid #222;
-        }
-
-        .cave-status-panel {
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 16px;
-            padding: 15px;
-            margin-bottom: 1rem;
-            position: relative;
-            z-index: 2;
-        }
-
-        .cave-status-panel h2 {
-            font-family: 'Space Grotesk', sans-serif;
-            color: #eab308;
-            margin-top: 0;
-            font-size: 1.4rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            text-shadow: 0 0 15px rgba(234, 179, 8, 0.5);
-        }
-
-        .cave-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
             gap: 20px;
-            margin-top: 1rem;
+            margin-top: 20px;
         }
 
-        .stat-box {
-            background: rgba(255,255,255,0.02);
-            border-radius: 12px;
-            padding: 15px;
-            border: 1px solid rgba(255,255,255,0.05);
+        .result-banner {
+            position: fixed;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: white;
+            z-index: 9999;
+            opacity: 0;
+            transition: 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            pointer-events: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .result-banner.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+        .result-banner.win {
+            background: linear-gradient(135deg, #4ade80, #10b981);
+            border: 2px solid #fff;
+        }
+        .result-banner.lose {
+            background: linear-gradient(135deg, #ef4444, #f43f5e);
+            border: 2px solid #fff;
         }
 
-        .stat-box span {
-            display: block;
-            font-size: 0.85rem;
-            color: #888;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 8px;
+        .main-container {
+            padding: 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
         }
-
-        .stat-box b {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.4rem;
-            color: #fff;
-        }
-
-        .highlight-money {
-            color: #4ade80 !important;
-            text-shadow: 0 0 15px rgba(74, 222, 128, 0.4);
-        }
-
-        .risk-meter {
-            width: 100%;
-            height: 12px;
-            background: #222;
-            border-radius: 6px;
-            margin-top: 25px;
-            overflow: hidden;
-            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
-        }
-
-        .risk-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #22c55e, #eab308, #ef4444);
-            width: 5%;
-            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 6px;
-        }
-
-        .cave-character {
-            font-size: 4rem;
-            margin: 1.5rem 0;
-            position: relative;
-            z-index: 2;
-            transition: transform 0.3s;
-            display: inline-block;
-            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
-        }
-
-        .cave-character.walking { animation: walk 0.5s infinite alternate ease-in-out; }
-        .cave-character.crashed { animation: shake 0.5s; filter: grayscale(100%); opacity: 0.5; color: #ef4444; }
-
-        @keyframes walk {
-            0% { transform: translateY(0) rotate(-10deg); }
-            100% { transform: translateY(-20px) rotate(10deg); }
-        }
-
-        @keyframes shake {
-            0% { transform: translate(1px, 1px) rotate(0deg); }
-            10% { transform: translate(-1px, -2px) rotate(-1deg); }
-            20% { transform: translate(-3px, 0px) rotate(1deg); }
-            30% { transform: translate(3px, 2px) rotate(0deg); }
-            40% { transform: translate(1px, -1px) rotate(1deg); }
-            50% { transform: translate(-1px, 2px) rotate(-1deg); }
-            60% { transform: translate(-3px, 1px) rotate(0deg); }
-            70% { transform: translate(3px, 1px) rotate(-1deg); }
-            80% { transform: translate(-1px, -1px) rotate(1deg); }
-            90% { transform: translate(1px, 2px) rotate(0deg); }
-            100% { transform: translate(1px, -2px) rotate(-1deg); }
-        }
-
-        .input-bet-container {
-            margin-top: 1rem;
-            position: relative;
-            z-index: 2;
-            background: rgba(0,0,0,0.5);
-            padding: 20px;
-            border-radius: 16px;
-            border: 1px solid #333;
-        }
-
-        .input-bet {
-            background: #000;
-            border: 2px solid #444;
-            color: #fbbf24;
-            padding: 10px 15px;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.2rem;
-            font-weight: bold;
-            border-radius: 12px;
-            width: 200px;
-            text-align: center;
-            margin-bottom: 10px;
-            outline: none;
-            transition: all 0.3s;
-        }
-        .input-bet:focus { border-color: #3b82f6; box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
-
-        .btn-action {
-            padding: 12px 25px;
-            font-size: 1rem;
-            font-family: 'Space Grotesk', sans-serif;
-            font-weight: 800;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .btn-start {
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            color: #fff;
-            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
-        }
-        .btn-start:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(59, 130, 246, 0.6); }
-
-        .cave-actions {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-top: 2rem;
-            position: relative;
-            z-index: 2;
-        }
-
-        .btn-step {
-            background: linear-gradient(135deg, #eab308, #ca8a04);
-            color: #000;
-            box-shadow: 0 10px 30px rgba(234, 179, 8, 0.4);
-        }
-        .btn-step:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(234, 179, 8, 0.6); }
-        .btn-step:disabled { background: #333; color: #666; transform: none; box-shadow: none; cursor: not-allowed; }
-
-        .btn-cashout {
-            background: linear-gradient(135deg, #22c55e, #16a34a);
-            color: #fff;
-            box-shadow: 0 10px 30px rgba(34, 197, 94, 0.4);
-        }
-        .btn-cashout:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(34, 197, 94, 0.6); }
-        .btn-cashout:disabled { background: #333; color: #666; transform: none; box-shadow: none; cursor: not-allowed; }
 
         @media (max-width: 768px) {
-            .cave-stats { grid-template-columns: 1fr; gap: 10px; }
-            .cave-actions { flex-direction: column; }
-            .btn-action { width: 100%; justify-content: center; }
-            .cave-wrapper, .premium-header { padding: 15px; }
-            .guide-box { margin: 0 15px 25px 15px; }
+            .main-container { padding: 1rem; }
         }
+        .glass-card {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 2rem;
+            padding: 2rem;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            margin-bottom: 2rem;
+        }
+        .game-layout { display: flex; gap: 2rem; align-items: center; justify-content: center; flex-wrap: wrap; }
+        .card-display {
+            width: 200px; height: 280px; background: transparent; border-radius: 20px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .controls { display: flex; flex-direction: column; gap: 1rem; flex: 1; }
+        .btn-guess { padding: 1rem; border: none; border-radius: 1rem; color: #fff; font-weight: 900; font-size: 1.2rem; cursor: pointer; transition: 0.3s; }
+        .btn-higher { background: linear-gradient(135deg, #00b894, #55efc4); }
+        .btn-lower { background: linear-gradient(135deg, #d63031, #ff7675); }
+        .btn-collect { background: var(--accent-color); color: #000; padding: 1rem; border-radius: 50px; border: none; font-weight: 900; cursor: pointer; }
+        .quick-bet-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 20px; width: 100%; }
+        .quick-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #e2e8f0; padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+        .quick-btn:hover { background: rgba(255,255,255,0.15); transform: translateY(-2px); }
+        .quick-btn.active { background: #f59e0b; color: #fff; border-color: #f59e0b; }
+        .footer-container { display: grid; grid-template-columns: 1fr 350px; gap: 2rem; margin-top: 2rem; }
+        @media (max-width: 768px) { .footer-container { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
-    <div class="game-container">
-        <!-- Header -->
-        <div class="game-header">
-            <div class="header-left">
-                <a href="../index.php" class="back-btn"><i class="fas fa-arrow-left"></i> Quay lại</a>
-                <div class="game-title">
-                    <h1 class="market-title"><i class="fas fa-dungeon"></i> HANG ĐỘNG THAM LAM</h1>
-                </div>
-            </div>
-            <div class="user-balance">
-                <i class="fas fa-wallet"></i>
-                <span id="userMoney"><?= number_format($userMoney, 0, ',', '.') ?></span> GTLM
+    <div class="main-container">
+        <div class="glass-card" style="display: flex; justify-content: space-between; align-items: center;">
+            <h1 style="margin:0; color: var(--primary-color);">HI-LO</h1>
+            <div style="display:flex; align-items:center; gap:1.5rem;">
+                <div id="userMoney" style="font-weight:900; font-size:1.5rem; color:var(--accent-color)"><?= number_format($money, 0, ',', '.') ?> gtlm</div>
+                <a href="../index.php" style="color: #fff; text-decoration: none; border: 1px solid rgba(255,255,255,0.2); padding: 0.5rem 1.5rem; border-radius: 50px; font-weight: 900; background: rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">THOÁT</a>
             </div>
         </div>
-
-
-    <div class="cave-wrapper">
-        <div class="cave-container" id="caveContainer">
-            
-            <div class="cave-status-panel">
-                <h2 id="statusTitle">Chuẩn bị thám hiểm</h2>
-                <div class="cave-stats">
-                    <div class="stat-box">
-                        <span>Số Bước Đã Đi</span>
-                        <b id="txtStep">0</b>
+        <div class="glass-card">
+            <div class="game-layout">
+                <div class="card-display" id="playingCard">
+                    <img src="../games/img/anh-bai/PNG/Cards (large)/card_back.png" alt="Card" id="cardImg" style="width: 100%; height: 100%; object-fit: cover; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.4);">
+                </div>
+                <div class="controls">
+                    <input type="number" id="betAmount" value="10000" style="background: rgba(255,255,255,0.1); border: 1px solid var(--primary-color); color: #fff; padding: 1rem; border-radius: 1rem; font-size: 1.5rem; text-align: center; outline: none;">
+                    <div class="quick-bet-grid">
+                        <button class="quick-btn" onclick="setBet(10000, event)">10K</button>
+                        <button class="quick-btn" onclick="setBet(50000, event)">50K</button>
+                        <button class="quick-btn" onclick="setBet(100000, event)">100K</button>
+                        <button class="quick-btn" onclick="setBet(500000, event)">500K</button>
+                        <button class="quick-btn" onclick="setBet(1000000, event)">1M</button>
+                        <button class="quick-btn" onclick="setBet(5000000, event)">5M</button>
+                        <button class="quick-btn" onclick="setBet(<?= $money ?>, event)">ALL IN</button>
                     </div>
-                    <div class="stat-box">
-                        <span>GTLM Đang Ôm</span>
-                        <b id="txtPrize" class="highlight-money">0</b>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-guess btn-higher" id="btnHigher" onclick="guess('higher')" disabled style="flex:1">CAO HƠN</button>
+                        <button class="btn-guess btn-lower" id="btnLower" onclick="guess('lower')" disabled style="flex:1">THẤP HƠN</button>
                     </div>
-                    <div class="stat-box">
-                        <span>Nguy Cơ Sập Hầm</span>
-                        <b id="txtRisk" style="color: #ef4444;">5%</b>
+                    <button class="btn-guess" style="background:var(--primary-color); width:100%" id="btnStart" onclick="startGame()">BẮT ĐẦU</button>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+                        <span>Thưởng: <b id="multVal" style="color:var(--accent-color)">x1.00</b></span>
+                        <button class="btn-collect" id="btnCollect" onclick="collect()" disabled>NHẬN Gtlm</button>
                     </div>
                 </div>
-                <div class="risk-meter">
-                    <div class="risk-bar" id="riskBar"></div>
+            </div>
+        </div>
+        <div class="footer-container" style="display: none;">
+            <div class="glass-card" style="margin-bottom: 0;">
+                <h3 style="color: var(--primary-color); margin-top: 0;">LỊCH SỬ</h3>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                        <tbody id="historyTableBody"><tr><td colspan="4" style="text-align: center; padding: 20px; opacity: 0.5;">Đang tải...</td></tr></tbody>
+                    </table>
                 </div>
             </div>
-
-            <div class="cave-character" id="characterIcon">
-                <i class="fas fa-user-astronaut" style="color: #cbd5e1;"></i>
-            </div>
-
-            <div class="input-bet-container" id="setupPanel">
-                <p style="color: #888; margin-bottom: 10px; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Mức cược ban đầu (Tối thiểu 1,000)</p>
-                <input type="text" id="betAmount" class="input-bet" value="10,000">
-                <br>
-                <button class="btn-action btn-start" id="btnStart"><i class="fas fa-door-open"></i> TIẾN VÀO HANG</button>
-            </div>
-
-            <div class="cave-actions" id="actionPanel" style="display: none;">
-                <button class="btn-action btn-step" id="btnStep"><i class="fas fa-shoe-prints"></i> BƯỚC TIẾP</button>
-                <button class="btn-action btn-cashout" id="btnCashout"><i class="fas fa-running"></i> CHẠY TRỐN</button>
+            <div class="glass-card" style="margin-bottom: 0;">
+                <h3 style="color: var(--primary-color); margin-top: 0;">THỐNG KÊ</h3>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <div style="flex:1; background: rgba(74, 222, 128, 0.1); padding: 10px; border-radius: 10px; text-align: center;">Thắng: <?= $gameThang ?></div>
+                    <div style="flex:1; background: rgba(255, 107, 107, 0.1); padding: 10px; border-radius: 10px; text-align: center;">Thua: <?= $gameThua ?></div>
+                </div>
+                <canvas id="gameChart" style="max-height: 150px;"></canvas>
             </div>
         </div>
     </div>
-    
-    <div style="text-align: center; margin-top: 30px;">
-        <a href="../index.php" style="display: inline-block; color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 1.1rem; transition: 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#94a3b8'">
-            🏠 QUAY LẠI TRANG CHỦ
-        </a>
-    </div>
-
     <canvas id="threejs-background" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none;"></canvas>
-    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        function setBet(amount, event) {
+            $('#betAmount').val(amount);
+            $('.quick-btn').removeClass('active');
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
+        }
+        
+        function showBanner(msg, type) {
+            let b = document.getElementById('resultBanner');
+            if (!b) {
+                b = document.createElement('div');
+                b.id = 'resultBanner';
+                document.body.appendChild(b);
+            }
+            b.className = 'result-banner ' + type + ' show';
+            b.innerHTML = msg;
+            setTimeout(() => { b.classList.remove('show'); }, 3000);
+        }
+        
+        function resetGameUI() {
+            $('#btnStart, #betAmount').prop('disabled', false);
+            $('#btnHigher, #btnLower, #btnCollect').prop('disabled', true);
+            $('#multVal').text('x1.00');
+            $('#cardImg').attr('src', '../games/img/anh-bai/PNG/Cards (large)/card_back.png');
+        }
+
+        const suits = ['♠', '♣', '♥', '♦'], values = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+        function startGame() {
+            const bet = $('#betAmount').val();
+            $.post('?action=start', { bet: bet }, function (res) {
+                if (res.success) {
+                    $('#userMoney').text(res.money + ' gtlm'); updateCardDisplay(res.card);
+                    $('#btnStart, #betAmount').prop('disabled', true); $('#btnHigher, #btnLower, #btnCollect').prop('disabled', false);
+                } else Swal.fire('Lỗi', res.message, 'error');
+            });
+        }
+        function guess(type) {
+            $.post('?action=guess', { guess: type }, function (res) {
+                if (res.success) {
+                    updateCardDisplay(res.card);
+                    if (res.win) { 
+                        $('#multVal').text('x' + res.mult); 
+                    }
+                    else { 
+                        let betStr = $('#betAmount').val().replace(/\./g, '');
+                        showBanner('THUA RỒI! -' + betStr + ' GTLM', 'lose');
+                        if (window.GameEffects) window.GameEffects.showLoss(parseInt(betStr) || 0);
+                        setTimeout(resetGameUI, 2500);
+                    }
+                }
+            });
+        }
+        function collect() {
+            $.post('?action=collect', function (res) {
+                if (res.success) {
+                    let betStr = $('#betAmount').val().replace(/\./g, '');
+                    let profit = parseInt(res.winAmount.replace(/\./g, '')) - parseInt(betStr);
+                    showBanner('THẮNG LỚN! +' + new Intl.NumberFormat().format(profit) + ' GTLM', 'win');
+                    $('#userMoney').text(new Intl.NumberFormat().format(res.money) + ' gtlm');
+                    if (window.GameEffects && profit > 0) window.GameEffects.showWin(profit);
+                    setTimeout(resetGameUI, 2500);
+                }
+            });
+        }
+        function updateCardDisplay(val) {
+            const suitMap = {'♠': 'spades', '♣': 'clubs', '♥': 'hearts', '♦': 'diamonds'};
+            const suitKey = suits[Math.floor(Math.random() * 4)];
+            const suitStr = suitMap[suitKey];
+            let valStr = values[val];
+            if (!isNaN(valStr) && parseInt(valStr) < 10) valStr = '0' + parseInt(valStr);
+            const url = `../games/img/anh-bai/PNG/Cards (large)/card_${suitStr}_${valStr}.png`;
+            $('#cardImg').attr('src', url);
+        }
+        async function loadHistory() {
+            // History API is currently unavailable
+        }
+        $(document).ready(() => {
+            loadHistory();
+            const ctx = document.getElementById('gameChart');
+            if (ctx) new Chart(ctx, { type: 'doughnut', data: { labels: ['Thắng', 'Thua'], datasets: [{ data: [<?= $gameThang ?>, <?= $gameThua ?>], backgroundColor: ['#4ade80', '#ff6b6b'] }] }, options: { responsive: true, maintainAspectRatio: false } });
+        });
         (function () {
             window.themeConfig = {
-                particleCount: <?= $particleCount ?? 50 ?>, particleSize: <?= $particleSize ?? 3 ?>, particleColor: '<?= $particleColor ?? "#ffffff" ?>', particleOpacity: <?= $particleOpacity ?? 0.5 ?>,
-                shapeCount: <?= $shapeCount ?? 10 ?>, shapeColors: <?= json_encode($shapeColors ?? ["#ffffff"]) ?>, shapeOpacity: <?= $shapeOpacity ?? 0.1 ?>, bgGradient: <?= json_encode($bgGradient ?? ["#1a1c29", "#2a2d3e"]) ?>
+                particleCount: <?= $particleCount ?>, particleSize: <?= $particleSize ?>, particleColor: '<?= $particleColor ?>', particleOpacity: <?= $particleOpacity ?>,
+                shapeCount: <?= $shapeCount ?>, shapeColors: <?= json_encode($shapeColors) ?>, shapeOpacity: <?= $shapeOpacity ?>, bgGradient: <?= json_encode($bgGradient) ?>
             };
         })();
+        window.currentBotId = <?= $botUserId ?? 0 ?>;
     </script>
     <script src="../threejs-background.js"></script>
     <script src="../assets/js/game-effects.js"></script>
     <script src="../assets/js/game-effects-auto.js"></script>
-    <script src="../assets/js/game-greedy-cave.js"></script>
 
-<!-- CUSTOM BOT SCRIPT FOR GREEDY CAVE -->
+<!-- AUTO-GENERATED BOT SCRIPT -->
 <script>
-if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
-if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
+if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\\/script>');
+if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\\/script>');
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
-<script src="../assets/js/bot_chat.js"></script>
 <script src="bots/bot_26.js"></script>
 
 </body>

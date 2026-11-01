@@ -1,120 +1,140 @@
 // LiveStream/bots/bot_33.js
-// Kịch bản Bot cho game Keno (ID 33)
+// Kịch bản Bot cho game Let It Ride (ID 34)
 // Tích hợp LiveStream Chat 24/7 theo chuẩn Casino Rule 5.3
 
 if (typeof BotVirtualCursor !== "undefined") {
-    BotVirtualCursor.init("Vua Soi Cầu Keno 🔢");
+    BotVirtualCursor.init("Cao Thủ Let It Ride ♠️🔥");
 
     const CASINO_CHATS = {
-        bet: [
-            "Xổ số Keno siêu tốc! Ra chiêu chọn dàn số vàng đón bão GTLM! 🔢⚡",
-            "Cầu số Keno đang rực sáng, vào tiền tự tin húp trọn ván này! 💎🔥",
-            "Quay lồng cầu 80 số! Anh em cùng nín thở đếm số trúng nào! 🌟💰",
-            "Khóa chặt các con số may mắn, chờ bóng vàng rơi về nick! 🎯🔢"
+        deal: [
+            "Khai cuộc Let It Ride Poker! Ra chiêu 3 cược liên hoàn đè bẹp nhà cái! ♠️🔥",
+            "Chia 3 lá bài đầu tiên nào! Cầu đang đỏ, tự tin Let It Ride! 💎⚡",
+            "Ra chiêu dứt khoát, tiếng bạc này không Thùng thì cũng Cù Lũ! 🌟💰",
+            "Vào tiền chắc tay, đón 2 lá bài chung hoàn thiện tay bài siêu phẩm! 🃏💎"
+        ],
+        ride: [
+            "Thế bài quá đẹp! Let It Ride! Giữ nguyên cược xông pha đón bão GTLM! 🚀💎",
+            "Bài sáng quắc, giữ cược tất tay đè bẹp ván giao lưu! ⚡🔥"
+        ],
+        pull: [
+            "Rút lại 1 cược phòng thủ! Quản trị vốn tối ưu bảo toàn nick! 🛡️✋",
+            "Lùi một bước để tiến hai bước, thu tiền về nick giữ nhịp an toàn! 🍵✨"
         ],
         win: [
-            "TRÚNG LỚN KENO RỒI! Húp trọn vé số vàng, tiền cộng đầy nick! 🏆🔢🤑",
-            "Đoán trúng cả dàn số! Gáy khét lẹt cả sảnh Keno hôm nay! 👑🔥💰",
-            "Lộc lá Keno đã về! Bão tiền nổ tưng bừng! 💎✨"
+            "HÚP TRỌN VÁN POKER LET IT RIDE! Bài đẹp nổ hũ, tiền cộng mỏi tay! 🏆♠️🤑",
+            "Gáy khét lẹt cả sòng poker hôm nay! Chiến thắng giòn giã! 👑🔥💰",
+            "Từ đôi 10 đến Cù Lũ! Lộc lá GTLM về nick ngập tràn! 💎✨"
         ],
         loss: [
-            "Hụt mất vài con số đẹp, bay màu nhẹ ván này! Vé sau phục thù! 😅🔄",
-            "Bốc hơi một chút, xốc lại dàn số ra chiêu tiếng mới! 💪🔢"
+            "Không đủ đôi 10 trở lên rồi, bay màu tiếng cược này! 😭💔",
+            "Bốc hơi nhẹ, ván sau ra chiêu tất tay phục thù! 💪🔄"
         ]
     };
 
     function sendChat(type) {
         if (typeof BotChat !== 'undefined' && BotChat.send) {
-            const list = CASINO_CHATS[type] || CASINO_CHATS.bet;
+            const list = CASINO_CHATS[type] || CASINO_CHATS.deal;
             const msg = list[Math.floor(Math.random() * list.length)];
-            BotChat.send(33, 'Vua Soi Cầu Keno 🔢', msg);
+            BotChat.send(33, 'Cao Thủ Let It Ride ♠️🔥', msg);
         }
     }
 
-    async function playKenoRound() {
-        // 0. Tắt thông báo SweetAlert nếu có
-        const swalBtn = document.querySelector('.swal2-confirm');
-        if (swalBtn) {
-            const swalTxt = (document.querySelector('.swal2-title')?.innerText || '').toLowerCase();
-            if (swalTxt.includes('thắng') || swalTxt.includes('win') || swalTxt.includes('trúng')) {
+    async function playLetItRide() {
+        // Xử lý nút VÁN MỚI
+        const resetBtn = document.getElementById('reset-btn');
+        const resultArea = document.getElementById('result-area');
+        if (resetBtn && resultArea && resultArea.style.display !== 'none') {
+            const resTxt = (resultArea.innerText || '').toLowerCase();
+            if (resTxt.includes('thắng') || resTxt.includes('win') || resTxt.includes('nhận')) {
                 if (Math.random() < 0.6) sendChat('win');
-            } else if (swalTxt.includes('thua') || swalTxt.includes('hụt') || swalTxt.includes('trượt')) {
+            } else if (resTxt.includes('thua') || resTxt.includes('mất') || resTxt.includes('không trúng')) {
                 if (Math.random() < 0.5) sendChat('loss');
             }
-            BotVirtualCursor.moveToElement($(swalBtn), 0.5, 0, () => {
-                BotVirtualCursor.simulateClick(() => { swalBtn.click(); });
+            BotVirtualCursor.moveToElement($(resetBtn), 0.5, 0, () => {
+                BotVirtualCursor.simulateClick(() => { resetBtn.click(); });
             });
-            await new Promise(r => setTimeout(r, 800));
-            return; 
+            return;
         }
 
-        const drawBtn = document.getElementById('drawBtn');
-        if (drawBtn && drawBtn.disabled && document.querySelectorAll('.keno-number.selected').length > 0 && !swalBtn) {
-            return; 
-        }
-
-        // 1. Đổi vé số? (30% cơ hội)
-        if (Math.random() < 0.3) {
-            const selected = Array.from(document.querySelectorAll('.keno-number.selected'));
-            for (let num of selected) {
-                BotVirtualCursor.moveToElement($(num), 0.2, 0, () => {
-                    BotVirtualCursor.simulateClick(() => { num.click(); });
+        // Xử lý Lượt 1
+        const action1 = document.getElementById('action-1');
+        if (action1 && action1.style.display !== 'none') {
+            const btns = $(action1).find('button');
+            if (btns.length > 0) {
+                const btn = btns[Math.floor(Math.random() * btns.length)];
+                BotVirtualCursor.moveToElement($(btn), 0.6, 0, () => {
+                    BotVirtualCursor.simulateClick(() => { 
+                        btn.click(); 
+                        const txt = (btn.innerText || '').toLowerCase();
+                        if (txt.includes('ride') || txt.includes('giữ')) sendChat('ride');
+                        else sendChat('pull');
+                    });
                 });
-                await new Promise(r => setTimeout(r, 300));
             }
+            return;
         }
 
-        // 2. Chọn số nếu chưa có số nào
-        let selectedCount = document.querySelectorAll('.keno-number.selected').length;
-        if (selectedCount === 0) {
-            const targetPicks = Math.floor(Math.random() * 5) + 3; // Chọn 3 đến 7 con số
-            while (selectedCount < targetPicks) {
-                const allNums = Array.from(document.querySelectorAll('.keno-number:not(.selected)'));
-                if (allNums.length === 0) break;
-                const rndNum = allNums[Math.floor(Math.random() * allNums.length)];
-                BotVirtualCursor.moveToElement($(rndNum), 0.3, 0, () => {
-                    BotVirtualCursor.simulateClick(() => { rndNum.click(); });
+        // Xử lý Lượt 2
+        const action2 = document.getElementById('action-2');
+        if (action2 && action2.style.display !== 'none') {
+            const btns = $(action2).find('button');
+            if (btns.length > 0) {
+                const btn = btns[Math.floor(Math.random() * btns.length)];
+                BotVirtualCursor.moveToElement($(btn), 0.6, 0, () => {
+                    BotVirtualCursor.simulateClick(() => { 
+                        btn.click(); 
+                        const txt = (btn.innerText || '').toLowerCase();
+                        if (txt.includes('ride') || txt.includes('giữ')) sendChat('ride');
+                        else sendChat('pull');
+                    });
                 });
-                await new Promise(r => setTimeout(r, 400));
-                selectedCount++;
             }
+            return;
         }
 
-        // 3. Đổi mức cược? (50% cơ hội)
-        if (Math.random() < 0.5) {
-            const chips = Array.from(document.querySelectorAll('.chip')).filter(b => !b.innerText.includes('MAX') && !b.innerText.includes('5M'));
-            if (chips.length > 0) {
-                const chipBtn = chips[Math.floor(Math.random() * chips.length)];
-                BotVirtualCursor.moveToElement($(chipBtn), 0.4, 0, () => {
-                    BotVirtualCursor.simulateClick(() => { chipBtn.click(); });
-                });
-                await new Promise(r => setTimeout(r, 600));
+        // Xử lý BẮT ĐẦU VÁN (nút Deal)
+        const dealBtn = document.getElementById('deal-btn');
+        const betForm = document.getElementById('bet-form');
+        if (dealBtn && betForm && betForm.style.display !== 'none') {
+            if (Math.random() > 0.5) {
+                const chips = Array.from(document.querySelectorAll('.chip')).filter(b => !b.innerText.includes('MAX') && !b.innerText.includes('5M'));
+                if (chips.length > 0) {
+                    const chipBtn = chips[Math.floor(Math.random() * chips.length)];
+                    BotVirtualCursor.moveToElement($(chipBtn), 0.4, 0, () => {
+                        BotVirtualCursor.simulateClick(() => { chipBtn.click(); });
+                    });
+                    await new Promise(r => setTimeout(r, 600));
+                }
             }
-        }
-
-        // 4. Bấm QUAY SỐ
-        if (drawBtn && !drawBtn.disabled) {
-            BotVirtualCursor.moveToElement($(drawBtn), 0.6, 0, () => {
+            BotVirtualCursor.moveToElement($(dealBtn), 0.7, 0, () => {
                 BotVirtualCursor.simulateClick(() => { 
-                    drawBtn.click(); 
-                    if (Math.random() < 0.35) sendChat('bet');
+                    dealBtn.click(); 
+                    if (Math.random() < 0.35) sendChat('deal');
                 });
             });
         }
     }
 
-    // Vòng lặp hành động chơi game
     function scheduleNextRound() {
-        const waitTime = 4000 + Math.random() * 4000;
+        const waitTime = 2500 + Math.random() * 2000;
         setTimeout(() => {
-            if (Math.random() > 0.1) {
-                playKenoRound().then(() => scheduleNextRound());
+            const swalBtn = document.querySelector('.swal2-confirm');
+            if (swalBtn) {
+                BotVirtualCursor.moveToElement($(swalBtn), 0.5, 0, () => {
+                    BotVirtualCursor.simulateClick(() => { swalBtn.click(); });
+                });
+                scheduleNextRound();
                 return;
             }
+
+            if (Math.random() > 0.1) {
+                playLetItRide();
+            }
+            
             scheduleNextRound();
         }, waitTime);
     }
     
-    // Khởi động bot
+    // Kích hoạt bot
     setTimeout(scheduleNextRound, 2000);
 }

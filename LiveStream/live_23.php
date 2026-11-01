@@ -5,607 +5,693 @@ require_once __DIR__ . '/../db_connect.php';
 
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
-$botUser = getOrCreateBotStreamerUser($conn, 'bot_23', 5000000000);
+$botUser = getOrCreateBotStreamerUser($conn, 'bot_23', 50000000);
 $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
-require_once '../load_theme.php';
 
-
-
-
+if (!isset($botUserId)) {
+    header('Location: ../login.php');
+    exit;
+}
 $userId = $botUserId;
-
-$stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
+$stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
-$user = $stmt->get_result()->fetch_assoc();
-$money = $user['Money'];
-$stmt->close();
+$userMoney = $stmt->get_result()->fetch_assoc()['Money'];
 
-if (isset($_GET['action'])) {
-    header('Content-Type: application/json');
-    $action = $_GET['action'];
-
-    if ($action === 'play') {
-        $bet1 = (int) ($_POST['bet1'] ?? 0);
-        $bet2 = (int) ($_POST['bet2'] ?? 0);
-        $bet3 = (int) ($_POST['bet3'] ?? 0);
-        $bet4 = (int) ($_POST['bet4'] ?? 0);
-        $totalBet = $bet1 + $bet2 + $bet3 + $bet4;
-
-        if ($totalBet <= 0 || $totalBet > $money) {
-            echo json_encode(['success' => false, 'message' => 'Cược không hợp lệ!']);
-            exit;
-        }
-
-        $beadsCount = rand(40, 60);
-        $remainder = $beadsCount % 4;
-        if ($remainder === 0)
-            $remainder = 4;
-
-        $winAmount = -$totalBet;
-        if ($remainder === 1)
-            $winAmount += $bet1 * 3.85;
-        elseif ($remainder === 2)
-            $winAmount += $bet2 * 3.85;
-        elseif ($remainder === 3)
-            $winAmount += $bet3 * 3.85;
-        elseif ($remainder === 4)
-            $winAmount += $bet4 * 3.85;
-
-        $newMoney = $money + $winAmount;
-        $stmt = $conn->prepare("UPDATE users SET Money = ? WHERE Iduser = ?");
-        $stmt->bind_param("di", $newMoney, $userId);
-        $stmt->execute();
-        $stmt->close();
-
-        // History
-        $his = $conn->prepare("INSERT INTO history_fantan (Iduser, Bet, Result, WinAmount, Time) VALUES (?, ?, ?, ?, NOW())");
-        $resStr = "Kết quả: $remainder (Tổng hạt: $beadsCount)";
-        $his->bind_param("idss", $userId, $totalBet, $resStr, $winAmount);
-        $his->execute();
-        $his->close();
-
-        // Tích hợp hệ thống Nhiệm vụ Sự kiện, Battle Pass, XP, v.v.
-        require_once '../game_history_helper.php';
-        logGameHistoryWithAll($conn, $userId, 'Fan-Tan', $totalBet, $winAmount > 0 ? $winAmount + $totalBet : 0, $winAmount > 0);
-
-        echo json_encode([
-            'success' => true,
-            'beadsCount' => $beadsCount,
-            'remainder' => $remainder,
-            'winAmount' => $winAmount,
-            'money' => number_format($newMoney, 0, ',', '.'),
-            'rawMoney' => $newMoney
-        ]);
-        exit;
-    } elseif ($action === 'get_history') {
-        $stmt = $conn->prepare("SELECT Bet, Result, WinAmount, Time FROM history_fantan WHERE Iduser = ? ORDER BY Time DESC LIMIT 10");
-        $stmt->bind_param("i", $userId);
-        $stmt->execute();
-        $res = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-        echo json_encode(['success' => true, 'history' => $res]);
-        exit;
-    }
+require_once '../load_theme.php';
+if (!isset($bgGradientCSS) || empty($bgGradientCSS)) {
+    $bgGradientCSS = 'linear-gradient(135deg, #1a1c29 0%, #2a2d3e 100%)';
 }
 ?>
 
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
-    <title>Fan-Tan - Nét Đẹp Truyền Thống</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="../assets/css/main.css">
+    <title>Nông Trại AFK - VIP</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link rel="stylesheet" href="../assets/css/main.css">
     <style>
-        :root {
-            --primary: #818cf8;
-            --secondary: #6ee7b7;
-            --danger: #ef4444;
-            --accent: #fbbf24;
-            --glass: rgba(255, 255, 255, 0.05);
-            --glass-border: rgba(255, 255, 255, 0.1);
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
         body {
-            background:
-                <?= $bgGradientCSS ?>
-            ;
-            background-attachment: fixed;
+            font-family: 'Outfit', sans-serif;
+            background: <?= $bgGradientCSS ?>;
             color: #fff;
-            font-family: 'Exo 2', system-ui, sans-serif;
             min-height: 100vh;
-            overflow-x: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
         }
 
-        #threejs-background {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-            pointer-events: none;
-        }
-
-        .main-container {
-            position: relative;
-            z-index: 1;
-            width: 95%;
-            max-width: 1000px;
+        .game-container {
+            max-width: 1200px;
             margin: 0 auto;
-            text-align: center;
-            transform: scale(0.65);
-            transform-origin: top center;
+            padding: 20px;
+        }
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 30px;
+            background: rgba(15, 17, 21, 0.8);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
         .game-title {
-            font-size: clamp(2.5rem, 8vw, 4.5rem);
-            font-weight: 900;
-            color: var(--primary);
-            text-shadow: 0 0 30px rgba(129, 140, 248, 0.4);
-            margin-bottom: 0.5rem;
-            text-transform: uppercase;
-            letter-spacing: 15px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: linear-gradient(90deg, #4ade80, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
         }
-
-        .glass-card {
-            background: var(--glass);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 3rem;
-            padding: clamp(1.5rem, 5vw, 3.5rem);
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-            margin-bottom: 2rem;
-            position: relative;
-            overflow: hidden;
+        
+        .user-balance {
+            background: rgba(255,255,255,0.05); 
+            padding: 15px 25px; 
+            border-radius: 12px; 
+            border: 1px solid rgba(255,255,255,0.1);
+            text-align: right;
         }
+        .user-balance span { font-size: 1.5rem; font-family: 'Space Grotesk'; font-weight: bold; color: #fbbf24; }
 
-        .balance-pill {
-            background: rgba(110, 231, 183, 0.1);
-            border: 1px solid var(--secondary);
-            padding: 0.8rem 2rem;
-            border-radius: 50px;
-            display: inline-block;
-            margin-bottom: 2rem;
-            color: var(--secondary);
-            font-weight: 700;
-            letter-spacing: 1px;
-        }
-
-        .beads-area {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-content: center;
-            gap: 8px;
-            max-width: 500px;
-            min-height: 200px;
-            margin: 0 auto 3rem;
-            padding: 2rem;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 2rem;
-            border: 1px solid var(--glass-border);
-        }
-
-        @keyframes dropBead {
-            0% { transform: translateY(-200px) scale(0.5); opacity: 0; }
-            60% { transform: translateY(15px) scale(1.1); opacity: 1; }
-            80% { transform: translateY(-5px) scale(0.95); }
-            100% { transform: translateY(0) scale(1); opacity: 1; }
-        }
-
-        .bead {
-            width: clamp(12px, 2vw, 18px);
-            aspect-ratio: 1;
-            background: var(--accent);
-            border-radius: 50%;
-            box-shadow: 0 0 10px rgba(251, 191, 36, 0.6);
-            animation: dropBead 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
-        }
-
-        .bet-grid {
+        .layout-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 3rem;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
+        }
+        @media (max-width: 900px) { .layout-grid { grid-template-columns: 1fr; } }
+
+        .glass-panel {
+            background: rgba(20, 24, 30, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
-        .bet-box {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--glass-border);
-            border-radius: 1.5rem;
-            padding: 1.5rem;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        .farm-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            aspect-ratio: 1;
+            background: #452c1e;
+            padding: 15px;
+            border-radius: 16px;
+            border: 4px solid #5a3a29;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        .plot {
+            background: #5c3a21;
+            border-radius: 12px;
+            cursor: url('../img/tay.png'), pointer !important;
             position: relative;
+            transition: 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #3d2412;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .plot:hover {
+            filter: brightness(1.2);
+            border-color: #8b5a33;
         }
 
-        .bet-box:hover {
-            background: rgba(255, 255, 255, 0.08);
-            transform: translateY(-5px);
+        .plot-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            animation: bounce 2s infinite ease-in-out;
+        }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+
+        .plot-timer {
+            font-size: 1rem;
+            font-weight: bold;
+            font-family: 'Space Grotesk';
+            background: rgba(0,0,0,0.6);
+            padding: 4px 8px;
+            border-radius: 6px;
         }
 
-        .bet-box.active {
-            border-color: var(--primary);
-            background: rgba(129, 140, 248, 0.15);
-            box-shadow: 0 0 20px rgba(129, 140, 248, 0.2);
-        }
-
-        .bet-label {
-            font-size: 2.5rem;
-            font-weight: 900;
-            color: var(--primary);
-            margin-bottom: 0.5rem;
-        }
-
-        .bet-input {
-            width: 100%;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 0.8rem;
+        .plot-status {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #ef4444;
             color: #fff;
-            text-align: center;
-            padding: 0.5rem;
-            font-size: 1.1rem;
-            font-weight: 700;
-            outline: none;
-            transition: 0.3s;
-        }
-
-        .bet-input:focus {
-            border-color: var(--primary);
-        }
-
-        .btn-play {
-            background: linear-gradient(135deg, var(--primary) 0%, #4338ca 100%);
-            border: none;
-            padding: 1.2rem 5rem;
-            border-radius: 50px;
-            color: #fff;
-            font-size: 1.5rem;
-            font-weight: 900;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 4px;
-            width: 100%;
-            max-width: 450px;
-            box-shadow: 0 10px 30px rgba(129, 140, 248, 0.4);
-        }
-
-        .btn-play:hover:not(:disabled) {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(129, 140, 248, 0.6);
-        }
-
-        .btn-play:disabled {
-            opacity: 0.5;
-            filter: grayscale(1);
-            cursor: not-allowed;
-        }
-
-        .status-msg {
-            font-size: clamp(1.2rem, 3vw, 1.8rem);
-            font-weight: 800;
-            color: var(--accent);
-            margin-bottom: 2rem;
-            min-height: 3rem;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-        }
-
-        .history-section {
-            background: var(--glass);
-            border-radius: 2.5rem;
-            padding: 2.5rem;
-            border: 1px solid var(--glass-border);
-        }
-
-        /* Result banner */
-        .result-banner {
-            position: fixed;
-            top: -100px;
-            left: 50%;
-            transform: translateX(-50%);
-            border-radius: 15px;
-            padding: 18px 26px;
-            font-size: 1.5rem;
-            font-weight: 800;
-            letter-spacing: .5px;
-            display: none;
-            z-index: 1000;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        .result-banner.show {
-            display: block;
-            animation: bannerIn .5s cubic-bezier(.16, 1, .3, 1) forwards;
-        }
-        @keyframes bannerIn {
-            from { opacity: 0; transform: translate(-50%, -20px) scale(.95); }
-            to { opacity: 1; transform: translate(-50%, 20px) scale(1); }
-        }
-        .result-banner.win {
-            background: linear-gradient(135deg, rgba(0, 230, 118, .95), rgba(0, 200, 100, .95));
-            border: 1px solid rgba(0, 230, 118, .4);
-            color: #fff;
-            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
-        }
-        .result-banner.lose {
-            background: linear-gradient(135deg, rgba(255, 61, 87, .95), rgba(200, 40, 60, .95));
-            border: 1px solid rgba(255, 61, 87, .3);
-            color: #fff;
-            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
-        }
-
-        .history-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
-        }
-
-        .history-table th {
-            color: rgba(255, 255, 255, 0.4);
-            text-transform: uppercase;
+            padding: 5px;
+            border-radius: 50%;
             font-size: 0.8rem;
-            padding: 1.2rem;
-            border-bottom: 2px solid var(--glass-border);
+            display: none;
+        }
+        .plot.ready .plot-status {
+            display: block;
+            background: #22c55e;
         }
 
-        .history-table td {
-            padding: 1.2rem;
-            border-bottom: 1px solid var(--glass-border);
-            font-weight: 600;
+        .shop-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; max-height: 350px; overflow-y: auto; padding-right: 5px; }
+        .shop-list::-webkit-scrollbar { width: 6px; }
+        .shop-list::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 10px; }
+        .shop-list::-webkit-scrollbar-thumb { background: #4ade80; border-radius: 10px; }
+        .shop-item {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            background: rgba(255,255,255,0.05);
+            padding: 10px;
+            border-radius: 12px;
+            transition: 0.2s;
+            border: 1px solid rgba(255,255,255,0.05);
+            height: 100%;
+        }
+        .shop-item:hover {
+            background: rgba(255,255,255,0.1);
         }
 
-        .quick-bet-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 30px; }
-        .quick-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #e2e8f0; padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
-        .quick-btn:hover { background: rgba(255,255,255,0.15); transform: translateY(-2px); }
-        .quick-btn.active { background: #f59e0b; color: #fff; border-color: #f59e0b; }
+        .item-info { display: flex; align-items: center; gap: 10px; }
+        .item-icon { font-size: 1.3rem; background: rgba(0,0,0,0.3); width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
+        .item-details h4 { margin: 0; font-size: 0.9rem; }
+        .item-details p { margin: 3px 0 0; color: #94a3b8; font-size: 0.75rem; }
+        .item-count { font-size: 0.9rem; font-weight: bold; color: #4ade80; }
 
-        @media (max-width: 600px) {
-            .bet-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 1rem;
-            }
+        .btn-buy { background: #3b82f6; border: none; padding: 5px 10px; font-size: 0.8rem; border-radius: 6px; color: #fff; font-weight: bold; cursor: url('../img/tay.png'), pointer !important; transition: 0.2s; }
+        .btn-buy:hover { background: #2563eb; }
+        
+        .btn-market { background: linear-gradient(90deg, #ef4444, #f59e0b); display: block; text-align: center; color: #fff; text-decoration: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 1.1rem; margin-top: 20px; transition: 0.3s; cursor: url('../img/tay.png'), pointer !important; }
+        .btn-market:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(239, 68, 68, 0.4); }
 
-            .bet-box {
-                padding: 1rem;
-            }
-
-            .btn-play {
-                padding: 1rem 2rem;
-                font-size: 1.2rem;
-            }
-        }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 100; align-items: center; justify-content: center; }
+        .modal-content { background: #1e293b; padding: 30px; border-radius: 20px; width: 600px; max-width: 95%; border: 1px solid rgba(255,255,255,0.1); max-height: 90vh; overflow-y: auto; }
+        .modal-title { margin-top: 0; text-align: center; font-size: 1.5rem; color: #4ade80; }
+        #seedList { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .seed-btn { display: flex; align-items: center; justify-content: space-between; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 12px; cursor: url('../img/tay.png'), pointer !important; transition: 0.2s; border: 1px solid transparent; }
+        .seed-btn:hover { background: rgba(255,255,255,0.1); border-color: #4ade80; }
+        .close-modal { width: 100%; background: #ef4444; border: none; padding: 12px; border-radius: 10px; color: #fff; font-weight: bold; cursor: url('../img/tay.png'), pointer !important; margin-top: 20px; }
     </style>
 </head>
-
 <body>
-
-
-    <div class="main-container">
-        <h1 class="game-title">FAN-TAN</h1>
-        <div class="balance-pill">💰 Số Gtlm: <span id="balance-val"><?= number_format($money, 0, ',', '.') ?></span>
-            gtlm
+    <div class="game-container">
+        <div class="game-header">
+            <div>
+                <h1 class="game-title">🌾 NÔNG TRẠI AFK</h1>
+                <div style="color: #94a3b8; margin-top: 5px;">Trồng cây - Bón phân - Bán lấy GTLM!</div>
+            </div>
+            <div class="user-balance">
+                <div style="font-size: 0.9rem; color: #94a3b8;">Số dư của bạn</div>
+                <span id="userMoney"><?= number_format($userMoney) ?></span> GTLM
+            </div>
         </div>
 
-        <div class="glass-card">
-            <div id="beads-container" class="beads-area"></div>
-
-            <div id="status-text" class="status-msg">Đặt cược và cùng đếm hạt!</div>
-
-            <div class="quick-bet-grid">
-                <button class="quick-btn" onclick="setBet(10000, event)">10K</button>
-                <button class="quick-btn" onclick="setBet(50000, event)">50K</button>
-                <button class="quick-btn" onclick="setBet(100000, event)">100K</button>
-                <button class="quick-btn" onclick="setBet(500000, event)">500K</button>
-                <button class="quick-btn" onclick="setBet(1000000, event)">1M</button>
-                <button class="quick-btn" onclick="setBet(5000000, event)">5M</button>
-                <button class="quick-btn" onclick="setBet(<?= $money ?>, event)">ALL IN</button>
-            </div>
-
-            <div class="bet-grid">
-                <div class="bet-box" onclick="$('#bet-1').focus()">
-                    <div class="bet-label">1</div>
-                    <input type="number" id="bet-1" class="bet-input" value="0" min="0">
-                </div>
-                <div class="bet-box" onclick="$('#bet-2').focus()">
-                    <div class="bet-label">2</div>
-                    <input type="number" id="bet-2" class="bet-input" value="0" min="0">
-                </div>
-                <div class="bet-box" onclick="$('#bet-3').focus()">
-                    <div class="bet-label">3</div>
-                    <input type="number" id="bet-3" class="bet-input" value="0" min="0">
-                </div>
-                <div class="bet-box" onclick="$('#bet-4').focus()">
-                    <div class="bet-label">4</div>
-                    <input type="number" id="bet-4" class="bet-input" value="0" min="0">
+        <div class="layout-grid">
+            <!-- Khu Vườn -->
+            <div class="glass-panel">
+                <h3 style="margin-top:0;"><i class="fas fa-seedling"></i> Khu Vườn Của Bạn</h3>
+                <div class="farm-grid" id="farmGrid">
+                    <!-- JS sẽ render 9 ô đất -->
                 </div>
             </div>
 
-            <button id="play-btn" class="btn-play">MỞ BÁT (COUNT)</button>
-        </div>
+            <!-- Cửa Hàng & Nick Đồ -->
+            <div class="glass-panel">
+                <h3 style="margin-top:0;"><i class="fas fa-store"></i> Cửa Hàng & Túi Đồ</h3>
+                
+                <div class="shop-list">
+                    <!-- Hạt Lúa Mì -->
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <div class="item-icon">🌾</div>
+                            <div class="item-details">
+                                <h4>Hạt Lúa Mì</h4>
+                                <p>1 Phút | 200 GTLM</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="item-count">Kho: <span id="inv_seed_wheat">0</span></div>
+                            <button class="btn-buy" onclick="buyItem('WHEAT')">MUA</button>
+                        </div>
+                    </div>
 
-        <div class="history-section" style="display: none;">
-            <h2 style="font-size: 1.2rem; letter-spacing: 2px; margin-bottom: 1rem;">LỊCH SỬ GẦN ĐÂY</h2>
-            <div style="overflow-x: auto;">
-                <table class="history-table">
-                    <thead>
-                        <tr>
-                            <th>Thời gian</th>
-                            <th>gtlm cược</th>
-                            <th>Kết quả</th>
-                            <th>Thắng/Thua</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-body"></tbody>
-                </table>
+                    <!-- Hạt Ngô -->
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <div class="item-icon">🌽</div>
+                            <div class="item-details">
+                                <h4>Hạt Ngô</h4>
+                                <p>3 Phút | 500 GTLM</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="item-count">Kho: <span id="inv_seed_corn">0</span></div>
+                            <button class="btn-buy" onclick="buyItem('CORN')">MUA</button>
+                        </div>
+                    </div>
+
+                    <!-- Hạt Cà Chua -->
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <div class="item-icon">🍅</div>
+                            <div class="item-details">
+                                <h4>Hạt Cà Chua</h4>
+                                <p>5 Phút | 1,500 GTLM</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="item-count">Kho: <span id="inv_seed_tomato">0</span></div>
+                            <button class="btn-buy" onclick="buyItem('TOMATO')">MUA</button>
+                        </div>
+                    </div>
+
+                    <!-- Táo -->
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <div class="item-icon">🍎</div>
+                            <div class="item-details">
+                                <h4>Hạt Táo</h4>
+                                <p>10 Phút | 4,000 GTLM</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="item-count">Kho: <span id="inv_seed_apple">0</span></div>
+                            <button class="btn-buy" onclick="buyItem('APPLE')">MUA</button>
+                        </div>
+                    </div>
+
+                    <!-- Dưa Hấu -->
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <div class="item-icon">🍉</div>
+                            <div class="item-details">
+                                <h4>Hạt Dưa Hấu</h4>
+                                <p>30 Phút | 15,000 GTLM</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="item-count">Kho: <span id="inv_seed_watermelon">0</span></div>
+                            <button class="btn-buy" onclick="buyItem('WATERMELON')">MUA</button>
+                        </div>
+                    </div>
+
+                    <!-- Dâu Tây -->
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <div class="item-icon">🍓</div>
+                            <div class="item-details">
+                                <h4>Hạt Dâu Tây</h4>
+                                <p>1 Giờ | 30,000 GTLM</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="item-count">Kho: <span id="inv_seed_strawberry">0</span></div>
+                            <button class="btn-buy" onclick="buyItem('STRAWBERRY')">MUA</button>
+                        </div>
+                    </div>
+
+                    <!-- Nho -->
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <div class="item-icon">🍇</div>
+                            <div class="item-details">
+                                <h4>Hạt Nho</h4>
+                                <p>2 Giờ | 70,000 GTLM</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="item-count">Kho: <span id="inv_seed_grape">0</span></div>
+                            <button class="btn-buy" onclick="buyItem('GRAPE')">MUA</button>
+                        </div>
+                    </div>
+
+                    <!-- Đào -->
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <div class="item-icon">🍑</div>
+                            <div class="item-details">
+                                <h4>Hạt Đào Tiên</h4>
+                                <p>4 Giờ | 150,000 GTLM</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="item-count">Kho: <span id="inv_seed_peach">0</span></div>
+                            <button class="btn-buy" onclick="buyItem('PEACH')">MUA</button>
+                        </div>
+                    </div>
+
+                    <!-- Cherry -->
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <div class="item-icon">🍒</div>
+                            <div class="item-details">
+                                <h4>Hạt Cherry</h4>
+                                <p>15 Phút | 8,000 GTLM</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="item-count">Kho: <span id="inv_seed_cherry">0</span></div>
+                            <button class="btn-buy" onclick="buyItem('CHERRY')">MUA</button>
+                        </div>
+                    </div>
+
+                    <!-- Chanh -->
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <div class="item-icon">🍋</div>
+                            <div class="item-details">
+                                <h4>Hạt Chanh</h4>
+                                <p>45 Phút | 20,000 GTLM</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="item-count">Kho: <span id="inv_seed_lemon">0</span></div>
+                            <button class="btn-buy" onclick="buyItem('LEMON')">MUA</button>
+                        </div>
+                    </div>
+
+                    <!-- Chuối -->
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <div class="item-icon">🍌</div>
+                            <div class="item-details">
+                                <h4>Hạt Chuối</h4>
+                                <p>1.5 Giờ | 45,000 GTLM</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="item-count">Kho: <span id="inv_seed_banana">0</span></div>
+                            <button class="btn-buy" onclick="buyItem('BANANA')">MUA</button>
+                        </div>
+                    </div>
+
+                    <!-- Kiwi -->
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <div class="item-icon">🥝</div>
+                            <div class="item-details">
+                                <h4>Hạt Kiwi</h4>
+                                <p>2.5 Giờ | 90,000 GTLM</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="item-count">Kho: <span id="inv_seed_kiwi">0</span></div>
+                            <button class="btn-buy" onclick="buyItem('KIWI')">MUA</button>
+                        </div>
+                    </div>
+
+                    <!-- Xoài -->
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <div class="item-icon">🥭</div>
+                            <div class="item-details">
+                                <h4>Hạt Xoài</h4>
+                                <p>3.5 Giờ | 120,000 GTLM</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="item-count">Kho: <span id="inv_seed_mango">0</span></div>
+                            <button class="btn-buy" onclick="buyItem('MANGO')">MUA</button>
+                        </div>
+                    </div>
+
+                    <!-- Dứa -->
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <div class="item-icon">🍍</div>
+                            <div class="item-details">
+                                <h4>Hạt Dứa</h4>
+                                <p>5 Giờ | 200,000 GTLM</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="item-count">Kho: <span id="inv_seed_pineapple">0</span></div>
+                            <button class="btn-buy" onclick="buyItem('PINEAPPLE')">MUA</button>
+                        </div>
+                    </div>
+
+                    <!-- Dừa -->
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <div class="item-icon">🥥</div>
+                            <div class="item-details">
+                                <h4>Hạt Dừa</h4>
+                                <p>8 Giờ | 350,000 GTLM</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="item-count">Kho: <span id="inv_seed_coconut">0</span></div>
+                            <button class="btn-buy" onclick="buyItem('COCONUT')">MUA</button>
+                        </div>
+                    </div>
+
+                    <!-- Dưa Lưới -->
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <div class="item-icon">🍈</div>
+                            <div class="item-details">
+                                <h4>Hạt Dưa Lưới</h4>
+                                <p>12 Giờ | 600,000 GTLM</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="item-count">Kho: <span id="inv_seed_melon">0</span></div>
+                            <button class="btn-buy" onclick="buyItem('MELON')">MUA</button>
+                        </div>
+                    </div>
+
+                    <!-- Cam -->
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <div class="item-icon">🍊</div>
+                            <div class="item-details">
+                                <h4>Hạt Cam</h4>
+                                <p>10 Giờ | 450,000 GTLM</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="item-count">Kho: <span id="inv_seed_orange">0</span></div>
+                            <button class="btn-buy" onclick="buyItem('ORANGE')">MUA</button>
+                        </div>
+                    </div>
+
+                    <!-- Bơ -->
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <div class="item-icon">🥑</div>
+                            <div class="item-details">
+                                <h4>Hạt Bơ</h4>
+                                <p>16 Giờ | 800,000 GTLM</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="item-count">Kho: <span id="inv_seed_avocado">0</span></div>
+                            <button class="btn-buy" onclick="buyItem('AVOCADO')">MUA</button>
+                        </div>
+                    </div>
+
+                    <!-- Lê -->
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <div class="item-icon">🍐</div>
+                            <div class="item-details">
+                                <h4>Hạt Lê</h4>
+                                <p>20 Giờ | 1,200,000 GTLM</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="item-count">Kho: <span id="inv_seed_pear">0</span></div>
+                            <button class="btn-buy" onclick="buyItem('PEAR')">MUA</button>
+                        </div>
+                    </div>
+
+                    <!-- Lựu -->
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <div class="item-icon">🍎</div>
+                            <div class="item-details">
+                                <h4>Hạt Lựu</h4>
+                                <p>24 Giờ | 2,000,000 GTLM</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="item-count">Kho: <span id="inv_seed_pomegranate">0</span></div>
+                            <button class="btn-buy" onclick="buyItem('POMEGRANATE')">MUA</button>
+                        </div>
+                    </div>
+
+                    <!-- Phân Bón -->
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <div class="item-icon">💩</div>
+                            <div class="item-details">
+                                <h4>Phân Bón</h4>
+                                <p>Giảm 50% TG | 500 GTLM</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="item-count">Kho: <span id="inv_fertilizer">0</span></div>
+                            <button class="btn-buy" onclick="buyItem('FERTILIZER')">MUA</button>
+                        </div>
+                    </div>
+                </div>
+
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
+                
+                <h3 style="margin-top:0; font-size: 1.1rem;"><i class="fas fa-box"></i> Kho Nông Sản</h3>
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 12px; font-size: 0.85rem;">
+                    <div style="text-align: center;">🌾 <br><b id="inv_crop_wheat">0</b></div>
+                    <div style="text-align: center;">🌽 <br><b id="inv_crop_corn">0</b></div>
+                    <div style="text-align: center;">🍅 <br><b id="inv_crop_tomato">0</b></div>
+                    <div style="text-align: center;">🍎 <br><b id="inv_crop_apple">0</b></div>
+                    <div style="text-align: center;">🍉 <br><b id="inv_crop_watermelon">0</b></div>
+                    <div style="text-align: center;">🍓 <br><b id="inv_crop_strawberry">0</b></div>
+                    <div style="text-align: center;">🍇 <br><b id="inv_crop_grape">0</b></div>
+                    <div style="text-align: center;">🍑 <br><b id="inv_crop_peach">0</b></div>
+                    <div style="text-align: center;">🍒 <br><b id="inv_crop_cherry">0</b></div>
+                    <div style="text-align: center;">🍋 <br><b id="inv_crop_lemon">0</b></div>
+                    <div style="text-align: center;">🍌 <br><b id="inv_crop_banana">0</b></div>
+                    <div style="text-align: center;">🥝 <br><b id="inv_crop_kiwi">0</b></div>
+                    <div style="text-align: center;">🥭 <br><b id="inv_crop_mango">0</b></div>
+                    <div style="text-align: center;">🍍 <br><b id="inv_crop_pineapple">0</b></div>
+                    <div style="text-align: center;">🥥 <br><b id="inv_crop_coconut">0</b></div>
+                    <div style="text-align: center;">🍈 <br><b id="inv_crop_melon">0</b></div>
+                    <div style="text-align: center;">🍊 <br><b id="inv_crop_orange">0</b></div>
+                    <div style="text-align: center;">🥑 <br><b id="inv_crop_avocado">0</b></div>
+                    <div style="text-align: center;">🍐 <br><b id="inv_crop_pear">0</b></div>
+                    <div style="text-align: center;">🍎 <br><b id="inv_crop_pomegranate">0</b></div>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <a href="market.php" class="btn-market" style="flex: 1; margin-top: 0; font-size: 0.9rem; padding: 10px;"><i class="fas fa-chart-line"></i> LÊN SÀN BÁN</a>
+                    <button class="btn-market" onclick="harvestAll()" style="flex: 1; margin-top: 0; background: linear-gradient(90deg, #eab308, #f59e0b); border: none; font-size: 0.9rem; padding: 10px;"><i class="fas fa-bolt"></i> THU HOẠCH NHANH</button>
+                    <button class="btn-market" onclick="openBotConfigModal()" style="flex: 1; margin-top: 0; background: linear-gradient(90deg, #10b981, #3b82f6); border: none; font-size: 0.9rem; padding: 10px;"><i class="fas fa-robot"></i> CÀI ĐẶT BOT</button>
+                </div>
             </div>
         </div>
-        <div style="margin-top: 1rem; text-align: center;"><a href="../index.php"
-                style="color: var(--primary); text-decoration: none; font-weight: 700; border: 1px solid var(--primary); padding: 0.8rem 2.5rem; border-radius: 50px; transition: 0.3s; display: inline-block;">🏠
-                QUAY LẠI SẢNH</a></div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="../index.php" style="display: inline-block; color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 1.1rem; transition: 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#94a3b8'">
+                🏠 QUAY LẠI TRANG CHỦ
+            </a>
+        </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/confetti.browser.min.js"></script>
+    <!-- Modal Chọn Hạt -->
+    <div class="modal" id="seedModal">
+        <div class="modal-content">
+            <h3 class="modal-title">Gieo Hạt / Bón Phân</h3>
+            <div id="seedList">
+                <div class="seed-btn" onclick="plantSeed('WHEAT')">
+                    <div>🌾 Lúa Mì</div>
+                    <div><b id="modal_seed_wheat">0</b> hạt</div>
+                </div>
+                <div class="seed-btn" onclick="plantSeed('CORN')">
+                    <div>🌽 Ngô</div>
+                    <div><b id="modal_seed_corn">0</b> hạt</div>
+                </div>
+                <div class="seed-btn" onclick="plantSeed('TOMATO')">
+                    <div>🍅 Cà Chua</div>
+                    <div><b id="modal_seed_tomato">0</b> hạt</div>
+                </div>
+                <div class="seed-btn" onclick="plantSeed('APPLE')">
+                    <div>🍎 Táo</div>
+                    <div><b id="modal_seed_apple">0</b> hạt</div>
+                </div>
+                <div class="seed-btn" onclick="plantSeed('WATERMELON')">
+                    <div>🍉 Dưa Hấu</div>
+                    <div><b id="modal_seed_watermelon">0</b> hạt</div>
+                </div>
+                <div class="seed-btn" onclick="plantSeed('STRAWBERRY')">
+                    <div>🍓 Dâu Tây</div>
+                    <div><b id="modal_seed_strawberry">0</b> hạt</div>
+                </div>
+                <div class="seed-btn" onclick="plantSeed('GRAPE')">
+                    <div>🍇 Nho</div>
+                    <div><b id="modal_seed_grape">0</b> hạt</div>
+                </div>
+                <div class="seed-btn" onclick="plantSeed('PEACH')">
+                    <div>🍑 Đào Tiên</div>
+                    <div><b id="modal_seed_peach">0</b> hạt</div>
+                </div>
+                <div class="seed-btn" onclick="plantSeed('CHERRY')">
+                    <div>🍒 Cherry</div>
+                    <div><b id="modal_seed_cherry">0</b> hạt</div>
+                </div>
+                <div class="seed-btn" onclick="plantSeed('LEMON')">
+                    <div>🍋 Chanh</div>
+                    <div><b id="modal_seed_lemon">0</b> hạt</div>
+                </div>
+                <div class="seed-btn" onclick="plantSeed('BANANA')">
+                    <div>🍌 Chuối</div>
+                    <div><b id="modal_seed_banana">0</b> hạt</div>
+                </div>
+                <div class="seed-btn" onclick="plantSeed('KIWI')">
+                    <div>🥝 Kiwi</div>
+                    <div><b id="modal_seed_kiwi">0</b> hạt</div>
+                </div>
+                <div class="seed-btn" onclick="plantSeed('MANGO')">
+                    <div>🥭 Xoài</div>
+                    <div><b id="modal_seed_mango">0</b> hạt</div>
+                </div>
+                <div class="seed-btn" onclick="plantSeed('PINEAPPLE')">
+                    <div>🍍 Dứa</div>
+                    <div><b id="modal_seed_pineapple">0</b> hạt</div>
+                </div>
+                <div class="seed-btn" onclick="plantSeed('COCONUT')">
+                    <div>🥥 Dừa</div>
+                    <div><b id="modal_seed_coconut">0</b> hạt</div>
+                </div>
+                <div class="seed-btn" onclick="plantSeed('MELON')">
+                    <div>🍈 Dưa Lưới</div>
+                    <div><b id="modal_seed_melon">0</b> hạt</div>
+                </div>
+                <div class="seed-btn" onclick="plantSeed('ORANGE')">
+                    <div>🍊 Cam</div>
+                    <div><b id="modal_seed_orange">0</b> hạt</div>
+                </div>
+                <div class="seed-btn" onclick="plantSeed('AVOCADO')">
+                    <div>🥑 Bơ</div>
+                    <div><b id="modal_seed_avocado">0</b> hạt</div>
+                </div>
+                <div class="seed-btn" onclick="plantSeed('PEAR')">
+                    <div>🍐 Lê</div>
+                    <div><b id="modal_seed_pear">0</b> hạt</div>
+                </div>
+                <div class="seed-btn" onclick="plantSeed('POMEGRANATE')">
+                    <div>🍎 Lựu</div>
+                    <div><b id="modal_seed_pomegranate">0</b> hạt</div>
+                </div>
+                <div class="seed-btn" onclick="fertilizePlot()" style="border-color: #f59e0b; grid-column: span 2;">
+                    <div>💩 Bón Phân (-50% TG)</div>
+                    <div><b id="modal_fertilizer">0</b> bao</div>
+                </div>
+            </div>
+            <button class="close-modal" onclick="$('#seedModal').hide()">HỦY BỎ</button>
+        </div>
+    </div>
 
-    <script>
-        let lastFocused = '#bet-1';
-        $(document).ready(function() {
-            $('.bet-input').focus(function() {
-                lastFocused = '#' + $(this).attr('id');
-            });
-        });
-
-        function setBet(amount, event) {
-            $(lastFocused).val(amount);
-            $('.quick-btn').removeClass('active');
-            if (event && event.target) {
-                event.target.classList.add('active');
-            }
-        }
-
-        $('#play-btn').click(function() {
-            const bet1 = parseInt($('#bet-1').val()) || 0;
-            const bet2 = parseInt($('#bet-2').val()) || 0;
-            const bet3 = parseInt($('#bet-3').val()) || 0;
-            const bet4 = parseInt($('#bet-4').val()) || 0;
-            
-            if (bet1 + bet2 + bet3 + bet4 <= 0) {
-                Swal.fire('Lỗi', 'Vui lòng đặt cược', 'warning');
-                return;
-            }
-
-            const btn = $(this);
-            btn.prop('disabled', true).text('ĐANG ĐẾM...');
-            $('#status-text').text('Đang đếm hạt...');
-
-            $.post('?action=play', { bet1: bet1, bet2: bet2, bet3: bet3, bet4: bet4 }, function(res) {
-                if (res.success) {
-                    let beadsHtml = '';
-                    for(let i=0; i<res.beadsCount; i++) {
-                        let delay = Math.random() * 0.5;
-                        beadsHtml += `<div class="bead" style="animation-delay: ${delay}s;"></div>`;
-                    }
-                    $('#beads-container').html(beadsHtml);
-
-                    setTimeout(() => {
-                        $('#balance-val').text(res.money);
-                        let resultColor = res.winAmount > 0 ? '#4ade80' : '#ef4444';
-                        $('#status-text').html(`Kết quả: <span style="color: ${resultColor}; font-size: 2.2rem;">${res.remainder} hạt!</span>`);
-
-                        if (res.winAmount > 0) {
-                            showBanner('THẮNG LỚN! +' + new Intl.NumberFormat().format(res.winAmount) + ' GTLM', 'win');
-                            if (window.GameEffects) window.GameEffects.showWin(res.winAmount);
-                        } else {
-                            showBanner('RẤT TIẾC! BẠN ĐÃ THUA', 'lose');
-                            if (window.GameEffects) window.GameEffects.showLoss(Math.abs(res.winAmount));
-                        }
-                        
-                        loadHistory();
-                        btn.prop('disabled', false).text('MỞ BÁT (COUNT)');
-                    }, 1500);
-                } else {
-                    Swal.fire('Lỗi', res.message, 'error');
-                    btn.prop('disabled', false).text('MỞ BÁT (COUNT)');
-                    $('#status-text').text('Đặt cược và cùng đếm hạt!');
-                }
-            }, 'json').fail(function() {
-                Swal.fire('Lỗi', 'Lỗi kết nối', 'error');
-                btn.prop('disabled', false).text('MỞ BÁT (COUNT)');
-            });
-        });
-
-        function showBanner(msg, type) {
-            const b = document.getElementById('resultBanner');
-            b.className = 'result-banner ' + type + ' show';
-            b.innerHTML = msg;
-            setTimeout(() => { b.classList.remove('show'); }, 3000);
-        }
-
-        function loadHistory() {
-            $.getJSON('fantan.php?action=get_history', function(res) {
-                if(res.success && res.history) {
-                    let html = '';
-                    res.history.forEach(h => {
-                        html += `<tr>
-                            <td>${h.Time}</td>
-                            <td>${parseInt(h.Bet).toLocaleString()}</td>
-                            <td>${h.Result}</td>
-                            <td style="color: ${h.WinAmount > 0 ? '#4ade80' : (h.WinAmount < 0 ? '#ef4444' : '#fff')}">${parseInt(h.WinAmount).toLocaleString()}</td>
-                        </tr>`;
-                    });
-                    $('#history-body').html(html);
-                }
-            });
-        }
-        $(document).ready(loadHistory);
-    </script>
-
-    <?php require_once '../casino_help.php'; ?>
-
-
-
-
-
-
-
-
-
-
-
-
-    <!-- Premium Effects System -->
-    <canvas id="threejs-background"></canvas>
-    <script>
-        (function () {
-            window.themeConfig = {
-                particleCount: <?= $particleCount ?? 800 ?>,
-                particleSize: <?= $particleSize ?? 0.05 ?>,
-                particleColor: '<?= $particleColor ?? "#ffffff" ?>',
-                particleOpacity: <?= $particleOpacity ?? 0.6 ?>,
-                shapeCount: <?= $shapeCount ?? 10 ?>,
-                shapeColors: <?= json_encode($shapeColors ?? ["#667eea", "#764ba2", "#4facfe", "#00f2fe"]) ?>,
-                shapeOpacity: <?= $shapeOpacity ?? 0.3 ?>,
-                bgGradient: <?= json_encode($bgGradient ?? ["#667eea", "#764ba2", "#4facfe"]) ?>
-            };
-            const prefix = (window.location.pathname.includes('/games/') || window.location.pathname.includes('/LiveStream/')) ? '../' : '';
-            const scripts = ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'];
-
-            scripts.forEach(src => {
-                const s = document.createElement('script');
-                s.src = prefix + src;
-                s.async = false;
-                document.head.appendChild(s);
-            });
-        })();
-    </script>
-
+    <script src="../assets/js/game-farm.js"></script>
 
 <!-- AUTO-GENERATED BOT SCRIPT -->
 <script>
 if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
 if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
+$(document).ready(function() {
+    if (typeof fetchFarm === 'function') fetchFarm();
+});
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
 <script src="../assets/js/bot_chat.js"></script>
 <script src="bots/bot_23.js"></script>
 
-<div class="result-banner" id="resultBanner"></div>
 </body>
-
 </html>

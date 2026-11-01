@@ -1,10 +1,12 @@
 /**
- * 🤖 Bot AI Thợ Săn Mìn Thông Minh cho Game Dò Mìn Cổ Điển (ID: 40)
- * - Tự động chơi liên tục 24/7, có Watchdog chống kẹt bot.
- * - Quản lý vốn thông minh (Smart Bankroll): Chọn mức cược 10K, 50K, 100K theo chuỗi thắng/thua.
- * - Chiến thuật dò an toàn: Nhắm mục tiêu mở 2-3 ô an toàn, ưu tiên góc và ô biên.
- * - Tự động chốt lời: Bấm "💰 Rút" khi đạt chỉ tiêu, bảo toàn số dư.
- * - Tương tác chat tự động theo phong cách chuẩn dự án (GTLM, húp, bay màu, ra chiêu...).
+ * 🤖 Bot AI Đoán Số Thông Minh (ID: 41 - Con Số May Mắn)
+ *
+ * THUẬT TOÁN BINARY SEARCH:
+ * - Server luôn trả hint "LỚN HƠN" hoặc "NHỎ HƠN" khi đoán sai.
+ * - Bot thu hẹp khoảng [low, high] theo binary search → tìm ra số đúng tối đa trong 7 lần.
+ * - Khi khoảng cách còn ≤ 10 (gần đúng), bot đoán chính xác midpoint để ăn x2.
+ * - Quản lý vốn thông minh: bet nhỏ khi đang tìm, bet lớn khi tự tin gần đúng.
+ * - Chat theo phong cách dự án GTLM sau mỗi kết quả.
  */
 
 (function () {
@@ -15,209 +17,222 @@
         return;
     }
 
-    BotVirtualCursor.init('Thợ Săn Mìn');
+    BotVirtualCursor.init('Thám Tử Số');
 
+    // ═══════════════════════════════════════════════════════
+    // TRẠNG THÁI BOT
+    // ═══════════════════════════════════════════════════════
     let botIsBusy = false;
-    let targetSafePicks = 3;
-    let winStreak = 0;
-    let lossStreak = 0;
-    let lastChatTime = 0;
     let busyTimer = null;
+
+    // Binary Search state
+    let low = 1;
+    let high = 100;
+    let lastGuess = null;
+    let consecutiveWins = 0;
+    let consecutiveLosses = 0;
+    let lastChatTime = 0;
+    let isNewGame = true; // true khi chưa có hint nào từ server
 
     function setBusy(val) {
         botIsBusy = val;
         if (busyTimer) clearTimeout(busyTimer);
         if (val) {
-            // Watchdog: Tự động giải phóng bot sau 2s nếu animation hoặc mạng bị treo
-            busyTimer = setTimeout(() => {
-                botIsBusy = false;
-            }, 2000);
+            busyTimer = setTimeout(() => { botIsBusy = false; }, 2000);
         }
     }
 
-    const winMessages = [
-        'Húp trọn kim cương rồi anh em ơi, rút sớm cho chắc! 💎',
-        'Lợi nhuận x{MULT} quá êm, chốt lời an toàn! 💰',
-        'Tay khéo quá, né trọn 3 bãi mìn! ✨',
-        'Húp GTLM nhẹ nhàng, bảo toàn mạng là trên hết! 🚀',
-        'Biết đủ là thắng, biết đủ là vui! 😎'
+    function resetSearch() {
+        low = 1;
+        high = 100;
+        lastGuess = null;
+        isNewGame = true;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // PHÂN TÍCH GỢI Ý TỪ SERVER
+    // ═══════════════════════════════════════════════════════
+    function parseHintFromStatus() {
+        const statusEl = document.getElementById('status-msg');
+        if (!statusEl || statusEl.style.display === 'none') return null;
+
+        const txt = (statusEl.textContent || '').toUpperCase();
+
+        if (txt.includes('CHÍNH XÁC') || txt.includes('THẮNG')) {
+            return 'WIN';
+        }
+        if (txt.includes('RẤT GẦN') || txt.includes('CÁCH')) {
+            return 'NEAR_WIN';
+        }
+        if (txt.includes('LỚN HƠN')) {
+            // Số bí mật LỚN HƠN số vừa đoán → low = lastGuess + 1
+            return 'HIGHER';
+        }
+        if (txt.includes('NHỎ HƠN')) {
+            // Số bí mật NHỎ HƠN số vừa đoán → high = lastGuess - 1
+            return 'LOWER';
+        }
+        return null;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // TÍNH SỐ ĐOÁN TIẾP THEO (BINARY SEARCH)
+    // ═══════════════════════════════════════════════════════
+    function computeNextGuess(hint) {
+        if (hint === 'HIGHER' && lastGuess !== null) {
+            low = lastGuess + 1;
+        } else if (hint === 'LOWER' && lastGuess !== null) {
+            high = lastGuess - 1;
+        }
+
+        // Bảo vệ tránh low > high
+        if (low > high) resetSearch();
+
+        return Math.round((low + high) / 2);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // QUẢN LÝ VỐN THÔNG MINH
+    // ═══════════════════════════════════════════════════════
+    function chooseBetAmount(hint) {
+        const rangeSize = high - low + 1;
+        // Khi khoảng hẹp (≤ 15), tự tin bet lớn hơn vì gần đúng
+        if (rangeSize <= 5) return 100000;   // Rất gần, bet 100K
+        if (rangeSize <= 15) return 50000;   // Khá gần, bet 50K
+        if (consecutiveWins >= 3) return 100000; // Chuỗi thắng → bet nhiều hơn
+        return 10000; // Mặc định bet 10K khi đang tìm
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // CHAT
+    // ═══════════════════════════════════════════════════════
+    const winPhrases = [
+        'Thám tử số xuất chiêu! Đoán trúng x10 rồi húp lúa! 🎯',
+        'Binary search ăn GTLM thật, anh em ơi! 💰',
+        'Bot tự học tự đoán, chiến thắng về tay! 🏆',
+        'Số bí mật không qua được tay thám tử! 🔍',
+        'Ăn to rồi anh em, GTLM về ví! 🚀'
     ];
 
-    const loseMessages = [
-        'BÙM! Dẫm trúng mìn rồi anh em ơi! 💣',
-        'Vừa chạm nhẹ đã nổ tung, ván sau né góc này! 💥',
-        'Tạm thời bay màu nhẹ, không sao ván sau phục thù! 😅',
-        'Mìn giấu hiểm thật, ván sau ra chiêu lớn phục thù! 😤'
+    const nearWinPhrases = [
+        'Gần đúng rồi, ăn x2 nhẹ nhàng! 🔥',
+        'Tay nghề cao, sai ít vẫn có thưởng! ✨',
+        'Cách vài số thôi, vẫn húp được rồi! 💎'
     ];
 
-    function sendBotChat(isWin, mult) {
+    const losePhrases = [
+        'Thua nhẹ thôi, binary search sắp ra số đúng! 💪',
+        'Bay màu một tí nhé, ván sau bung lụa! 😅',
+        'Đang thu hẹp phạm vi, sắp tóm được số bí mật! 🔍',
+        'Thua mà không nản, ra chiêu tiếp thôi! 😤'
+    ];
+
+    function sendBotChat(type) {
         const now = Date.now();
-        if (now - lastChatTime < 15000) return;
-        if (Math.random() > 0.5) return;
+        if (now - lastChatTime < 12000) return;
+        if (Math.random() > 0.55) return;
 
-        const list = isWin ? winMessages : loseMessages;
-        let msg = list[Math.floor(Math.random() * list.length)];
-        msg = msg.replace('{MULT}', mult || '1.5');
+        let list;
+        if (type === 'win') list = winPhrases;
+        else if (type === 'near') list = nearWinPhrases;
+        else list = losePhrases;
 
+        const msg = list[Math.floor(Math.random() * list.length)];
         if (typeof BotChat !== 'undefined' && BotChat.send) {
             BotChat.send(40, 'bot_40', msg);
             lastChatTime = now;
         }
     }
 
+    // ═══════════════════════════════════════════════════════
+    // VÒNG LẶP CHÍNH
+    // ═══════════════════════════════════════════════════════
     function playTurn() {
         if (botIsBusy) return;
 
-        // Tự động tắt mọi popup nếu có
-        if (typeof Swal !== 'undefined' && Swal.isVisible && Swal.isVisible()) {
-            try { Swal.close(); } catch (e) { }
-        }
-
-        const btnStart = document.getElementById('btn-start');
-        const btnCashout = document.getElementById('btn-cashout');
+        const btnGuess = document.getElementById('btn-guess');
+        const btnNew = document.getElementById('btn-new');
+        const numInput = document.getElementById('guess-number');
         const betInput = document.getElementById('bet-amount');
 
-        // Đảm bảo ô cược luôn có số hợp lệ
-        if (betInput && (!betInput.value || parseInt(betInput.value) <= 0)) {
-            betInput.value = 10000;
-        }
+        if (!btnGuess || !numInput || !betInput) return;
+        if (btnGuess.disabled) return;
 
-        // Kiểm tra xem ván đang chạy hay đang dừng
-        const isGameActive = btnCashout && $(btnCashout).is(':visible') && btnCashout.style.display !== 'none';
-        const isGameIdle = btnStart && $(btnStart).is(':visible') && btnStart.style.display !== 'none' && !btnStart.disabled && !isGameActive;
+        // GIAI ĐOẠN 1: Đọc hint từ lần đoán trước
+        const hint = parseHintFromStatus();
 
-        // ══════════════════════════════════════════════════════
-        // GIAI ĐOẠN 1: GAME ĐANG DỪNG -> CHỌN CHIP VÀ BẮT ĐẦU VÁN
-        // ══════════════════════════════════════════════════════
-        if (isGameIdle) {
+        if (hint === 'WIN' || hint === 'NEAR_WIN') {
+            // Vừa thắng → reset search để chuẩn bị ván mới
+            if (hint === 'WIN') {
+                sendBotChat('win');
+                consecutiveWins++;
+                consecutiveLosses = 0;
+            } else {
+                sendBotChat('near');
+                consecutiveWins++;
+                consecutiveLosses = 0;
+            }
+            resetSearch();
+
+            // Chờ 600ms rồi bắt đầu ván mới
             setBusy(true);
-
-            // 1. Xác định số ô cần mở an toàn
-            if (winStreak >= 2) {
-                targetSafePicks = Math.random() < 0.6 ? 3 : 4;
-            } else if (lossStreak >= 2) {
-                targetSafePicks = 2; // Thua thì chỉ mở 2 ô là rút ngay
-            } else {
-                targetSafePicks = 3;
-            }
-
-            // 2. Chọn mức cược thông minh
-            let targetChipText = '10K';
-            if (winStreak >= 3) targetChipText = Math.random() < 0.5 ? '100K' : '50K';
-            else if (winStreak >= 1) targetChipText = '50K';
-            else if (lossStreak >= 3) targetChipText = '10K';
-
-            const quickBtns = Array.from(document.querySelectorAll('.btn-quick-bet'));
-            const chipBtn = quickBtns.find(b => (b.innerText || '').trim().toUpperCase() === targetChipText) || quickBtns[0];
-
-            const currentBet = parseInt($('#bet-amount').val()) || 0;
-            const targetVal = targetChipText === '100K' ? 100000 : (targetChipText === '50K' ? 50000 : 10000);
-
-            // Bấm chọn chip cược nếu khác mức hiện tại
-            if (chipBtn && currentBet !== targetVal && Math.random() < 0.7) {
-                BotVirtualCursor.moveToElement($(chipBtn), 0.4, 0, () => {
-                    setTimeout(() => {
-                        BotVirtualCursor.simulateClick(() => {
-                            try { chipBtn.click(); } catch (e) { }
-                            setTimeout(() => {
-                                clickStart(btnStart);
-                            }, 150);
-                        });
-                    }, 80);
-                });
-            } else {
-                clickStart(btnStart);
-            }
+            setTimeout(() => {
+                const statusEl = document.getElementById('status-msg');
+                if (statusEl) statusEl.style.display = 'none';
+                setBusy(false);
+            }, 600);
             return;
         }
 
-        // ══════════════════════════════════════════════════════
-        // GIAI ĐOẠN 2: GAME ĐANG CHẠY -> DÒ MÌN HOẶC RÚT GTLM (CASHOUT)
-        // ══════════════════════════════════════════════════════
-        if (isGameActive) {
-            setBusy(true);
+        if (hint === 'HIGHER' || hint === 'LOWER') {
+            // Áp dụng hint để cập nhật phạm vi
+            if (hint === 'HIGHER') {
+                low = Math.max(low, (lastGuess || 0) + 1);
+            } else {
+                high = Math.min(high, (lastGuess || 101) - 1);
+            }
+            sendBotChat('lose');
+            consecutiveLosses++;
+            consecutiveWins = 0;
+        }
 
-            const revealedCells = document.querySelectorAll('.mine-cell.revealed');
-            const revealedCount = revealedCells.length;
-            const cashoutText = (btnCashout.innerText || '');
-            const matchMult = cashoutText.match(/x([0-9.]+)/);
-            const curMult = matchMult ? matchMult[1] : '1.3';
+        // GIAI ĐOẠN 2: Tính số đoán tiếp theo (không truyền hint vì đã cập nhật ở trên)
+        const nextGuess = computeNextGuess(null);
+        const betAmount = chooseBetAmount(hint);
 
-            // 1. Kiểm tra đã đạt mục tiêu mở ô chưa?
-            if (revealedCount >= targetSafePicks) {
-                // 🎉 ĐÃ ĐẠT MỤC TIÊU -> BẤM NÚT RÚT GTLM
-                BotVirtualCursor.moveToElement($(btnCashout), 0.5, 0, () => {
+        setBusy(true);
+
+        // Bấm chọn số đoán
+        BotVirtualCursor.moveToElement($(numInput), 0.4, 0, () => {
+            setTimeout(() => {
+                BotVirtualCursor.simulateClick(() => {
+                    numInput.value = nextGuess;
+                    lastGuess = nextGuess;
+
+                    // Điền số GTLM cược
+                    betInput.value = betAmount;
+
+                    // Di chuyển tới nút Đoán và bấm
                     setTimeout(() => {
-                        BotVirtualCursor.simulateClick(() => {
-                            try { btnCashout.click(); } catch (e) { }
-                            winStreak++;
-                            lossStreak = 0;
-                            sendBotChat(true, curMult);
-                            setTimeout(() => { setBusy(false); }, 900);
+                        BotVirtualCursor.moveToElement($(btnGuess), 0.45, 0, () => {
+                            setTimeout(() => {
+                                BotVirtualCursor.simulateClick(() => {
+                                    try { btnGuess.click(); } catch (e) { }
+                                    // Chờ server phản hồi
+                                    setTimeout(() => {
+                                        setBusy(false);
+                                    }, 500);
+                                });
+                            }, 100);
                         });
                     }, 120);
                 });
-                return;
-            }
-
-            // 2. Chưa đạt mục tiêu -> CHỌN 1 Ô CHƯA MỞ ĐỂ ĐÀO
-            const unrevealedCells = Array.from(document.querySelectorAll('.mine-cell:not(.revealed):not(.mine)'));
-            if (unrevealedCells.length === 0) {
-                setBusy(false);
-                return;
-            }
-
-            // 🧠 CHIẾN THUẬT: Ưu tiên các góc (0, 4, 20, 24)
-            const cornerIndices = [0, 4, 20, 24];
-            const availableCorners = unrevealedCells.filter(c => cornerIndices.includes(parseInt(c.getAttribute('data-cell'))));
-
-            let chosenCell = null;
-            if (availableCorners.length > 0 && Math.random() < 0.65) {
-                chosenCell = availableCorners[Math.floor(Math.random() * availableCorners.length)];
-            } else {
-                chosenCell = unrevealedCells[Math.floor(Math.random() * unrevealedCells.length)];
-            }
-
-            if (chosenCell) {
-                BotVirtualCursor.moveToElement($(chosenCell), 0.45, 0, () => {
-                    setTimeout(() => {
-                        BotVirtualCursor.simulateClick(() => {
-                            try { chosenCell.click(); } catch (e) { }
-                            setTimeout(() => {
-                                const hitMine = document.querySelectorAll('.mine-cell.mine').length > 0;
-                                if (hitMine) {
-                                    lossStreak++;
-                                    winStreak = 0;
-                                    sendBotChat(false, null);
-                                    setTimeout(() => { setBusy(false); }, 900);
-                                } else {
-                                    setBusy(false);
-                                }
-                            }, 300);
-                        });
-                    }, 100);
-                });
-            } else {
-                setBusy(false);
-            }
-        }
-    }
-
-    function clickStart(btnStart) {
-        BotVirtualCursor.moveToElement($(btnStart), 0.5, 0, () => {
-            setTimeout(() => {
-                BotVirtualCursor.simulateClick(() => {
-                    try { btnStart.click(); } catch (e) { }
-                    setTimeout(() => { setBusy(false); }, 600);
-                });
-            }, 100);
+            }, 80);
         });
     }
 
-    // Khởi động chu trình quét định kỳ mỗi 700ms
-    setInterval(playTurn, 700);
-
-    // Chạy lượt đầu tiên sau 1s
+    // Khởi động - chạy mỗi 900ms
+    setInterval(playTurn, 900);
     setTimeout(playTurn, 1000);
 
 })();

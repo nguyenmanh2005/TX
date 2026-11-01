@@ -1,139 +1,582 @@
 <?php
 session_start();
 
-require '../db_connect.php';
+require '../db_connect.php'; // Load kết nối DB trước khi gọi bot_streamer_helper
 require_once '../game_history_helper.php';
 require_once 'bot_streamer_helper.php';
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_38', 50000000);
 $botUserId = $botUser['Iduser'];
 $_SESSION['Iduser_temp_bot'] = $botUserId;
+
+require_once '../include_css.php';
+include '../load_theme.php';
+if (!isset($botUserId)) {
+    header('Location: ../login.php');
+    exit;
+}
+$userId = $botUserId;
+$stmt = $conn->prepare("SELECT Money, Name FROM users WHERE Iduser = ?");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$user = $stmt->get_result()->fetch_assoc();
+$money = $user['Money'];
+$userName = $user['Name'];
+$stmt->close();
+function getMinesMultiplier($mines, $revealed)
+{
+    if ($revealed <= 0)
+        return 1.0;
+    $total = 25;
+    $safe = $total - $mines;
+    $prob = 1.0;
+    for ($i = 0; $i < $revealed; $i++)
+        $prob *= ($safe - $i) / ($total - $i);
+    return round((1.0 / $prob) * 0.97, 2); // 3% House Edge for premium
+}
+if (isset($_GET['action'])) {
+    header('Content-Type: application/json');
+    $action = $_GET['action'];
+    $response = ['success' => false];
+    if ($action === 'start') {
+        $rawBet = $_POST['bet'] ?? 0;
+        $minesCount = (int)($_POST['mines'] ?? 3);
+        // FIX: Chống Array Injection & Validate
+        if (is_array($rawBet) || !is_numeric($rawBet)) {
+            $response['message'] = "Dữ liệu cược không hợp lệ!";
+            echo json_encode($response); exit;
+        }
+        $bet = (float)$rawBet;
+        $minBet = 1000;
+        if ($bet < $minBet || $minesCount < 1 || $minesCount > 24) {
+            $response['message'] = "Yêu cầu không hợp lệ! Mức cược tối thiểu là " . number_format($minBet) . " gtlm.";
+        } else {
+            $conn->begin_transaction();
+            try {
+                // FIX: Sử dụng Prepared Statement & FOR UPDATE
+                $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+                $stmt->bind_param("i", $userId);
+                $stmt->execute();
+                $userData = $stmt->get_result()->fetch_assoc();
+                if (!$userData || $userData['Money'] < $bet) {
+                    if ($userData && $userData['Money'] < 10000) {
+                        $conn->query("UPDATE users SET Money = 50000000 WHERE Iduser = " . (int)$userId);
+                        $userData['Money'] = 50000000;
+                    } else {
+                        throw new Exception("Không đủ Gtlm!");
+                    }
+                }
+                // Trừ Gtlm an toàn
+                $stmt = $conn->prepare("UPDATE users SET Money = Money - ? WHERE Iduser = ?");
+                $stmt->bind_param("di", $bet, $userId);
+                $stmt->execute();
+                $allTiles = range(0, 24);
+                shuffle($allTiles);
+                $mines = array_slice($allTiles, 0, $minesCount);
+                $_SESSION['mines_game'] = ['bet' => $bet, 'mines' => $mines, 'revealed' => [], 'minesCount' => $minesCount, 'status' => 'active'];
+                $conn->commit();
+                $newMoney = $userData['Money'] - $bet;
+                $response = ['success' => true, 'money' => number_format($newMoney, 0, ',', '.')];
+            } catch (Exception $e) {
+                $conn->rollback();
+                $response['message'] = $e->getMessage();
+            }
+        }
+    } elseif ($action === 'reveal') {
+        $index = (int) ($_POST['index'] ?? -1);
+        if (!isset($_SESSION['mines_game']) || $_SESSION['mines_game']['status'] !== 'active' || $index < 0 || $index > 24) {
+            $response['message'] = "Phiên chơi không hợp lệ!";
+        } else {
+            $game = &$_SESSION['mines_game'];
+            if (in_array($index, $game['mines'])) {
+                $game['status'] = 'lost';
+                $bet = $game['bet'];
+                $resStr = "Lost at tile $index | Mines: " . $game['minesCount'];
+                $his = $conn->prepare("INSERT INTO history_mines (Iduser,Bet,Result,WinAmount,Time) VALUES (?,?,?,?,NOW())");
+                $negBet = -$bet;
+                $his->bind_param("idss", $userId, $bet, $resStr, $negBet);
+                $his->execute();
+                logGameHistoryWithAll($conn, $userId, 'Mines', $bet, 0, false);
+                $response = ['success' => true, 'hit' => true, 'mines' => $game['mines']];
+                unset($_SESSION['mines_game']);
+            } else {
+                if (!in_array($index, $game['revealed']))
+                    $game['revealed'][] = $index;
+                $nextMult = getMinesMultiplier($game['minesCount'], count($game['revealed']));
+                $response = ['success' => true, 'hit' => false, 'multiplier' => $nextMult];
+            }
+        }
+    } elseif ($action === 'cashout') {
+        if (!isset($_SESSION['mines_game']) || $_SESSION['mines_game']['status'] !== 'active') {
+            $response['message'] = "Không có gtlm để rút!";
+        } else {
+            $game = $_SESSION['mines_game'];
+            $revealedCount = count($game['revealed']);
+            if ($revealedCount == 0) {
+                $response['message'] = "Hãy lật ít nhất 1 ô!";
+            } else {
+                $conn->begin_transaction();
+                try {
+                    // Khóa bản ghi user
+                    $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ? FOR UPDATE");
+                    $stmt->bind_param("i", $userId);
+                    $stmt->execute();
+                    $stmt->get_result();
+                    $mult = getMinesMultiplier($game['minesCount'], $revealedCount);
+                    $winAmount = round($game['bet'] * $mult);
+                    $updateStmt = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
+                    $updateStmt->bind_param("di", $winAmount, $userId);
+                    $updateStmt->execute();
+                    $resStr = "Win x$mult | Tiles: $revealedCount";
+                    $profit = $winAmount - $game['bet'];
+                    $his = $conn->prepare("INSERT INTO history_mines (Iduser,Bet,Result,WinAmount,Time) VALUES (?,?,?,?,NOW())");
+                    $his->bind_param("idid", $userId, $game['bet'], $resStr, $profit);
+                    $his->execute();
+                    logGameHistoryWithAll($conn, $userId, 'Mines', $game['bet'], $winAmount, true);
+                    $conn->commit();
+                    $stmt = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
+                    $stmt->bind_param("i", $userId);
+                    $stmt->execute();
+                    $newMoney = $stmt->get_result()->fetch_assoc()['Money'];
+                    $response = [
+                        'success' => true, 
+                        'winAmount' => number_format($winAmount, 0, ',', '.'), 
+                        'money' => number_format($newMoney, 0, ',', '.'), 
+                        'mines' => $game['mines']
+                    ];
+                    unset($_SESSION['mines_game']);
+                } catch (Exception $e) {
+                    $conn->rollback();
+                    $response['message'] = "Lỗi hệ thống quyết toán!";
+                }
+            }
+        }
+    }
+    echo json_encode($response);
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bảo Trì Game | Mega Spin</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Laser Mines Premium - Vegas Royale</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;500;700&display=swap"
+        rel="stylesheet">
+    <?php echo getCSSIncludes(['special_effects' => true]); ?>
     <style>
         :root {
-            --bg: #020617;
-            --panel: rgba(15, 23, 42, 0.85);
-            --primary: #6366f1;
-            --secondary: #a855f7;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --glass-border: rgba(255, 255, 255, 0.1);
+            --primary: #12c2e9;
+            --accent: #f1c40f;
+            --danger: #ff4757;
+            --glass: rgba(255, 255, 255, 0.08);
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            background: var(--bg);
-            background-image: 
-                radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 100% 100%, rgba(168, 85, 247, 0.15) 0%, transparent 50%);
-            color: #f8fafc;
-            font-family: 'Outfit', sans-serif;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            text-align: center;
-            padding: 20px;
+            margin: 0;
+            background:
+                <?= $bgGradientCSS ?>
+            ;
+            background-attachment: fixed;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
             overflow: hidden;
+            cursor: url('../img/chuot.png'), auto !important;
         }
-        .maintenance-box {
-            background: var(--panel);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            border: 2px solid var(--primary);
-            padding: 45px 35px;
-            border-radius: 28px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 35px rgba(99, 102, 241, 0.25);
-            max-width: 580px;
+        .main-container {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .glass-card {
+            background: var(--glass);
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 2rem;
+            padding: 1.5rem;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
+            width: 95%;
+            max-width: 1100px;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 1.5rem;
+            max-height: 92vh;
+            align-self: center;
+        }
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .grid-area {
+            position: relative;
             width: 100%;
-            animation: fadeIn 0.6s ease-out;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(15px); }
-            to { opacity: 1; transform: translateY(0); }
+        .mines-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 1;
         }
-        .maintenance-icon {
-            font-size: 70px;
-            color: var(--warning);
-            margin-bottom: 20px;
-            animation: pulse 2.2s infinite ease-in-out;
-            text-shadow: 0 0 25px rgba(245, 158, 11, 0.5);
+        .tile {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            position: relative;
+            overflow: hidden;
+            transform-style: preserve-3d;
         }
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.08); }
+        .tile:hover:not(.revealed) {
+            transform: translateY(-5px) scale(1.05);
+            background: rgba(18, 194, 233, 0.1);
+            border-color: var(--primary);
+            box-shadow: 0 10px 20px rgba(18, 194, 233, 0.2);
         }
-        .badge-status {
-            display: inline-block;
-            background: rgba(245, 158, 11, 0.15);
-            border: 1px solid var(--warning);
-            color: var(--warning);
-            font-size: 0.8rem;
-            font-weight: 800;
-            padding: 5px 16px;
-            border-radius: 50px;
-            margin-bottom: 15px;
-            letter-spacing: 2px;
+        .tile.revealed {
+            cursor: default;
+            border: none;
+        }
+        .tile.safe {
+            background: linear-gradient(135deg, #12c2e9, #c471ed) !important;
+            box-shadow: 0 0 20px rgba(18, 194, 233, 0.6);
+        }
+        .tile.mine {
+            background: linear-gradient(135deg, #ff4757, #ff6b81) !important;
+            box-shadow: 0 0 20px rgba(255, 71, 87, 0.6);
+        }
+        .input-group {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 0.8rem 1.2rem;
+            border-radius: 1.2rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .input-group label {
+            display: block;
+            font-size: 0.6rem;
             text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 5px;
+            font-weight: 700;
+            letter-spacing: 1px;
         }
-        h1 {
-            margin: 0 0 12px;
-            font-size: 30px;
-            font-weight: 800;
-            background: linear-gradient(135deg, #818cf8, #c084fc);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: -0.5px;
-        }
-        p {
-            font-size: 16px;
-            color: #94a3b8;
-            line-height: 1.65;
-            margin-bottom: 25px;
-        }
-        p b {
-            color: #f8fafc;
+        .input-group input,
+        .input-group select {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.2rem;
+            font-weight: 900;
+            width: 100%;
+            outline: none;
+            font-family: 'Orbitron';
+            color: var(--primary);
         }
         .btn-action {
-            display: inline-block;
-            padding: 10px 28px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            text-decoration: none;
-            border-radius: 50px;
-            font-weight: 700;
-            font-size: 0.95rem;
-            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
-            transition: all 0.3s ease;
+            padding: 1.2rem;
+            border-radius: 1.5rem;
+            border: none;
+            font-weight: 900;
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: 0.3s;
+            text-transform: uppercase;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, var(--primary), #c471ed);
+            color: #fff;
+            box-shadow: 0 10px 30px rgba(18, 194, 233, 0.3);
         }
-        .btn-action:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 30px rgba(99, 102, 241, 0.6);
+        .btn-action:hover:not(:disabled) {
+            transform: translateY(-3px);
+            filter: brightness(1.1);
+        }
+        #cashoutBtn {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            box-shadow: 0 10px 30px rgba(46, 204, 113, 0.3);
+            display: none;
+        }
+        .stat-card {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 0.8rem;
+            border-radius: 1.2rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: center;
+        }
+        .stat-card span {
+            display: block;
+            font-size: 0.6rem;
+            opacity: 0.5;
+            font-weight: 700;
+            margin-bottom: 3px;
+        }
+        .stat-card b {
+            font-size: 1.4rem;
+            font-family: 'Orbitron';
+            color: var(--accent);
+        }
+        .mult-bar {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            width: 100%;
+            max-width: 500px;
+            margin-bottom: 20px;
+            padding: 10px 0;
+            scrollbar-width: none;
+        }
+        .mult-step {
+            min-width: 80px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            text-align: center;
+            font-size: 0.8rem;
+            font-weight: 900;
+            opacity: 0.5;
+            transition: 0.3s;
+        }
+        .mult-step.active {
+            opacity: 1;
+            background: var(--primary);
+            color: #000;
+            transform: scale(1.1);
+            box-shadow: 0 0 15px var(--primary);
+        }
+        .btn-quick-bet {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: url('../img/tay.png'), pointer !important;
+            font-weight: 600;
+            transition: 0.3s;
+            font-size: 0.75rem;
+        }
+        .btn-quick-bet:hover {
+            background: var(--primary);
+            color: #000;
+            border-color: var(--primary);
         }
     </style>
 </head>
 <body>
-    <div class="maintenance-box">
-        <div class="maintenance-icon"><i class="fa-solid fa-screwdriver-wrench"></i></div>
-        <div class="badge-status">🛠️ Kênh Đang Bảo Trì</div>
-        <h1>MEGA SPIN (ID: 38)</h1>
-        <p>Game <b>Mega Spin</b> hiện đang được tạm dừng để bảo trì, tối ưu thuật toán quay số cộng đồng và hoàn thiện tính năng cho Bot Streamer.<br>Xin vui lòng quay lại sau hoặc chọn kênh live khác!</p>
-        <a href="../index.php" class="btn-action">🏠 Về Sảnh Chính</a>
+    <div class="main-container">
+        <div class="glass-card">
+            <div class="sidebar">
+                <div style="margin-bottom: 0.5rem;">
+                    <h1
+                        style="margin:0; font-size: 2.2rem; font-weight: 900; color: var(--primary); font-family: 'Orbitron'; letter-spacing: 2px;">
+                        MINES</h1>
+                    <p style="margin:0; opacity:0.4; font-size: 0.75rem; letter-spacing: 1px;">Cyber Laser Protocol</p>
+                </div>
+                <div class="input-group">
+                    <label>Gtlm cược (gtlm)</label>
+                    <input type="number" id="betAmount" value="10000" min="1000">
+                    <div class="quick-bets" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 10px;">
+                        <button class="btn-quick-bet" onclick="setBet(10000)">10K</button>
+                        <button class="btn-quick-bet" onclick="setBet(50000)">50K</button>
+                        <button class="btn-quick-bet" onclick="setBet(100000)">100K</button>
+                        <button class="btn-quick-bet" onclick="setBet(500000)">500K</button>
+                        <button class="btn-quick-bet" onclick="setBet(1000000)">1M</button>
+                        <button class="btn-quick-bet" onclick="setBet(5000000)">5M</button>
+                        <button class="btn-quick-bet" onclick="setBet('ALLIN')" style="grid-column: span 3; background: var(--primary); color:#000; border:none; font-weight:800;">ALL IN</button>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Số lượng mìn</label>
+                    <select id="minesCount" onchange="updateMultBar()">
+                        <?php for ($i = 1; $i <= 24; $i++)
+                            echo "<option value='$i' " . ($i == 3 ? 'selected' : '') . ">$i Mìn</option>"; ?>
+                    </select>
+                </div>
+                <div class="stat-card">
+                    <span>LỢI NHUẬN TIỀM NĂNG</span>
+                    <div style="display:flex; align-items:baseline; justify-content:center; gap:5px;">
+                        <b id="potentialWin">0</b>
+                        <small style="opacity:0.5; font-weight:900; font-size:0.6rem;">GTLM</small>
+                    </div>
+                </div>
+                <button id="startBtn" class="btn-action" onclick="startGame()">🚀 BẮT ĐẦU DÒ</button>
+                <button id="cashoutBtn" class="btn-action" onclick="cashout()">💰 RÚT (x<span
+                        id="curMult">1.0</span>)</button>
+                <div style="margin-top:auto; padding-top:1rem; border-top:1px solid rgba(255,255,255,0.1);">
+                    <div class="stat-card" style="background:rgba(0,0,0,0.4)">
+                        <span>Số Gtlm HIỆN TẠI</span>
+                        <div style="display:flex; align-items:baseline; justify-content:center; gap:5px;">
+                            <b id="userMoney" style="color:var(--accent)"><?= number_format($money, 0, ',', '.') ?></b>
+                            <small style="opacity:0.5; font-weight:900; font-size:0.6rem;">GTLM</small>
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin-top: 0.8rem;">
+                        <a href="../index.php"
+                            style="color: #fff; text-decoration: none; font-size: 0.75rem; opacity: 0.3;">← Quay về
+                            Dashboard</a>
+                    </div>
+                </div>
+            </div>
+            <div class="grid-area">
+                <div class="mult-bar" id="multBar"></div>
+                <div class="mines-grid" id="minesGrid">
+                    <?php for ($i = 0; $i < 25; $i++): ?>
+                        <div class="tile" data-index="<?= $i ?>" onclick="revealTile(<?= $i ?>)">?</div>
+                    <?php endfor; ?>
+                </div>
+            </div>
+        </div>
     </div>
+    <script>
+        let isGameActive = false, revealedCount = 0;
+        function setBet(amount) {
+            const money = parseFloat($('#userMoney').text().replace(/\./g, ''));
+            if (amount === 'ALLIN') {
+                $('#betAmount').val(money);
+            } else {
+                $('#betAmount').val(amount);
+            }
+        }
+        function getMultJS(mines, revealed) {
+            if (revealed <= 0) return 1.0;
+            let total = 25, safe = total - mines, prob = 1.0;
+            for (let i = 0; i < revealed; i++) prob *= (safe - i) / (total - i);
+            return (1.0 / prob * 0.97).toFixed(2);
+        }
+        function updateMultBar() {
+            const mines = parseInt($('#minesCount').val());
+            const bar = $('#multBar').empty();
+            for (let i = 1; i <= Math.min(10, 25 - mines); i++) {
+                bar.append(`<div class="mult-step" id="step-${i}">${getMultJS(mines, i)}x</div>`);
+            }
+        }
+        updateMultBar();
+        function startGame() {
+            const bet = $('#betAmount').val();
+            const mines = $('#minesCount').val();
+            $.post('?action=start', { bet, mines }, function (res) {
+                if (res.success) {
+                    isGameActive = true; revealedCount = 0;
+                    $('#userMoney').text(res.money);
+                    $('#startBtn').hide(); $('#cashoutBtn').show().prop('disabled', true);
+                    $('#minesCount, #betAmount').prop('disabled', true);
+                    $('.tile').removeClass('revealed safe mine').text('?');
+                    $('.mult-step').removeClass('active');
+                    $('#curMult').text('1.0');
+                    $('#potentialWin').text('0');
+                } else { Swal.fire('Lỗi', res.message, 'error'); }
+            });
+        }
+        function revealTile(idx) {
+            if (!isGameActive) return;
+            const tile = $(`.tile[data-index="${idx}"]`);
+            if (tile.hasClass('revealed')) return;
+            $.post('?action=reveal', { index: idx }, function (res) {
+                if (res.success) {
+                    tile.addClass('revealed');
+                    if (res.hit) {
+                        isGameActive = false;
+                        tile.addClass('mine').html('💣');
+                        showAll(res.mines);
+                        const betAmt = parseInt($('#betAmount').val());
+                        if (window.GameEffects) window.GameEffects.showLoss(betAmt);
+                        setTimeout(() => {
+                            resetUI();
+                        }, 800);
+                    } else {
+                        revealedCount++;
+                        tile.addClass('safe').html('💎');
+                        gsap.from(tile, { scale: 0, duration: 0.4, ease: "back.out(2)" });
+                        $('#curMult').text(res.multiplier);
+                        const win = Math.floor($('#betAmount').val() * res.multiplier);
+                        $('#potentialWin').text(win.toLocaleString('vi-VN'));
+                        $('#cashoutBtn').prop('disabled', false);
+                        $('.mult-step').removeClass('active');
+                        $(`#step-${revealedCount}`).addClass('active');
+                        if (window.GameEffects) window.GameEffects.towerSafe(tile[0]);
+                    }
+                }
+            });
+        }
+        function cashout() {
+            if (!isGameActive || revealedCount === 0) return;
+            $.post('?action=cashout', function (res) {
+                if (res.success) {
+                    isGameActive = false;
+                    $('#userMoney').text(res.money);
+                    showAll(res.mines);
+                    const win = parseInt((res.winAmount + '').replace(/\./g, '')) || 0;
+                    if (window.GameEffects) {
+                        if (revealedCount >= 5) window.GameEffects.showBigWin(win);
+                        else window.GameEffects.showWin(win);
+                    }
+                    resetUI();
+                }
+            });
+        }
+        function showAll(mines) {
+            mines.forEach(m => {
+                const t = $(`.tile[data-index="${m}"]`);
+                if (!t.hasClass('revealed')) t.addClass('mine').html('💣').css('opacity', '0.4');
+            });
+            $('.tile:not(.revealed):not(.mine)').addClass('safe').html('💎').css('opacity', '0.4');
+        }
+        function resetUI() {
+            $('#startBtn').show(); $('#cashoutBtn').hide();
+            $('#minesCount, #betAmount').prop('disabled', false);
+        }
+    </script>
+    <canvas id="threejs-background"></canvas>
+    <script>
+        (function () {
+            window.themeConfig = {
+                particleCount: 600,
+                particleSize: 0.05,
+                particleColor: '#12c2e9',
+                particleOpacity: 0.5,
+                shapeCount: 12,
+                shapeColors: ["#12c2e9", "#c471ed", "#f1c40f"],
+                shapeOpacity: 0.2,
+                bgGradient: ["#000428", "#004e92", "#000000"]
+            };
+            const prefix = '../';
+            ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/game-effects-auto.js'].forEach(src => {
+                const s = document.createElement('script');
+                s.src = prefix + src; s.async = false;
+                document.head.appendChild(s);
+            });
+        })();
+    </script>
 
 <!-- AUTO-GENERATED BOT SCRIPT -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script>
+if (typeof jQuery === "undefined") document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
+if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
+</script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
-<script src="../assets/js/bot_chat.js"></script>
 <script src="bots/bot_38.js?v=<?= time() ?>"></script>
 
 </body>
