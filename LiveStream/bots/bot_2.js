@@ -1,6 +1,33 @@
 if (typeof BotVirtualCursor !== "undefined") {
-    BotVirtualCursor.init("Bot Streamer");
+    BotVirtualCursor.init("Thần Xung Quantum ⚡");
     let botIsBusy = false;
+
+    const CASINO_CHATS = {
+        bet: [
+            "Khởi động lõi xung năng lượng! Ra chiêu điều phối hạt vi mô vào trận địa Quantum! ⚡🔋",
+            "Xung động dao động cực mạnh, vào tiền cửa xung chuẩn chỉnh đón bão GTLM! 🌌💎",
+            "Trận địa hôm nay sóng đẹp, anh em cùng tôi bắt nhịp giao lưu hạt lượng tử nào! 🚀✨",
+            "Cầu đang nhấp nhô, ra chiêu nhẹ nhàng bảo toàn nick chờ thời cơ nổ hũ! 🛡️⚡"
+        ],
+        win: [
+            "HÚP TRỌN XUNG LƯỢNG TỬ! Tiền nổ rực rỡ cộng thẳng vào nick! 🏆⚡🤑",
+            "Đồng bộ hạt thành công! Gáy khét lẹt trận địa Quantum Pulse hôm nay! 👑🔥💰",
+            "Xung chấn đỉnh cao! Lộc lá GTLM về nick ngập tràn anh em ơi! 💎🎉"
+        ],
+        loss: [
+            "Lệch pha dao động làm bay màu tiếng này rồi! Bình tĩnh ra chiêu nạp lại xung! 😅🔄",
+            "Bốc hơi nhẹ, còn thở là còn bẻ cầu lượng tử! Ván sau húp lại gấp đôi! 💪⚡",
+            "Xung nghịch chiều gây biến động nick, ván sau dồn lực phục thù! 🛡️🔥"
+        ]
+    };
+
+    function sendChat(type) {
+        if (typeof BotChat !== 'undefined' && BotChat.send) {
+            const list = CASINO_CHATS[type] || CASINO_CHATS.bet;
+            const msg = list[Math.floor(Math.random() * list.length)];
+            BotChat.send(2, 'Thần Xung Quantum ⚡', msg);
+        }
+    }
 
     // ---- Trạng thái "tâm lý" của bot ----
     let recentResults = []; // true = thắng, false = thua, giữ tối đa 10 ván
@@ -12,8 +39,11 @@ if (typeof BotVirtualCursor !== "undefined") {
         if (!moneyText) return 0;
         const balance = parseInt(moneyText.innerText.replace(/\./g, '')) || 0;
         if (lastBalance !== null && balance !== lastBalance) {
-            recentResults.push(balance > lastBalance);
+            const isWin = balance > lastBalance;
+            recentResults.push(isWin);
             if (recentResults.length > 10) recentResults.shift();
+            if (isWin && Math.random() < 0.6) sendChat('win');
+            else if (!isWin && Math.random() < 0.5) sendChat('loss');
         }
         lastBalance = balance;
         return balance;
@@ -171,7 +201,12 @@ if (typeof BotVirtualCursor !== "undefined") {
             BotVirtualCursor.moveToElement($(targetBtn), 1, 0, () => {
                 setTimeout(() => {
                     BotVirtualCursor.simulateClick(() => {
-                        try { targetBtn.click(); } catch (e) { }
+                        try { 
+                            targetBtn.click(); 
+                            if (targetBtn === playBtn && Math.random() < 0.35) {
+                                sendChat('bet');
+                            }
+                        } catch (e) { }
                         botIsBusy = false;
                     });
                 }, baseDelay + Math.random() * delayRange);

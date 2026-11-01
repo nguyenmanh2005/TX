@@ -6,7 +6,7 @@ require_once __DIR__ . '/../game_history_helper.php';
 require_once __DIR__ . '/bot_streamer_helper.php';
 
 // --- KÊNH ĐANG BẢO TRÌ ---
-die('<div style="color: #fbbf24; text-align: center; font-family: sans-serif; margin-top: 20vh;"><h2><i class="fa fa-wrench"></i> KÊNH LIVE NÀY ĐANG BẢO TRÌ</h2><p>Xin lỗi đạo hữu, kênh này đang được nâng cấp. Vui lòng chọn kênh khác!</p></div>');
+// die('<div style="color: #fbbf24; text-align: center; font-family: sans-serif; margin-top: 20vh;"><h2><i class="fa fa-wrench"></i> KÊNH LIVE NÀY ĐANG BẢO TRÌ</h2><p>Xin lỗi đạo hữu, kênh này đang được nâng cấp. Vui lòng chọn kênh khác!</p></div>');
 
 $botUser = getOrCreateBotStreamerUser($conn, 'bot_19', 50000000);
 $botUserId = $botUser['Iduser'];
@@ -930,6 +930,7 @@ if (typeof jQuery === "undefined") document.write('<script src="https://code.jqu
 if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
+<script src="../assets/js/bot_chat.js"></script>
 <script src="bots/bot_19.js"></script>
 
 </body>

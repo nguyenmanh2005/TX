@@ -410,6 +410,7 @@ if (typeof jQuery === "undefined") document.write('<script src="https://code.jqu
 if (typeof gsap === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
 </script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
+<script src="../assets/js/bot_chat.js"></script>
 <script src="bots/bot_36.js?v=<?= time() ?>"></script>
 <!-- Temporarily disabled ThreeJS auto-init to fix syntax error -->
 <!--

@@ -1014,6 +1014,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'spin_pro') {
 
     <!-- 🤖 THUẬT TOÁN BOT STREAMER 46 CHUYÊN BIỆT -->
     <script src="../assets/js/bot_virtual_cursor.js"></script>
+<script src="../assets/js/bot_chat.js"></script>
     <script src="bots/bot_46.js"></script>
 
 </body>

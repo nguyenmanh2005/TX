@@ -8,7 +8,37 @@ function startBingoBot() {
         return;
     }
 
-    BotVirtualCursor.init("Bot Streamer");
+    BotVirtualCursor.init("Thánh Số Bingo 🎱✨");
+
+    const CASINO_CHATS = {
+        maintenance: [
+            "Bàn Bingo đang bảo trì nâng cấp công nghệ! Anh em nghỉ tay uống nước lát chiến tiếp nhé! 🍵✨",
+            "Đang hiệu chỉnh lồng cầu số học! Chờ giây lát ta lại quẩy banh nóc! 🛠️🎱",
+            "Hệ thống đang chuẩn bị giải thưởng cực khủng, anh em chờ xíu nhé! 💎🌟"
+        ],
+        draw: [
+            "Quay lồng cầu Bingo! Ra chiêu rút quả bóng vàng phát tài! 🎱🌟💎",
+            "Cầu đang nổ giòn giã! Anh em cùng nín thở đếm số nào! 🔮⚡",
+            "Số đẹp xuất hiện rước GTLM về nick nào! Bắn bóng đỉnh cao! 🎯💰"
+        ],
+        win: [
+            "BINGO RỒI ANH EM ƠI! Húp trọn hàng số may mắn ngập tràn nick! 🏆🎉🤑",
+            "Nổ Bingo thẳng hàng! Gáy khét lẹt cả sảnh Bingo hôm nay! 👑🎱💰",
+            "Đỉnh cao săn số! Tiền cộng đầy tài khoản rực rỡ! 💎✨"
+        ],
+        loss: [
+            "Lệch đúng 1 ô nữa là trúng Bingo rồi, bay màu nhẹ! Ván sau phục thù! 😅🔄",
+            "Bốc hơi chút ít lộc, bảng mới này nhất định húp đậm! 💪🎱"
+        ]
+    };
+
+    function sendChat(type) {
+        if (typeof BotChat !== 'undefined' && BotChat.send) {
+            const list = CASINO_CHATS[type] || CASINO_CHATS.draw;
+            const msg = list[Math.floor(Math.random() * list.length)];
+            BotChat.send(12, 'Thánh Số Bingo 🎱✨', msg);
+        }
+    }
 
     // Kiểm tra có đang ở trang bảo trì không (không có chip/btn-draw)
     const isMaintenance = !document.querySelector(".chip") && !document.querySelector("[name='action']");
@@ -21,7 +51,8 @@ function startBingoBot() {
             if (typeof BotVirtualCursor.moveTo === 'function') {
                 BotVirtualCursor.moveTo(x, y);
             }
-            setTimeout(wanderCursor, 3000 + Math.random() * 4000);
+            if (Math.random() < 0.25) sendChat('maintenance');
+            setTimeout(wanderCursor, 8000 + Math.random() * 6000);
         };
         setTimeout(wanderCursor, 2000);
         return;
@@ -84,7 +115,10 @@ function startBingoBot() {
                         if (drawBtn) {
                             BotVirtualCursor.moveToElement($(drawBtn), 0.6, 0, () => {
                                 BotVirtualCursor.simulateClick(() => {
-                                    try { drawBtn.click(); } catch(e) {}
+                                    try { 
+                                        drawBtn.click(); 
+                                        if (Math.random() < 0.35) sendChat('draw');
+                                    } catch(e) {}
                                 });
                             });
                         }

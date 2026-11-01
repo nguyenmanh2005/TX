@@ -1,9 +1,54 @@
 if (typeof BotVirtualCursor !== "undefined") {
-    BotVirtualCursor.init("Bot Streamer");
+    BotVirtualCursor.init("Kỵ Mã Siêu Tốc 🐎🏁");
+    let lastKnownBalance = null;
+
+    const CASINO_CHATS = {
+        race: [
+            "Trường đua rực lửa! Ra chiêu chọn tuấn mã xung phong giật cúp! 🐎🏁🔥",
+            "Ép ga hết cỡ! Khí thế áp đảo đường đua rước bão GTLM! ⚡🏆",
+            "Vào tiền chắc tay, ủng hộ tuấn mã về nhất nào anh em! 🌟💎",
+            "Dàn thú đua vào vị trí xuất phát! Ra chiêu quyết thắng! 🏇🚀"
+        ],
+        racing: [
+            "Bứt tốc ngoạn mục ở khúc cua! Nước rút thần sầu nào! 🐎💨",
+            "Đua căng thẳng từng mét! Tiến lên về đích húp trọn giải thưởng! 😱🏁"
+        ],
+        win: [
+            "HÚP TRỌN GIẢI NHẤT ĐUA THÚ! Tuấn mã cán đích rực rỡ, tiền cộng đầy nick! 🏆🐎🤑",
+            "Chiến thắng vang dội trường đua! Gáy khét lẹt cả sảnh! 👑🔥💰",
+            "Đỉnh cao soi kèo thú đua! GTLM cộng dồn rực rỡ! 💎✨"
+        ],
+        loss: [
+            "Bị ép cua phút chót hụt mất giải nhất, bay màu tiếng này! 😭💔",
+            "Bốc hơi nhẹ, ván sau chọn lại thần mã phục thù! 💪🔄"
+        ]
+    };
+
+    function sendChat(type) {
+        if (typeof BotChat !== 'undefined' && BotChat.send) {
+            const list = CASINO_CHATS[type] || CASINO_CHATS.race;
+            const msg = list[Math.floor(Math.random() * list.length)];
+            BotChat.send(22, 'Kỵ Mã Siêu Tốc 🐎🏁', msg);
+        }
+    }
+
+    function checkBalance() {
+        const el = document.getElementById('userMoney') || document.getElementById('balance');
+        if (!el) return;
+        const curBal = parseInt(el.innerText.replace(/\D/g, '')) || 0;
+        if (lastKnownBalance !== null) {
+            if (curBal > lastKnownBalance) {
+                if (Math.random() < 0.6) sendChat('win');
+            } else if (curBal < lastKnownBalance) {
+                if (Math.random() < 0.5) sendChat('loss');
+            }
+        }
+        lastKnownBalance = curBal;
+    }
 
     function runRacingBot() {
+        checkBalance();
         const raceBtn = document.getElementById('raceBtn');
-        // Nếu nút bị disable hoặc đang đua (raceActive = true) thì đợi
         if (!raceBtn || raceBtn.disabled || (typeof raceActive !== 'undefined' && raceActive)) {
             setTimeout(runRacingBot, 1500);
             return;
@@ -15,8 +60,7 @@ if (typeof BotVirtualCursor !== "undefined") {
             return;
         }
 
-        // 20% cơ hội đổi chiến thuật
-        // Đổi con vật (50% trong số 20%)
+        // 20% cơ hội đổi con vật
         if (Math.random() < 0.50) {
             const animalSelect = document.getElementById('animalSelect');
             if (animalSelect && !animalSelect.disabled) {
@@ -25,7 +69,6 @@ if (typeof BotVirtualCursor !== "undefined") {
                         try {
                             const newAnimal = Math.floor(Math.random() * 8) + 1;
                             animalSelect.value = newAnimal;
-                            // Trigger change event if needed
                             animalSelect.dispatchEvent(new Event('change'));
                         } catch (e) { }
                     });
@@ -41,7 +84,6 @@ if (typeof BotVirtualCursor !== "undefined") {
     function chooseRacingBet() {
         const betBtns = Array.from(document.querySelectorAll('.qbtn')).filter(b => b.id !== 'maxBtn');
         if (betBtns.length > 0) {
-            // Nghiêng về các mức cược thấp và vừa (ưu tiên mảng đầu)
             const maxIdx = Math.min(betBtns.length, 5);
             let targetBet = betBtns[Math.floor(Math.random() * maxIdx)];
 
@@ -60,8 +102,15 @@ if (typeof BotVirtualCursor !== "undefined") {
         if (raceBtn && !raceBtn.disabled) {
             BotVirtualCursor.moveToElement($(raceBtn), 0.4, 0, () => {
                 setTimeout(() => {
-                    BotVirtualCursor.simulateClick(() => { try { raceBtn.click(); } catch (e) { } });
-                    // Đợi cuộc đua bắt đầu và kết thúc (khoảng 8-10 giây)
+                    BotVirtualCursor.simulateClick(() => { 
+                        try { 
+                            raceBtn.click(); 
+                            if (Math.random() < 0.35) sendChat('race');
+                            setTimeout(() => {
+                                if (Math.random() < 0.4) sendChat('racing');
+                            }, 3500);
+                        } catch (e) { } 
+                    });
                     setTimeout(runRacingBot, 8000 + Math.random() * 2000);
                 }, 200);
             });

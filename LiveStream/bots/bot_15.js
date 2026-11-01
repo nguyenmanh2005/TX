@@ -44,6 +44,40 @@
 function startBJBot15() {
     BotVirtualCursor.init("Grand Master ♛♠️🃏");
 
+    const CASINO_CHATS = {
+        bet: [
+            "Grand Master xuất trận! Ra chiêu điều phối phỉnh cược chuẩn Hi-Lo! ♛♠️",
+            "Đếm bài chuyên nghiệp: Chỉ số đang cực nóng, tăng tiền cược đón bão GTLM! ⚡💎",
+            "Trận địa Blackjack Royale đỉnh cao! Ra chiêu chuẩn xác không một vết xước! 🌟👑",
+            "Quản trị vốn tối ưu: Đặt cược chuẩn toán học bảo vệ nick! 🛡️💰"
+        ],
+        hit: [
+            "Điểm số cần tối ưu, rút thêm một lá thăm dò! 🃏⚡",
+            "Kéo thêm lá bài theo đúng bảng Basic Strategy! 💥💪"
+        ],
+        stand: [
+            "Khóa điểm chuẩn! Dằn bài đợi nhà cái quắc theo xác suất! 🛡️✋",
+            "Điểm số lý tưởng, bảo toàn vốn chờ tiền về nick! 💎✨"
+        ],
+        win: [
+            "GRAND MASTER THẮNG TUYỆT ĐỐI! Húp trọn ván bài đỉnh cao! 🏆♛🤑",
+            "Đỉnh cao đếm bài! Gáy khét lẹt cả sòng bạc thượng lưu hôm nay! 👑🔥💰",
+            "Toán học không biết nói dối! GTLM cộng dồn ngập nick! 💎🎉"
+        ],
+        loss: [
+            "Xác suất 5% hy hữu xuất hiện làm bay màu ván này! Bình tĩnh làm lại! 😅💔",
+            "Biến động ngắn hạn làm bốc hơi GTLM, đường dài Grand Master vẫn luôn thắng! 💪🔄"
+        ]
+    };
+
+    function sendChat(type) {
+        if (typeof BotChat !== 'undefined' && BotChat.send) {
+            const list = CASINO_CHATS[type] || CASINO_CHATS.bet;
+            const msg = list[Math.floor(Math.random() * list.length)];
+            BotChat.send(15, 'Grand Master ♛♠️🃏', msg);
+        }
+    }
+
     // ─── BETTING CONFIG ───────────────────────────────────────────
     const BET_UNIT = 50000;  // Đơn vị cơ bản
     const MAX_BET_RATIO = 0.02; // Max 2% balance mỗi ván
@@ -321,9 +355,11 @@ function startBJBot15() {
         if (result === 'WIN') {
             loseStreak = 0; winStreak++;
             sessionProfit += 50000; // ước tính (không biết exact payout ở đây)
+            if (Math.random() < 0.6) sendChat('win');
         } else if (result === 'LOSE') {
             winStreak = 0; loseStreak++;
             sessionProfit -= 50000;
+            if (Math.random() < 0.5) sendChat('loss');
         } else {
             // PUSH: giữ nguyên streak
         }
@@ -380,6 +416,7 @@ function startBJBot15() {
                         phase = 'playing';
                         actionTaken = false;
                         isBusy = false;
+                        if (Math.random() < 0.35) sendChat('bet');
                         // Đếm bài sau khi bài được chia
                         setTimeout(updateCount, 1500);
                     });
@@ -427,6 +464,7 @@ function startBJBot15() {
             } else if (action === 'HIT') {
                 const hitBtn = document.getElementById('hitBtn');
                 safeClick(hitBtn, () => {
+                    if (Math.random() < 0.25) sendChat('hit');
                     // Cập nhật count sau khi nhận bài mới
                     setTimeout(updateCount, 600);
                     actionTaken = false; // cho hit tiếp
@@ -436,6 +474,7 @@ function startBJBot15() {
             } else {
                 const standBtn = document.getElementById('standBtn');
                 safeClick(standBtn, () => {
+                    if (Math.random() < 0.25) sendChat('stand');
                     actionTaken = false;
                     isBusy = false;
                 });

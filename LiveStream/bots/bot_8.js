@@ -7,11 +7,48 @@
 if (typeof BotVirtualCursor !== "undefined") {
     BotVirtualCursor.init("Thần Quay Hũ 🎰💎");
     let botBusy = false;
+    let lastKnownBalance = null;
+
+    const CASINO_CHATS = {
+        spin: [
+            "Kéo cần gạt Neon! Ra chiêu quay hũ săn Jackpot nổ tung màn hình! 🎰✨🔥",
+            "Bảng quay đang nóng rực! Căn đúng nhịp giật hũ rước lộc GTLM về nick! 💎🚀",
+            "Ra chiêu đều tay, hũ Neon 2077 ván này không nổ thì ván sau phải nổ! 🌟💰",
+            "Tập trung cao độ! Cầu may mắn đang đến, húp trọn Jackpot nào anh em! 👑🎰"
+        ],
+        win: [
+            "NỔ HŨ TO RỒI ANH EM ƠI! Húp trọn Jackpot GTLM ngập tràn nick! 🏆🎰🤑",
+            "Dây biểu tượng thẳng hàng! Gáy khét lẹt cả sảnh quay hôm nay! 👑🔥💰",
+            "Tiền nổ tưng bừng! Húp đậm quà tặng vũ trụ slot Neon! 💎🎉"
+        ],
+        loss: [
+            "Lệch mất một biểu tượng, bay màu nhẹ ván quay này! 😅🔄",
+            "Hũ đang tích tụ năng lượng, kiên trì ra chiêu săn cú nổ lịch sử! 💪🎰",
+            "Bay màu vài đồng lẻ không xi nhê, chuẩn bị cho cú nổ Jackpot siêu to! 🛡️⚡"
+        ]
+    };
+
+    function sendChat(type) {
+        if (typeof BotChat !== 'undefined' && BotChat.send) {
+            const list = CASINO_CHATS[type] || CASINO_CHATS.spin;
+            const msg = list[Math.floor(Math.random() * list.length)];
+            BotChat.send(8, 'Thần Quay Hũ 🎰💎', msg);
+        }
+    }
 
     function getBotBalance() {
         const balanceEl = document.getElementById('balance-txt');
         if (!balanceEl) return 50000000;
-        return parseInt(balanceEl.innerText.replace(/\D/g, '')) || 0;
+        const bal = parseInt(balanceEl.innerText.replace(/\D/g, '')) || 0;
+        if (lastKnownBalance !== null) {
+            if (bal > lastKnownBalance + 50000) {
+                if (Math.random() < 0.6) sendChat('win');
+            } else if (bal < lastKnownBalance - 200000) {
+                if (Math.random() < 0.3) sendChat('loss');
+            }
+        }
+        lastKnownBalance = bal;
+        return bal;
     }
 
     function runSlotStreamerBot() {
@@ -85,7 +122,10 @@ if (typeof BotVirtualCursor !== "undefined") {
         setTimeout(() => {
             BotVirtualCursor.moveToElement($(spinBtn), 0.25, 0, () => {
                 BotVirtualCursor.simulateClick(() => {
-                    try { spinBtn.click(); } catch(e){}
+                    try { 
+                        spinBtn.click(); 
+                        if (Math.random() < 0.35) sendChat('spin');
+                    } catch(e){}
                     botBusy = false;
                     setTimeout(runSlotStreamerBot, 600);
                 });

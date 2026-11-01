@@ -1,15 +1,51 @@
 if (typeof BotVirtualCursor !== "undefined") {
-    BotVirtualCursor.init("Bot Streamer");
+    BotVirtualCursor.init("Xạ Thủ Xúc Xắc Craps 🎲");
+
+    const CASINO_CHATS = {
+        bet: [
+            "Đấu trường Craps rực lửa! Ra chiêu lắc cặp xúc xắc định mệnh! 🎲⚡",
+            "Comeout Roll! Tay lắc ma thuật gieo 7 hoặc 11 húp trọn GTLM ngay hiệp 1! 🌟💎",
+            "Vào tiền chắc tay, ném xúc xắc chuẩn từng góc độ! 🎯💰",
+            "Trận địa hôm nay cầu đang thuận, gieo xúc xắc rước lộc về nick! 💎🚀"
+        ],
+        point: [
+            "Đã thiết lập Điểm Point! Tập trung hỏa lực săn xúc xắc trùng điểm húp đậm! 🎲🔥",
+            "Giữ vững tay ném, né số 7 đón trúng điểm Point nào! 🛡️⚡"
+        ],
+        win: [
+            "7 HOẶC 11 RỒI! HÚP TRỌN ĐẤU TRƯỜNG CRAPS! Tiền nhảy ting ting vào nick! 🏆🎲🤑",
+            "Gáy khét lẹt cả sòng Craps hôm nay! Tay lắc đỉnh của chóp! 👑💎💰",
+            "Trúng điểm Point ngoạn mục! Lộc lá GTLM về nick ngập tràn! 🌟🎉"
+        ],
+        loss: [
+            "Craps out rồi, bay màu tiếng lắc này! Không sao, hiệp sau gỡ lại! 😅🔄",
+            "Bốc hơi chút ít GTLM, xốc lại tinh thần ném ván mới! 💪🎲"
+        ]
+    };
+
+    function sendChat(type) {
+        if (typeof BotChat !== 'undefined' && BotChat.send) {
+            const list = CASINO_CHATS[type] || CASINO_CHATS.bet;
+            const msg = list[Math.floor(Math.random() * list.length)];
+            BotChat.send(20, 'Xạ Thủ Xúc Xắc Craps 🎲', msg);
+        }
+    }
 
     function playCraps() {
         // Xóa popup Swal nếu có (thắng/thua/lỗi) để tiếp tục
         const swalConfirm = document.querySelector('.swal2-confirm');
         if (swalConfirm && swalConfirm.offsetParent !== null) {
-            BotVirtualCursor.moveToElement($(swalConfirm), 1, 0, () => {
+            const swalTxt = (document.querySelector('.swal2-title')?.innerText || '').toLowerCase();
+            if (swalTxt.includes('thắng') || swalTxt.includes('win')) {
+                if (Math.random() < 0.6) sendChat('win');
+            } else if (swalTxt.includes('thua') || swalTxt.includes('craps') || swalTxt.includes('lose')) {
+                if (Math.random() < 0.5) sendChat('loss');
+            }
+            BotVirtualCursor.moveToElement($(swalConfirm), 0.5, 0, () => {
                 setTimeout(() => {
                     BotVirtualCursor.simulateClick(() => { try { swalConfirm.click(); } catch (e) { } });
-                    setTimeout(playCraps, 2000);
-                }, 400);
+                    setTimeout(playCraps, 1500);
+                }, 300);
             });
             return;
         }
@@ -27,22 +63,24 @@ if (typeof BotVirtualCursor !== "undefined") {
 
         if (!isPointPhase) {
             // Phase đầu tiên (Comeout), chọn mức cược
-            // Lọc bỏ ALL IN để tránh cháy túi sớm
             const betBtns = Array.from(document.querySelectorAll('.quick-btn')).filter(b => !b.innerText.includes('ALL IN') && b.offsetParent !== null);
             if (betBtns.length > 0) {
-                // Chọn các mức cược từ nhỏ đến vừa, thỉnh thoảng mới cược to
                 const maxIdx = Math.min(betBtns.length, 4);
                 let btn = betBtns[Math.floor(Math.random() * maxIdx)];
 
-                BotVirtualCursor.moveToElement($(btn), 0.5, 0, () => {
+                BotVirtualCursor.moveToElement($(btn), 0.4, 0, () => {
                     setTimeout(() => {
                         BotVirtualCursor.simulateClick(() => { try { btn.click(); } catch (e) { } });
-                        // Chọn cược xong thì nhấn lắc
-                        setTimeout(() => clickRollBtn(rollBtn), 300);
+                        setTimeout(() => {
+                            if (Math.random() < 0.35) sendChat('bet');
+                            clickRollBtn(rollBtn);
+                        }, 300);
                     }, 200);
                 });
                 return;
             }
+        } else {
+            if (Math.random() < 0.25) sendChat('point');
         }
 
         // Phase Point hoặc không tìm thấy nút cược -> Chỉ việc nhấn lắc
@@ -50,11 +88,10 @@ if (typeof BotVirtualCursor !== "undefined") {
     }
 
     function clickRollBtn(btn) {
-        BotVirtualCursor.moveToElement($(btn), 0.5, 0, () => {
+        BotVirtualCursor.moveToElement($(btn), 0.4, 0, () => {
             setTimeout(() => {
                 BotVirtualCursor.simulateClick(() => { try { btn.click(); } catch (e) { } });
-                // Đợi 3.5-4.5s cho hiệu ứng lắc (0.6s) và popup chữ nổi (2.5s) kết thúc
-                setTimeout(playCraps, 3500 + Math.random() * 1000);
+                setTimeout(playCraps, 3200 + Math.random() * 800);
             }, 200);
         });
     }

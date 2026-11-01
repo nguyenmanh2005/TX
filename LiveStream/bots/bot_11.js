@@ -6,7 +6,37 @@ function startBattleRoyaleBot() {
         return;
     }
 
-    BotVirtualCursor.init("Bot Streamer");
+    BotVirtualCursor.init("Chiến Thần Đấu Số 🎯🔥");
+
+    const CASINO_CHATS = {
+        bet: [
+            "Vào bo sinh tồn! Ra chiêu cược {bet} GTLM quyết chiến tới cùng! 🎯🔥",
+            "Đấu trường số rực lửa! Độc cô cầu bại tham chiến gom trọn GTLM! ⚡💪",
+            "Căn nhịp nhảy dù chuẩn xác, vào tiền cửa đẹp đón đầu bão số! 🌟💎",
+            "Chiến thuật sinh tồn tối thượng: Tích tiểu thành đại, hạ gục đối thủ! 🛡️🚀"
+        ],
+        win: [
+            "TOP 1 SINH TỒN RỒI! Húp trọn GTLM của toàn bộ đấu trường! 🏆👑🤑",
+            "Chiến thần số học gáy khét lẹt cả bản đồ! Tiền đầy nick! 💎🎉🔥",
+            "Húp ngập mặt ván giao lưu! Bản lĩnh nhà vô địch sinh tồn! ⚡💰"
+        ],
+        loss: [
+            "Vòng bo khép bất ngờ quá, bay màu tiếng này hơi tiếc! 😅💔",
+            "Bốc hơi chút máu, trận địa sau hồi sinh càn quét gấp đôi! 💪🔄",
+            "Tạm thời về cõi, chỉnh lại giáp và súng ra chiêu ván mới! 🛡️⚡"
+        ]
+    };
+
+    function sendChat(type, replaceObj = {}) {
+        if (typeof BotChat !== 'undefined' && BotChat.send) {
+            const list = CASINO_CHATS[type] || CASINO_CHATS.bet;
+            let msg = list[Math.floor(Math.random() * list.length)];
+            for (let k in replaceObj) {
+                msg = msg.replace(new RegExp(`\\{${k}\\}`, 'g'), replaceObj[k]);
+            }
+            BotChat.send(11, 'Chiến Thần Đấu Số 🎯🔥', msg);
+        }
+    }
 
     // === TRẠNG THÁI NỘI BỘ ===
     let lastBalance = null;        // Số dư lần trước
@@ -65,11 +95,13 @@ function startBattleRoyaleBot() {
             winStreak++;
             lossStreak = 0;
             roundHistory.push('win');
+            if (Math.random() < 0.6) sendChat('win');
             console.log('[Bot BR] ✅ THẮNG! WinStreak:', winStreak);
         } else if (cur < lastBalance) {
             lossStreak++;
             winStreak = 0;
             roundHistory.push('loss');
+            if (Math.random() < 0.5) sendChat('loss');
             console.log('[Bot BR] ❌ THUA! LossStreak:', lossStreak);
         }
 
@@ -115,7 +147,10 @@ function startBattleRoyaleBot() {
                         setTimeout(() => {
                             BotVirtualCursor.moveToElement($(joinBtn), 0.6, 0, () => {
                                 BotVirtualCursor.simulateClick(() => {
-                                    try { joinBtn.click(); } catch(e){}
+                                    try { 
+                                        joinBtn.click(); 
+                                        if (Math.random() < 0.35) sendChat('bet', { bet: betVal.toLocaleString() });
+                                    } catch(e){}
                                 });
                             });
                         }, 800 + Math.random() * 700);

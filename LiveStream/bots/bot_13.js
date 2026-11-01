@@ -22,6 +22,43 @@
 function startBJBot13() {
     BotVirtualCursor.init("Thần Bài Xì Dách ♠️🃏");
 
+    const CASINO_CHATS = {
+        bet: [
+            "Khai cuộc ván giao lưu Xì Dách! Ra chiêu phỉnh {chip} GTLM đọ tài nhà cái! ♠️🃏",
+            "Chia bài nào! Vận đỏ đang lên, quyết tâm bắt trọn Xì Dách 21 điểm! 💎🔥",
+            "Thế trận đang đẹp, vào tiền tự tin chiến thắng giòn giã! 🌟💰",
+            "Tập trung đếm bài, ra chiêu chuẩn xác bảo toàn nick rước lộc! 🛡️♠️"
+        ],
+        hit: [
+            "Điểm còn thấp, rút thêm lá bài quyết định vận mệnh! 🃏⚡",
+            "Kéo thêm một lá nữa! Tự tin không sợ quắc! 💥💪"
+        ],
+        stand: [
+            "Điểm đẹp rồi! Dằn bài khóa điểm chờ nhà cái quắc! 🛡️✋",
+            "Đủ điểm húp rồi, dằn bài chờ lộc lá về nick! 💎✨"
+        ],
+        win: [
+            "HÚP TRỌN VÁN XÌ DÁCH! Điểm số áp đảo nhà cái, GTLM về nick ngập tràn! 🏆♠️🤑",
+            "Xì Dách / 21 điểm hoàn hảo! Gáy khét lẹt cả sòng bạc Hoàng Gia! 👑🔥💰",
+            "Thần bài xuất chiêu chuẩn không cần chỉnh! Tiền đầy nick! 💎🎉"
+        ],
+        loss: [
+            "Rút quá tay bị quắc rồi, bay màu ván giao lưu này! 😭💔",
+            "Nhà cái hên quá, bốc hơi chút ít GTLM, ván sau dằn dơ phục thù! 💪🔄"
+        ]
+    };
+
+    function sendChat(type, replaceObj = {}) {
+        if (typeof BotChat !== 'undefined' && BotChat.send) {
+            const list = CASINO_CHATS[type] || CASINO_CHATS.bet;
+            let msg = list[Math.floor(Math.random() * list.length)];
+            for (let k in replaceObj) {
+                msg = msg.replace(new RegExp(`\\{${k}\\}`, 'g'), replaceObj[k]);
+            }
+            BotChat.send(13, 'Thần Bài Xì Dách ♠️🃏', msg);
+        }
+    }
+
     // ─── CHIP LEVELS ─────────────────────────────────────────────
     const CHIP_VALUES = [10000, 50000, 100000, 500000, 1000000, 5000000];
     let chipIndex = 1;   // Mặc định 50K
@@ -77,10 +114,12 @@ function startBJBot13() {
                 winStreak++; loseStreak = 0;
                 if (winStreak >= 3) chipIndex = Math.min(chipIndex + 1, CHIP_VALUES.length - 1);
                 if (winStreak >= 6) { chipIndex = 1; winStreak = 0; }
+                if (Math.random() < 0.6) sendChat('win');
             } else if (cur < lastBalance) {
                 loseStreak++; winStreak = 0;
                 if (loseStreak === 2) chipIndex = Math.min(chipIndex + 1, Math.floor(CHIP_VALUES.length * 0.6));
                 if (loseStreak >= 4) { chipIndex = Math.max(chipIndex - 1, 0); loseStreak = 0; }
+                if (Math.random() < 0.5) sendChat('loss');
             }
         }
         lastBalance = cur;
@@ -144,6 +183,7 @@ function startBJBot13() {
                     safeClick(startBtn, () => {
                         actionTaken = false;
                         isBusy = false;
+                        if (Math.random() < 0.35) sendChat('bet', { chip: targetVal.toLocaleString() });
                     });
                 }, 600 + Math.random() * 400);
             });
@@ -166,6 +206,7 @@ function startBJBot13() {
             if (doHit) {
                 const hitBtn = document.getElementById('btn-hit');
                 safeClick(hitBtn, () => {
+                    if (Math.random() < 0.25) sendChat('hit');
                     // Sau khi hit, có thể cần hit lại → reset actionTaken
                     setTimeout(() => {
                         actionTaken = false;
@@ -175,6 +216,7 @@ function startBJBot13() {
             } else {
                 const standBtn = document.getElementById('btn-stand');
                 safeClick(standBtn, () => {
+                    if (Math.random() < 0.25) sendChat('stand');
                     actionTaken = false;
                     isBusy = false;
                 });

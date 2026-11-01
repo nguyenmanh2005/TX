@@ -13,6 +13,43 @@ if (typeof BotVirtualCursor !== "undefined") {
     BotVirtualCursor.init("Thần Bài Multiplayer ♠️👑");
     window.botActionLocked = false;
 
+    const CASINO_CHATS = {
+        join: [
+            "Đấu trường Multiplayer nóng bỏng! Vào bàn giao lưu cùng các tay to! ♠️👑",
+            "Ai ngồi cùng bàn đấy? Chuẩn bị tinh thần xem thần bài ra chiêu nhé! 💎🔥",
+            "Bàn đông vui thế này húp GTLM mới sướng! Chúc anh em cùng bàn phát tài! 🌟💰"
+        ],
+        bet: [
+            "Khai cuộc ván bài đối kháng! Ra chiêu chắc tay không ngán nhà cái! ♠️🃏",
+            "Vào tiền tự tin, ván này anh em chúng ta cùng nhau húp trọn! ⚡💎"
+        ],
+        hit: [
+            "Điểm thấp phải kéo thêm! Rút bài quyết đoán! 🃏⚡",
+            "Thêm một lá nữa để chạm mốc 21 điểm hoàn hảo! 💥💪"
+        ],
+        stand: [
+            "Điểm dằn bài quá đẹp! Khóa điểm chờ nhà cái quắc! 🛡️✋",
+            "Đủ điểm húp rồi, nhường lượt cho anh em kéo bài! 💎✨"
+        ],
+        win: [
+            "CẢ BÀN CÙNG HÚP! Thần bài multiplayer dẫn dắt anh em về bờ ngoạn mục! 🏆♠️🤑",
+            "Húp trọn ván giao lưu! Gáy khét lẹt cả phòng live! 👑🔥💰",
+            "Chiến thắng áp đảo! Tiền nhảy ting ting vào nick! 💎🎉"
+        ],
+        loss: [
+            "Nhà cái rút bài ảo quá, bay màu tiếng này cùng anh em! 😅💔",
+            "Bốc hơi chút ít GTLM, ván sau cả bàn cùng nhau phục thù! 💪🔄"
+        ]
+    };
+
+    function sendChat(type) {
+        if (typeof BotChat !== 'undefined' && BotChat.send) {
+            const list = CASINO_CHATS[type] || CASINO_CHATS.bet;
+            const msg = list[Math.floor(Math.random() * list.length)];
+            BotChat.send(16, 'Thần Bài Multiplayer ♠️👑', msg);
+        }
+    }
+
     // ─── BASIC STRATEGY ──────────────────────────────────────────
     const BJStrategy = {
         calcScore(cards) {
@@ -131,7 +168,10 @@ if (typeof BotVirtualCursor !== "undefined") {
                 if (btnVaoBan) {
                     window.botActionLocked = true; // Khoá vì sắp load trang khác
                     BotVirtualCursor.moveToElement($(btnVaoBan), 0.8, 0, () => {
-                        setTimeout(() => { btnVaoBan.click(); }, 600);
+                        setTimeout(() => { 
+                            if (Math.random() < 0.5) sendChat('join');
+                            btnVaoBan.click(); 
+                        }, 600);
                     });
                     return;
                 }
@@ -172,6 +212,7 @@ if (typeof BotVirtualCursor !== "undefined") {
                 const BET_LEVELS = [10000, 50000, 100000, 200000];
                 betInput.value = BET_LEVELS[Math.floor(Math.random() * 2) + 1]; // 50K hoặc 100K
             }
+            if (Math.random() < 0.35) sendChat('bet');
             botClick(btnBet, 1500);
             return;
         }
@@ -198,6 +239,9 @@ if (typeof BotVirtualCursor !== "undefined") {
             } else if (action === 'hit') {
                 targetBtn = btnHit;
             }
+
+            if (targetBtn === btnHit && Math.random() < 0.25) sendChat('hit');
+            else if (targetBtn === btnStand && Math.random() < 0.25) sendChat('stand');
 
             botClick(targetBtn, 1500);
             return;

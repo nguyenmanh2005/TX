@@ -8,6 +8,38 @@ if (typeof BotVirtualCursor !== "undefined") {
     BotVirtualCursor.init("Thần Bài Rồng Hổ 🐯🐉");
     let botRunning = false;
     let matchCount = 0;
+    let lastKnownBalance = null;
+    let lastBetSideName = 'Rồng 🐉';
+
+    const CASINO_CHATS = {
+        bet: [
+            "Thế trận Long Hổ cuộn trào! Ra chiêu đặt trọn niềm tin vào cửa {side}! 🐉🐯⚡",
+            "Cầu bệt đang lộ rõ, dồn hỏa lực vào {side} bắt trọn lộc lá GTLM! 🎯🔥",
+            "Ra chiêu dứt khoát không do dự, quyết đấu trận địa phân định giang sơn! ⚔️💎",
+            "Bắt nhịp cầu chuẩn chỉ, vào tiền cửa {side} húp GTLM nào anh em! 🌟💰"
+        ],
+        win: [
+            "HÚP NGẬP MẶT CỬA {side}! Điểm số áp đảo, GTLM về đầy nick! 🏆🎉💰",
+            "Đoán cầu như thần! Long Hổ hiển linh ăn trọn ván giao lưu này! 👑🐯🐉✨",
+            "Gáy khét lẹt cả sảnh Long Hổ! Tiền cộng rực rỡ vào tài khoản! 💎🤑"
+        ],
+        loss: [
+            "Bị đối phương ép 1 nút, bay màu tiếng này hơi cay! 😅💔",
+            "Tạm thời về cõi một ván, hồi sức ra chiêu bẻ cầu ngay lập tức! 💪🔄",
+            "Lệch một nhịp bài làm bốc hơi GTLM, ván sau tất tay phục thù! 🛡️⚡"
+        ]
+    };
+
+    function sendChat(type, replaceObj = {}) {
+        if (typeof BotChat !== 'undefined' && BotChat.send) {
+            const list = CASINO_CHATS[type] || CASINO_CHATS.bet;
+            let msg = list[Math.floor(Math.random() * list.length)];
+            for (let k in replaceObj) {
+                msg = msg.replace(new RegExp(`\\{${k}\\}`, 'g'), replaceObj[k]);
+            }
+            BotChat.send(5, 'Thần Bài Rồng Hổ 🐯🐉', msg);
+        }
+    }
 
     function runSmartBot5() {
         if (botRunning) return;
@@ -17,6 +49,16 @@ if (typeof BotVirtualCursor !== "undefined") {
         const resetBtn = document.getElementById('reset-btn');
         if (resetSection && resetSection.style.display !== 'none' && resetBtn) {
             botRunning = true;
+            const balanceText = document.getElementById('balance-val');
+            if (balanceText && lastKnownBalance !== null) {
+                const curBal = parseInt(balanceText.innerText.replace(/\./g, '')) || 0;
+                if (curBal > lastKnownBalance) {
+                    if (Math.random() < 0.6) sendChat('win', { side: lastBetSideName });
+                } else if (curBal < lastKnownBalance) {
+                    if (Math.random() < 0.5) sendChat('loss');
+                }
+                lastKnownBalance = curBal;
+            }
             setTimeout(() => {
                 BotVirtualCursor.moveToElement($(resetBtn), 0.3, 0, () => {
                     BotVirtualCursor.simulateClick(() => {
@@ -43,18 +85,21 @@ if (typeof BotVirtualCursor !== "undefined") {
         let balance = 50000000;
         if (balanceText) {
             balance = parseInt(balanceText.innerText.replace(/\./g, '')) || 0;
+            if (lastKnownBalance === null) lastKnownBalance = balance;
         }
 
         // ── LỰA CHỌN CỬA CƯỢC (DRAGON / TIE / TIGER) ──
-        // 48% Rồng, 44% Hổ, 8% Trực diện Hòa (Tie 1:8)
         let mainSide = 'dragon';
         const randSide = Math.random();
         if (randSide < 0.48) {
             mainSide = 'dragon'; // 🐉 Cửa Rồng
+            lastBetSideName = 'Rồng 🐉';
         } else if (randSide < 0.92) {
             mainSide = 'tiger';  // 🐯 Cửa Hổ
+            lastBetSideName = 'Hổ 🐯';
         } else {
             mainSide = 'tie';    // 🤝 Cửa Hòa 1 ăn 8
+            lastBetSideName = 'Hòa 🤝';
         }
 
         // 20% cơ hội chơi chiến thuật cao thủ: Cược chính Rồng/Hổ + Lót thêm cửa Hòa (Tie)
@@ -139,7 +184,10 @@ if (typeof BotVirtualCursor !== "undefined") {
             setTimeout(() => {
                 BotVirtualCursor.moveToElement($(dealBtn), 0.28, 0, () => {
                     BotVirtualCursor.simulateClick(() => {
-                        try { dealBtn.click(); } catch (e) { }
+                        try { 
+                            dealBtn.click(); 
+                            if (Math.random() < 0.4) sendChat('bet', { side: lastBetSideName });
+                        } catch (e) { }
                         botRunning = false;
                         setTimeout(runSmartBot5, 1200);
                     });

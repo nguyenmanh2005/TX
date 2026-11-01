@@ -1,5 +1,45 @@
 if (typeof BotVirtualCursor !== "undefined") {
     BotVirtualCursor.init("Thần Bài Caribbean 👑");
+    let lastKnownBalance = null;
+
+    const CASINO_CHATS = {
+        deal: [
+            "Khai cuộc ván bài Caribbean Stud Poker! Ra chiêu cược Ante săn Thùng Phá Sảnh! 👑♠️",
+            "Chia 5 lá bài nào! Cầu bài đang đỏ, quyết tâm húp trọn ván giao lưu này! 💎🔥",
+            "Bắt đầu ván poker biển Caribbean! Tự tin đọ tay bài cùng nhà cái! 🌟💰"
+        ],
+        call: [
+            "Bài có cửa sáng! Ra chiêu Theo cược (CALL) x2 tiền đè bẹp nhà cái! 🃏⚡",
+            "Thế bài quá nét, không CALL thì có lỗi với bản thân! Húp GTLM nào! 💥💪"
+        ],
+        fold: [
+            "Bài xấu quá, Bỏ bài (FOLD) bảo toàn nick chờ thời cơ! 🛡️✋",
+            "Rút lui chiến thuật, giữ vững nguồn vốn cho tiếng sau! 🍵✨"
+        ],
+        win: [
+            "HÚP TRỌN VÁN POKER CARIBBEAN! Tay bài áp đảo tuyệt đối, tiền cộng đầy nick! 🏆👑🤑",
+            "Gáy khét lẹt cả sảnh Caribbean Poker hôm nay! Chiến thắng giòn giã! 💎🎉🔥",
+            "Nhà cái không đủ điều kiện hoặc bài non! Húp sạch tiền cược! ⚡💰"
+        ],
+        loss: [
+            "Nhà cái mở ra bài to hơn rồi, bay màu tiếng cược này! 😭💔",
+            "Bốc hơi chút ít GTLM, ván sau ra chiêu tất tay phục thù! 💪🔄"
+        ]
+    };
+
+    function sendChat(type) {
+        if (typeof BotChat !== 'undefined' && BotChat.send) {
+            const list = CASINO_CHATS[type] || CASINO_CHATS.deal;
+            const msg = list[Math.floor(Math.random() * list.length)];
+            BotChat.send(17, 'Thần Bài Caribbean 👑', msg);
+        }
+    }
+
+    function readMoney() {
+        const el = document.getElementById('userMoney');
+        if (!el) return 0;
+        return parseInt(el.innerText.replace(/\D/g, '')) || 0;
+    }
 
     function parseCard(c) {
         if (!c) return 0;
@@ -77,6 +117,15 @@ if (typeof BotVirtualCursor !== "undefined") {
 
         // 2. Nhấn VÁN MỚI
         if (isVisible('newBtn')) {
+            const curBal = readMoney();
+            if (lastKnownBalance !== null) {
+                if (curBal > lastKnownBalance) {
+                    if (Math.random() < 0.6) sendChat('win');
+                } else if (curBal < lastKnownBalance) {
+                    if (Math.random() < 0.5) sendChat('loss');
+                }
+            }
+            lastKnownBalance = curBal;
             botClick(document.getElementById('newBtn'), 2000);
             return;
         }
@@ -89,12 +138,20 @@ if (typeof BotVirtualCursor !== "undefined") {
             console.log(`[Bot 17] Đánh giá: Hand=${hand}, DealerUp=${dealer} => Quyết định: ${action.toUpperCase()}`);
             
             // Suy nghĩ 2-4 giây cho Call/Fold
-            if (action === 'call') botClick(document.getElementById('callBtn'), 2000 + Math.random() * 2000);
-            else botClick(document.getElementById('foldBtn'), 2000 + Math.random() * 2000);
+            if (action === 'call') {
+                if (Math.random() < 0.4) sendChat('call');
+                botClick(document.getElementById('callBtn'), 2000 + Math.random() * 2000);
+            } else {
+                if (Math.random() < 0.3) sendChat('fold');
+                botClick(document.getElementById('foldBtn'), 2000 + Math.random() * 2000);
+            }
             return;
         }
 
         if (isVisible('dealBtn')) {
+            if (lastKnownBalance === null) lastKnownBalance = readMoney();
+            if (Math.random() < 0.35) sendChat('deal');
+
             // Xác suất 30% đổi mức cược ngẫu nhiên (tránh click ALL IN)
             const chips = Array.from(document.querySelectorAll('.chip')).filter(c => !c.innerText.includes('MAX') && !c.innerText.includes('ALL'));
             if (chips.length > 0 && Math.random() < 0.3) {

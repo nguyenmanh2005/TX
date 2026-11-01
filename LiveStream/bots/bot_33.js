@@ -1,13 +1,46 @@
 // LiveStream/bots/bot_33.js
 // Kịch bản Bot cho game Keno (ID 33)
+// Tích hợp LiveStream Chat 24/7 theo chuẩn Casino Rule 5.3
 
 if (typeof BotVirtualCursor !== "undefined") {
-    BotVirtualCursor.init("Bot Streamer");
+    BotVirtualCursor.init("Vua Soi Cầu Keno 🔢");
+
+    const CASINO_CHATS = {
+        bet: [
+            "Xổ số Keno siêu tốc! Ra chiêu chọn dàn số vàng đón bão GTLM! 🔢⚡",
+            "Cầu số Keno đang rực sáng, vào tiền tự tin húp trọn ván này! 💎🔥",
+            "Quay lồng cầu 80 số! Anh em cùng nín thở đếm số trúng nào! 🌟💰",
+            "Khóa chặt các con số may mắn, chờ bóng vàng rơi về nick! 🎯🔢"
+        ],
+        win: [
+            "TRÚNG LỚN KENO RỒI! Húp trọn vé số vàng, tiền cộng đầy nick! 🏆🔢🤑",
+            "Đoán trúng cả dàn số! Gáy khét lẹt cả sảnh Keno hôm nay! 👑🔥💰",
+            "Lộc lá Keno đã về! Bão tiền nổ tưng bừng! 💎✨"
+        ],
+        loss: [
+            "Hụt mất vài con số đẹp, bay màu nhẹ ván này! Vé sau phục thù! 😅🔄",
+            "Bốc hơi một chút, xốc lại dàn số ra chiêu tiếng mới! 💪🔢"
+        ]
+    };
+
+    function sendChat(type) {
+        if (typeof BotChat !== 'undefined' && BotChat.send) {
+            const list = CASINO_CHATS[type] || CASINO_CHATS.bet;
+            const msg = list[Math.floor(Math.random() * list.length)];
+            BotChat.send(33, 'Vua Soi Cầu Keno 🔢', msg);
+        }
+    }
 
     async function playKenoRound() {
         // 0. Tắt thông báo SweetAlert nếu có
         const swalBtn = document.querySelector('.swal2-confirm');
         if (swalBtn) {
+            const swalTxt = (document.querySelector('.swal2-title')?.innerText || '').toLowerCase();
+            if (swalTxt.includes('thắng') || swalTxt.includes('win') || swalTxt.includes('trúng')) {
+                if (Math.random() < 0.6) sendChat('win');
+            } else if (swalTxt.includes('thua') || swalTxt.includes('hụt') || swalTxt.includes('trượt')) {
+                if (Math.random() < 0.5) sendChat('loss');
+            }
             BotVirtualCursor.moveToElement($(swalBtn), 0.5, 0, () => {
                 BotVirtualCursor.simulateClick(() => { swalBtn.click(); });
             });
@@ -16,12 +49,11 @@ if (typeof BotVirtualCursor !== "undefined") {
         }
 
         const drawBtn = document.getElementById('drawBtn');
-        // Tránh click lung tung khi bóng đang xổ (nút bị vô hiệu hóa và đang chưa có bảng kết quả)
         if (drawBtn && drawBtn.disabled && document.querySelectorAll('.keno-number.selected').length > 0 && !swalBtn) {
             return; 
         }
 
-        // 1. Đổi vé số? (30% cơ hội bot xóa số cũ để đánh số mới, nếu không sẽ giữ nguyên số cũ như người thật)
+        // 1. Đổi vé số? (30% cơ hội)
         if (Math.random() < 0.3) {
             const selected = Array.from(document.querySelectorAll('.keno-number.selected'));
             for (let num of selected) {
@@ -63,14 +95,17 @@ if (typeof BotVirtualCursor !== "undefined") {
         // 4. Bấm QUAY SỐ
         if (drawBtn && !drawBtn.disabled) {
             BotVirtualCursor.moveToElement($(drawBtn), 0.6, 0, () => {
-                BotVirtualCursor.simulateClick(() => { drawBtn.click(); });
+                BotVirtualCursor.simulateClick(() => { 
+                    drawBtn.click(); 
+                    if (Math.random() < 0.35) sendChat('bet');
+                });
             });
         }
     }
 
     // Vòng lặp hành động chơi game
     function scheduleNextRound() {
-        const waitTime = 4000 + Math.random() * 4000; // Đợi 4-8 giây sau khi ván trước kết thúc
+        const waitTime = 4000 + Math.random() * 4000;
         setTimeout(() => {
             if (Math.random() > 0.1) {
                 playKenoRound().then(() => scheduleNextRound());

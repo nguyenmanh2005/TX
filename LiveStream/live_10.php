@@ -273,6 +273,7 @@ $user = $stmt->get_result()->fetch_assoc();
     </script>
 
     <script src="../assets/js/bot_virtual_cursor.js"></script>
+<script src="../assets/js/bot_chat.js"></script>
     <script src="bots/bot_10.js"></script>
 </body>
 </html>

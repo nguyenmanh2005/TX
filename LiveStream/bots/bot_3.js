@@ -7,11 +7,47 @@
 if (typeof BotVirtualCursor !== "undefined") {
     BotVirtualCursor.init("Phi Công Vũ Trụ 🚀");
     let botBusy = false;
+    let lastKnownBalance = null;
+
+    const CASINO_CHATS = {
+        launch: [
+            "Nạp nhiên liệu cực đại! Ra chiêu cất cánh phi thuyền săn x10 GTLM! 🚀🔥",
+            "Động cơ phản lực đã kích hoạt! Ván giao lưu này quyết tâm đưa phi thuyền lên mây! 🌌💰",
+            "Tất tay chiến tiếng này, anh em thắt dây an toàn bay vào tâm bão lộc lá! 👨‍🚀💎",
+            "Mục tiêu x5 thẳng tiến! Ra chiêu chắc tay không run sợ! ⚡🚀"
+        ],
+        cashout: [
+            "NHẢY DÙ THÀNH CÔNG! Húp trọn {mult} GTLM ngập tràn nick! 🏆🎉🤑",
+            "Chốt hạ đúng đỉnh! Phi công gáy khét cả bầu trời vũ trụ hôm nay! 🚀👑💰",
+            "Ăn non một chút nhưng chắc nick! Lộc lá GTLM về tươi rói! 💎✨"
+        ],
+        crash: [
+            "Nổ động cơ phút chót, bay màu tiếng cất cánh này rồi anh em ơi! 😭💥",
+            "Tên lửa chạm thiên thạch bốc hơi, không sao, phi thuyền mới đã sẵn sàng ra chiêu! 🛡️🚀",
+            "Gãy cánh giữa đường, ván sau tăng tốc bù lỗ gấp đôi! 💪🔥"
+        ]
+    };
+
+    function sendChat(type, replaceObj = {}) {
+        if (typeof BotChat !== 'undefined' && BotChat.send) {
+            const list = CASINO_CHATS[type] || CASINO_CHATS.launch;
+            let msg = list[Math.floor(Math.random() * list.length)];
+            for (let k in replaceObj) {
+                msg = msg.replace(new RegExp(`\\{${k}\\}`, 'g'), replaceObj[k]);
+            }
+            BotChat.send(3, 'Phi Công Vũ Trụ 🚀', msg);
+        }
+    }
 
     function getBotBalance() {
         const moneyEl = document.getElementById('userMoney');
         if (!moneyEl) return 50000000;
-        return parseInt(moneyEl.innerText.replace(/\./g, '')) || 0;
+        const bal = parseInt(moneyEl.innerText.replace(/\./g, '')) || 0;
+        if (lastKnownBalance !== null && bal < lastKnownBalance - 20000) {
+            if (Math.random() < 0.4) sendChat('crash');
+        }
+        lastKnownBalance = bal;
+        return bal;
     }
 
     function runCrashStreamerBot() {
@@ -30,7 +66,10 @@ if (typeof BotVirtualCursor !== "undefined") {
                 botBusy = true;
                 BotVirtualCursor.moveToElement($(cashoutBtn), 0.2, 0, () => {
                     BotVirtualCursor.simulateClick(() => {
-                        try { cashoutBtn.click(); } catch (e) { }
+                        try { 
+                            cashoutBtn.click(); 
+                            sendChat('cashout', { mult: curMult.toFixed(2) + 'x' });
+                        } catch (e) { }
                         botBusy = false;
                         setTimeout(runCrashStreamerBot, 1000);
                     });
@@ -126,7 +165,10 @@ if (typeof BotVirtualCursor !== "undefined") {
         setTimeout(() => {
             BotVirtualCursor.moveToElement($(startBtn), 0.25, 0, () => {
                 BotVirtualCursor.simulateClick(() => {
-                    try { startBtn.click(); } catch (e) { }
+                    try { 
+                        startBtn.click(); 
+                        if (Math.random() < 0.4) sendChat('launch');
+                    } catch (e) { }
                     botBusy = false;
                     setTimeout(runCrashStreamerBot, 500);
                 });

@@ -18,6 +18,39 @@
 function startBot14() {
     BotVirtualCursor.init("Huyền Thoại Xì Dách ♠️🃏");
 
+    const CASINO_CHATS = {
+        bet: [
+            "Huyền thoại tái xuất! Ra chiêu ván giao lưu Xì Dách VIP đỉnh cao! ♠️👑",
+            "Vào tiền tự tin, bắt nhịp chuỗi thắng rực rỡ hôm nay! 💎⚡",
+            "Nhà cái chuẩn bị tinh thần, tiếng này tôi húp trọn vẹn! 🌟🃏💰"
+        ],
+        hit: [
+            "Điểm còn thấp, rút thêm lá bài quyết định vận mệnh! 🃏⚡",
+            "Kéo thêm một lá nữa! Tự tin không sợ quắc! 💥💪"
+        ],
+        stand: [
+            "Điểm chuẩn rồi! Dằn bài khóa điểm chờ nhà cái quắc! 🛡️✋",
+            "Đủ điểm húp rồi, dằn bài chờ lộc lá về nick! 💎✨"
+        ],
+        win: [
+            "HÚP TRỌN VÁN BÀI! Huyền thoại ra tay gạo xay ra cám! 🏆♠️🤑",
+            "Xì Dách bất bại! Tiền cộng vào nick mỏi cả tay anh em ơi! 👑🔥💰",
+            "Gáy khét sảnh VIP! Chiến thắng quá thuyết phục! 💎🎉"
+        ],
+        loss: [
+            "Hơi non tay một nhịp làm bay màu tiếng bạc! Ván sau phục thù! 😭💔",
+            "Tạm thời bốc hơi chút ít GTLM, còn thở là còn gỡ gấp đôi! 💪🔄"
+        ]
+    };
+
+    function sendChat(type) {
+        if (typeof BotChat !== 'undefined' && BotChat.send) {
+            const list = CASINO_CHATS[type] || CASINO_CHATS.bet;
+            const msg = list[Math.floor(Math.random() * list.length)];
+            BotChat.send(14, 'Huyền Thoại Xì Dách ♠️🃏', msg);
+        }
+    }
+
     // ─── ĐỌC TRẠNG THÁI TỪ DOM ───────────────────────────────────
     function getPlayerScore() {
         // <h3>🃏 Bài của bạn (11 điểm):</h3>
@@ -87,10 +120,12 @@ function startBot14() {
             winStreak++; loseStreak = 0;
             if (winStreak >= 3) betIndex = Math.min(betIndex + 1, BET_POOL.length - 1);
             if (winStreak >= 6) { betIndex = 1; winStreak = 0; }
+            if (Math.random() < 0.6) sendChat('win');
         } else if (txt.includes('thua') || txt.includes('chết') || txt.includes('nhà cái') || txt.includes('mất')) {
             loseStreak++; winStreak = 0;
             if (loseStreak === 2) betIndex = Math.min(betIndex + 1, Math.floor(BET_POOL.length * 0.7));
             if (loseStreak >= 4) { betIndex = Math.max(betIndex - 1, 0); loseStreak = 0; }
+            if (Math.random() < 0.5) sendChat('loss');
         }
     }
 
@@ -110,11 +145,13 @@ function startBot14() {
             setTimeout(() => {
                 if (doHit) {
                     clickBtn(hitBtn, () => {
+                        if (Math.random() < 0.25) sendChat('hit');
                         // Form submit → iframe reload → bot tự chạy lại
                         try { hitBtn.closest('form').submit(); } catch (e) { }
                     });
                 } else {
                     clickBtn(standBtn, () => {
+                        if (Math.random() < 0.25) sendChat('stand');
                         try { standBtn.closest('form').submit(); } catch (e) { }
                     });
                 }
@@ -141,6 +178,7 @@ function startBot14() {
                         setTimeout(() => {
                             // 3. Rê chuột đến nút Bắt Đầu và click
                             clickBtn(startBtn, () => {
+                                if (Math.random() < 0.35) sendChat('bet');
                                 try { startBtn.closest('form').submit(); } catch (e) { }
                             });
                         }, 500 + Math.random() * 400);

@@ -1,21 +1,53 @@
 // LiveStream/bots/bot_32.js
 // Kịch bản Bot cho game JoJo Battle (ID 32)
-// Theo rule: Không được nhúng logic bot vào file game (live_32.php), phải tách ra thư mục bot/
+// Tích hợp LiveStream Chat 24/7 theo chuẩn Casino Rule 5.3
 
 if (typeof BotVirtualCursor !== "undefined") {
-    BotVirtualCursor.init("Bot Streamer");
+    BotVirtualCursor.init("Stand Master JoJo 🌟👊");
+
+    const CASINO_CHATS = {
+        bet: [
+            "ORA ORA ORA! Triệu hồi Stand! Ra chiêu quyết đấu đỉnh cao trận địa JoJo! 🌟👊🔥",
+            "Muda Muda! Vào tiền tự tin, Stand của tôi là vô địch thiên hạ! ⚡💎",
+            "Khai mở trận chiến Stand! Ra chiêu bắt trọn bão GTLM! 💥💰",
+            "Sức mạnh Stand thức tỉnh! Trận chiến này tiền phải về đầy nick! 🌟⚡"
+        ],
+        win: [
+            "KONO DIO DA! HÚP TRỌN VÁN ĐẤU JOJO! Điểm số áp đảo, tiền về nick ngập tràn! 🏆🌟🤑",
+            "Stand tối thượng gáy khét lẹt cả vũ trụ! Tiền nổ rực rỡ! 👑🔥💰",
+            "Chiến thắng huy hoàng! ORA ORA quét sạch đối thủ! 💎✨"
+        ],
+        loss: [
+            "Bị đối phương phản đòn phút chót, bay màu ván này! Không sao, hiệp sau ORA ORA phục thù! 😅🔄",
+            "Bốc hơi một chút thể lực, hồi máu ra chiêu lật ngược thế cờ! 💪⚡"
+        ]
+    };
+
+    function sendChat(type) {
+        if (typeof BotChat !== 'undefined' && BotChat.send) {
+            const list = CASINO_CHATS[type] || CASINO_CHATS.bet;
+            const msg = list[Math.floor(Math.random() * list.length)];
+            BotChat.send(32, 'Stand Master JoJo 🌟👊', msg);
+        }
+    }
 
     async function playJojoRound() {
-        if (typeof active !== "undefined" && active) return; // Đang chiến đấu thì không làm gì
+        if (typeof active !== "undefined" && active) return;
 
         // 0. Tắt thông báo SweetAlert nếu có bị kẹt
         const swalBtn = document.querySelector('.swal2-confirm');
         if (swalBtn) {
+            const swalTxt = (document.querySelector('.swal2-title')?.innerText || '').toLowerCase();
+            if (swalTxt.includes('thắng') || swalTxt.includes('win')) {
+                if (Math.random() < 0.6) sendChat('win');
+            } else if (swalTxt.includes('thua') || swalTxt.includes('lose')) {
+                if (Math.random() < 0.5) sendChat('loss');
+            }
             BotVirtualCursor.moveToElement($(swalBtn), 0.5, 0, () => {
                 BotVirtualCursor.simulateClick(() => { swalBtn.click(); });
             });
             await new Promise(r => setTimeout(r, 800));
-            return; // Đợi vòng sau làm tiếp
+            return;
         }
 
         // 1. Nhấn nút Xóa cược cũ
@@ -54,24 +86,24 @@ if (typeof BotVirtualCursor !== "undefined") {
         const btnStart = document.getElementById('btn-duel');
         if (btnStart && !btnStart.disabled) {
             BotVirtualCursor.moveToElement($(btnStart), 0.8, 0, () => {
-                BotVirtualCursor.simulateClick(() => { btnStart.click(); });
+                BotVirtualCursor.simulateClick(() => { 
+                    btnStart.click(); 
+                    if (Math.random() < 0.4) sendChat('bet');
+                });
             });
         }
     }
 
     // Vòng lặp hành động chơi game
     function scheduleNextRound() {
-        // Chờ từ 3 đến 8 giây để chơi tiếp
         const waitTime = 3000 + Math.random() * 5000;
         setTimeout(() => {
             if (typeof active !== "undefined" && !active) {
-                // Đang nhàn rỗi -> chơi luôn (tỉ lệ 90%)
                 if (Math.random() > 0.1) {
                     playJojoRound().then(() => scheduleNextRound());
-                    return; // playJojoRound sẽ quyết định bao lâu thì gọi tiếp
+                    return;
                 }
             }
-            // Nếu bận hoặc skip, thử lại sau 3-5 giây
             scheduleNextRound();
         }, waitTime);
     }

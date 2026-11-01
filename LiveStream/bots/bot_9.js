@@ -7,11 +7,52 @@
 if (typeof BotVirtualCursor !== "undefined") {
     BotVirtualCursor.init("Thần Bài Baccarat 👑👸");
     let botBusy = false;
+    let lastKnownBalance = null;
+    let lastSideChosen = 'Nhà Cái (KING) 👑';
+
+    const CASINO_CHATS = {
+        bet: [
+            "Soi cầu Baccarat cực chuẩn: Ra chiêu quyết đoán vào cửa {side}! 🃏👑✨",
+            "Thế bài Banker/Player đang bệt dài! Chiến cửa {side} húp lộc GTLM! 🎯💎",
+            "Khai cuộc ván giao lưu đỉnh cao! 9 nút thẳng tiến anh em ơi! ⚡💰",
+            "Cầu đang thuận, vào tiền cửa {side} đón lộc phát tài! 🌟🃏"
+        ],
+        win: [
+            "HÚP TRỌN 8-9 NÚT! Tiền cộng vào nick mỏi tay anh em ơi! 🏆🎉🤑",
+            "Thần bài xuất kích chuẩn từng milimet! Gáy khét trận địa Baccarat! 👑🃏💰",
+            "Ăn trọn cửa {side}! Lộc lá GTLM về nick ngập tràn! 💎✨"
+        ],
+        loss: [
+            "Rút lá thứ 3 bị gãy, bay màu ván này tiếc quá! 😭💔",
+            "Không sao, quản trị vốn chuẩn thì bẻ cầu một nhát là hồi sinh ngay! 💪🔄",
+            "Bốc hơi tiếng bạc, ván sau tăng phỉnh bẻ cầu gỡ lại! 🛡️⚡"
+        ]
+    };
+
+    function sendChat(type, replaceObj = {}) {
+        if (typeof BotChat !== 'undefined' && BotChat.send) {
+            const list = CASINO_CHATS[type] || CASINO_CHATS.bet;
+            let msg = list[Math.floor(Math.random() * list.length)];
+            for (let k in replaceObj) {
+                msg = msg.replace(new RegExp(`\\{${k}\\}`, 'g'), replaceObj[k]);
+            }
+            BotChat.send(9, 'Thần Bài Baccarat 👑👸', msg);
+        }
+    }
 
     function getBotBalance() {
         const balanceEl = document.getElementById('userBalance');
         if (!balanceEl) return 50000000;
-        return parseInt(balanceEl.innerText.replace(/\D/g, '')) || 0;
+        const bal = parseInt(balanceEl.innerText.replace(/\D/g, '')) || 0;
+        if (lastKnownBalance !== null) {
+            if (bal > lastKnownBalance + 40000) {
+                if (Math.random() < 0.6) sendChat('win', { side: lastSideChosen });
+            } else if (bal < lastKnownBalance - 50000) {
+                if (Math.random() < 0.4) sendChat('loss');
+            }
+        }
+        lastKnownBalance = bal;
+        return bal;
     }
 
     function runBaccaratStreamerBot() {
@@ -73,10 +114,13 @@ if (typeof BotVirtualCursor !== "undefined") {
         const randBox = Math.random();
         if (randBox < 0.48) {
             targetBox = boxBanker; // 👑 KING (Nhà Cái)
+            lastSideChosen = 'Nhà Cái (KING) 👑';
         } else if (randBox < 0.92) {
             targetBox = boxPlayer; // 👸 QUEEN (Người Chơi)
+            lastSideChosen = 'Người Chơi (QUEEN) 👸';
         } else {
             targetBox = boxTie || boxBanker; // 🤝 DRAW (Hòa 1:8)
+            lastSideChosen = 'HÒA (DRAW 1:8) 🤝';
         }
 
         // BƯỚC 1: Nghỉ 0.8s - 1.2s trước ván mới
@@ -113,7 +157,10 @@ if (typeof BotVirtualCursor !== "undefined") {
         setTimeout(() => {
             BotVirtualCursor.moveToElement($(dealBtn), 0.25, 0, () => {
                 BotVirtualCursor.simulateClick(() => {
-                    try { dealBtn.click(); } catch(e){}
+                    try { 
+                        dealBtn.click(); 
+                        if (Math.random() < 0.4) sendChat('bet', { side: lastSideChosen });
+                    } catch(e){}
                     botBusy = false;
                     setTimeout(runBaccaratStreamerBot, 800);
                 });

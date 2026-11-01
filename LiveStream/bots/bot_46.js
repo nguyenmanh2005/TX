@@ -9,7 +9,37 @@
         return;
     }
 
-    BotVirtualCursor.init("Bot Streamer");
+    BotVirtualCursor.init("Bậc Thầy Cò Quay 🎡💎");
+
+    const CASINO_CHATS = {
+        bet: [
+            "Vòng quay Roulette Hoàng Gia! Ra chiêu điều phối phỉnh cược vào ô đỏ đen chuẩn chỉ! 🎡💎🔥",
+            "Cò quay đang thuận cầu chẵn lẻ, vào tiền tự tin húp trọn ván giao lưu! 🎯⚡",
+            "Bắt trọn góc bàn Roulette! Khóa chặt con số định mệnh rước bão GTLM! 🌟💰",
+            "Ra chiêu chiến lược rải góc xác suất cao bảo vệ nick! 🛡️💎"
+        ],
+        spin: [
+            "Thả bóng xoay tròn! Quả bóng bạc dừng lại ở ô may mắn nào! 🎡⚪✨",
+            "Bóng quay tít mù! Cả sòng nín thở chờ kết quả! 😱⚡"
+        ],
+        win: [
+            "BÓNG RƠI ĐÚNG Ô CƯỢC! HÚP TRỌN VÁN ROULETTE! GTLM cộng dồn ngập nick! 🏆🎡🤑",
+            "Gáy khét lẹt cả sòng Roulette Royal hôm nay! Chiến thắng áp đảo! 👑💎💰",
+            "Thần cò quay hiển linh! Tiền nhảy ting ting vào tài khoản! 💎🎉"
+        ],
+        loss: [
+            "Bóng nảy sang ô bên cạnh, bay màu tiếng này hơi tiếc! 😅🔄",
+            "Bốc hơi nhẹ, còn thở là còn bẻ cầu Roulette! Hiệp sau gỡ lại! 💪🎡"
+        ]
+    };
+
+    function sendChat(type) {
+        if (typeof BotChat !== 'undefined' && BotChat.send) {
+            const list = CASINO_CHATS[type] || CASINO_CHATS.bet;
+            const msg = list[Math.floor(Math.random() * list.length)];
+            BotChat.send(46, 'Bậc Thầy Cò Quay 🎡💎', msg);
+        }
+    }
 
     let botIsBusy = false;
     let roundState = 'idle'; // 'idle' -> 'betting' -> 'spinning' -> 'cooldown'
@@ -27,8 +57,11 @@
     function updatePsychology() {
         const balance = getBalance();
         if (lastBalance !== null && balance !== lastBalance) {
-            recentResults.push(balance > lastBalance);
+            const isWin = balance > lastBalance;
+            recentResults.push(isWin);
             if (recentResults.length > 10) recentResults.shift();
+            if (isWin && Math.random() < 0.6) sendChat('win');
+            else if (!isWin && Math.random() < 0.5) sendChat('loss');
         }
         lastBalance = balance;
         return balance;
@@ -168,6 +201,7 @@
 
             roundState = 'betting';
             currentStep = 0;
+            if (Math.random() < 0.35) sendChat('bet');
         }
 
         if (roundState === 'betting' && plan) {
@@ -223,6 +257,7 @@
                             setTimeout(() => {
                                 BotVirtualCursor.simulateClick(() => {
                                     try { spinBtn.click(); } catch(e) {}
+                                    if (Math.random() < 0.45) sendChat('spin');
                                     roundState = 'spinning';
                                     botIsBusy = false;
                                     plan = null;

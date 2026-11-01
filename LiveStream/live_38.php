@@ -133,6 +133,7 @@ $_SESSION['Iduser_temp_bot'] = $botUserId;
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 <script src="../assets/js/bot_virtual_cursor.js"></script>
+<script src="../assets/js/bot_chat.js"></script>
 <script src="bots/bot_38.js?v=<?= time() ?>"></script>
 
 </body>

@@ -8,6 +8,33 @@ if (typeof BotVirtualCursor !== "undefined") {
     BotVirtualCursor.init("Xạ Thủ Đại Dương 🦈🔫");
     let botBusy = false;
     let lastBulletChangeTime = 0;
+    let lastChatTime = 0;
+
+    const CASINO_CHATS = {
+        shoot: [
+            "Boss Hải Vương xuất hiện! Ra chiêu xả đạn nòng lớn săn hũ đại dương! 🦈🌊⚡",
+            "Đạn pháo đã khóa mục tiêu! Chiến liên thanh quét sạch bầy cá rước GTLM! 🎯🔫💎",
+            "Xạ thủ biển sâu ra chiêu, không con cá to nào thoát được tầm ngắm! 🌊🚀",
+            "Đổi nòng pháo đại bác, quyết tâm húp trọn đàn cá vàng! 👑🔫💰"
+        ],
+        win: [
+            "HÚP TRỌN BOSS RỒNG BIỂN! GTLM nổ văng tung tóe đầy nick! 🏆🦈🤑",
+            "Cá mập vàng quy hàng! Tiền tươi thóc thật về nick rủng rỉnh! 👑💰✨",
+            "Xạ thủ bắn phát nào trúng phát đó! Gáy khét cả vịnh đại dương! 🎯💎🎉"
+        ],
+        loss: [
+            "Cá bơi nhanh quá đạn bay màu một mớ, tăng nòng pháo phục thù! 😅🔫",
+            "Chưa nổ kịp thì cá lặn mất, tập trung hỏa lực săn đợt sóng sau! 💪🌊"
+        ]
+    };
+
+    function sendChat(type) {
+        if (typeof BotChat !== 'undefined' && BotChat.send) {
+            const list = CASINO_CHATS[type] || CASINO_CHATS.shoot;
+            const msg = list[Math.floor(Math.random() * list.length)];
+            BotChat.send(10, 'Xạ Thủ Đại Dương 🦈🔫', msg);
+        }
+    }
 
     function runFishShooterBot() {
         if (botBusy) return;
@@ -19,6 +46,10 @@ if (typeof BotVirtualCursor !== "undefined") {
         }
 
         const now = Date.now();
+        if (now - lastChatTime > 15000 && Math.random() < 0.4) {
+            lastChatTime = now;
+            sendChat(Math.random() < 0.6 ? 'shoot' : 'win');
+        }
 
         // ── 1. ĐỔI CỠ ĐẠN PHÁO (30% cơ hội mỗi 15-30s) ──
         const bulletBtns = Array.from(document.querySelectorAll('.bullet-btn'));
