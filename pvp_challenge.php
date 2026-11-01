@@ -365,6 +365,20 @@ require_once 'load_theme.php';
             <p>Đấu 1-1 với người chơi khác và giành chiến thắng!</p>
         </div>
 
+        <!-- ♟️ Banner Sảnh Cờ Ca-rô Tách Riêng Biệt -->
+        <div style="background: linear-gradient(135deg, rgba(59,130,246,0.25), rgba(29,78,216,0.25)); border: 2px solid #3b82f6; border-radius: 16px; padding: 18px 24px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between; gap: 15px; box-shadow: 0 10px 25px rgba(59,130,246,0.25); flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div style="font-size: 2.5rem;">♟️</div>
+                <div>
+                    <h3 style="margin: 0; color: #60a5fa; font-size: 1.25rem; font-weight: 900;">ĐẤU TRƯỜNG CỜ CA-RÔ PvP ĐÃ TÁCH SẢNH RIÊNG!</h3>
+                    <p style="margin: 4px 0 0 0; color: rgba(255,255,255,0.85); font-size: 0.9rem;">Game đánh liên tục 15x15: Đấu với AI Đại Sư Ca-rô (đánh siêu tốc) hoặc tạo bàn cờ thách đấu.</p>
+                </div>
+            </div>
+            <a href="pvp_caro.php" class="btn" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #fff; font-weight: 900; text-decoration: none; padding: 12px 24px; border-radius: 12px; white-space: nowrap; box-shadow: 0 0 15px rgba(59,130,246,0.5);">
+                VÀO SẢNH CỜ CA-RÔ 👉
+            </a>
+        </div>
+
         <div class="pvp-tabs">
             <button class="pvp-tab active" onclick="switchTab('create')">Tạo Challenge</button>
             <button class="pvp-tab" onclick="switchTab('pending')">Chờ Chấp Nhận</button>
@@ -402,7 +416,6 @@ require_once 'load_theme.php';
                             <option value="dice">Dice (Xúc Xắc)</option>
                             <option value="rps">Rock Paper Scissors (Oẳn Tù Tì)</option>
                             <option value="number">Đoán Số (1-100)</option>
-                            <option value="caro">Cờ Caro (15x15)</option>
                             <option value="poker">Poker (1vs1 - Beta)</option>
                         </select>
                     </div>

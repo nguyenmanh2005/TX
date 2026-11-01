@@ -380,6 +380,59 @@ switch ($action) {
         ]);
         break;
 
+    case 'create_caro_bot':
+        $betAmount = (float) ($_POST['bet_amount'] ?? 10000);
+        if ($betAmount < 1000) $betAmount = 1000;
+
+        // Kiểm tra tiền của người chơi
+        $checkBalance = $conn->prepare("SELECT Money FROM users WHERE Iduser = ?");
+        $checkBalance->bind_param("i", $userId);
+        $checkBalance->execute();
+        $userBalance = $checkBalance->get_result()->fetch_assoc();
+        $checkBalance->close();
+
+        if (!$userBalance || $userBalance['Money'] < $betAmount) {
+            echo json_encode(['success' => false, 'message' => 'Bạn không đủ GTLM để vào trận cờ!']);
+            exit;
+        }
+
+        require_once __DIR__ . '/LiveStream/bot_streamer_helper.php';
+        $botUser = getOrCreateBotStreamerUser($conn, 'bot_66', 50000000);
+        $botId = (int)$botUser['Iduser'];
+
+        $conn->begin_transaction();
+        try {
+            $stmtDeduct = $conn->prepare("UPDATE users SET Money = Money - ? WHERE Iduser = ?");
+            $stmtDeduct->bind_param("di", $betAmount, $userId);
+            $stmtDeduct->execute();
+            $stmtDeduct->close();
+
+            $board = array_fill(0, 15, array_fill(0, 15, 0));
+            $boardJson = json_encode($board);
+            $expiresAt = date('Y-m-d H:i:s', time() + 3600);
+
+            $stmtIns = $conn->prepare("INSERT INTO pvp_challenges 
+                (challenger_id, opponent_id, game_type, bet_amount, status, board_state, current_turn_id, accepted_at, expires_at)
+                VALUES (?, ?, 'caro', ?, 'accepted', ?, ?, NOW(), ?)");
+            $stmtIns->bind_param("iidsis", $userId, $botId, $betAmount, $boardJson, $userId, $expiresAt);
+            $stmtIns->execute();
+            $newChallengeId = $conn->insert_id;
+            $stmtIns->close();
+
+            $conn->commit();
+            echo json_encode([
+                'success' => true,
+                'challenge_id' => $newChallengeId,
+                'message' => 'Đã khởi tạo bàn cờ với Đại Sư Ca-rô!'
+            ]);
+            exit;
+        } catch (Throwable $e) {
+            $conn->rollback();
+            echo json_encode(['success' => false, 'message' => 'Lỗi tạo bàn cờ: ' . $e->getMessage()]);
+            exit;
+        }
+        break;
+
     case 'make_move':
         // Đánh một nước trong Caro
         $challengeId = (int) ($_POST['challenge_id'] ?? 0);
@@ -415,19 +468,19 @@ switch ($action) {
             exit;
         }
 
-        // Thực hiện đánh
+        // Thực hiện đánh của người chơi
         $playerToken = ($userId == $challenge['challenger_id']) ? 1 : 2;
+        $botToken = ($playerToken == 1) ? 2 : 1;
         $board[$row][$col] = $playerToken;
-        $boardJson = json_encode($board);
 
-        // Kiểm tra thắng
+        // Kiểm tra người chơi thắng
         $isWin = checkCaroWin($board, $row, $col, $playerToken);
-        $nextTurnId = ($userId == $challenge['challenger_id']) ? $challenge['opponent_id'] : $challenge['challenger_id'];
+        $opponentId = ($userId == $challenge['challenger_id']) ? (int)$challenge['opponent_id'] : (int)$challenge['challenger_id'];
 
         $conn->begin_transaction();
         try {
             if ($isWin) {
-                // Thắng cuộc
+                // Người chơi thắng
                 $totalBet = $challenge['bet_amount'] * 2;
                 $updateWinner = $conn->prepare("UPDATE users SET Money = Money + ? WHERE Iduser = ?");
                 $updateWinner->bind_param("di", $totalBet, $userId);
@@ -435,31 +488,104 @@ switch ($action) {
                 $updateWinner->close();
 
                 updatePvpStats($conn, $userId, true, $totalBet);
-                updatePvpStats($conn, $nextTurnId, false, $challenge['bet_amount']);
+                updatePvpStats($conn, $opponentId, false, $challenge['bet_amount']);
 
-                $updateResult = $conn->prepare("UPDATE pvp_challenges SET status = 'completed', board_state = ?, result = ?, winner_id = ?, completed_at = NOW() WHERE id = ?");
+                $boardJson = json_encode($board);
                 $resultStr = ($userId == $challenge['challenger_id']) ? 'challenger_win' : 'opponent_win';
+                $updateResult = $conn->prepare("UPDATE pvp_challenges SET status = 'completed', board_state = ?, result = ?, winner_id = ?, completed_at = NOW() WHERE id = ?");
                 $updateResult->bind_param("ssii", $boardJson, $resultStr, $userId, $challengeId);
                 $updateResult->execute();
                 $updateResult->close();
-            } else {
-                // Tiếp tục game
-                $updateMove = $conn->prepare("UPDATE pvp_challenges SET board_state = ?, current_turn_id = ? WHERE id = ?");
-                $updateMove->bind_param("sii", $boardJson, $nextTurnId, $challengeId);
-                $updateMove->execute();
-                $updateMove->close();
+
+                $conn->commit();
+                echo json_encode([
+                    'success' => true,
+                    'is_win' => true,
+                    'winner_id' => $userId,
+                    'board' => $board,
+                    'message' => 'Chúc mừng bạn đã chiến thắng cờ Ca-rô!'
+                ]);
+                exit;
             }
 
-            $conn->commit();
-            echo json_encode([
-                'success' => true,
-                'message' => $isWin ? 'Bạn đã thắng!' : 'Đã đánh thành công!',
-                'is_win' => $isWin,
-                'board' => $board
-            ]);
-        } catch (Exception $e) {
+            // Kiểm tra xem đối thủ có phải là Bot không
+            $stmtOpp = $conn->prepare("SELECT Name FROM users WHERE Iduser = ?");
+            $stmtOpp->bind_param("i", $opponentId);
+            $stmtOpp->execute();
+            $oppUser = $stmtOpp->get_result()->fetch_assoc();
+            $stmtOpp->close();
+
+            $isOppBot = ($oppUser && (strpos($oppUser['Name'], 'bot_') === 0 || strpos($oppUser['Name'], 'Bot') === 0));
+
+            if ($isOppBot) {
+                // AI Bot đánh ngay lập tức (Đánh liên tục không độ trễ)
+                $botMove = getAiCaroMove($board, $botToken, $playerToken);
+                $bRow = $botMove['row'];
+                $bCol = $botMove['col'];
+                $board[$bRow][$bCol] = $botToken;
+
+                $botWin = checkCaroWin($board, $bRow, $bCol, $botToken);
+                $boardJson = json_encode($board);
+
+                if ($botWin) {
+                    updatePvpStats($conn, $userId, false, $challenge['bet_amount']);
+                    updatePvpStats($conn, $opponentId, true, $challenge['bet_amount'] * 2);
+
+                    $resultStr = ($opponentId == $challenge['challenger_id']) ? 'challenger_win' : 'opponent_win';
+                    $updateResult = $conn->prepare("UPDATE pvp_challenges SET status = 'completed', board_state = ?, result = ?, winner_id = ?, completed_at = NOW() WHERE id = ?");
+                    $updateResult->bind_param("ssii", $boardJson, $resultStr, $opponentId, $challengeId);
+                    $updateResult->execute();
+                    $updateResult->close();
+
+                    $conn->commit();
+                    echo json_encode([
+                        'success' => true,
+                        'is_win' => false,
+                        'bot_move' => ['row' => $bRow, 'col' => $bCol],
+                        'bot_win' => true,
+                        'winner_id' => $opponentId,
+                        'board' => $board,
+                        'message' => 'Đại Sư Ca-rô đã khóa thế cờ thắng!'
+                    ]);
+                    exit;
+                } else {
+                    $updateMove = $conn->prepare("UPDATE pvp_challenges SET board_state = ?, current_turn_id = ? WHERE id = ?");
+                    $updateMove->bind_param("sii", $boardJson, $userId, $challengeId);
+                    $updateMove->execute();
+                    $updateMove->close();
+
+                    $conn->commit();
+                    echo json_encode([
+                        'success' => true,
+                        'is_win' => false,
+                        'bot_move' => ['row' => $bRow, 'col' => $bCol],
+                        'bot_win' => false,
+                        'current_turn_id' => $userId,
+                        'board' => $board
+                    ]);
+                    exit;
+                }
+            } else {
+                // Đối thủ người thật -> Chuyển lượt
+                $boardJson = json_encode($board);
+                $updateMove = $conn->prepare("UPDATE pvp_challenges SET board_state = ?, current_turn_id = ? WHERE id = ?");
+                $updateMove->bind_param("sii", $boardJson, $opponentId, $challengeId);
+                $updateMove->execute();
+                $updateMove->close();
+
+                $conn->commit();
+                echo json_encode([
+                    'success' => true,
+                    'is_win' => false,
+                    'current_turn_id' => $opponentId,
+                    'board' => $board
+                ]);
+                exit;
+            }
+        } catch (Throwable $e) {
             $conn->rollback();
             echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()]);
+            exit;
         }
         break;
 
@@ -723,6 +849,125 @@ function checkCaroWin(array $board, int $row, int $col, int $player)
         if ($count >= 5) return true;
     }
     return false;
+}
+
+function countConsecutive(array $board, int $row, int $col, array $dir, int $player): int
+{
+    $count = 1;
+    for ($i = 1; $i < 5; $i++) {
+        $r = $row + $dir[0] * $i;
+        $c = $col + $dir[1] * $i;
+        if ($r >= 0 && $r < 15 && $c >= 0 && $c < 15 && $board[$r][$c] == $player) $count++;
+        else break;
+    }
+    for ($i = 1; $i < 5; $i++) {
+        $r = $row - $dir[0] * $i;
+        $c = $col - $dir[1] * $i;
+        if ($r >= 0 && $r < 15 && $c >= 0 && $c < 15 && $board[$r][$c] == $player) $count++;
+        else break;
+    }
+    return $count;
+}
+
+function countOpenEnds(array $board, int $row, int $col, array $dir, int $player): int
+{
+    $open = 0;
+    for ($i = 1; $i < 5; $i++) {
+        $r = $row + $dir[0] * $i;
+        $c = $col + $dir[1] * $i;
+        if ($r < 0 || $r >= 15 || $c < 0 || $c >= 15 || ($board[$r][$c] != $player && $board[$r][$c] != 0)) break;
+        if ($board[$r][$c] == 0) { $open++; break; }
+    }
+    for ($i = 1; $i < 5; $i++) {
+        $r = $row - $dir[0] * $i;
+        $c = $col - $dir[1] * $i;
+        if ($r < 0 || $r >= 15 || $c < 0 || $c >= 15 || ($board[$r][$c] != $player && $board[$r][$c] != 0)) break;
+        if ($board[$r][$c] == 0) { $open++; break; }
+    }
+    return $open;
+}
+
+function scorePattern(int $consec, int $open, bool $isAttack): int
+{
+    if ($consec >= 5) return 100000;
+    if ($consec === 4) {
+        if ($open === 2) return $isAttack ? 25000 : 18000;
+        if ($open === 1) return $isAttack ? 8000 : 6000;
+    }
+    if ($consec === 3) {
+        if ($open === 2) return $isAttack ? 6000 : 4500;
+        if ($open === 1) return $isAttack ? 1500 : 1000;
+    }
+    if ($consec === 2) {
+        if ($open === 2) return $isAttack ? 500 : 300;
+        if ($open === 1) return $isAttack ? 100 : 50;
+    }
+    return 10;
+}
+
+function getAiCaroMove(array $board, int $botToken = 2, int $playerToken = 1): array
+{
+    $size = 15;
+    $directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+
+    // 1. Kiểm tra nếu Bot có nước thắng ngay
+    for ($r = 0; $r < $size; $r++) {
+        for ($c = 0; $c < $size; $c++) {
+            if ($board[$r][$c] === 0 && checkCaroWin($board, $r, $c, $botToken)) {
+                return ['row' => $r, 'col' => $c];
+            }
+        }
+    }
+    // 2. Chặn nước thắng của Người chơi
+    for ($r = 0; $r < $size; $r++) {
+        for ($c = 0; $c < $size; $c++) {
+            if ($board[$r][$c] === 0 && checkCaroWin($board, $r, $c, $playerToken)) {
+                return ['row' => $r, 'col' => $c];
+            }
+        }
+    }
+
+    $bestScore = -1;
+    $bestMoves = [];
+    $hasPieces = false;
+    $candidates = [];
+
+    for ($r = 0; $r < $size; $r++) {
+        for ($c = 0; $c < $size; $c++) {
+            if ($board[$r][$c] !== 0) {
+                $hasPieces = true;
+                for ($dr = -2; $dr <= 2; $dr++) {
+                    for ($dc = -2; $dc <= 2; $dc++) {
+                        $nr = $r + $dr;
+                        $nc = $c + $dc;
+                        if ($nr >= 0 && $nr < $size && $nc >= 0 && $nc < $size && $board[$nr][$nc] === 0) {
+                            $candidates["{$nr}_{$nc}"] = [$nr, $nc];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (!$hasPieces || empty($candidates)) return ['row' => 7, 'col' => 7];
+
+    foreach ($candidates as $cand) {
+        $r = $cand[0];
+        $c = $cand[1];
+        $score = (14 - (abs($r - 7) + abs($c - 7))) * 2;
+        foreach ($directions as $dir) {
+            $score += scorePattern(countConsecutive($board, $r, $c, $dir, $botToken), countOpenEnds($board, $r, $c, $dir, $botToken), true);
+            $score += scorePattern(countConsecutive($board, $r, $c, $dir, $playerToken), countOpenEnds($board, $r, $c, $dir, $playerToken), false);
+        }
+        if ($score > $bestScore) {
+            $bestScore = $score;
+            $bestMoves = [$cand];
+        } else if ($score === $bestScore) {
+            $bestMoves[] = $cand;
+        }
+    }
+    $chosen = $bestMoves[array_rand($bestMoves)];
+    return ['row' => $chosen[0], 'col' => $chosen[1]];
 }
 
 // Hàm cập nhật stats
