@@ -19,9 +19,12 @@ $userId    = $botUserId;
 $username  = 'bot_61';
 $avatar    = 'https://api.dicebear.com/7.x/avataaars/svg?seed=bot61';
 
-$_SESSION['Iduser'] = $botUserId;
-$_SESSION['Name']   = $username;
-$_SESSION['Avatar'] = $avatar;
+if (!isset($_SESSION['Iduser'])) {
+    $_SESSION['Iduser'] = $botUserId;
+    $_SESSION['Name']   = $username;
+    $_SESSION['Avatar'] = $avatar;
+}
+$_SESSION['Iduser_temp_bot'] = $botUserId;
 
 // Đảm bảo bot luôn dồi dào GTLM để leo tháp mượt mà
 $chk = $conn->query("SELECT Money, Name FROM users WHERE Iduser = $userId");

@@ -14,8 +14,11 @@ require_once __DIR__ . '/../db_connect.php';
 require_once __DIR__ . '/bot_streamer_helper.php';
 
 $userId = (int)$_SESSION['Iduser'];
+$tableId = isset($_GET['id']) ? (int)$_GET['id'] : 1;
+
 // Tương thích ngược: nếu ai truy cập id=66 cũ thì tự động đẩy lên bàn 62
 if ($tableId === 66) $tableId = 62;
+
 // Bàn hợp lệ liên tục từ 1 đến 62 (loại bỏ bàn 19)
 if ($tableId < 1 || $tableId > 62 || $tableId === 19) {
     $tableId = 1;
