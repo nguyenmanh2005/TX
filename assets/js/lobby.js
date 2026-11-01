@@ -15,7 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Filter games
             games.forEach(game => {
-                if (category === 'all' || game.dataset.category === category) {
+                const cats = (game.dataset.category || '').split(/\s+/);
+                if (category === 'all' || cats.includes(category)) {
                     game.style.display = 'block';
                     gsap.fromTo(game, { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.4 });
                 } else {

@@ -3258,6 +3258,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                     <a href="pvp_challenge.php" class="menu-item tooltip" data-tooltip="Thách đấu PvP">
                         <span class="menu-icon">⚔️</span> Đấu PvP
                     </a>
+                    <a href="pvp_caro.php" class="menu-item tooltip" data-tooltip="Cờ Ca-rô PvP 1vs1">
+                        <span class="menu-icon">♟️</span> Cờ Ca-rô
+                    </a>
                     <a href="leaderboard.php" class="menu-item tooltip" data-tooltip="Bảng xếp hạng người chơi">
                         <span class="menu-icon">🏆</span> Xếp Hạng
                     </a>
@@ -3432,15 +3435,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                         onclick="this.select();">
                     <small>✨ Bạn và bạn bè sẽ nhận thưởng coin khi hoàn tất đăng ký qua link này.</small>
 
-                    <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid rgba(102, 126, 234, 0.2);">
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid rgba(102, 126, 234, 0.2); display: flex; gap: 8px;">
                         <a href="pvp_challenge.php"
-                            style="display: block; padding: 12px 20px; background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)); color: white; text-decoration: none; border-radius: var(--border-radius); font-weight: 600; text-align: center; transition: all 0.3s ease; cursor: url('img/tay.png'), url('../img/tay.png'), pointer !important;">
-                            ⚔️ Thách Đấu PvP 1-1
+                            style="flex: 1; display: block; padding: 10px 8px; background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)); color: white; text-decoration: none; border-radius: var(--border-radius); font-weight: 600; text-align: center; transition: all 0.3s ease; cursor: url('img/tay.png'), url('../img/tay.png'), pointer !important; font-size: 13px;">
+                            ⚔️ Đấu PvP 1-1
                         </a>
-                        <small
-                            style="display: block; margin-top: 8px; text-align: center; color: var(--text-dark); opacity: 0.8;">Đấu
-                            1-1 với bạn bè và giành chiến thắng!</small>
+                        <a href="pvp_caro.php"
+                            style="flex: 1; display: block; padding: 10px 8px; background: linear-gradient(135deg, #10b981, #059669); color: white; text-decoration: none; border-radius: var(--border-radius); font-weight: 600; text-align: center; transition: all 0.3s ease; cursor: url('img/tay.png'), url('../img/tay.png'), pointer !important; font-size: 13px;">
+                            ♟️ Cờ Ca-rô
+                        </a>
                     </div>
+                    <small
+                        style="display: block; margin-top: 8px; text-align: center; color: var(--text-dark); opacity: 0.8;">Đấu
+                        trí và so tài trực tiếp cùng cao thủ!</small>
                 </div>
             <?php endif; ?>
             <?php if (defined('UP_EVENT_ACTIVE') && UP_EVENT_ACTIVE): ?>
@@ -3540,6 +3547,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                 <button class="tab-btn" data-category="card">Game Bài</button>
                 <button class="tab-btn" data-category="slots">Slots & Quay Số</button>
                 <button class="tab-btn" data-category="mini">Mini Games</button>
+                <button class="tab-btn" data-category="pvp" style="color: #ef4444; border-color: #ef4444;">⚔️ PvP Đối Kháng</button>
                 <button class="tab-btn" data-category="vip" style="color: #fbbf24; border-color: #fbbf24;">VIP & Tycoon</button>
                 <button class="tab-btn" data-category="social">Sư Đồ & Bang Hội</button>
             </div>
@@ -3814,10 +3822,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                     <span class="game-icon">👊</span>
                     <span class="game-name">Đại Chiến JoJo</span>
                 </a>
-                <a href="games/horserace_pvp.php" class="game-card" data-category="mini">
+                <a href="games/horserace_pvp.php" class="game-card" data-category="mini pvp">
                     <span class="game-badge badge-new">PVP</span>
                     <span class="game-icon">🐎</span>
                     <span class="game-name">Đua Ngựa PVP</span>
+                </a>
+                <a href="pvp_caro.php" class="game-card" data-category="mini pvp">
+                    <span class="game-badge badge-hot" style="background: linear-gradient(135deg, #10b981, #059669); color: #fff;">1VS1</span>
+                    <span class="game-icon">♟️</span>
+                    <span class="game-name">Cờ Ca-rô PvP</span>
+                </a>
+                <a href="pvp_challenge.php" class="game-card" data-category="mini pvp">
+                    <span class="game-badge badge-new" style="background: linear-gradient(135deg, #ef4444, #f59e0b); color: #fff;">ARENA</span>
+                    <span class="game-icon">⚔️</span>
+                    <span class="game-name">Đấu Trường PvP</span>
                 </a>
                 <a href="guild_pro.php" class="game-card" data-category="mini">
                     <span class="game-badge badge-hot">Hot</span>
@@ -4043,6 +4061,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                 <span class="quick-link-icon">⚔️</span>
                 <div class="quick-link-title">Thách Đấu PvP</div>
                 <div class="quick-link-desc">Đấu 1-1 với người chơi khác và giành chiến thắng</div>
+            </a>
+            <a href="pvp_caro.php" class="quick-link-card" style="border-left: 4px solid #10b981;">
+                <span class="quick-link-icon">♟️</span>
+                <div class="quick-link-title">Cờ Ca-rô PvP</div>
+                <div class="quick-link-desc">Đấu trí 15x15 đỉnh cao, chiến liên tục với AI thần tốc hoặc 1vs1</div>
             </a>
         </div>
     </div>

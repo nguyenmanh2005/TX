@@ -964,6 +964,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                     <button class="tab-btn" data-category="card">🃏 Game Bài</button>
                     <button class="tab-btn" data-category="slots">🎰 Slots & Xổ Số</button>
                     <button class="tab-btn" data-category="mini">🎯 Mini Games</button>
+                    <button class="tab-btn" data-category="pvp" style="color: #ef4444; border-color: #ef4444;">⚔️ PvP Đối Kháng</button>
                     <button class="tab-btn" data-category="social">🤝 Bang Hội & Social</button>
                 </div>
 
@@ -1157,10 +1158,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                         <span class="icon">👊</span>
                         <span class="name">Đại Chiến JoJo</span>
                     </a>
-                    <a href="games/horserace_pvp.php" class="game-card-v3" data-category="mini">
+                    <a href="games/horserace_pvp.php" class="game-card-v3" data-category="mini pvp">
                         <span class="game-badge-v3" style="background:#ef4444;">PVP</span>
                         <span class="icon">🐎</span>
                         <span class="name">Đua Ngựa PVP</span>
+                    </a>
+                    <a href="pvp_caro.php" class="game-card-v3" data-category="mini pvp">
+                        <span class="game-badge-v3" style="background:linear-gradient(135deg, #10b981, #059669); color: #fff;">1VS1</span>
+                        <span class="icon">♟️</span>
+                        <span class="name">Cờ Ca-rô PvP</span>
+                    </a>
+                    <a href="pvp_challenge.php" class="game-card-v3" data-category="mini pvp">
+                        <span class="game-badge-v3" style="background:linear-gradient(135deg, #ef4444, #f59e0b); color: #fff;">ARENA</span>
+                        <span class="icon">⚔️</span>
+                        <span class="name">Đấu Trường PvP</span>
                     </a>
 
                     <!-- Social & Guilds -->
@@ -1297,7 +1308,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const targetCategory = btn.getAttribute('data-category');
             gameCards.forEach(card => {
-                if (targetCategory === 'all' || card.getAttribute('data-category') === targetCategory) {
+                const cardCat = (card.getAttribute('data-category') || '').split(/\s+/);
+                if (targetCategory === 'all' || cardCat.includes(targetCategory)) {
                     card.style.display = 'flex';
                 } else {
                     card.style.display = 'none';
