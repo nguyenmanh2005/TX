@@ -3547,12 +3547,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                 <button class="tab-btn" data-category="card">Game Bài</button>
                 <button class="tab-btn" data-category="slots">Slots & Quay Số</button>
                 <button class="tab-btn" data-category="mini">Mini Games</button>
-                <button class="tab-btn" data-category="pvp" style="color: #ef4444; border-color: #ef4444;">⚔️ PvP Đối Kháng</button>
                 <button class="tab-btn" data-category="vip" style="color: #fbbf24; border-color: #fbbf24;">VIP & Tycoon</button>
                 <button class="tab-btn" data-category="social">Sư Đồ & Bang Hội</button>
             </div>
 
             <div class="game-grid-modern">
+                <!-- Cờ Ca-rô PvP Đỉnh Cao -->
+                <a href="pvp_caro.php" class="game-card" data-category="mini" style="border: 2px solid #10b981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.35);">
+                    <span class="game-badge badge-hot" style="background: linear-gradient(135deg, #10b981, #059669); color: #fff;">HOT 1VS1</span>
+                    <span class="game-icon">♟️</span>
+                    <span class="game-name">Cờ Ca-rô PvP</span>
+                </a>
+
                 <!-- AFK & VIP Games -->
                 <a href="games/farm.php" class="game-card" data-category="vip">
                     <span class="game-badge badge-new" style="background:#22c55e;">NEW</span>
@@ -3822,17 +3828,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
                     <span class="game-icon">👊</span>
                     <span class="game-name">Đại Chiến JoJo</span>
                 </a>
-                <a href="games/horserace_pvp.php" class="game-card" data-category="mini pvp">
+                <a href="games/horserace_pvp.php" class="game-card" data-category="mini">
                     <span class="game-badge badge-new">PVP</span>
                     <span class="game-icon">🐎</span>
                     <span class="game-name">Đua Ngựa PVP</span>
                 </a>
-                <a href="pvp_caro.php" class="game-card" data-category="mini pvp">
-                    <span class="game-badge badge-hot" style="background: linear-gradient(135deg, #10b981, #059669); color: #fff;">1VS1</span>
-                    <span class="game-icon">♟️</span>
-                    <span class="game-name">Cờ Ca-rô PvP</span>
-                </a>
-                <a href="pvp_challenge.php" class="game-card" data-category="mini pvp">
+                <a href="pvp_challenge.php" class="game-card" data-category="mini">
                     <span class="game-badge badge-new" style="background: linear-gradient(135deg, #ef4444, #f59e0b); color: #fff;">ARENA</span>
                     <span class="game-icon">⚔️</span>
                     <span class="game-name">Đấu Trường PvP</span>
