@@ -400,7 +400,7 @@ Truy cập tại [admin_dashboard.php](file:///c:/xampp/htdocs/1/admin_dashboard
 
 - **Bản Quyền Thuộc Về:** Dự Án Giải Trí Trực Tuyến GTLM Gaming Platform (nguyenmanh2005/TX).
 - **Phát Triển & Vận Hành:** Đội ngũ phát triển độc quyền GTLM Core Team.
-- **Giấy Phép:** Proprietary & Confidential — Toàn bộ mã nguồn được bảo hộ, nghiêm cấm sao chép, thương mại hóa trái phép khi chưa có sự đồng ý bằng văn bản.
+- **Giấy Phép:** Dự án nhằm mục đích giải trí, học tập VÀ PHI LỢI NHUẬN.
 
 ---
 *⭐ Chúc xếp và cộng đồng người chơi có những giây phút trải nghiệm giải trí thăng hoa cùng GTLM Gaming Platform! ⭐*
