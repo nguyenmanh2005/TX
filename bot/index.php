@@ -151,6 +151,15 @@ $res = $conn->query($sql);
 while($row = $res->fetch_assoc()) {
     $emailMd5 = md5($row['Email']);
     $state = $botStates[$emailMd5] ?? ['wins'=>0, 'mood'=>'happy'];
+    if (!isset($state['losses']) || $state['losses'] == 0) {
+        $lCount = 0;
+        if (!empty($state['history'])) {
+            foreach ($state['history'] as $h) {
+                if (($h['result'] ?? '') === 'lose') $lCount++;
+            }
+        }
+        $state['losses'] = $lCount;
+    }
     
     // Thống kê nhanh
     $stats['total_bot_money'] += $row['Money'];
@@ -941,8 +950,8 @@ $dominantMood = $moodMeta[$dominantMoodKey] ?? $moodMeta['happy'];
         .modal-dialog {
             background: #0d1222;
             width: 100%;
-            max-width: 680px;
-            max-height: 85vh;
+            max-width: 820px;
+            max-height: 88vh;
             border-radius: var(--radius-xl);
             border: 1px solid rgba(139, 92, 246, 0.4);
             padding: 28px;
@@ -1413,8 +1422,9 @@ $dominantMood = $moodMeta[$dominantMoodKey] ?? $moodMeta['happy'];
                             <div class="bot-money">
                                 <i class="fa fa-coins"></i> <?= number_format($bot['Money']) ?> GTLM
                             </div>
-                            <div class="bot-wins">
-                                🏆 <?= $bot['state']['wins'] ?? 0 ?> ván
+                            <div class="bot-wins" style="display: flex; gap: 8px; font-size: 0.72rem; font-weight: 800;">
+                                <span style="color: var(--success);" title="Ván thắng">🏆 <?= $bot['state']['wins'] ?? 0 ?> W</span>
+                                <span style="color: var(--danger);" title="Ván thua">💀 <?= $bot['state']['losses'] ?? 0 ?> L</span>
                             </div>
                         </div>
 
@@ -1491,70 +1501,183 @@ $dominantMood = $moodMeta[$dominantMoodKey] ?? $moodMeta['happy'];
             return false;
         }
 
-        // Modal Soi Kho Đồ
+        // Modal Soi Kho Đồ & Thống Kê Thắng/Thua
         function showBotDetail(botId, botName) {
             const modal = document.getElementById('botModal');
             const title = document.getElementById('modalTitle');
             const content = document.getElementById('modalContent');
             
-            title.innerText = `🎒 Kho Đồ của ${botName}`;
+            title.innerHTML = `<span style="display:flex; align-items:center; gap:8px;"><i class="fa fa-briefcase"></i> Hồ Sơ & Kho Đồ: <b>${botName}</b> (#${botId})</span>`;
             modal.style.display = 'flex';
-            content.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-muted);"><i class="fa fa-spinner fa-spin"></i> Đang lục lọi túi đồ...</div>';
+            content.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-muted);"><i class="fa fa-spinner fa-spin"></i> Đang tải dữ liệu trang bị & lịch sử cược...</div>';
 
             fetch(`api_bot_inventory.php?bot_id=${botId}`)
                 .then(res => res.json())
                 .then(res => {
                     if (res.status === 'success') {
                         const d = res.data;
+                        const s = d.stats || {};
+                        const b = d.bot || {};
                         let html = '';
-                        
-                        const renderSection = (title, items, icon) => {
+
+                        // 1. Bot Profile Banner
+                        html += `
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 14px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 20px; flex-wrap: wrap;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <img src="${b.image || '../img/avatar_default.png'}" style="width: 52px; height: 52px; border-radius: 12px; object-fit: cover; border: 2px solid rgba(139, 92, 246, 0.4);" onerror="this.src='../img/avatar_default.png'">
+                                    <div>
+                                        <div style="font-size: 1.1rem; font-weight: 800; color: #fff; font-family: 'Outfit', sans-serif;">${b.name || botName}</div>
+                                        <div style="font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; margin-top: 2px;">
+                                            <span>ID: #${b.id || botId}</span>
+                                            <span>•</span>
+                                            <span>${b.email || ''}</span>
+                                            <span class="mood-chip mood-${b.mood || 'happy'}">${b.mood || 'happy'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">Tài Sản Hiện Tại</div>
+                                    <div style="font-size: 1.25rem; font-weight: 900; color: var(--warn); font-family: 'Outfit', sans-serif;">
+                                        <i class="fa fa-coins"></i> ${Number(b.money || 0).toLocaleString()} <span style="font-size:0.8rem;">GTLM</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+
+                        // 2. Performance Summary Cards (Tổng GTLM Win & Lose & P/L)
+                        const netProfit = Number(s.net_profit_gtlm || 0);
+                        html += `
+                            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px;">
+                                <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 12px; padding: 12px 14px;">
+                                    <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; display: flex; align-items: center; gap: 5px;">
+                                        <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981;"></span> Tổng GTLM Thắng
+                                    </div>
+                                    <div style="font-size: 1.15rem; font-weight: 900; color: var(--success); font-family: 'JetBrains Mono', monospace; margin: 4px 0;">
+                                        +${Number(s.total_win_gtlm || 0).toLocaleString()}
+                                    </div>
+                                    <div style="font-size: 0.72rem; color: var(--text-dim);">🏆 <b>${s.total_wins || 0}</b> ván thắng</div>
+                                </div>
+
+                                <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 12px; padding: 12px 14px;">
+                                    <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; display: flex; align-items: center; gap: 5px;">
+                                        <span style="width: 7px; height: 7px; border-radius: 50%; background: #ef4444;"></span> Tổng GTLM Thua
+                                    </div>
+                                    <div style="font-size: 1.15rem; font-weight: 900; color: var(--danger); font-family: 'JetBrains Mono', monospace; margin: 4px 0;">
+                                        -${Number(s.total_lose_gtlm || 0).toLocaleString()}
+                                    </div>
+                                    <div style="font-size: 0.72rem; color: var(--text-dim);">💀 <b>${s.total_losses || 0}</b> ván thua</div>
+                                </div>
+
+                                <div style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 12px; padding: 12px 14px;">
+                                    <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; display: flex; align-items: center; gap: 5px;">
+                                        <span style="width: 7px; height: 7px; border-radius: 50%; background: #6366f1;"></span> Lợi Nhuận Ròng
+                                    </div>
+                                    <div style="font-size: 1.15rem; font-weight: 900; color: ${netProfit >= 0 ? 'var(--success)' : 'var(--danger)'}; font-family: 'JetBrains Mono', monospace; margin: 4px 0;">
+                                        ${netProfit >= 0 ? '+' : ''}${netProfit.toLocaleString()}
+                                    </div>
+                                    <div style="font-size: 0.72rem; color: var(--text-dim);">${netProfit >= 0 ? '🟢 Lãi ròng' : '🔴 Lỗ ròng'}</div>
+                                </div>
+
+                                <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 12px; padding: 12px 14px;">
+                                    <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; display: flex; align-items: center; gap: 5px;">
+                                        <span style="width: 7px; height: 7px; border-radius: 50%; background: #f59e0b;"></span> Tỉ Lệ Thắng
+                                    </div>
+                                    <div style="font-size: 1.15rem; font-weight: 900; color: var(--warn); font-family: 'Outfit', sans-serif; margin: 4px 0;">
+                                        ${s.win_rate || 0}%
+                                    </div>
+                                    <div style="font-size: 0.72rem; color: var(--text-dim);">Tổng ${s.total_games || 0} ván cược</div>
+                                </div>
+                            </div>
+                        `;
+
+                        // 3. Inventory Items
+                        const renderSection = (secTitle, items, icon) => {
                             if (!items || items.length === 0) return '';
-                            return `<div style="margin-bottom: 20px;">
-                                <h4 style="color: var(--warn); border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px; margin-bottom: 10px; font-size: 0.9rem;">${icon} ${title}</h4>
+                            return `<div style="margin-bottom: 16px;">
+                                <h4 style="color: var(--warn); border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 5px; margin-bottom: 8px; font-size: 0.85rem; font-family: 'Outfit', sans-serif;">${icon} ${secTitle}</h4>
                                 <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                    ${items.map(i => `<span style="padding: 4px 10px; font-size: 0.78rem; background: rgba(255,255,255,0.06); border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">${i.name || i.icon || ''} ${i.name || ''}</span>`).join('')}
+                                    ${items.map(i => `<span style="padding: 4px 10px; font-size: 0.75rem; background: rgba(255,255,255,0.04); border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); color: #fff;">${i.icon || ''} ${i.name || ''}</span>`).join('')}
                                 </div>
                             </div>`;
                         };
 
-                        html += renderSection('Themes Giao Diện', d.themes, '🎨');
-                        html += renderSection('Con Trỏ Chuột', d.cursors, '🖱️');
-                        html += renderSection('Khung Chat', d.chat_frames, '💬');
-                        html += renderSection('Khung Avatar', d.avatar_frames, '🖼️');
-                        html += renderSection('Thành Tựu', d.achievements, '🏆');
+                        let invHtml = '';
+                        invHtml += renderSection('Themes Giao Diện', d.themes, '🎨');
+                        invHtml += renderSection('Con Trỏ Chuột', d.cursors, '🖱️');
+                        invHtml += renderSection('Khung Chat', d.chat_frames, '💬');
+                        invHtml += renderSection('Khung Avatar', d.avatar_frames, '🖼️');
+                        invHtml += renderSection('Thành Tựu', d.achievements, '🏆');
 
-                        // Lịch sử chơi gần đây
-                        html += `<div style="margin-top: 25px;">
-                            <h4 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 6px; font-size: 0.9rem;">📈 Lịch Sử Chơi Gần Đây</h4>
-                            <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.78rem;">
-                                <thead>
-                                    <tr style="text-align: left; color: var(--text-muted); border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                        <th style="padding: 8px;">Game</th>
-                                        <th style="padding: 8px;">Cược</th>
-                                        <th style="padding: 8px;">Kết quả</th>
-                                        <th style="padding: 8px;">Thời gian</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${(d.history || []).map(h => `
-                                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
-                                            <td style="padding: 8px; font-weight: 700; color: #fff;">${h.game}</td>
-                                            <td style="padding: 8px; color: var(--warn); font-weight: 700;">${Number(h.bet).toLocaleString()}</td>
-                                            <td style="padding: 8px; color: ${h.result === 'win' ? 'var(--success)' : 'var(--danger)'}; font-weight: 800;">
-                                                ${(h.result || '').toUpperCase()}
-                                            </td>
-                                            <td style="padding: 8px; color: var(--text-dim);">${h.time}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                            ${(!d.history || d.history.length === 0) ? '<div style="text-align: center; padding: 20px; color: var(--text-dim);">Chưa có dữ liệu ván đấu.</div>' : ''}
-                        </div>`;
+                        if (invHtml) {
+                            html += `<div style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-glass); border-radius: 12px; padding: 14px; margin-bottom: 22px;">${invHtml}</div>`;
+                        }
 
-                        if (html === '') html = '<div style="text-align: center; padding: 40px; color: var(--text-muted);">Bot này chưa có trang bị nào!</div>';
+                        // 4. Detailed Match History Table with GTLM Win & Lose
+                        const hist = d.history || [];
+                        html += `
+                            <div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <h4 style="color: var(--primary); font-size: 0.92rem; font-family: 'Outfit', sans-serif; display: flex; align-items: center; gap: 7px;">
+                                        <i class="fa fa-chart-line"></i> Lịch Sử Trận Đấu Gần Đây
+                                    </h4>
+                                    <span style="font-size: 0.72rem; color: var(--text-dim);">${hist.length} ván gần nhất</span>
+                                </div>
+                                <div style="overflow-x: auto; border: 1px solid var(--border-glass); border-radius: 12px; background: rgba(0,0,0,0.25);">
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 0.78rem;">
+                                        <thead>
+                                            <tr style="text-align: left; color: var(--text-muted); background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.08);">
+                                                <th style="padding: 10px 12px;">Game</th>
+                                                <th style="padding: 10px 12px;">Tiền Cược</th>
+                                                <th style="padding: 10px 12px;">Kết Quả</th>
+                                                <th style="padding: 10px 12px;">Biến Động GTLM</th>
+                                                <th style="padding: 10px 12px;">Thời Gian</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${hist.map(h => {
+                                                const isWin = h.result === 'win';
+                                                const winAmt = Number(h.win_amount || h.bet || 0);
+                                                const loseAmt = Number(h.lose_amount || h.bet || 0);
+                                                return `
+                                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                                        <td style="padding: 10px 12px; font-weight: 700; color: #fff;">
+                                                            ${h.game}
+                                                        </td>
+                                                        <td style="padding: 10px 12px; color: var(--warn); font-family: 'JetBrains Mono', monospace; font-weight: 700;">
+                                                            ${Number(h.bet).toLocaleString()}
+                                                        </td>
+                                                        <td style="padding: 10px 12px;">
+                                                            <span style="font-size: 0.68rem; font-weight: 900; padding: 2px 8px; border-radius: 6px; ${isWin ? 'background: rgba(16,185,129,0.2); color: var(--success); border: 1px solid rgba(16,185,129,0.3);' : 'background: rgba(239,68,68,0.2); color: var(--danger); border: 1px solid rgba(239,68,68,0.3);'}">
+                                                                ${isWin ? '🏆 THẮNG' : '💀 THUA'}
+                                                            </span>
+                                                        </td>
+                                                        <td style="padding: 10px 12px; font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 0.82rem;">
+                                                            ${isWin 
+                                                                ? `<span style="color: var(--success);">+${winAmt.toLocaleString()} GTLM</span>`
+                                                                : `<span style="color: var(--danger);">-${loseAmt.toLocaleString()} GTLM</span>`
+                                                            }
+                                                        </td>
+                                                        <td style="padding: 10px 12px; color: var(--text-dim); font-size: 0.72rem;">
+                                                            ${h.time}
+                                                        </td>
+                                                    </tr>
+                                                `;
+                                            }).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                ${hist.length === 0 ? '<div style="text-align: center; padding: 24px; color: var(--text-dim); font-size: 0.8rem;">Chưa có dữ liệu ván đấu nào được ghi nhận.</div>' : ''}
+                            </div>
+                        `;
+
                         content.innerHTML = html;
+                    } else {
+                        content.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--danger);">Không thể tải thông tin bot này!</div>';
                     }
+                })
+                .catch(err => {
+                    console.error('Lỗi soi kho:', err);
+                    content.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--danger);">Lỗi kết nối khi tải kho đồ!</div>';
                 });
         }
 
