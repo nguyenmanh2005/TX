@@ -171,6 +171,32 @@ function simulateMatchWinner($p1Id, $p2Id, $seasonId, $matchKey) {
 }
 }
 
+if (!function_exists('getEsportsCurrentSeasonInfo')) {
+function getEsportsCurrentSeasonInfo($now = null) {
+    if ($now === null) $now = time();
+    $cycleSeconds = 1800; // 30 phút một mùa giải
+    // Mốc khởi chạy MÙA #1 (Khởi đầu tính từ mùa đầu tiên khi ra mắt)
+    $launchTimestamp = 1793628000;
+    $launchBase = (int)floor($launchTimestamp / $cycleSeconds);
+    $rawSeason = (int)floor($now / $cycleSeconds);
+
+    $seasonNumber = max(1, ($rawSeason - $launchBase + 1));
+    $elapsed = $now % $cycleSeconds;
+
+    $seasonStartTime = date('Y-m-d H:i:s', $rawSeason * $cycleSeconds);
+    $seasonEndTime = date('Y-m-d H:i:s', ($rawSeason + 1) * $cycleSeconds);
+
+    return [
+        'season_id' => $seasonNumber,
+        'season_number' => $seasonNumber,
+        'elapsed' => $elapsed,
+        'start_time' => $seasonStartTime,
+        'end_time' => $seasonEndTime,
+        'cycle_seconds' => $cycleSeconds
+    ];
+}
+}
+
 /**
  * 🏛️ Lấy hoặc tạo Mùa Giải Đấu Trường Hiện Tại
  */
@@ -178,13 +204,12 @@ if (!function_exists('getCurrentEsportsTournament')) {
 function getCurrentEsportsTournament($conn, $forceStage = null) {
     initEsportsTournamentTables($conn);
 
-    $now = time();
-    $cycleSeconds = 1800; // 30 phút một mùa giải
-    $seasonId = (int)floor($now / $cycleSeconds);
-    $elapsed = $now % $cycleSeconds;
-
-    $seasonStartTime = date('Y-m-d H:i:s', $seasonId * $cycleSeconds);
-    $seasonEndTime = date('Y-m-d H:i:s', ($seasonId + 1) * $cycleSeconds);
+    $seasonInfo = getEsportsCurrentSeasonInfo();
+    $seasonId = $seasonInfo['season_id'];
+    $seasonNumber = $seasonInfo['season_number'];
+    $elapsed = $seasonInfo['elapsed'];
+    $seasonStartTime = $seasonInfo['start_time'];
+    $seasonEndTime = $seasonInfo['end_time'];
 
     // Xác định trạng thái hiện tại theo tiến trình 30 phút hoặc session force
     $stageOverride = $forceStage ?? ($_SESSION['esports_force_stage'] ?? null);
@@ -349,7 +374,7 @@ function getCurrentEsportsTournament($conn, $forceStage = null) {
         'champion' => $isFinalFinished ? $champion : null
     ];
 
-    $title = "Đại Chiến Cờ Ca-rô AI Siêu Cấp - Mùa #" . ($seasonId % 1000 + 1);
+    $title = "Đại Chiến Cờ Ca-rô AI Siêu Cấp - Mùa #" . $seasonNumber;
     $bracketJson = json_encode($bracketTree, JSON_UNESCAPED_UNICODE);
 
     if (!$tour) {
@@ -386,7 +411,7 @@ function getCurrentEsportsTournament($conn, $forceStage = null) {
     return [
         'id' => $tourDbId,
         'season_id' => $seasonId,
-        'season_number' => ($seasonId % 1000 + 1),
+        'season_number' => $seasonNumber,
         'title' => $title,
         'stage' => $currentStage,
         'stage_title' => $stageTitle,
@@ -469,10 +494,9 @@ function settleEsportsPredictionsPayout($conn, $seasonId, $championId, $champion
  */
 if (!function_exists('placeEsportsPrediction')) {
 function placeEsportsPrediction($conn, $userId, $playerId, $amount) {
-    $now = time();
-    $cycleSeconds = 1800;
-    $seasonId = (int)floor($now / $cycleSeconds);
-    $elapsed = $now % $cycleSeconds;
+    $seasonInfo = getEsportsCurrentSeasonInfo();
+    $seasonId = $seasonInfo['season_id'];
+    $elapsed = $seasonInfo['elapsed'];
 
     // Chỉ cho phép đặt cược trong 10 phút đầu (0 - 600s) hoặc khi được chọn chế độ mở cược
     $stageOverride = $_SESSION['esports_force_stage'] ?? null;
