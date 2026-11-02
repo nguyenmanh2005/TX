@@ -419,9 +419,12 @@
             const renderSlot = (player, score, isWinner, isLoser) => {
                 if (!player) {
                     return `
-                    <div class="player-slot" style="opacity: 0.4;">
-                        <div class="player-info-left"><span class="player-avatar-icon">❔</span><span class="player-name-text">Chờ đối thủ</span></div>
-                        <div class="player-score-badge">-</div>
+                    <div class="player-slot" style="opacity: 0.45; border: 1px dashed rgba(255,255,255,0.12); background: rgba(0,0,0,0.15);">
+                        <div class="player-info-left">
+                            <span class="player-avatar-icon">❔</span>
+                            <span class="player-name-text" style="color:#94a3b8; font-style:italic;">Chờ đối thủ</span>
+                        </div>
+                        <div class="player-score-badge" style="opacity:0.3;">-</div>
                     </div>`;
                 }
                 const winClass = isWinner ? 'winner' : (isLoser ? 'loser' : '');
@@ -445,21 +448,29 @@
                 const isFinished = match.status === 'finished';
                 const p1Win = isFinished && match.winner === (p1 ? p1.id : null);
                 const p2Win = isFinished && match.winner === (p2 ? p2.id : null);
+                const hasBothPlayers = !!(p1 && p2);
 
                 let btnHtml = '';
-                if (isLive) {
+                let canClick = false;
+                if (isLive && hasBothPlayers) {
                     btnHtml = `<button type="button" class="btn-watch-match live"><i class="fa fa-play-circle"></i> 🔴 XEM TRỰC TIẾP TRẬN NÀY</button>`;
-                } else if (isFinished) {
+                    canClick = true;
+                } else if (isFinished && hasBothPlayers) {
                     btnHtml = `<button type="button" class="btn-watch-match finished"><i class="fa fa-eye"></i> 👁️ Xem Lại Ván Đấu (AI Replay)</button>`;
+                    canClick = true;
                 } else {
-                    btnHtml = `<button type="button" class="btn-watch-match upcoming"><i class="fa fa-gamepad"></i> ⚔️ Đấu Thử Trận Này</button>`;
+                    // BỎ HOÀN TOÀN ĐẤU THỬ - CHỈ HIỂN THỊ CHỜ VÒNG ĐẤU
+                    btnHtml = `<div class="match-waiting-tag"><i class="fa fa-hourglass-half"></i> <span>${!hasBothPlayers ? 'Chờ đối thủ vòng trước' : 'Chưa đến giờ thi đấu'}</span></div>`;
+                    canClick = false;
                 }
 
+                const clickAttr = canClick ? `onclick="window.esportsManager.openMatchArena(${match.match_id})" title="Bấm vào để xem trận đấu"` : `style="cursor: default;"`;
+
                 return `
-                <div class="bracket-match-card ${isLive ? 'live-playing' : ''}" onclick="window.esportsManager.openMatchArena(${match.match_id})" title="Bấm vào để xem hai AI đấu cờ trên bàn 15x15">
+                <div class="bracket-match-card ${isLive ? 'live-playing' : ''} ${!canClick ? 'non-clickable' : ''}" ${clickAttr}>
                     <div class="match-header-tag">
                         <span>${title}</span>
-                        ${isLive ? '<span class="live-tag">🔥 ĐANG ĐẤU</span>' : (isFinished ? '<span style="color:#10b981;">✓ XONG</span>' : '<span>SẮP ĐẤU</span>')}
+                        ${isLive ? '<span class="live-tag">🔥 ĐANG ĐẤU</span>' : (isFinished ? '<span style="color:#10b981;">✓ XONG</span>' : '<span style="color:#94a3b8;">SẮP ĐẤU</span>')}
                     </div>
                     ${renderSlot(p1, match.p1_score, p1Win, p2Win)}
                     ${renderSlot(p2, match.p2_score, p2Win, p1Win)}
@@ -528,12 +539,29 @@
             allMatches.forEach(m => {
                 const isActive = this.currentArenaMatch && this.currentArenaMatch.match_id === m.match_id;
                 const isPlaying = m.status === 'playing';
+                const hasPlayers = !!(m.p1 && m.p2);
+                const isClickable = (m.status === 'playing' || m.status === 'finished') && hasPlayers;
+
                 const pill = $(`
-                    <button type="button" class="match-pill-btn ${isActive ? 'active' : ''}" data-id="${m.match_id}">
+                    <button type="button" class="match-pill-btn ${isActive ? 'active' : ''} ${!isClickable ? 'disabled' : ''}" data-id="${m.match_id}" style="${!isClickable ? 'opacity:0.4; cursor:not-allowed;' : ''}">
                         ${isPlaying ? '🔴 ' : ''}${m.round_name || ('Trận ' + m.match_id)}
                     </button>
                 `);
                 pill.on('click', () => {
+                    if (!isClickable) {
+                        Swal.mixin({
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 2200,
+                            background: '#0f172a',
+                            color: '#f8fafc'
+                        }).fire({
+                            icon: 'info',
+                            title: !hasPlayers ? 'Trận đấu này chưa xác định đối thủ (Chờ kết quả vòng trước)!' : 'Trận đấu này chưa đến giờ thi đấu!'
+                        });
+                        return;
+                    }
                     this.openMatchArena(m.match_id);
                 });
                 container.append(pill);
@@ -551,15 +579,34 @@
         }
 
         watchCurrentLiveMatch() {
-            const allMatches = this.getAllMatchesList();
-            // Ưu tiên trận đang đấu (playing)
-            let matchToWatch = allMatches.find(m => m.status === 'playing');
-            // Nếu không có trận nào đang đấu, chọn Chung Kết hoặc Trận 1
-            if (!matchToWatch) {
-                matchToWatch = allMatches.find(m => m.match_id === 7) || allMatches[0];
+            if (!this.currentData || !this.currentData.tournament) return;
+            const stage = this.currentData.tournament.stage;
+
+            if (stage === 'betting') {
+                Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    background: '#0f172a',
+                    color: '#f8fafc'
+                }).fire({
+                    icon: 'info',
+                    title: '🔥 Sàn cược đang mở! Tứ kết sẽ tự động khởi tranh khi hết đếm ngược (hoặc sếp bấm [⚔️ Vòng Tứ Kết] để mở ngay).'
+                });
+                return;
             }
 
-            if (matchToWatch) {
+            const allMatches = this.getAllMatchesList();
+            // Ưu tiên trận đang đấu (playing) có đủ 2 người chơi
+            let matchToWatch = allMatches.find(m => m.status === 'playing' && m.p1 && m.p2);
+            // Nếu không có trận nào đang đấu, chọn trận đã xong gần nhất
+            if (!matchToWatch) {
+                const finishedMatches = allMatches.filter(m => m.status === 'finished' && m.p1 && m.p2);
+                matchToWatch = finishedMatches[finishedMatches.length - 1] || allMatches[0];
+            }
+
+            if (matchToWatch && matchToWatch.p1 && matchToWatch.p2) {
                 this.openMatchArena(matchToWatch.match_id);
             }
         }
@@ -567,7 +614,20 @@
         openMatchArena(matchId) {
             const allMatches = this.getAllMatchesList();
             let match = allMatches.find(m => m.match_id === matchId);
-            if (!match) match = allMatches[0];
+            if (!match || !match.p1 || !match.p2) {
+                Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 2500,
+                    background: '#0f172a',
+                    color: '#f8fafc'
+                }).fire({
+                    icon: 'warning',
+                    title: 'Trận đấu này chưa có đủ 2 kỳ thủ (chờ kết quả vòng trước)!'
+                });
+                return;
+            }
             if (!match) return;
 
             this.currentArenaMatch = match;

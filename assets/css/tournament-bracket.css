@@ -681,15 +681,27 @@
     color: #34d399;
     border-color: #10b981;
 }
-.btn-watch-match.upcoming {
-    background: rgba(255, 255, 255, 0.05);
-    color: #94a3b8;
-    border: 1px dashed rgba(255, 255, 255, 0.15);
+.bracket-match-card.non-clickable {
+    cursor: default !important;
 }
-.btn-watch-match.upcoming:hover {
-    background: rgba(59, 130, 246, 0.2);
-    color: #60a5fa;
-    border-color: #3b82f6;
+.bracket-match-card.non-clickable:hover {
+    transform: none !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+.match-waiting-tag {
+    margin-top: 6px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 }
 
 .esports-stage-controller-bar {
