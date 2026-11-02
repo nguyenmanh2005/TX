@@ -81,8 +81,15 @@
 }
 
 @keyframes crownFloat {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-4px); }
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-4px);
+    }
 }
 
 .esports-title-text h2 {
@@ -174,13 +181,27 @@
 }
 
 @keyframes pulseBorder {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-    50% { box-shadow: 0 0 12px 2px rgba(16, 185, 129, 0.6); }
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 12px 2px rgba(16, 185, 129, 0.6);
+    }
 }
 
 @keyframes pulseBorderRed {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-    50% { box-shadow: 0 0 12px 2px rgba(239, 68, 68, 0.6); }
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 12px 2px rgba(239, 68, 68, 0.6);
+    }
 }
 
 .esports-timer-pool {
@@ -314,8 +335,15 @@
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* ========================================================
@@ -353,8 +381,17 @@
 }
 
 @keyframes beaconPulse {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.4); opacity: 0.6; }
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.4);
+        opacity: 0.6;
+    }
 }
 
 .hud-stage-text .hud-stage-label {
@@ -584,10 +621,25 @@
     border-color: #fbbf24;
 }
 
-.btn-season-opt.opt-spring:hover { border-color: #f43f5e; color: #f43f5e; }
-.btn-season-opt.opt-summer:hover { border-color: #f59e0b; color: #f59e0b; }
-.btn-season-opt.opt-autumn:hover { border-color: #ea580c; color: #ea580c; }
-.btn-season-opt.opt-winter:hover { border-color: #06b6d4; color: #06b6d4; }
+.btn-season-opt.opt-spring:hover {
+    border-color: #f43f5e;
+    color: #f43f5e;
+}
+
+.btn-season-opt.opt-summer:hover {
+    border-color: #f59e0b;
+    color: #f59e0b;
+}
+
+.btn-season-opt.opt-autumn:hover {
+    border-color: #ea580c;
+    color: #ea580c;
+}
+
+.btn-season-opt.opt-winter:hover {
+    border-color: #06b6d4;
+    color: #06b6d4;
+}
 
 .settings-menu-divider {
     height: 1px;
@@ -722,8 +774,13 @@
 }
 
 @keyframes wirePulse {
-    from { opacity: 0.7; }
-    to { opacity: 1; }
+    from {
+        opacity: 0.7;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 /* ========================================================
@@ -763,8 +820,17 @@
 }
 
 @keyframes livePulseCard {
-    0%, 100% { border-color: rgba(239, 68, 68, 0.6); box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
-    50% { border-color: rgba(239, 68, 68, 1); box-shadow: 0 0 25px rgba(239, 68, 68, 0.55); }
+
+    0%,
+    100% {
+        border-color: rgba(239, 68, 68, 0.6);
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+    }
+
+    50% {
+        border-color: rgba(239, 68, 68, 1);
+        box-shadow: 0 0 25px rgba(239, 68, 68, 0.55);
+    }
 }
 
 .bracket-match-card.final-card {
@@ -979,8 +1045,17 @@
 }
 
 @keyframes trophyGlow {
-    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.6)); }
-    50% { transform: scale(1.06); filter: drop-shadow(0 0 35px rgba(251, 191, 36, 1)); }
+
+    0%,
+    100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.6));
+    }
+
+    50% {
+        transform: scale(1.06);
+        filter: drop-shadow(0 0 35px rgba(251, 191, 36, 1));
+    }
 }
 
 .pedestal-title {
@@ -1187,9 +1262,20 @@
     text-transform: uppercase;
 }
 
-.ticket-status-pill.pending { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
-.ticket-status-pill.won { background: rgba(16, 185, 129, 0.25); color: #34d399; }
-.ticket-status-pill.lost { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+.ticket-status-pill.pending {
+    background: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+}
+
+.ticket-status-pill.won {
+    background: rgba(16, 185, 129, 0.25);
+    color: #34d399;
+}
+
+.ticket-status-pill.lost {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+}
 
 /* ========================================================
    TAB 2: ĐẤU TRƯỜNG CỜ CA-RÔ LIVE (ARENA 15x15)
@@ -1378,8 +1464,13 @@
     box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
 }
 
-.duel-player-card.player-x .turn-indicator-badge { left: 14px; }
-.duel-player-card.player-o .turn-indicator-badge { right: 14px; }
+.duel-player-card.player-x .turn-indicator-badge {
+    left: 14px;
+}
+
+.duel-player-card.player-o .turn-indicator-badge {
+    right: 14px;
+}
 
 /* Center Score in HUD */
 .duel-center-score {
@@ -1407,9 +1498,18 @@
     font-family: 'JetBrains Mono', monospace;
 }
 
-.duel-score-display .score-num.p1 { color: #ef4444; }
-.duel-score-display .score-num.p2 { color: #a855f7; }
-.duel-score-display .score-colon { color: #64748b; margin: 0 4px; }
+.duel-score-display .score-num.p1 {
+    color: #ef4444;
+}
+
+.duel-score-display .score-num.p2 {
+    color: #a855f7;
+}
+
+.duel-score-display .score-colon {
+    color: #64748b;
+    margin: 0 4px;
+}
 
 .duel-move-count {
     font-size: 0.7rem;
@@ -1527,14 +1627,30 @@
 }
 
 @keyframes popStone {
-    0% { transform: scale(0.3); opacity: 0; }
-    80% { transform: scale(1.15); opacity: 1; }
-    100% { transform: scale(1); opacity: 1; }
+    0% {
+        transform: scale(0.3);
+        opacity: 0;
+    }
+
+    80% {
+        transform: scale(1.15);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 @keyframes winPulse {
-    0% { box-shadow: 0 0 5px #fbbf24; }
-    100% { box-shadow: 0 0 18px #fbbf24; }
+    0% {
+        box-shadow: 0 0 5px #fbbf24;
+    }
+
+    100% {
+        box-shadow: 0 0 18px #fbbf24;
+    }
 }
 
 /* Victory Overlay in Arena */
@@ -1587,7 +1703,9 @@
     flex-wrap: wrap;
 }
 
-.btn-vic-restart, .btn-vic-next, .btn-vic-bracket {
+.btn-vic-restart,
+.btn-vic-next,
+.btn-vic-bracket {
     padding: 8px 14px;
     border-radius: 10px;
     font-size: 0.8rem;
@@ -1666,8 +1784,17 @@
 }
 
 @keyframes livePulse {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.08); opacity: 0.85; }
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.08);
+        opacity: 0.85;
+    }
 }
 
 /* ========================================================
@@ -1679,6 +1806,7 @@
         height: 95vh;
         max-height: none;
     }
+
     .hud-stepper {
         order: 3;
         width: 100%;
@@ -1693,35 +1821,259 @@
         border-radius: 0;
         max-height: none;
     }
+
     .esports-header {
         padding: 10px 14px;
     }
+
     .esports-tabs-nav {
         padding: 0 10px;
         overflow-x: auto;
     }
+
     .esports-tab-btn {
         padding: 10px 12px;
         font-size: 0.78rem;
         white-space: nowrap;
     }
+
     .bracket-tree-container {
         flex-direction: column;
         min-width: 100%;
         gap: 20px;
     }
+
     .bracket-branch-col {
         display: none;
     }
+
     .bracket-column {
         width: 100%;
     }
+
     .arena-hud-duel {
         grid-template-columns: 1fr;
         gap: 8px;
     }
+
     .duel-player-card.player-o {
         flex-direction: row;
         text-align: left;
     }
+}
+
+/* ========================================================
+   HEADER GAME SWITCHER PILLS (IN MODAL)
+======================================================== */
+.modal-game-switcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 3px 6px;
+    border-radius: 999px;
+    margin-left: 12px;
+}
+
+.modal-game-chip {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.modal-game-chip:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.modal-game-chip.active {
+    background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+    color: #000000;
+    font-weight: 900;
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+}
+
+/* ========================================================
+   CHESS MATCH ARENA (8x8 LUXURY BOARD)
+======================================================== */
+.chess-match-board {
+    display: grid;
+    grid-template-columns: repeat(8, 44px);
+    grid-template-rows: repeat(8, 44px);
+    border: 3px solid #78350f;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    background: #451a03;
+    position: relative;
+    user-select: none;
+}
+
+.chess-cell {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    font-size: 28px;
+    cursor: default;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.chess-cell.light {
+    background-color: #f0d9b5;
+}
+
+.chess-cell.dark {
+    background-color: #b58863;
+}
+
+.chess-cell.last-move-from {
+    background-color: rgba(251, 191, 36, 0.45) !important;
+}
+
+.chess-cell.last-move-to {
+    background-color: rgba(251, 191, 36, 0.75) !important;
+    box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.5);
+}
+
+.chess-cell.check-cell {
+    background-color: rgba(239, 68, 68, 0.8) !important;
+    animation: checkFlash 0.7s infinite alternate;
+}
+
+@keyframes checkFlash {
+    0% { filter: brightness(1); }
+    100% { filter: brightness(1.4); }
+}
+
+.chess-piece {
+    display: inline-block;
+    transition: transform 0.25s ease;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+}
+
+.chess-piece.white-piece {
+    color: #f8fafc;
+    text-shadow: 0 0 2px #000, 0 0 6px rgba(255, 255, 255, 0.8);
+}
+
+.chess-piece.black-piece {
+    color: #1e1e24;
+    text-shadow: 0 0 2px #fff, 0 0 4px rgba(0, 0, 0, 0.9);
+}
+
+.chess-piece.move-anim {
+    animation: chessHop 0.22s ease-out;
+}
+
+@keyframes chessHop {
+    0% { transform: scale(0.6) translateY(-8px); opacity: 0.6; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* ========================================================
+   XIANGQI MATCH ARENA (9x10 TRADITIONAL BOARD)
+======================================================== */
+.xiangqi-match-board {
+    width: 378px;
+    height: 420px;
+    background: linear-gradient(135deg, #d4973b 0%, #ba7b24 100%);
+    border: 4px solid #5a3811;
+    border-radius: 10px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(0, 0, 0, 0.35);
+    position: relative;
+    padding: 10px;
+    box-sizing: border-box;
+    user-select: none;
+}
+
+.xiangqi-grid-lines {
+    position: absolute;
+    inset: 10px;
+    pointer-events: none;
+}
+
+.xiangqi-river-banner {
+    position: absolute;
+    top: calc(50% - 18px);
+    left: 10px;
+    right: 10px;
+    height: 36px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    font-family: 'Playfair Display', serif, 'Noto Serif SC', serif;
+    font-size: 1.15rem;
+    font-weight: 900;
+    color: #451a03;
+    letter-spacing: 12px;
+    border-top: 1px dashed rgba(69, 26, 3, 0.4);
+    border-bottom: 1px dashed rgba(69, 26, 3, 0.4);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.xiangqi-cells-container {
+    display: grid;
+    grid-template-columns: repeat(9, 40px);
+    grid-template-rows: repeat(10, 40px);
+    width: 360px;
+    height: 400px;
+    position: relative;
+    z-index: 2;
+}
+
+.xiangqi-cell {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.xiangqi-piece-token {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    font-weight: 900;
+    cursor: default;
+    border: 2px solid;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.45), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+}
+
+.xiangqi-piece-token.red-side {
+    background: linear-gradient(145deg, #fff7ed 0%, #fed7aa 100%);
+    border-color: #dc2626;
+    color: #dc2626;
+    text-shadow: 0 1px 2px rgba(220, 38, 38, 0.4);
+}
+
+.xiangqi-piece-token.black-side {
+    background: linear-gradient(145deg, #f8fafc 0%, #cbd5e1 100%);
+    border-color: #0f172a;
+    color: #0f172a;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.xiangqi-cell.last-move-target .xiangqi-piece-token {
+    transform: scale(1.08);
+    box-shadow: 0 0 14px #fbbf24, 0 4px 8px rgba(0, 0, 0, 0.5);
+    border-color: #fbbf24;
 }

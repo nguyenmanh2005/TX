@@ -1053,8 +1053,14 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
             <button class="btn-channel-switch" onclick="openChannelSwitcher()">
                 <i class="fa fa-tv"></i> ĐỔI KÊNH
             </button>
-            <button class="btn-channel-switch" onclick="openEsportsTournament()" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.3) 0%, rgba(217, 119, 6, 0.4) 100%); border-color: #f59e0b; color: #fbbf24;" title="Đấu Trường Cờ Ca-rô AI & Dự Đoán Quán Quân">
+            <button class="btn-channel-switch" onclick="openEsportsTournament('caro')" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.3) 0%, rgba(217, 119, 6, 0.4) 100%); border-color: #f59e0b; color: #fbbf24;" title="Giải Đấu Cờ Ca-rô AI 30 Phút">
                 <i class="fa fa-trophy"></i> GIẢI ĐẤU 30P
+            </button>
+            <button class="btn-channel-switch" onclick="openEsportsTournament('chess')" style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.3) 0%, rgba(2, 132, 199, 0.4) 100%); border-color: #38bdf8; color: #38bdf8;" title="Giải Đấu Cờ Vua AI">
+                <i class="fa fa-chess-knight"></i> GIẢI CỜ VUA
+            </button>
+            <button class="btn-channel-switch" onclick="openEsportsTournament('xiangqi')" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(185, 28, 28, 0.4) 100%); border-color: #ef4444; color: #f87171;" title="Giải Đấu Cờ Tướng AI">
+                <i class="fa fa-shield-alt"></i> GIẢI CỜ TƯỚNG
             </button>
         </div>
 

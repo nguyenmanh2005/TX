@@ -3,10 +3,12 @@
  * ⚔️ ESPORTS TOURNAMENT BRACKET & PREDICTION ENGINE
  * 
  * Hệ thống Đấu Trường Giải Đấu Loại Trực Tiếp (Bracket Tree) & Sàn Dự Đoán Quán Quân:
- * - Tự động mở giải đấu Cờ Ca-rô AI định kỳ mỗi 30 phút một mùa giải.
+ * - 3 GIẢI ĐẤU song song: Cờ Ca-rô AI, Cờ Vua AI, Cờ Tướng AI (mỗi giải 8 kỳ thủ AI riêng).
+ * - Mỗi giải tự động mở mùa mới mỗi 30 phút. Các giải LỆCH PHA 10 phút nên lúc nào cũng có
+ *   một giải đang mở cược, một giải đang thi đấu, một giải sắp trao cúp.
  * - 8 Kỳ thủ AI hạt giống tranh tài qua 3 vòng: Tứ kết ➔ Bán kết ➔ Chung kết.
  * - Sàn Dự Đoán Quán Quân (Outright Betting) với Odds tự động, trả thưởng GTLM lớn.
- * - Đồng bộ thời gian thực chuẩn xác 100% cho mọi người chơi.
+ * - Đồng bộ thời gian thực chuẩn xác 100% cho mọi người chơi (giai đoạn chạy theo đồng hồ thật).
  */
 
 if (!function_exists('initEsportsTournamentTables')) {
@@ -53,98 +55,118 @@ function initEsportsTournamentTables($conn) {
 }
 }
 
-if (!function_exists('getEsportsPlayersList')) {
-function getEsportsPlayersList() {
+/**
+ * 🎮 Cấu hình 3 giải đấu: Cờ Ca-rô, Cờ Vua, Cờ Tướng
+ * - offset: lệch pha đồng hồ (giây) để 3 giải không trùng giai đoạn với nhau
+ * - id_offset: tách vùng season_id trong DB (cột season_id là UNIQUE) để mỗi giải có mùa riêng
+ */
+if (!function_exists('getEsportsGamesConfig')) {
+function getEsportsGamesConfig() {
     return [
-        'alphax' => [
-            'id' => 'alphax',
-            'name' => 'AlphaX',
-            'title' => 'Đệ Nhất Khai Cuộc',
-            'avatar' => '🔴',
-            'color' => '#ef4444',
-            'elo' => 2850,
-            'seed' => 1,
-            'odds' => 2.50,
-            'style' => 'Tấn công dồn dập, ép biên thần tốc'
+        'caro' => [
+            'code' => 'caro',
+            'db_type' => 'caro_ai',
+            'label' => 'Cờ Ca-rô',
+            'icon' => '⭕',
+            'offset' => 0,
+            'id_offset' => 0,
+            'title_name' => 'Đại Chiến Cờ Ca-rô AI Siêu Cấp'
         ],
-        'deepo' => [
-            'id' => 'deepo',
-            'name' => 'DeepO',
-            'title' => 'Thần Toán Trung Cuộc',
-            'avatar' => '⭕',
-            'color' => '#3b82f6',
-            'elo' => 2820,
-            'seed' => 2,
-            'odds' => 3.20,
-            'style' => 'Tính toán sâu 12 nước cờ đôi'
+        'chess' => [
+            'code' => 'chess',
+            'db_type' => 'chess_ai',
+            'label' => 'Cờ Vua',
+            'icon' => '♞',
+            'offset' => 600,
+            'id_offset' => 1000000,
+            'title_name' => 'Đại Chiến Cờ Vua AI Siêu Cấp'
         ],
-        'zenzero' => [
-            'id' => 'zenzero',
-            'name' => 'ZenZero',
-            'title' => 'Khiên Thần Ca-rô',
-            'avatar' => '🟣',
-            'color' => '#a855f7',
-            'elo' => 2780,
-            'seed' => 3,
-            'odds' => 4.50,
-            'style' => 'Bậc thầy phòng thủ & phản kích'
-        ],
-        'stockcaro' => [
-            'id' => 'stockcaro',
-            'name' => 'StockCaro',
-            'title' => 'Pháo Đài Bất Bại',
-            'avatar' => '🟢',
-            'color' => '#10b981',
-            'elo' => 2740,
-            'seed' => 4,
-            'odds' => 5.80,
-            'style' => 'Kiểm soát trung lộ cực kỳ chắc chắn'
-        ],
-        'dragonai' => [
-            'id' => 'dragonai',
-            'name' => 'DragonAI',
-            'title' => 'Hỏa Long Sát Chiêu',
-            'avatar' => '🟡',
-            'color' => '#fbbf24',
-            'elo' => 2700,
-            'seed' => 5,
-            'odds' => 7.20,
-            'style' => 'Thế cờ 3 quân phân nhánh hiểm hóc'
-        ],
-        'phantomx' => [
-            'id' => 'phantomx',
-            'name' => 'PhantomX',
-            'title' => 'Bóng Ma Đảo Ngược',
-            'avatar' => '⚪',
-            'color' => '#94a3b8',
-            'elo' => 2680,
-            'seed' => 6,
-            'odds' => 9.00,
-            'style' => 'Lội ngược dòng phút chót ngoạn mục'
-        ],
-        'cyberbot' => [
-            'id' => 'cyberbot',
-            'name' => 'CyberBot',
-            'title' => 'Tia Chớp Lượng Tử',
-            'avatar' => '🟠',
-            'color' => '#f97316',
-            'elo' => 2640,
-            'seed' => 7,
-            'odds' => 11.50,
-            'style' => 'Hạ cờ tốc hành trong 0.2 giây'
-        ],
-        'titango' => [
-            'id' => 'titango',
-            'name' => 'TitanGo',
-            'title' => 'Thạch Bàn Trầm Ổn',
-            'avatar' => '🟤',
-            'color' => '#78716c',
-            'elo' => 2610,
-            'seed' => 8,
-            'odds' => 15.00,
-            'style' => 'Lì đòn, biến hóa khó đoán'
+        'xiangqi' => [
+            'code' => 'xiangqi',
+            'db_type' => 'xiangqi_ai',
+            'label' => 'Cờ Tướng',
+            'icon' => '帥',
+            'offset' => 1200,
+            'id_offset' => 2000000,
+            'title_name' => 'Đại Chiến Cờ Tướng AI Siêu Cấp'
         ]
     ];
+}
+}
+
+if (!function_exists('normalizeEsportsGame')) {
+function normalizeEsportsGame($game) {
+    $game = strtolower(trim((string)$game));
+    $games = getEsportsGamesConfig();
+    return isset($games[$game]) ? $game : 'caro';
+}
+}
+
+/**
+ * Dựng danh sách 8 kỳ thủ theo thứ tự hạt giống 1 ➔ 8
+ * Mỗi dòng: [id, tên, danh hiệu, avatar, màu, elo, odds, lối đánh]
+ */
+if (!function_exists('esportsBuildRoster')) {
+function esportsBuildRoster(array $rows) {
+    $roster = [];
+    $seed = 1;
+    foreach ($rows as $r) {
+        $roster[$r[0]] = [
+            'id' => $r[0],
+            'name' => $r[1],
+            'title' => $r[2],
+            'avatar' => $r[3],
+            'color' => $r[4],
+            'elo' => $r[5],
+            'seed' => $seed++,
+            'odds' => $r[6],
+            'style' => $r[7]
+        ];
+    }
+    return $roster;
+}
+}
+
+if (!function_exists('getEsportsPlayersList')) {
+function getEsportsPlayersList($game = 'caro') {
+    $game = normalizeEsportsGame($game);
+
+    if ($game === 'chess') {
+        return esportsBuildRoster([
+            ['cv_deepking', 'DeepKing', 'Vua Của Các Vị Vua', '👑', '#fbbf24', 2890, 2.40, 'Khai cuộc sách vở, nuốt chửng đối thủ ở trung cuộc'],
+            ['cv_stockmate', 'StockMate', 'Động Cơ Bất Bại', '🛡️', '#38bdf8', 2860, 3.00, 'Tàn cuộc chính xác như cỗ máy'],
+            ['cv_knightmare', 'KnightMare', 'Ác Mộng Của Quân Mã', '🐴', '#a855f7', 2820, 4.20, 'Phong cách mã dị biệt, hy sinh quân đầy bất ngờ'],
+            ['cv_rookstorm', 'RookStorm', 'Bão Xe Đôi', '🏰', '#f97316', 2790, 5.50, 'Song xe chiếm cột mở, đè bẹp cánh vua'],
+            ['cv_bishopx', 'BishopX', 'Tượng Cặp Xuyên Phá', '⛪', '#10b981', 2750, 7.00, 'Tượng cặp quét thẳng các đường chéo dài'],
+            ['cv_queenzilla', 'QueenZilla', 'Nữ Hoàng Chớp Nhoáng', '💎', '#ec4899', 2720, 8.80, 'Hậu tung hoành, tấn công chớp nhoáng'],
+            ['cv_pawnstar', 'PawnStar', 'Tốt Thí Thành Hậu', '⚡', '#eab308', 2680, 11.00, 'Đẩy tốt tuyệt đỉnh, biến tốt thành hậu'],
+            ['cv_gambitzero', 'GambitZero', 'Kẻ Liều Lĩnh Gambit', '🔥', '#ef4444', 2640, 14.50, 'Thí quân liều lĩnh ngay từ khai cuộc']
+        ]);
+    }
+
+    if ($game === 'xiangqi') {
+        return esportsBuildRoster([
+            ['ct_longtuong', 'Long Tướng', 'Rồng Thiêng Cung Thành', '🐉', '#ef4444', 2880, 2.40, 'Pháo đầu đè trung lộ, ép sát cung thành'],
+            ['ct_phongma', 'Phong Mã', 'Song Mã Ẩm Tuyền', '🐎', '#38bdf8', 2850, 3.10, 'Song mã linh hoạt, tấn công liên hoàn'],
+            ['ct_thienphao', 'Thiên Pháo', 'Pháo Gài Chiếu Tướng', '💥', '#f97316', 2810, 4.30, 'Pháo gài chiếu tướng bất ngờ'],
+            ['ct_haxe', 'Hạ Xe', 'Thủ Thành Bất Bại', '🏯', '#10b981', 2770, 5.60, 'Thủ chắc cung thành, phản công bằng xe'],
+            ['ct_kiemthan', 'Kiếm Thần', 'Tốt Qua Sông', '⚔️', '#a855f7', 2740, 7.20, 'Tốt qua sông dồn ép từng bước'],
+            ['ct_anphong', 'Ẩn Phong', 'Cao Thủ Ẩn Danh', '🌪️', '#94a3b8', 2700, 9.00, 'Kỳ thủ ẩn mình, thế trận khó lường'],
+            ['ct_hoalong', 'Hỏa Long', 'Công Thành Bạt Địa', '🔥', '#eab308', 2660, 11.50, 'Đổi quân hung hãn, công thành bạt địa'],
+            ['ct_bachho', 'Bạch Hổ', 'Hổ Trắng Phản Đòn', '🐅', '#f1f5f9', 2620, 15.00, 'Lì đòn, chờ thời cơ phản đòn chí mạng']
+        ]);
+    }
+
+    return esportsBuildRoster([
+        ['alphax', 'AlphaX', 'Đệ Nhất Khai Cuộc', '🔴', '#ef4444', 2850, 2.50, 'Tấn công dồn dập, ép biên thần tốc'],
+        ['deepo', 'DeepO', 'Thần Toán Trung Cuộc', '⭕', '#3b82f6', 2820, 3.20, 'Tính toán sâu 12 nước cờ đôi'],
+        ['zenzero', 'ZenZero', 'Khiên Thần Ca-rô', '🟣', '#a855f7', 2780, 4.50, 'Bậc thầy phòng thủ & phản kích'],
+        ['stockcaro', 'StockCaro', 'Pháo Đài Bất Bại', '🟢', '#10b981', 2740, 5.80, 'Kiểm soát trung lộ cực kỳ chắc chắn'],
+        ['dragonai', 'DragonAI', 'Hỏa Long Sát Chiêu', '🟡', '#fbbf24', 2700, 7.20, 'Thế cờ 3 quân phân nhánh hiểm hóc'],
+        ['phantomx', 'PhantomX', 'Bóng Ma Đảo Ngược', '⚪', '#94a3b8', 2680, 9.00, 'Lội ngược dòng phút chót ngoạn mục'],
+        ['cyberbot', 'CyberBot', 'Tia Chớp Lượng Tử', '🟠', '#f97316', 2640, 11.50, 'Hạ cờ tốc hành trong 0.2 giây'],
+        ['titango', 'TitanGo', 'Thạch Bàn Trầm Ổn', '🟤', '#78716c', 2610, 15.00, 'Lì đòn, biến hóa khó đoán']
+    ]);
 }
 }
 
@@ -152,8 +174,8 @@ function getEsportsPlayersList() {
  * 🎲 Hàm xác định người thắng trận dựa trên Elo và hạt giống mùa giải
  */
 if (!function_exists('simulateMatchWinner')) {
-function simulateMatchWinner($p1Id, $p2Id, $seasonId, $matchKey) {
-    $players = getEsportsPlayersList();
+function simulateMatchWinner($p1Id, $p2Id, $seasonId, $matchKey, $game = 'caro') {
+    $players = getEsportsPlayersList($game);
     $p1 = $players[$p1Id] ?? null;
     $p2 = $players[$p2Id] ?? null;
 
@@ -171,17 +193,45 @@ function simulateMatchWinner($p1Id, $p2Id, $seasonId, $matchKey) {
 }
 }
 
+/**
+ * ⏱️ Xác định giai đoạn theo thời gian đã trôi qua trong mùa (0 - 1800 giây)
+ * Trả về [stage, giây còn lại của giai đoạn, tiêu đề giai đoạn]
+ */
+if (!function_exists('esportsStageFromElapsed')) {
+function esportsStageFromElapsed($elapsed) {
+    if ($elapsed < 600) {
+        return ['betting', 600 - $elapsed, 'Mở Sàn Đặt Cược Dự Đoán Quán Quân'];
+    } elseif ($elapsed < 1080) {
+        return ['quarter_finals', 1080 - $elapsed, 'Đang Thi Đấu Vòng Tứ Kết (4 Trận)'];
+    } elseif ($elapsed < 1440) {
+        return ['semi_finals', 1440 - $elapsed, 'Đang Thi Đấu Vòng Bán Kết (2 Trận)'];
+    } elseif ($elapsed < 1680) {
+        return ['finals', 1680 - $elapsed, 'Trận Chung Kết Đỉnh Cao - Tranh Cúp Vàng'];
+    }
+    return ['finished', 1800 - $elapsed, 'Đã Tìm Ra Quán Quân - Chuẩn Bị Mùa Mới'];
+}
+}
+
 if (!function_exists('getEsportsCurrentSeasonInfo')) {
-function getEsportsCurrentSeasonInfo($now = null) {
+function getEsportsCurrentSeasonInfo($now = null, $game = 'caro') {
     if ($now === null) $now = time();
+    $game = normalizeEsportsGame($game);
+    $gameCfg = getEsportsGamesConfig()[$game];
+    $offset = (int)$gameCfg['offset'];
+
     $cycleSeconds = 1800; // 30 phút một mùa giải
     // Mốc khởi chạy MÙA XUÂN (Khởi đầu tính từ mùa đầu tiên khi ra mắt)
     $launchTimestamp = 1793628000;
     $launchBase = (int)floor($launchTimestamp / $cycleSeconds);
-    $rawSeason = (int)floor($now / $cycleSeconds);
+
+    // Đồng hồ riêng của từng giải (lệch pha để 3 giải không trùng giai đoạn)
+    $shiftedNow = $now + $offset;
+    $rawSeason = (int)floor($shiftedNow / $cycleSeconds);
 
     $seasonIndex = max(0, ($rawSeason - $launchBase)); // 0, 1, 2, 3...
     $seasonNumber = $seasonIndex + 1; // 1, 2, 3, 4...
+    // season_id lưu DB: tách vùng riêng cho từng giải (cột season_id là UNIQUE)
+    $seasonId = $seasonNumber + (int)$gameCfg['id_offset'];
 
     // 🌸 ☀️ 🍂 ❄️ 4 Mùa: XUÂN - HẠ - THU - ĐÔNG
     $seasonsList = [
@@ -230,14 +280,17 @@ function getEsportsCurrentSeasonInfo($now = null) {
         $seasonTag .= " (NĂM {$yearNumber})";
     }
 
-    $title = "Đại Chiến Cờ Ca-rô AI Siêu Cấp - " . $currentSeason['name'] . ($yearNumber > 1 ? " (Năm {$yearNumber})" : "");
-    $elapsed = $now % $cycleSeconds;
+    $title = $gameCfg['title_name'] . " - " . $currentSeason['name'] . ($yearNumber > 1 ? " (Năm {$yearNumber})" : "");
+    $elapsed = $shiftedNow % $cycleSeconds;
 
-    $seasonStartTime = date('Y-m-d H:i:s', $rawSeason * $cycleSeconds);
-    $seasonEndTime = date('Y-m-d H:i:s', ($rawSeason + 1) * $cycleSeconds);
+    // Thời điểm bắt đầu / kết thúc THẬT của mùa (trừ lại phần lệch pha)
+    $seasonStartTime = date('Y-m-d H:i:s', $rawSeason * $cycleSeconds - $offset);
+    $seasonEndTime = date('Y-m-d H:i:s', ($rawSeason + 1) * $cycleSeconds - $offset);
 
     return [
-        'season_id' => $seasonNumber,
+        'game' => $game,
+        'game_label' => $gameCfg['label'],
+        'season_id' => $seasonId,
         'season_number' => $seasonNumber,
         'season_name' => $currentSeason['name'],
         'season_icon' => $currentSeason['icon'],
@@ -254,13 +307,111 @@ function getEsportsCurrentSeasonInfo($now = null) {
 }
 
 /**
- * 🏛️ Lấy hoặc tạo Mùa Giải Đấu Trường Hiện Tại
+ * 🌳 Dựng toàn bộ cây thi đấu 8 kỳ thủ (4 trận tứ kết ➔ 2 trận bán kết ➔ 1 chung kết)
+ * Cặp đấu theo hạt giống: #1 vs #8, #4 vs #5, #2 vs #7, #3 vs #6.
+ * Bán kết / Chung kết CHỈ lộ đối thủ khi vòng trước đã đấu xong (hoặc đang diễn ra đúng vòng đó).
+ */
+if (!function_exists('esportsBuildBracket')) {
+function esportsBuildBracket(array $players, $seasonId, $stage, $game) {
+    $ids = array_keys($players); // đã sắp theo hạt giống 1 ➔ 8
+    $pairs = [[0, 7], [3, 4], [1, 6], [2, 5]];
+
+    $qfWinners = [];
+    foreach ($pairs as $i => $pair) {
+        $qfWinners[$i] = simulateMatchWinner($ids[$pair[0]], $ids[$pair[1]], $seasonId, 'qf' . ($i + 1), $game);
+    }
+    $sf1Winner = simulateMatchWinner($qfWinners[0], $qfWinners[1], $seasonId, 'sf1', $game);
+    $sf2Winner = simulateMatchWinner($qfWinners[2], $qfWinners[3], $seasonId, 'sf2', $game);
+    $finalWinner = simulateMatchWinner($sf1Winner, $sf2Winner, $seasonId, 'final', $game);
+    $champion = $players[$finalWinner];
+
+    $isQfFinished = in_array($stage, ['semi_finals', 'finals', 'finished']);
+    $isQfPlaying = ($stage === 'quarter_finals');
+    $isSfFinished = in_array($stage, ['finals', 'finished']);
+    $isSfPlaying = ($stage === 'semi_finals');
+    $isFinalFinished = ($stage === 'finished');
+    $isFinalPlaying = ($stage === 'finals');
+
+    $qf = [];
+    foreach ($pairs as $i => $pair) {
+        $a = $ids[$pair[0]];
+        $b = $ids[$pair[1]];
+        $w = $qfWinners[$i];
+        $qf[] = [
+            'match_id' => $i + 1,
+            'round_name' => 'Tứ Kết ' . ($i + 1),
+            'title' => 'TỨ KẾT ' . ($i + 1) . ': ' . $players[$a]['name'] . ' vs ' . $players[$b]['name'],
+            'p1' => $players[$a],
+            'p2' => $players[$b],
+            'winner' => $isQfFinished ? $w : null,
+            'status' => $isQfFinished ? 'finished' : ($isQfPlaying ? 'playing' : 'upcoming'),
+            'p1_score' => $isQfFinished ? ($w === $a ? 1 : 0) : 0,
+            'p2_score' => $isQfFinished ? ($w === $b ? 1 : 0) : 0
+        ];
+    }
+
+    $showSf = ($isQfFinished || $isSfPlaying);
+    $sfDefs = [
+        [5, 'Bán Kết 1', 'BÁN KẾT 1', 'TK1', 'TK2', $qfWinners[0], $qfWinners[1], $sf1Winner],
+        [6, 'Bán Kết 2', 'BÁN KẾT 2', 'TK3', 'TK4', $qfWinners[2], $qfWinners[3], $sf2Winner]
+    ];
+    $sf = [];
+    foreach ($sfDefs as $d) {
+        $sf[] = [
+            'match_id' => $d[0],
+            'round_name' => $d[1],
+            'title' => $showSf
+                ? ($d[2] . ': ' . ($players[$d[5]]['name'] ?? 'TBD') . ' vs ' . ($players[$d[6]]['name'] ?? 'TBD'))
+                : ($d[2] . ' (Thắng ' . $d[3] . ' vs Thắng ' . $d[4] . ')'),
+            'p1' => $showSf ? $players[$d[5]] : null,
+            'p2' => $showSf ? $players[$d[6]] : null,
+            'winner' => $isSfFinished ? $d[7] : null,
+            'status' => $isSfFinished ? 'finished' : ($isSfPlaying ? 'playing' : 'upcoming'),
+            'p1_score' => $isSfFinished ? ($d[7] === $d[5] ? 1 : 0) : 0,
+            'p2_score' => $isSfFinished ? ($d[7] === $d[6] ? 1 : 0) : 0
+        ];
+    }
+
+    $showFinal = ($isSfFinished || $isFinalPlaying);
+    $final = [
+        'match_id' => 7,
+        'round_name' => 'Chung Kết',
+        'title' => $showFinal
+            ? ('👑 CHUNG KẾT VÔ ĐỊCH: ' . ($players[$sf1Winner]['name'] ?? 'TBD') . ' vs ' . ($players[$sf2Winner]['name'] ?? 'TBD'))
+            : '👑 CHUNG KẾT VÔ ĐỊCH (Thắng BK1 vs Thắng BK2)',
+        'p1' => $showFinal ? $players[$sf1Winner] : null,
+        'p2' => $showFinal ? $players[$sf2Winner] : null,
+        'winner' => $isFinalFinished ? $finalWinner : null,
+        'status' => $isFinalFinished ? 'finished' : ($isFinalPlaying ? 'playing' : 'upcoming'),
+        'p1_score' => $isFinalFinished ? ($finalWinner === $sf1Winner ? 1 : 0) : 0,
+        'p2_score' => $isFinalFinished ? ($finalWinner === $sf2Winner ? 1 : 0) : 0
+    ];
+
+    return [
+        'tree' => [
+            'qf' => $qf,
+            'sf' => $sf,
+            'final' => $final,
+            'champion' => $isFinalFinished ? $champion : null
+        ],
+        'final_winner' => $finalWinner,
+        'champion' => $champion
+    ];
+}
+}
+
+/**
+ * 🏛️ Lấy hoặc tạo Mùa Giải Đấu Trường Hiện Tại (theo từng môn: caro / chess / xiangqi)
+ * Tham số $forceStage được giữ lại cho tương thích nhưng KHÔNG còn tác dụng: giai đoạn chỉ chạy theo đồng hồ thật.
  */
 if (!function_exists('getCurrentEsportsTournament')) {
-function getCurrentEsportsTournament($conn, $forceStage = null) {
+function getCurrentEsportsTournament($conn, $forceStage = null, $game = 'caro') {
     initEsportsTournamentTables($conn);
 
-    $seasonInfo = getEsportsCurrentSeasonInfo();
+    $game = normalizeEsportsGame($game);
+    $gameCfg = getEsportsGamesConfig()[$game];
+
+    $seasonInfo = getEsportsCurrentSeasonInfo(null, $game);
     $seasonId = $seasonInfo['season_id'];
     $seasonNumber = $seasonInfo['season_number'];
     $seasonName = $seasonInfo['season_name'];
@@ -271,50 +422,7 @@ function getCurrentEsportsTournament($conn, $forceStage = null) {
     $seasonStartTime = $seasonInfo['start_time'];
     $seasonEndTime = $seasonInfo['end_time'];
 
-    // Giai đoạn luôn chạy theo tiến trình 30 phút của đồng hồ thật. Không cho phép ép giai đoạn từ phía người chơi.
-    $stageOverride = null;
-
-    if ($stageOverride && in_array($stageOverride, ['betting', 'quarter_finals', 'semi_finals', 'finals', 'finished'])) {
-        $currentStage = $stageOverride;
-        if ($currentStage === 'betting') {
-            $timeRemainingInStage = 600;
-            $stageTitle = 'Mở Sàn Đặt Cược Dự Đoán Quán Quân';
-        } elseif ($currentStage === 'quarter_finals') {
-            $timeRemainingInStage = 480;
-            $stageTitle = 'Đang Thi Đấu Vòng Tứ Kết (4 Trận)';
-        } elseif ($currentStage === 'semi_finals') {
-            $timeRemainingInStage = 360;
-            $stageTitle = 'Đang Thi Đấu Vòng Bán Kết (2 Trận)';
-        } elseif ($currentStage === 'finals') {
-            $timeRemainingInStage = 240;
-            $stageTitle = 'Trận Chung Kết Đỉnh Cao - Tranh Cúp Vàng';
-        } else {
-            $timeRemainingInStage = 120;
-            $stageTitle = 'Đã Tìm Ra Quán Quân - Chuẩn Bị Mùa Mới';
-        }
-    } else {
-        if ($elapsed < 600) {
-            $currentStage = 'betting';
-            $timeRemainingInStage = 600 - $elapsed;
-            $stageTitle = 'Mở Sàn Đặt Cược Dự Đoán Quán Quân';
-        } elseif ($elapsed < 1080) {
-            $currentStage = 'quarter_finals';
-            $timeRemainingInStage = 1080 - $elapsed;
-            $stageTitle = 'Đang Thi Đấu Vòng Tứ Kết (4 Trận)';
-        } elseif ($elapsed < 1440) {
-            $currentStage = 'semi_finals';
-            $timeRemainingInStage = 1440 - $elapsed;
-            $stageTitle = 'Đang Thi Đấu Vòng Bán Kết (2 Trận)';
-        } elseif ($elapsed < 1680) {
-            $currentStage = 'finals';
-            $timeRemainingInStage = 1680 - $elapsed;
-            $stageTitle = 'Trận Chung Kết Đỉnh Cao - Tranh Cúp Vàng';
-        } else {
-            $currentStage = 'finished';
-            $timeRemainingInStage = 1800 - $elapsed;
-            $stageTitle = 'Đã Tìm Ra Quán Quân - Chuẩn Bị Mùa Mới';
-        }
-    }
+    list($currentStage, $timeRemainingInStage, $stageTitle) = esportsStageFromElapsed($elapsed);
 
     // Lấy thông tin từ database nếu đã có
     $stmt = $conn->prepare("SELECT * FROM esports_tournaments WHERE season_id = ?");
@@ -323,125 +431,21 @@ function getCurrentEsportsTournament($conn, $forceStage = null) {
     $tour = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
-    $players = getEsportsPlayersList();
+    $players = getEsportsPlayersList($game);
 
-    // Tính toán toàn bộ cây thi đấu (Bracket Tree)
-    // 4 Trận Tứ Kết (Quarter-Finals)
-    $qf1_winner = simulateMatchWinner('alphax', 'titango', $seasonId, 'qf1');
-    $qf2_winner = simulateMatchWinner('stockcaro', 'dragonai', $seasonId, 'qf2');
-    $qf3_winner = simulateMatchWinner('deepo', 'cyberbot', $seasonId, 'qf3');
-    $qf4_winner = simulateMatchWinner('zenzero', 'phantomx', $seasonId, 'qf4');
+    $built = esportsBuildBracket($players, $seasonId, $currentStage, $game);
+    $bracketTree = $built['tree'];
+    $final_winner = $built['final_winner'];
+    $champion = $built['champion'];
 
-    // 2 Trận Bán Kết (Semi-Finals)
-    $sf1_winner = simulateMatchWinner($qf1_winner, $qf2_winner, $seasonId, 'sf1');
-    $sf2_winner = simulateMatchWinner($qf3_winner, $qf4_winner, $seasonId, 'sf2');
-
-    // 1 Trận Chung Kết (Grand Final)
-    $final_winner = simulateMatchWinner($sf1_winner, $sf2_winner, $seasonId, 'final');
-    $champion = $players[$final_winner];
-
-    $isQfFinished = in_array($currentStage, ['semi_finals', 'finals', 'finished']);
-    $isQfPlaying = ($currentStage === 'quarter_finals');
-
-    $isSfFinished = in_array($currentStage, ['finals', 'finished']);
-    $isSfPlaying = ($currentStage === 'semi_finals');
-
-    $isFinalFinished = ($currentStage === 'finished');
-    $isFinalPlaying = ($currentStage === 'finals');
-
-    $bracketTree = [
-        'qf' => [
-            [
-                'match_id' => 1,
-                'round_name' => 'Tứ Kết 1',
-                'title' => 'TỨ KẾT 1: AlphaX vs TitanGo',
-                'p1' => $players['alphax'],
-                'p2' => $players['titango'],
-                'winner' => $isQfFinished ? $qf1_winner : null,
-                'status' => $isQfFinished ? 'finished' : ($isQfPlaying ? 'playing' : 'upcoming'),
-                'p1_score' => $isQfFinished ? ($qf1_winner === 'alphax' ? 1 : 0) : 0,
-                'p2_score' => $isQfFinished ? ($qf1_winner === 'titango' ? 1 : 0) : 0
-            ],
-            [
-                'match_id' => 2,
-                'round_name' => 'Tứ Kết 2',
-                'title' => 'TỨ KẾT 2: StockCaro vs DragonAI',
-                'p1' => $players['stockcaro'],
-                'p2' => $players['dragonai'],
-                'winner' => $isQfFinished ? $qf2_winner : null,
-                'status' => $isQfFinished ? 'finished' : ($isQfPlaying ? 'playing' : 'upcoming'),
-                'p1_score' => $isQfFinished ? ($qf2_winner === 'stockcaro' ? 1 : 0) : 0,
-                'p2_score' => $isQfFinished ? ($qf2_winner === 'dragonai' ? 1 : 0) : 0
-            ],
-            [
-                'match_id' => 3,
-                'round_name' => 'Tứ Kết 3',
-                'title' => 'TỨ KẾT 3: DeepO vs CyberBot',
-                'p1' => $players['deepo'],
-                'p2' => $players['cyberbot'],
-                'winner' => $isQfFinished ? $qf3_winner : null,
-                'status' => $isQfFinished ? 'finished' : ($isQfPlaying ? 'playing' : 'upcoming'),
-                'p1_score' => $isQfFinished ? ($qf3_winner === 'deepo' ? 1 : 0) : 0,
-                'p2_score' => $isQfFinished ? ($qf3_winner === 'cyberbot' ? 1 : 0) : 0
-            ],
-            [
-                'match_id' => 4,
-                'round_name' => 'Tứ Kết 4',
-                'title' => 'TỨ KẾT 4: ZenZero vs PhantomX',
-                'p1' => $players['zenzero'],
-                'p2' => $players['phantomx'],
-                'winner' => $isQfFinished ? $qf4_winner : null,
-                'status' => $isQfFinished ? 'finished' : ($isQfPlaying ? 'playing' : 'upcoming'),
-                'p1_score' => $isQfFinished ? ($qf4_winner === 'zenzero' ? 1 : 0) : 0,
-                'p2_score' => $isQfFinished ? ($qf4_winner === 'phantomx' ? 1 : 0) : 0
-            ]
-        ],
-        'sf' => [
-            [
-                'match_id' => 5,
-                'round_name' => 'Bán Kết 1',
-                'title' => ($isQfFinished || $isSfPlaying) ? ('BÁN KẾT 1: ' . ($players[$qf1_winner]['name'] ?? 'TBD') . ' vs ' . ($players[$qf2_winner]['name'] ?? 'TBD')) : 'BÁN KẾT 1 (Thắng TK1 vs Thắng TK2)',
-                'p1' => ($isQfFinished || $isSfPlaying) ? $players[$qf1_winner] : null,
-                'p2' => ($isQfFinished || $isSfPlaying) ? $players[$qf2_winner] : null,
-                'winner' => $isSfFinished ? $sf1_winner : null,
-                'status' => $isSfFinished ? 'finished' : ($isSfPlaying ? 'playing' : 'upcoming'),
-                'p1_score' => $isSfFinished ? ($sf1_winner === $qf1_winner ? 1 : 0) : 0,
-                'p2_score' => $isSfFinished ? ($sf1_winner === $qf2_winner ? 1 : 0) : 0
-            ],
-            [
-                'match_id' => 6,
-                'round_name' => 'Bán Kết 2',
-                'title' => ($isQfFinished || $isSfPlaying) ? ('BÁN KẾT 2: ' . ($players[$qf3_winner]['name'] ?? 'TBD') . ' vs ' . ($players[$qf4_winner]['name'] ?? 'TBD')) : 'BÁN KẾT 2 (Thắng TK3 vs Thắng TK4)',
-                'p1' => ($isQfFinished || $isSfPlaying) ? $players[$qf3_winner] : null,
-                'p2' => ($isQfFinished || $isSfPlaying) ? $players[$qf4_winner] : null,
-                'winner' => $isSfFinished ? $sf2_winner : null,
-                'status' => $isSfFinished ? 'finished' : ($isSfPlaying ? 'playing' : 'upcoming'),
-                'p1_score' => $isSfFinished ? ($sf2_winner === $qf3_winner ? 1 : 0) : 0,
-                'p2_score' => $isSfFinished ? ($sf2_winner === $qf4_winner ? 1 : 0) : 0
-            ]
-        ],
-        'final' => [
-            'match_id' => 7,
-            'round_name' => 'Chung Kết',
-            'title' => ($isSfFinished || $isFinalPlaying) ? ('👑 CHUNG KẾT VÔ ĐỊCH: ' . ($players[$sf1_winner]['name'] ?? 'TBD') . ' vs ' . ($players[$sf2_winner]['name'] ?? 'TBD')) : '👑 CHUNG KẾT VÔ ĐỊCH (Thắng BK1 vs Thắng BK2)',
-            'p1' => ($isSfFinished || $isFinalPlaying) ? $players[$sf1_winner] : null,
-            'p2' => ($isSfFinished || $isFinalPlaying) ? $players[$sf2_winner] : null,
-            'winner' => $isFinalFinished ? $final_winner : null,
-            'status' => $isFinalFinished ? 'finished' : ($isFinalPlaying ? 'playing' : 'upcoming'),
-            'p1_score' => $isFinalFinished ? ($final_winner === $sf1_winner ? 1 : 0) : 0,
-            'p2_score' => $isFinalFinished ? ($final_winner === $sf2_winner ? 1 : 0) : 0
-        ],
-        'champion' => $isFinalFinished ? $champion : null
-    ];
-
-    $title = $seasonInfo['title'];
     $bracketJson = json_encode($bracketTree, JSON_UNESCAPED_UNICODE);
+    $dbGameType = $gameCfg['db_type'];
 
     if (!$tour) {
-        $stmtInsert = $conn->prepare("INSERT INTO esports_tournaments (season_id, title, status, start_time, end_time, champion_id, champion_name, bracket_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-        $champId = $isFinalFinished ? $final_winner : null;
-        $champName = $isFinalFinished ? $champion['name'] : null;
-        $stmtInsert->bind_param("isssssss", $seasonId, $title, $currentStage, $seasonStartTime, $seasonEndTime, $champId, $champName, $bracketJson);
+        $stmtInsert = $conn->prepare("INSERT INTO esports_tournaments (season_id, title, game_type, status, start_time, end_time, champion_id, champion_name, bracket_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $champId = ($currentStage === 'finished') ? $final_winner : null;
+        $champName = ($currentStage === 'finished') ? $champion['name'] : null;
+        $stmtInsert->bind_param("issssssss", $seasonId, $title, $dbGameType, $currentStage, $seasonStartTime, $seasonEndTime, $champId, $champName, $bracketJson);
         $stmtInsert->execute();
         $tourDbId = $stmtInsert->insert_id;
         $stmtInsert->close();
@@ -457,8 +461,8 @@ function getCurrentEsportsTournament($conn, $forceStage = null) {
 
     // Tự động thanh toán trả thưởng khi giải đấu kết thúc (finished)
     if ($currentStage === 'finished' && empty($tour['payout_settled'])) {
-        settleEsportsPredictionsPayout($conn, $seasonId, $final_winner, $champion['name']);
-        $conn->query("UPDATE esports_tournaments SET payout_settled = 1 WHERE season_id = $seasonId");
+        settleEsportsPredictionsPayout($conn, $seasonId, $final_winner, $champion['name'], $gameCfg['label'], $seasonNumber);
+        $conn->query("UPDATE esports_tournaments SET payout_settled = 1 WHERE season_id = " . (int)$seasonId);
     }
 
     // Lấy tổng cược hiện tại của mùa này
@@ -470,6 +474,8 @@ function getCurrentEsportsTournament($conn, $forceStage = null) {
 
     return [
         'id' => $tourDbId,
+        'game' => $game,
+        'game_label' => $gameCfg['label'],
         'season_id' => $seasonId,
         'season_number' => $seasonNumber,
         'season_name' => $seasonName,
@@ -492,10 +498,34 @@ function getCurrentEsportsTournament($conn, $forceStage = null) {
 }
 
 /**
+ * 📡 Trạng thái nhanh của cả 3 giải (không ghi DB) để hiển thị trên thanh chọn giải
+ */
+if (!function_exists('getEsportsAllGamesStatus')) {
+function getEsportsAllGamesStatus() {
+    $out = [];
+    foreach (getEsportsGamesConfig() as $code => $cfg) {
+        $info = getEsportsCurrentSeasonInfo(null, $code);
+        list($stage, $remaining, $stageTitle) = esportsStageFromElapsed($info['elapsed']);
+        $out[$code] = [
+            'game' => $code,
+            'label' => $cfg['label'],
+            'icon' => $cfg['icon'],
+            'stage' => $stage,
+            'stage_title' => $stageTitle,
+            'seconds_remaining' => $remaining,
+            'season_tag' => $info['season_tag'],
+            'season_number' => $info['season_number']
+        ];
+    }
+    return $out;
+}
+}
+
+/**
  * 💰 Thanh toán trả thưởng cho khán giả dự đoán chính xác Quán Quân
  */
 if (!function_exists('settleEsportsPredictionsPayout')) {
-function settleEsportsPredictionsPayout($conn, $seasonId, $championId, $championName) {
+function settleEsportsPredictionsPayout($conn, $seasonId, $championId, $championName, $gameLabel = '', $seasonNumber = null) {
     require_once __DIR__ . '/game_history_helper.php';
 
     // 1. Tìm tất cả dự đoán của mùa giải này
@@ -541,11 +571,13 @@ function settleEsportsPredictionsPayout($conn, $seasonId, $championId, $champion
     if (file_exists(__DIR__ . '/realtime/realtime_publisher.php')) {
         require_once __DIR__ . '/realtime/realtime_publisher.php';
         if (class_exists('RealtimePublisher')) {
+            $shownSeason = $seasonNumber !== null ? $seasonNumber : $seasonId;
+            $gameText = $gameLabel !== '' ? " {$gameLabel}" : '';
             RealtimePublisher::publish('live_61', 'esports_champion_announced', [
                 'season_id' => $seasonId,
                 'champion_id' => $championId,
                 'champion_name' => $championName,
-                'message' => "🏆 CHÚC MỪNG KỲ THỦ [{$championName}] ĐÃ ĐOẠT CÚP VÔ ĐỊCH MÙA #{$seasonId}!"
+                'message' => "🏆 CHÚC MỪNG KỲ THỦ [{$championName}] ĐÃ ĐOẠT CÚP VÔ ĐỊCH GIẢI" . mb_strtoupper($gameText) . " MÙA #{$shownSeason}!"
             ]);
         }
     }
@@ -556,8 +588,9 @@ function settleEsportsPredictionsPayout($conn, $seasonId, $championId, $champion
  * 🎯 Đặt Cược Dự Đoán Quán Quân
  */
 if (!function_exists('placeEsportsPrediction')) {
-function placeEsportsPrediction($conn, $userId, $playerId, $amount) {
-    $seasonInfo = getEsportsCurrentSeasonInfo();
+function placeEsportsPrediction($conn, $userId, $playerId, $amount, $game = 'caro') {
+    $game = normalizeEsportsGame($game);
+    $seasonInfo = getEsportsCurrentSeasonInfo(null, $game);
     $seasonId = $seasonInfo['season_id'];
     $elapsed = $seasonInfo['elapsed'];
 
@@ -576,7 +609,7 @@ function placeEsportsPrediction($conn, $userId, $playerId, $amount) {
         return ['success' => false, 'message' => 'Mức cược dự đoán tối thiểu là 1,000 GTLM!'];
     }
 
-    $players = getEsportsPlayersList();
+    $players = getEsportsPlayersList($game);
     if (!isset($players[$playerId])) {
         return ['success' => false, 'message' => 'Kỳ thủ bạn chọn không hợp lệ!'];
     }
@@ -605,7 +638,7 @@ function placeEsportsPrediction($conn, $userId, $playerId, $amount) {
         ];
     }
 
-    $tour = getCurrentEsportsTournament($conn);
+    $tour = getCurrentEsportsTournament($conn, null, $game);
     $tourId = (int)$tour['id'];
 
     $conn->begin_transaction();

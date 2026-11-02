@@ -668,8 +668,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
         </div>
     </div>
 
-    <div style="display: flex; align-items: center; gap: 20px;">
-        <button type="button" onclick="openEsportsTournament()" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.35)); border: 1px solid #f59e0b; color: #fbbf24; border-radius: 999px; padding: 8px 18px; font-weight: 800; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 0 15px rgba(245, 158, 11, 0.3); transition: all 0.2s;" title="Đấu Trường Cờ Ca-rô AI & Sàn Dự Đoán Quán Quân"><i class="fa fa-trophy"></i> GIẢI ĐẤU 30P</button>
+    <div style="display: flex; align-items: center; gap: 8px;">
+        <!-- 3 Giải Đấu Esports AI Song Song -->
+        <button type="button" onclick="openEsportsTournament('caro')" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.35)); border: 1px solid #f59e0b; color: #fbbf24; border-radius: 999px; padding: 7px 14px; font-weight: 800; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 0 12px rgba(245, 158, 11, 0.3); transition: all 0.2s;" title="Giải Đấu Cờ Ca-rô AI 30 Phút & Sàn Dự Đoán Quán Quân">
+            <i class="fa fa-trophy"></i> GIẢI ĐẤU 30P
+        </button>
+        <button type="button" onclick="openEsportsTournament('chess')" style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(2, 132, 199, 0.35)); border: 1px solid #38bdf8; color: #38bdf8; border-radius: 999px; padding: 7px 14px; font-weight: 800; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 0 12px rgba(56, 189, 248, 0.3); transition: all 0.2s;" title="Giải Đấu Cờ Vua AI Siêu Cấp & Sàn Dự Đoán Quán Quân">
+            <i class="fa fa-chess-knight"></i> GIẢI CỜ VUA
+        </button>
+        <button type="button" onclick="openEsportsTournament('xiangqi')" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(185, 28, 28, 0.35)); border: 1px solid #ef4444; color: #f87171; border-radius: 999px; padding: 7px 14px; font-weight: 800; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 0 12px rgba(239, 68, 68, 0.3); transition: all 0.2s;" title="Giải Đấu Cờ Tướng AI Siêu Cấp & Sàn Dự Đoán Quán Quân">
+            <i class="fa fa-shield-alt"></i> GIẢI CỜ TƯỚNG
+        </button>
         <div style="background: rgba(255,255,255,0.08); padding: 8px 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.15); font-weight: 700; font-size: 14px;">
             💰 <span style="color: #4ade80;"><?= number_format($user['Money'], 0, ',', '.') ?></span> GTLM
         </div>

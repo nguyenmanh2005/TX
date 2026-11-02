@@ -1,9 +1,14 @@
 /**
- * ⚔️ ESPORTS TOURNAMENT BRACKET & LIVE CARO ARENA JS v2.0
+ * ⚔️ ESPORTS TOURNAMENT BRACKET & LIVE MULTI-ARENA JS v3.5
  * 
- * - Quản lý Cây Thi Đấu (Bracket Tree) & Sàn Dự Đoán Quán Quân
- * - Đấu Trường Trực Tiếp 15x15 (Live Caro Match Arena) với Minimax AI & Web Audio
- * - Bộ điều khiển giai đoạn (Stage Controller) linh hoạt cho phép xem từ đầu hoặc giờ thật
+ * Hỗ trợ 3 giải đấu AI đỉnh cao chạy song song lệch pha 10 phút:
+ * 1. ⭕ CỜ CA-RÔ AI (Bàn cờ 15x15)
+ * 2. ♞ CỜ VUA AI (Bàn cờ 8x8 Gỗ Quý)
+ * 3. 帥 CỜ TƯỚNG AI (Bàn cờ 9x10 Sông Sở Hà Hán Giới)
+ * 
+ * - Quản lý Cây Thi Đấu (Bracket Tree) & Sàn Dự Đoán Quán Quân theo 4 Mùa (Xuân, Hạ, Thu, Đông)
+ * - Tự động đồng bộ thời gian thực 100%, không cho phép tua nhảy giai đoạn trước giờ
+ * - Đấu Trường Trực Tiếp (Live Arena) mô phỏng chân thực từng nước đi của cả 3 môn cờ
  */
 
 (function (window, $) {
@@ -15,12 +20,11 @@
             this.currentData = null;
             this.countdownTimer = null;
             this.activeTab = 'bracket';
+            this.currentGame = 'caro'; // 'caro' | 'chess' | 'xiangqi'
 
-            // Arena Game State
+            // Arena Shared State
             this.currentArenaMatch = null;
-            this.boardSize = 15;
-            this.boardState = [];
-            this.currentTurn = 1; // 1: X (p1), 2: O (p2)
+            this.currentTurn = 1; // 1: P1, 2: P2
             this.isGameOver = false;
             this.isThinking = false;
             this.moveCount = 0;
@@ -29,8 +33,22 @@
             this.audioCtx = null;
             this.nextMoveTimeout = null;
 
-            this.letters = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O'];
-            this.starPoints = [[7,7], [3,3], [11,3], [3,11], [11,11]]; // H8, D4, L4, D12, L12
+            // Caro Board State (15x15)
+            this.caroBoardSize = 15;
+            this.caroBoardState = [];
+            this.caroLetters = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O'];
+            this.caroStarPoints = [[7,7], [3,3], [11,3], [3,11], [11,11]];
+
+            // Chess Board State (8x8)
+            this.chessBoardState = [];
+            this.chessFiles = ['a','b','c','d','e','f','g','h'];
+            this.chessSimulationMoves = [];
+            this.chessMoveIndex = 0;
+
+            // Xiangqi Board State (9x10)
+            this.xiangqiBoardState = [];
+            this.xiangqiSimulationMoves = [];
+            this.xiangqiMoveIndex = 0;
         }
 
         init() {
@@ -47,9 +65,16 @@
                     <!-- Header -->
                     <div class="esports-header">
                         <div class="esports-title-group">
-                            <div class="esports-badge-icon">⚔️</div>
+                            <div class="esports-badge-icon" id="esportsBadgeIcon">⚔️</div>
                             <div class="esports-title-text">
-                                <h2 id="esportsTitle">ĐẠI CHIẾN CỜ CA-RÔ AI <span class="season-tag" id="esportsSeasonTag">MÙA #0</span></h2>
+                                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                                    <h2 id="esportsTitle" style="margin:0;">ĐẠI CHIẾN CỜ CA-RÔ AI <span class="season-tag" id="esportsSeasonTag">MÙA #0</span></h2>
+                                    <div class="modal-game-switcher" title="Chuyển nhanh giải đấu">
+                                        <button type="button" class="modal-game-chip active" id="gameChip-caro" onclick="window.esportsManager.switchGame('caro')">⭕ Ca-rô</button>
+                                        <button type="button" class="modal-game-chip" id="gameChip-chess" onclick="window.esportsManager.switchGame('chess')">♞ Cờ Vua</button>
+                                        <button type="button" class="modal-game-chip" id="gameChip-xiangqi" onclick="window.esportsManager.switchGame('xiangqi')">帥 Cờ Tướng</button>
+                                    </div>
+                                </div>
                                 <div class="esports-stage-status">
                                     <span class="stage-pill betting" id="esportsStagePill">ĐANG MỞ SÀN CƯỢC</span>
                                     <span id="esportsStageDesc">Đếm ngược mở trận tứ kết</span>
@@ -141,7 +166,7 @@
                             </div>
                         </div>
 
-                        <!-- Tab 2: Đấu Trường Cờ Ca-rô Live (15x15 Arena) -->
+                        <!-- Tab 2: Đấu Trường Trực Tiếp (Multi-Game Arena) -->
                         <div class="esports-tab-pane" id="pane-arena">
                             <div class="arena-container">
                                 <!-- Match Selection Bar -->
@@ -162,13 +187,13 @@
 
                                 <!-- Duel HUD -->
                                 <div class="arena-hud-duel">
-                                    <!-- Player 1 Card (Red X) -->
+                                    <!-- Player 1 Card -->
                                     <div class="duel-player-card player-x" id="arenaPlayer1Card">
                                         <div class="duel-player-avatar" id="arenaP1Avatar">🔴</div>
                                         <div class="duel-player-details">
-                                            <div class="duel-player-name" id="arenaP1Name">AlphaX</div>
-                                            <div class="duel-player-meta"><span class="badge-role">QUÂN ĐỎ (❌)</span> • Elo <span id="arenaP1Elo">2850</span></div>
-                                            <div class="duel-player-style" id="arenaP1Style">Tấn công dồn dập, ép biên thần tốc</div>
+                                            <div class="duel-player-name" id="arenaP1Name">Kỳ Thủ 1</div>
+                                            <div class="duel-player-meta"><span class="badge-role" id="arenaP1RoleText">QUÂN ĐỎ</span> • Elo <span id="arenaP1Elo">2850</span></div>
+                                            <div class="duel-player-style" id="arenaP1Style">Lối đánh toàn diện</div>
                                         </div>
                                         <div class="turn-indicator-badge" id="arenaP1TurnBadge">ĐANG ĐẾN LƯỢT</div>
                                     </div>
@@ -184,60 +209,30 @@
                                         <div class="duel-move-count">Nước cờ: <b id="arenaMoveCounter" style="color:#fbbf24;">0</b></div>
                                     </div>
 
-                                    <!-- Player 2 Card (Purple/Blue O) -->
+                                    <!-- Player 2 Card -->
                                     <div class="duel-player-card player-o" id="arenaPlayer2Card">
                                         <div class="duel-player-avatar" id="arenaP2Avatar">🟣</div>
                                         <div class="duel-player-details">
-                                            <div class="duel-player-name" id="arenaP2Name">ZenZero</div>
-                                            <div class="duel-player-meta"><span class="badge-role o">QUÂN TÍM (⭕)</span> • Elo <span id="arenaP2Elo">2780</span></div>
-                                            <div class="duel-player-style" id="arenaP2Style">Bậc thầy phòng thủ & phản kích</div>
+                                            <div class="duel-player-name" id="arenaP2Name">Kỳ Thủ 2</div>
+                                            <div class="duel-player-meta"><span class="badge-role o" id="arenaP2RoleText">QUÂN TÍM</span> • Elo <span id="arenaP2Elo">2780</span></div>
+                                            <div class="duel-player-style" id="arenaP2Style">Bậc thầy phản kích</div>
                                         </div>
                                         <div class="turn-indicator-badge" id="arenaP2TurnBadge">ĐANG ĐẾN LƯỢT</div>
                                     </div>
                                 </div>
 
-                                <!-- 15x15 Caro Board -->
-                                <div class="arena-board-wrap">
-                                    <div class="board-coord-row top-letters">
-                                        <span></span>
-                                        <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span>
-                                        <span>F</span><span>G</span><span>H</span><span>I</span><span>J</span>
-                                        <span>K</span><span>L</span><span>M</span><span>N</span><span>O</span>
-                                        <span></span>
-                                    </div>
-
-                                    <div class="board-with-side-coords">
-                                        <div class="board-coord-col left-numbers">
-                                            <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
-                                            <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
-                                            <span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
-                                        </div>
-
-                                        <div class="caro-match-board" id="tournamentCaroBoard">
-                                            <!-- Dynamically generated 225 cells -->
-                                        </div>
-
-                                        <div class="board-coord-col right-numbers">
-                                            <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
-                                            <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
-                                            <span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
-                                        </div>
-                                    </div>
-
-                                    <div class="board-coord-row bottom-letters">
-                                        <span></span>
-                                        <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span>
-                                        <span>F</span><span>G</span><span>H</span><span>I</span><span>J</span>
-                                        <span>K</span><span>L</span><span>M</span><span>N</span><span>O</span>
-                                        <span></span>
+                                <!-- Dynamic Arena Board Wrap (Caro / Chess / Xiangqi) -->
+                                <div class="arena-board-wrap" id="arenaBoardWrap">
+                                    <div id="arenaBoardDynamic">
+                                        <!-- Dynamically generated board based on currentGame -->
                                     </div>
 
                                     <!-- Victory Modal Overlay -->
                                     <div class="arena-victory-modal" id="arenaVictoryModal">
                                         <div class="victory-content-box">
                                             <div class="victory-icon-trophy">🏆</div>
-                                            <h2 class="victory-headline" id="arenaVictoryHeadline">ALPHAX CHIẾN THẮNG!</h2>
-                                            <div class="victory-subtext" id="arenaVictorySubtext">Hoàn tất 5 quân liên tiếp và xuất sắc đoạt vé đi tiếp!</div>
+                                            <h2 class="victory-headline" id="arenaVictoryHeadline">CHIẾN THẮNG TUYỆT ĐỐI!</h2>
+                                            <div class="victory-subtext" id="arenaVictorySubtext">Xuất sắc giành vé đi tiếp!</div>
                                             <div class="victory-action-btns">
                                                 <button type="button" class="btn-vic-restart" onclick="window.esportsManager.restartCurrentMatch()"><i class="fa fa-redo"></i> Xem Lại Ván Này</button>
                                                 <button type="button" class="btn-vic-next" id="btnVicNextMatch" onclick="window.esportsManager.goToNextMatch()"><i class="fa fa-arrow-right"></i> Xem Trận Kế Tiếp</button>
@@ -251,7 +246,7 @@
                                 <div class="arena-commentary-bar">
                                     <div class="comm-badge"><i class="fa fa-broadcast-tower"></i> BÌNH LUẬN TRỰC TIẾP:</div>
                                     <div class="comm-ticker-text" id="arenaCommentaryText">
-                                        Trận đấu đang chuẩn bị khởi tranh trên bàn cờ tiêu chuẩn 15x15...
+                                        Trận đấu đang chuẩn bị khởi tranh...
                                     </div>
                                 </div>
                             </div>
@@ -262,7 +257,7 @@
                             <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 10px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
                                 <div>
                                     <span style="color:#fbbf24; font-weight:800;">💡 LUẬT DỰ ĐOÁN:</span>
-                                    <span style="color:#cbd5e1; font-size:0.85rem;"> Chọn 1 trong 8 kỳ thủ AI mà sếp tin là sẽ giành cúp Vô Địch. Nếu kỳ thủ đó vô địch mùa này, sếp nhận ngay [Tiền cược × Tỷ lệ Odds]!</span>
+                                    <span style="color:#cbd5e1; font-size:0.85rem;"> Chọn 1 trong 8 kỳ thủ AI của giải đấu mà sếp tin là sẽ giành cúp Vô Địch. Nếu kỳ thủ đó vô địch mùa này, sếp nhận ngay [Tiền cược × Tỷ lệ Odds]!</span>
                                 </div>
                                 <div style="font-size:0.9rem; font-weight:800; color:#34d399;" id="esportsUserMoney">
                                     Số dư: 0 GTLM
@@ -304,7 +299,23 @@
                 const targetTab = $(this).data('tab');
                 self.switchTab(targetTab);
             });
+        }
 
+        switchGame(gameCode) {
+            if (!['caro', 'chess', 'xiangqi'].includes(gameCode)) gameCode = 'caro';
+            if (this.currentGame === gameCode && this.currentData) return;
+
+            this.currentGame = gameCode;
+            $('.modal-game-chip').removeClass('active');
+            $(`#gameChip-${gameCode}`).addClass('active');
+
+            if (this.nextMoveTimeout) {
+                clearTimeout(this.nextMoveTimeout);
+                this.nextMoveTimeout = null;
+            }
+            this.currentArenaMatch = null;
+
+            this.loadTournamentData();
         }
 
         switchTab(tabId) {
@@ -320,8 +331,14 @@
             }
         }
 
-        openModal() {
+        openModal(initialGame) {
             this.init();
+            if (initialGame && ['caro', 'chess', 'xiangqi'].includes(initialGame)) {
+                this.currentGame = initialGame;
+            }
+            $('.modal-game-chip').removeClass('active');
+            $(`#gameChip-${this.currentGame}`).addClass('active');
+
             $('#esportsTournamentModal').addClass('active');
             this.loadTournamentData();
             this.startCountdownLoop();
@@ -346,7 +363,7 @@
             const appRoot = '/' + (pathParts[1] && !pathParts[1].includes('.') ? pathParts[1] + '/' : '');
             const apiUrl = origin + appRoot + 'api_esports_tournament.php';
 
-            $.getJSON(apiUrl, { action: 'get_tournament_bracket' }, function (res) {
+            $.getJSON(apiUrl, { action: 'get_tournament_bracket', game: self.currentGame }, function (res) {
                 if (res && res.success) {
                     self.currentData = res;
                     self.renderAll();
@@ -381,14 +398,39 @@
             if (!this.currentData) return;
             const t = this.currentData.tournament;
 
+            // Update Game Selector Chips Stage Labels
+            if (this.currentData.games_status) {
+                const gs = this.currentData.games_status;
+                const stageMap = {
+                    'betting': '🔥 Mở Cược',
+                    'quarter_finals': '⚔️ Tứ Kết',
+                    'semi_finals': '⚡ Bán Kết',
+                    'finals': '👑 Chung Kết',
+                    'finished': '🏆 Vinh Danh'
+                };
+                ['caro', 'chess', 'xiangqi'].forEach(g => {
+                    if (gs[g]) {
+                        $(`#chipStage-${g}`).text(stageMap[gs[g].stage] || 'Đang đấu');
+                    }
+                });
+            }
+
             // Header Elements
             const seasonTag = t.season_tag || ('MÙA #' + t.season_number);
             const badgeClass = t.season_badge_class || '';
-            $('#esportsTitle').html(`ĐẠI CHIẾN CỜ CA-RÔ AI <span class="season-tag ${badgeClass}">${seasonTag}</span>`);
+            const gameIcon = (this.currentGame === 'chess') ? '♞' : ((this.currentGame === 'xiangqi') ? '帥' : '⭕');
+            const gameTitlePrefix = (this.currentGame === 'chess') ? 'ĐẠI CHIẾN CỜ VUA AI' : ((this.currentGame === 'xiangqi') ? 'ĐẠI CHIẾN CỜ TƯỚNG AI' : 'ĐẠI CHIẾN CỜ CA-RÔ AI');
+
+            $('#esportsBadgeIcon').text(gameIcon);
+            $('#esportsTitle').html(`${gameTitlePrefix} <span class="season-tag ${badgeClass}">${seasonTag}</span>`);
             $('#esportsPoolVal').text(new Intl.NumberFormat().format(t.total_pool) + ' GTLM');
             $('#esportsUserMoney').text('Số dư của sếp: ' + this.currentData.user_money_formatted + ' GTLM');
 
-            // Stepper chỉ hiển thị tiến trình: bước đã qua = done, bước hiện tại = active
+            // Đồng bộ tab môn cờ hiện tại
+            $('.modal-game-chip').removeClass('active');
+            $(`#gameChip-${this.currentGame}`).addClass('active');
+
+            // Stepper
             const stageOrder = ['betting', 'quarter_finals', 'semi_finals', 'finals', 'finished'];
             const stepIds = ['#stepBetting', '#stepQf', '#stepSf', '#stepFinals', '#stepFinished'];
             const curIdx = Math.max(0, stageOrder.indexOf(t.stage));
@@ -536,7 +578,7 @@
                 ${renderMatchCard('TK 2 (#4 vs #5)', bracket.qf[1])}
             </div>`;
 
-            // Đường nối nhánh trái: QF1 & QF2 -> SF1
+            // Đường nối nhánh trái
             const qf1Wire = wireClass(bracket.qf[0]);
             const qf2Wire = wireClass(bracket.qf[1]);
             const conn1Html = `
@@ -688,9 +730,7 @@
             }
 
             const allMatches = this.getAllMatchesList();
-            // Ưu tiên trận đang đấu (playing) có đủ 2 người chơi
             let matchToWatch = allMatches.find(m => m.status === 'playing' && m.p1 && m.p2);
-            // Nếu không có trận nào đang đấu, chọn trận đã xong gần nhất
             if (!matchToWatch) {
                 const finishedMatches = allMatches.filter(m => m.status === 'finished' && m.p1 && m.p2);
                 matchToWatch = finishedMatches[finishedMatches.length - 1] || allMatches[0];
@@ -718,27 +758,38 @@
                 });
                 return;
             }
-            if (!match) return;
 
             this.currentArenaMatch = match;
             this.switchTab('arena');
             this.renderMatchPills();
 
             // Populate HUD
-            const p1 = match.p1 || { name: 'AlphaX', avatar: '🔴', elo: 2850, color: '#ef4444', style: 'Tấn công dồn dập' };
-            const p2 = match.p2 || { name: 'ZenZero', avatar: '🟣', elo: 2780, color: '#a855f7', style: 'Khiên thần Ca-rô' };
+            const p1 = match.p1;
+            const p2 = match.p2;
 
             $('#arenaP1Avatar').text(p1.avatar || '🔴');
-            $('#arenaP1Name').text(p1.name || 'Bot X').css('color', p1.color || '#ef4444');
+            $('#arenaP1Name').text(p1.name || 'Bot 1').css('color', p1.color || '#ef4444');
             $('#arenaP1Elo').text(p1.elo || 2800);
             $('#arenaP1Style').text(p1.style || 'Lối đánh toàn diện');
 
             $('#arenaP2Avatar').text(p2.avatar || '🟣');
-            $('#arenaP2Name').text(p2.name || 'Bot O').css('color', p2.color || '#a855f7');
+            $('#arenaP2Name').text(p2.name || 'Bot 2').css('color', p2.color || '#a855f7');
             $('#arenaP2Elo').text(p2.elo || 2750);
             $('#arenaP2Style').text(p2.style || 'Phản kích trung tâm');
 
-            $('#arenaRoundTitle').text(match.title || match.round_name || 'ĐẤU TRƯỜNG CỜ CA-RÔ');
+            // Dynamic Roles according to game
+            if (this.currentGame === 'chess') {
+                $('#arenaP1RoleText').text('QUÂN TRẮNG (♔)');
+                $('#arenaP2RoleText').text('QUÂN ĐEN (♚)');
+            } else if (this.currentGame === 'xiangqi') {
+                $('#arenaP1RoleText').text('QUÂN ĐỎ (帥)');
+                $('#arenaP2RoleText').text('QUÂN ĐEN (將)');
+            } else {
+                $('#arenaP1RoleText').text('QUÂN ĐỎ (❌)');
+                $('#arenaP2RoleText').text('QUÂN TÍM (⭕)');
+            }
+
+            $('#arenaRoundTitle').text(match.title || match.round_name || 'ĐẤU TRƯỜNG AI');
             $('#arenaScoreP1').text(match.p1_score || 0);
             $('#arenaScoreP2').text(match.p2_score || 0);
             $('#arenaMoveCounter').text('0');
@@ -750,13 +801,58 @@
             this.startArenaGame();
         }
 
+        // ==========================================
+        // MULTI-GAME BOARD INITIALIZATION
+        // ==========================================
         initArenaBoard() {
-            const boardEl = $('#tournamentCaroBoard');
-            boardEl.empty();
+            const container = $('#arenaBoardDynamic');
+            container.empty();
 
-            for (let r = 0; r < this.boardSize; r++) {
-                for (let c = 0; c < this.boardSize; c++) {
-                    const isStar = this.starPoints.some(([sr, sc]) => sr === r && sc === c);
+            if (this.currentGame === 'chess') {
+                this.initChessBoard(container);
+            } else if (this.currentGame === 'xiangqi') {
+                this.initXiangqiBoard(container);
+            } else {
+                this.initCaroBoard(container);
+            }
+        }
+
+        initCaroBoard(container) {
+            let html = `
+            <div class="board-coord-row top-letters">
+                <span></span>
+                <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span>
+                <span>F</span><span>G</span><span>H</span><span>I</span><span>J</span>
+                <span>K</span><span>L</span><span>M</span><span>N</span><span>O</span>
+                <span></span>
+            </div>
+            <div class="board-with-side-coords">
+                <div class="board-coord-col left-numbers">
+                    <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+                    <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+                    <span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+                </div>
+                <div class="caro-match-board" id="tournamentCaroBoard"></div>
+                <div class="board-coord-col right-numbers">
+                    <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+                    <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+                    <span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+                </div>
+            </div>
+            <div class="board-coord-row bottom-letters">
+                <span></span>
+                <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span>
+                <span>F</span><span>G</span><span>H</span><span>I</span><span>J</span>
+                <span>K</span><span>L</span><span>M</span><span>N</span><span>O</span>
+                <span></span>
+            </div>
+            `;
+            container.html(html);
+
+            const boardEl = $('#tournamentCaroBoard');
+            for (let r = 0; r < this.caroBoardSize; r++) {
+                for (let c = 0; c < this.caroBoardSize; c++) {
+                    const isStar = this.caroStarPoints.some(([sr, sc]) => sr === r && sc === c);
                     const cell = $(`
                         <div class="caro-match-cell ${isStar ? 'star-point' : ''}" data-row="${r}" data-col="${c}"></div>
                     `);
@@ -765,27 +861,91 @@
             }
         }
 
+        initChessBoard(container) {
+            let html = `
+            <div style="display:flex; flex-direction:column; align-items:center;">
+                <div style="display:flex; gap:0; margin-bottom:4px; font-family:'JetBrains Mono', monospace; font-size:12px; font-weight:700; color:#94a3b8; width:352px; justify-content:space-around;">
+                    <span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span>
+                </div>
+                <div style="display:flex; align-items:center;">
+                    <div style="display:flex; flex-direction:column; height:352px; justify-content:space-around; font-family:'JetBrains Mono', monospace; font-size:12px; font-weight:700; color:#94a3b8; margin-right:8px;">
+                        <span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
+                    </div>
+                    <div class="chess-match-board" id="tournamentChessBoard"></div>
+                    <div style="display:flex; flex-direction:column; height:352px; justify-content:space-around; font-family:'JetBrains Mono', monospace; font-size:12px; font-weight:700; color:#94a3b8; margin-left:8px;">
+                        <span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
+                    </div>
+                </div>
+                <div style="display:flex; gap:0; margin-top:4px; font-family:'JetBrains Mono', monospace; font-size:12px; font-weight:700; color:#94a3b8; width:352px; justify-content:space-around;">
+                    <span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span>
+                </div>
+            </div>
+            `;
+            container.html(html);
+
+            const boardEl = $('#tournamentChessBoard');
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const isLight = (r + c) % 2 === 0;
+                    const cell = $(`
+                        <div class="chess-cell ${isLight ? 'light' : 'dark'}" data-row="${r}" data-col="${c}"></div>
+                    `);
+                    boardEl.append(cell);
+                }
+            }
+        }
+
+        initXiangqiBoard(container) {
+            let html = `
+            <div style="display:flex; flex-direction:column; align-items:center;">
+                <div class="xiangqi-match-board" id="tournamentXiangqiBoard">
+                    <div class="xiangqi-river-banner">
+                        <span>楚 河</span>
+                        <span>漢 界</span>
+                    </div>
+                    <div class="xiangqi-cells-container" id="xiangqiCellsGrid"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; width:360px; margin-top:6px; font-family:'JetBrains Mono', monospace; font-size:11px; font-weight:700; color:#fbbf24;">
+                    <span>1 (Cửu)</span><span>2 (Bát)</span><span>3 (Thất)</span><span>4 (Lục)</span><span>5 (Ngũ)</span><span>6 (Tứ)</span><span>7 (Tam)</span><span>8 (Nhị)</span><span>9 (Nhất)</span>
+                </div>
+            </div>
+            `;
+            container.html(html);
+
+            const gridEl = $('#xiangqiCellsGrid');
+            for (let r = 0; r < 10; r++) {
+                for (let c = 0; c < 9; c++) {
+                    const cell = $(`
+                        <div class="xiangqi-cell" data-row="${r}" data-col="${c}"></div>
+                    `);
+                    gridEl.append(cell);
+                }
+            }
+        }
+
+        // ==========================================
+        // GAME START & RUNNER
+        // ==========================================
         startArenaGame() {
             if (this.nextMoveTimeout) {
                 clearTimeout(this.nextMoveTimeout);
                 this.nextMoveTimeout = null;
             }
 
-            this.boardState = Array.from({ length: this.boardSize }, () => Array(this.boardSize).fill(0));
-            this.currentTurn = 1; // 1: X (p1), 2: O (p2)
+            this.currentTurn = 1;
             this.isGameOver = false;
             this.isThinking = false;
             this.moveCount = 0;
 
             $('#arenaMoveCounter').text('0');
-            $('.caro-match-cell').removeClass('piece-x piece-o last-move win-cell').text('');
 
-            const p1Name = this.currentArenaMatch.p1 ? this.currentArenaMatch.p1.name : 'AlphaX';
-            const p2Name = this.currentArenaMatch.p2 ? this.currentArenaMatch.p2.name : 'ZenZero';
-
-            this.setCommentary(`⚔️ Trận chiến bắt đầu! <b>${p1Name} (❌)</b> vs <b>${p2Name} (⭕)</b>.`);
-            this.updateTurnHUD();
-            this.scheduleNextMove();
+            if (this.currentGame === 'chess') {
+                this.startChessGame();
+            } else if (this.currentGame === 'xiangqi') {
+                this.startXiangqiGame();
+            } else {
+                this.startCaroGame();
+            }
         }
 
         updateTurnHUD() {
@@ -798,7 +958,22 @@
             }
         }
 
-        scheduleNextMove() {
+        // ==========================================
+        // 1. CARO GAME LOGIC
+        // ==========================================
+        startCaroGame() {
+            this.caroBoardState = Array.from({ length: this.caroBoardSize }, () => Array(this.caroBoardSize).fill(0));
+            $('.caro-match-cell').removeClass('piece-x piece-o last-move win-cell').text('');
+
+            const p1Name = this.currentArenaMatch.p1 ? this.currentArenaMatch.p1.name : 'AlphaX';
+            const p2Name = this.currentArenaMatch.p2 ? this.currentArenaMatch.p2.name : 'ZenZero';
+
+            this.setCommentary(`⚔️ Trận chiến Cờ Ca-rô bắt đầu! <b>${p1Name} (❌)</b> vs <b>${p2Name} (⭕)</b>.`);
+            this.updateTurnHUD();
+            this.scheduleNextCaroMove();
+        }
+
+        scheduleNextCaroMove() {
             if (this.isGameOver || this.isThinking) return;
 
             const baseDelay = 1200;
@@ -809,13 +984,13 @@
                 this.isThinking = false;
                 if (this.isGameOver) return;
 
-                const [r, c] = this.findBestMove(this.currentTurn);
-                this.placePiece(r, c, this.currentTurn);
+                const [r, c] = this.findBestCaroMove(this.currentTurn);
+                this.placeCaroPiece(r, c, this.currentTurn);
             }, delay);
         }
 
-        placePiece(r, c, player) {
-            this.boardState[r][c] = player;
+        placeCaroPiece(r, c, player) {
+            this.caroBoardState[r][c] = player;
             this.moveCount++;
             $('#arenaMoveCounter').text(this.moveCount);
 
@@ -835,34 +1010,35 @@
 
             this.playStoneClick();
 
-            const coordName = this.letters[c] + (r + 1);
+            const coordName = this.caroLetters[c] + (r + 1);
             this.setCommentary(`<b>${currentPlayerObj.name}</b> hạ quân tại ô <b>[${coordName}]</b> (Nước cờ ${this.moveCount})`);
 
-            // Check Win
-            const winLine = this.checkWin(r, c, player);
+            const winLine = this.checkCaroWin(r, c, player);
             if (winLine) {
-                this.handleVictory(player, winLine);
+                this.handleVictory(player, () => {
+                    winLine.forEach(([wr, wc]) => {
+                        $(`#tournamentCaroBoard .caro-match-cell[data-row="${wr}"][data-col="${wc}"]`).addClass('win-cell');
+                    });
+                }, 'Hoàn tất thế cờ ngũ tử 5 quân liên tiếp!');
                 return;
             }
 
-            // Check Draw
-            if (this.moveCount >= this.boardSize * this.boardSize) {
+            if (this.moveCount >= this.caroBoardSize * this.caroBoardSize) {
                 this.handleDraw();
                 return;
             }
 
-            // Switch Turn
             this.currentTurn = (this.currentTurn === 1) ? 2 : 1;
             this.updateTurnHUD();
-            this.scheduleNextMove();
+            this.scheduleNextCaroMove();
         }
 
-        checkWin(r, c, player) {
+        checkCaroWin(r, c, player) {
             const directions = [
-                [[0, 1], [0, -1]],   // Ngang
-                [[1, 0], [-1, 0]],   // Dọc
-                [[1, 1], [-1, -1]],  // Chéo chính
-                [[1, -1], [-1, 1]]   // Chéo phụ
+                [[0, 1], [0, -1]],
+                [[1, 0], [-1, 0]],
+                [[1, 1], [-1, -1]],
+                [[1, -1], [-1, 1]]
             ];
 
             for (let pair of directions) {
@@ -870,7 +1046,7 @@
                 for (let [dr, dc] of pair) {
                     let nr = r + dr;
                     let nc = c + dc;
-                    while (nr >= 0 && nr < this.boardSize && nc >= 0 && nc < this.boardSize && this.boardState[nr][nc] === player) {
+                    while (nr >= 0 && nr < this.caroBoardSize && nc >= 0 && nc < this.caroBoardSize && this.caroBoardState[nr][nc] === player) {
                         line.push([nr, nc]);
                         nr += dr;
                         nc += dc;
@@ -881,16 +1057,374 @@
             return null;
         }
 
-        handleVictory(winner, winLine) {
+        findBestCaroMove(player) {
+            if (this.moveCount === 0) return [7, 7];
+            if (this.moveCount === 1) {
+                const candidates = [[6,6], [6,7], [6,8], [7,6], [7,8], [8,6], [8,7], [8,8]];
+                return candidates[Math.floor(Math.random() * candidates.length)];
+            }
+
+            let bestScore = -1;
+            let bestMoves = [];
+
+            for (let r = 0; r < this.caroBoardSize; r++) {
+                for (let c = 0; c < this.caroBoardSize; c++) {
+                    if (this.caroBoardState[r][c] !== 0) continue;
+
+                    let hasNeighbor = false;
+                    for (let dr = -2; dr <= 2 && !hasNeighbor; dr++) {
+                        for (let dc = -2; dc <= 2 && !hasNeighbor; dc++) {
+                            const nr = r + dr;
+                            const nc = c + dc;
+                            if (nr >= 0 && nr < this.caroBoardSize && nc >= 0 && nc < this.caroBoardSize && this.caroBoardState[nr][nc] !== 0) {
+                                hasNeighbor = true;
+                            }
+                        }
+                    }
+                    if (!hasNeighbor) continue;
+
+                    const score = this.evaluateCaroCell(r, c, player);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMoves = [[r, c]];
+                    } else if (Math.abs(score - bestScore) < 5) {
+                        bestMoves.push([r, c]);
+                    }
+                }
+            }
+
+            if (bestMoves.length === 0) {
+                for (let r = 0; r < this.caroBoardSize; r++) {
+                    for (let c = 0; c < this.caroBoardSize; c++) {
+                        if (this.caroBoardState[r][c] === 0) return [r, c];
+                    }
+                }
+            }
+
+            return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+        }
+
+        evaluateCaroCell(r, c, player) {
+            const opp = (player === 1) ? 2 : 1;
+            const myScore = this.getCaroPatternScore(r, c, player);
+            const oppScore = this.getCaroPatternScore(r, c, opp);
+
+            const attackWeight = (player === 1) ? 1.25 : 1.1;
+            const defenseWeight = (player === 1) ? 1.1 : 1.28;
+
+            const distFromCenter = Math.abs(r - 7) + Math.abs(c - 7);
+            const centerBonus = Math.max(0, 16 - distFromCenter);
+            const jitter = Math.random() * 6;
+
+            return (myScore * attackWeight) + (oppScore * defenseWeight) + centerBonus + jitter;
+        }
+
+        getCaroPatternScore(r, c, p) {
+            const directions = [
+                [[0, 1], [0, -1]],
+                [[1, 0], [-1, 0]],
+                [[1, 1], [-1, -1]],
+                [[1, -1], [-1, 1]]
+            ];
+
+            let total = 0;
+            for (let pair of directions) {
+                let count = 1;
+                let openEnds = 0;
+
+                for (let [dr, dc] of pair) {
+                    let nr = r + dr;
+                    let nc = c + dc;
+                    while (nr >= 0 && nr < this.caroBoardSize && nc >= 0 && nc < this.caroBoardSize && this.caroBoardState[nr][nc] === p) {
+                        count++;
+                        nr += dr;
+                        nc += dc;
+                    }
+                    if (nr >= 0 && nr < this.caroBoardSize && nc >= 0 && nc < this.caroBoardSize && this.caroBoardState[nr][nc] === 0) {
+                        openEnds++;
+                    }
+                }
+
+                if (count >= 5) total += 100000;
+                else if (count === 4) {
+                    if (openEnds === 2) total += 30000;
+                    else if (openEnds === 1) total += 6000;
+                } else if (count === 3) {
+                    if (openEnds === 2) total += 5000;
+                    else if (openEnds === 1) total += 700;
+                } else if (count === 2) {
+                    if (openEnds === 2) total += 250;
+                    else if (openEnds === 1) total += 35;
+                }
+            }
+            return total;
+        }
+
+        // ==========================================
+        // 2. CHESS GAME LOGIC (CỜ VUA 8x8)
+        // ==========================================
+        startChessGame() {
+            // Initial 8x8 layout: 0 = empty, string = piece
+            // 'wK','wQ','wR','wB','wN','wP' | 'bK','bQ','bR','bB','bN','bP'
+            this.chessBoardState = [
+                ['bR','bN','bB','bQ','bK','bB','bN','bR'],
+                ['bP','bP','bP','bP','bP','bP','bP','bP'],
+                ['','','','','','','',''],
+                ['','','','','','','',''],
+                ['','','','','','','',''],
+                ['','','','','','','',''],
+                ['wP','wP','wP','wP','wP','wP','wP','wP'],
+                ['wR','wN','wB','wQ','wK','wB','wN','wR']
+            ];
+
+            this.renderChessPieces();
+
+            // Preset high-stakes tactical chess game moves with commentary
+            const p1 = this.currentArenaMatch.p1 ? this.currentArenaMatch.p1.name : 'DeepKing';
+            const p2 = this.currentArenaMatch.p2 ? this.currentArenaMatch.p2.name : 'StockMate';
+
+            this.chessSimulationMoves = [
+                { from:[6,4], to:[4,4], p:1, text:`<b>${p1}</b> đẩy tốt E4 mở đường cho Tượng và Hậu kiểm soát trung tâm.` },
+                { from:[1,4], to:[3,4], p:2, text:`<b>${p2}</b> đáp trả bằng E5 tạo thế cờ thoáng cân bằng!` },
+                { from:[7,6], to:[5,5], p:1, text:`<b>${p1}</b> xuất Mã Nf3 đe dọa trực tiếp tốt E5 của đối thủ!` },
+                { from:[0,1], to:[2,2], p:2, text:`<b>${p2}</b> triển khai Mã Nc6 thủ chắc tốt E5.` },
+                { from:[7,5], to:[4,2], p:1, text:`<b>${p1}</b> đưa Tượng lên Bc4 triển khai khai cuộc Ý sắc bén!` },
+                { from:[0,6], to:[2,5], p:2, text:`<b>${p2}</b> phản đòn với Mã Nf6, tấn công tốt E4.` },
+                { from:[6,3], to:[5,3], p:1, text:`<b>${p1}</b> d3 bảo vệ vững chắc ô trung tâm.` },
+                { from:[0,5], to:[3,2], p:2, text:`<b>${p2}</b> Bc5 chiếm đường chéo vàng, nhắm thẳng ô F2!` },
+                { from:[7,4], to:[7,6], p:1, castle:[7,7,7,5], text:`<b>${p1}</b> Nhập thành ngắn O-O an toàn Vua và đưa Xe ra tham chiến!` },
+                { from:[0,4], to:[0,6], p:2, castle:[0,7,0,5], text:`<b>${p2}</b> cũng nhập thành O-O, trận đấu bước vào trung cuộc nảy lửa!` },
+                { from:[7,1], to:[5,2], p:1, text:`<b>${p1}</b> đưa Mã Nc3 liên kết hai cánh.` },
+                { from:[1,3], to:[2,3], p:2, text:`<b>${p2}</b> d6 củng cố trung lộ và mở đường cho Tượng cánh Hậu.` },
+                { from:[7,2], to:[3,6], p:1, text:`<b>${p1}</b> ghim Tượng Bg5 khống chế mã đối phương!` },
+                { from:[1,7], to:[2,7], p:2, text:`<b>${p2}</b> h6 hỏi tội Tượng đối phương ngay lập tức.` },
+                { from:[3,6], to:[4,7], p:1, text:`<b>${p1}</b> Bh4 lùi bước giữ thế ghim hiểm hóc!` },
+                { from:[2,2], to:[4,3], p:2, text:`<b>${p2}</b> Nd4 chiếm lĩnh tiền đồn trung tâm!` },
+                { from:[5,5], to:[3,4], p:1, capture:true, text:`🔥 <b>${p1}</b> NxP ăn tốt E5, mở đợt đột phá trung lộ ngoạn mục!` },
+                { from:[4,7], to:[1,5], p:1, check:true, text:`⚡ <b>${p1}</b> Tượng chém F7 CHIẾU TƯỚNG! Vua đối thủ rơi vào thế bị ép góc.` },
+                { from:[7,3], to:[3,7], p:1, checkmate:true, text:`👑 <b>${p1}</b> Hậu Qh5 tung đòn CHIẾU BÍ! Thế cờ tuyệt sát không thể chống đỡ!` }
+            ];
+            this.chessMoveIndex = 0;
+
+            this.setCommentary(`⚔️ Trận đấu Cờ Vua AI khởi tranh! <b>${p1} (♔ Trắng)</b> vs <b>${p2} (♚ Đen)</b>.`);
+            this.updateTurnHUD();
+            this.scheduleNextChessMove();
+        }
+
+        renderChessPieces() {
+            const pieceGlyphs = {
+                'wK': '♔', 'wQ': '♕', 'wR': '♖', 'wB': '♗', 'wN': '♘', 'wP': '♙',
+                'bK': '♚', 'bQ': '♛', 'bR': '♜', 'bB': '♝', 'bN': '♞', 'bP': '♟'
+            };
+
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const p = this.chessBoardState[r][c];
+                    const cell = $(`#tournamentChessBoard .chess-cell[data-row="${r}"][data-col="${c}"]`);
+                    cell.empty();
+                    if (p) {
+                        const isWhite = p.startsWith('w');
+                        const glyph = pieceGlyphs[p] || '';
+                        cell.html(`<span class="chess-piece ${isWhite ? 'white-piece' : 'black-piece'}">${glyph}</span>`);
+                    }
+                }
+            }
+        }
+
+        scheduleNextChessMove() {
+            if (this.isGameOver || this.isThinking) return;
+
+            const baseDelay = 1300;
+            const delay = Math.max(180, Math.floor(baseDelay / this.speedMultiplier));
+
+            this.isThinking = true;
+            this.nextMoveTimeout = setTimeout(() => {
+                this.isThinking = false;
+                if (this.isGameOver) return;
+                this.executeNextChessMove();
+            }, delay);
+        }
+
+        executeNextChessMove() {
+            if (this.chessMoveIndex >= this.chessSimulationMoves.length) {
+                // Game over
+                const winnerPlayer = (this.currentArenaMatch.winner === this.currentArenaMatch.p2.id) ? 2 : 1;
+                this.handleVictory(winnerPlayer, () => {}, 'Chiếu bí ngoạn mục trên bàn cờ vua!');
+                return;
+            }
+
+            const m = this.chessSimulationMoves[this.chessMoveIndex];
+            this.chessMoveIndex++;
+            this.moveCount++;
+            $('#arenaMoveCounter').text(this.moveCount);
+
+            const [fr, fc] = m.from;
+            const [tr, tc] = m.to;
+            const piece = this.chessBoardState[fr][fc];
+
+            this.chessBoardState[fr][fc] = '';
+            this.chessBoardState[tr][tc] = piece;
+
+            if (m.castle) {
+                const [r1, c1, r2, c2] = m.castle;
+                const rPiece = this.chessBoardState[r1][c1];
+                this.chessBoardState[r1][c1] = '';
+                this.chessBoardState[r2][c2] = rPiece;
+            }
+
+            this.renderChessPieces();
+
+            $('.chess-cell').removeClass('last-move-from last-move-to check-cell');
+            $(`#tournamentChessBoard .chess-cell[data-row="${fr}"][data-col="${fc}"]`).addClass('last-move-from');
+            const targetCell = $(`#tournamentChessBoard .chess-cell[data-row="${tr}"][data-col="${tc}"]`).addClass('last-move-to');
+            targetCell.find('.chess-piece').addClass('move-anim');
+
+            if (m.check || m.checkmate) {
+                targetCell.addClass('check-cell');
+            }
+
+            this.playStoneClick();
+            this.setCommentary(m.text);
+
+            if (m.checkmate || this.chessMoveIndex >= this.chessSimulationMoves.length) {
+                const winnerPlayer = (this.currentArenaMatch.winner === this.currentArenaMatch.p2.id) ? 2 : 1;
+                this.handleVictory(winnerPlayer, () => {
+                    targetCell.addClass('check-cell');
+                }, 'Chiếu bí và đoạt chiến thắng tuyệt đối trên bàn cờ vua!');
+                return;
+            }
+
+            this.currentTurn = (m.p === 1) ? 2 : 1;
+            this.updateTurnHUD();
+            this.scheduleNextChessMove();
+        }
+
+        // ==========================================
+        // 3. XIANGQI GAME LOGIC (CỜ TƯỚNG 9x10)
+        // ==========================================
+        startXiangqiGame() {
+            // Initial 10x9 layout
+            // Red (P1 - Bottom): 帥 (Tướng), 仕 (Sĩ), 相 (Tượng), 俥 (Xe), 傌 (Mã), 炮 (Pháo), 兵 (Tốt)
+            // Black (P2 - Top): 將 (Tướng), 士 (Sĩ), 象 (Tượng), 車 (Xe), 馬 (Mã), 砲 (Pháo), 卒 (Tốt)
+            this.xiangqiBoardState = Array.from({ length: 10 }, () => Array(9).fill(''));
+
+            // Black baseline (Row 0)
+            const bBase = ['車','馬','象','士','將','士','象','馬','車'];
+            bBase.forEach((p, c) => this.xiangqiBoardState[0][c] = { name: p, side: 'black' });
+            this.xiangqiBoardState[2][1] = { name: '砲', side: 'black' };
+            this.xiangqiBoardState[2][7] = { name: '砲', side: 'black' };
+            [0, 2, 4, 6, 8].forEach(c => this.xiangqiBoardState[3][c] = { name: '卒', side: 'black' });
+
+            // Red baseline (Row 9)
+            const rBase = ['俥','傌','相','仕','帥','仕','相','傌','俥'];
+            rBase.forEach((p, c) => this.xiangqiBoardState[9][c] = { name: p, side: 'red' });
+            this.xiangqiBoardState[7][1] = { name: '炮', side: 'red' };
+            this.xiangqiBoardState[7][7] = { name: '炮', side: 'red' };
+            [0, 2, 4, 6, 8].forEach(c => this.xiangqiBoardState[6][c] = { name: '兵', side: 'red' });
+
+            this.renderXiangqiPieces();
+
+            const p1 = this.currentArenaMatch.p1 ? this.currentArenaMatch.p1.name : 'Long Tướng';
+            const p2 = this.currentArenaMatch.p2 ? this.currentArenaMatch.p2.name : 'Phong Mã';
+
+            this.xiangqiSimulationMoves = [
+                { from:[7,1], to:[7,4], p:1, text:`<b>${p1}</b> khai cuộc: <b>Pháo 2 bình 5 (Trung Pháo)</b> đè nén trung lộ đối phương!` },
+                { from:[0,1], to:[2,2], p:2, text:`<b>${p2}</b> nghênh chiến: <b>Mã 8 tấn 7</b> thủ vững bình phong mã!` },
+                { from:[9,1], to:[7,2], p:1, text:`<b>${p1}</b> nhảy <b>Mã 2 tiến 3</b> bảo vệ tốt đầu và kiểm soát bàn cờ.` },
+                { from:[0,0], to:[0,1], p:2, text:`<b>${p2}</b> bình <b>Xe 9 bình 8</b> chiếm lộ xe khống chế hành lang trái.` },
+                { from:[9,0], to:[8,0], p:1, text:`<b>${p1}</b> hoành <b>Xe 1 tiến 1</b>, chuẩn bị tuần hà tuần tra mặt sông.` },
+                { from:[3,4], to:[4,4], p:2, text:`<b>${p2}</b> tiến <b>Tốt 5 tiến 1</b> tranh chấp quyền kiểm soát trung cung!` },
+                { from:[8,0], to:[8,3], p:1, text:`<b>${p1}</b> điều <b>Xe 1 bình 4</b> chiếm lộ sườn hiểm trở!` },
+                { from:[0,1], to:[4,1], p:2, text:`<b>${p2}</b> lao <b>Xe 8 tiến 4</b> vượt sông tuần hà phong tỏa!` },
+                { from:[7,4], to:[3,4], p:1, capture:true, text:`🔥 <b>${p1}</b> Pháo trung lộ ăn Tốt 5, dồn hỏa lực ép sát cung thành!` },
+                { from:[2,7], to:[6,7], p:2, text:`<b>${p2}</b> Pháo 2 tiến 4 kẹp sườn phản kích mã đối phương!` },
+                { from:[8,3], to:[2,3], p:1, check:true, text:`⚡ <b>${p1}</b> Xe 4 tiến 6 cắm đáy CHIẾU TƯỚNG! Cung thành đen rung chuyển!` },
+                { from:[0,3], to:[1,4], p:2, text:`<b>${p2}</b> Sĩ 4 tiến 5 che chắn cứu giá Tướng quân!` },
+                { from:[7,7], to:[0,7], p:1, checkmate:true, text:`👑 <b>${p1}</b> Pháo nách hạ đáy CHIẾU BÍ TUYỆT SÁT! Không còn đường phá giải!` }
+            ];
+            this.xiangqiMoveIndex = 0;
+
+            this.setCommentary(`⚔️ Trận đấu Cờ Tướng AI khai màn! <b>${p1} (帥 Đỏ - Đi Tiên)</b> vs <b>${p2} (將 Đen - Đi Hậu)</b>.`);
+            this.updateTurnHUD();
+            this.scheduleNextXiangqiMove();
+        }
+
+        renderXiangqiPieces() {
+            for (let r = 0; r < 10; r++) {
+                for (let c = 0; c < 9; c++) {
+                    const cell = $(`#xiangqiCellsGrid .xiangqi-cell[data-row="${r}"][data-col="${c}"]`);
+                    cell.empty();
+                    const p = this.xiangqiBoardState[r][c];
+                    if (p) {
+                        cell.html(`<div class="xiangqi-piece-token ${p.side === 'red' ? 'red-side' : 'black-side'}">${p.name}</div>`);
+                    }
+                }
+            }
+        }
+
+        scheduleNextXiangqiMove() {
+            if (this.isGameOver || this.isThinking) return;
+
+            const baseDelay = 1350;
+            const delay = Math.max(180, Math.floor(baseDelay / this.speedMultiplier));
+
+            this.isThinking = true;
+            this.nextMoveTimeout = setTimeout(() => {
+                this.isThinking = false;
+                if (this.isGameOver) return;
+                this.executeNextXiangqiMove();
+            }, delay);
+        }
+
+        executeNextXiangqiMove() {
+            if (this.xiangqiMoveIndex >= this.xiangqiSimulationMoves.length) {
+                const winnerPlayer = (this.currentArenaMatch.winner === this.currentArenaMatch.p2.id) ? 2 : 1;
+                this.handleVictory(winnerPlayer, () => {}, 'Chiếu tướng tuyệt sát trên bàn cờ tướng!');
+                return;
+            }
+
+            const m = this.xiangqiSimulationMoves[this.xiangqiMoveIndex];
+            this.xiangqiMoveIndex++;
+            this.moveCount++;
+            $('#arenaMoveCounter').text(this.moveCount);
+
+            const [fr, fc] = m.from;
+            const [tr, tc] = m.to;
+            const piece = this.xiangqiBoardState[fr][fc];
+
+            this.xiangqiBoardState[fr][fc] = '';
+            this.xiangqiBoardState[tr][tc] = piece;
+
+            this.renderXiangqiPieces();
+
+            $('.xiangqi-cell').removeClass('last-move-target');
+            const targetCell = $(`#xiangqiCellsGrid .xiangqi-cell[data-row="${tr}"][data-col="${tc}"]`).addClass('last-move-target');
+
+            this.playStoneClick();
+            this.setCommentary(m.text);
+
+            if (m.checkmate || this.xiangqiMoveIndex >= this.xiangqiSimulationMoves.length) {
+                const winnerPlayer = (this.currentArenaMatch.winner === this.currentArenaMatch.p2.id) ? 2 : 1;
+                this.handleVictory(winnerPlayer, () => {}, 'Đòn sát chiêu tuyệt đỉnh công phá cung thành đối phương!');
+                return;
+            }
+
+            this.currentTurn = (m.p === 1) ? 2 : 1;
+            this.updateTurnHUD();
+            this.scheduleNextXiangqiMove();
+        }
+
+        // ==========================================
+        // VICTORY / DRAW / CONTROLS
+        // ==========================================
+        handleVictory(winner, highlightCallback, customSubtext) {
             this.isGameOver = true;
             this.playWinSound();
 
-            winLine.forEach(([wr, wc]) => {
-                $(`#tournamentCaroBoard .caro-match-cell[data-row="${wr}"][data-col="${wc}"]`).addClass('win-cell');
-            });
+            if (highlightCallback) highlightCallback();
 
-            const p1 = this.currentArenaMatch.p1 || { name: 'AlphaX' };
-            const p2 = this.currentArenaMatch.p2 || { name: 'ZenZero' };
+            const p1 = this.currentArenaMatch.p1 || { name: 'Kỳ Thủ 1' };
+            const p2 = this.currentArenaMatch.p2 || { name: 'Kỳ Thủ 2' };
             const winnerObj = (winner === 1) ? p1 : p2;
             const loserObj = (winner === 1) ? p2 : p1;
 
@@ -905,22 +1439,22 @@
             const isFinal = this.currentArenaMatch.match_id === 7;
             const headline = `👑 ${winnerObj.name} CHIẾN THẮNG TUYỆT ĐỐI!`;
             const subtext = isFinal
-                ? `Xuất sắc kết chuỗi 5 quân liên hoàn và chính thức ĐOẠT CÚP VÔ ĐỊCH MÙA GIẢI GTLM!`
-                : `Hạ gục đối thủ ${loserObj.name} với nước cờ 5 quân liên tiếp và giành quyền đi tiếp!`;
+                ? `Xuất sắc hạ gục đối thủ và chính thức ĐOẠT CÚP VÔ ĐỊCH MÙA GIẢI GTLM!`
+                : (customSubtext || `Hạ gục đối thủ ${loserObj.name} và hiên ngang bước vào vòng kế tiếp!`);
 
             $('#arenaVictoryHeadline').html(headline);
             $('#arenaVictorySubtext').html(subtext);
             $('#arenaVictoryModal').addClass('active');
 
-            this.setCommentary(`🎉 <b>${winnerObj.name}</b> đã xuất sắc hoàn tất thế cờ ngũ tử và GIÀNH CHIẾN THẮNG!`);
+            this.setCommentary(`🎉 <b>${winnerObj.name}</b> đã xuất sắc GIÀNH CHIẾN THẮNG TUYỆT ĐỐI!`);
         }
 
         handleDraw() {
             this.isGameOver = true;
             $('#arenaVictoryHeadline').html('🤝 BÀN CỜ BẤT PHÂN THẮNG BẠI!');
-            $('#arenaVictorySubtext').html('225 ô cờ đã kín, hai đại sư kỳ phùng địch thủ!');
+            $('#arenaVictorySubtext').html('Thế trận ngang tài ngang sức, hai đại sư kỳ phùng địch thủ!');
             $('#arenaVictoryModal').addClass('active');
-            this.setCommentary('🤝 Hòa cờ! Cả hai kỳ thủ thi triển chiến thuật phòng thủ kín kẽ.');
+            this.setCommentary('🤝 Hòa cờ! Cả hai kỳ thủ thi triển chiến thuật kín kẽ.');
         }
 
         goToNextMatch() {
@@ -985,8 +1519,16 @@
         }
 
         playStoneClick() {
-            this.playTone(320, 'triangle', 0.08, 0.22);
-            setTimeout(() => this.playTone(180, 'sine', 0.05, 0.12), 25);
+            if (this.currentGame === 'chess') {
+                this.playTone(420, 'triangle', 0.06, 0.25);
+                setTimeout(() => this.playTone(210, 'sine', 0.05, 0.14), 20);
+            } else if (this.currentGame === 'xiangqi') {
+                this.playTone(520, 'square', 0.04, 0.18);
+                setTimeout(() => this.playTone(280, 'triangle', 0.06, 0.2), 15);
+            } else {
+                this.playTone(320, 'triangle', 0.08, 0.22);
+                setTimeout(() => this.playTone(180, 'sine', 0.05, 0.12), 25);
+            }
         }
 
         playWinSound() {
@@ -995,112 +1537,9 @@
             });
         }
 
-        // 🧠 Heuristic Caro Minimax Engine
-        findBestMove(player) {
-            if (this.moveCount === 0) return [7, 7]; // First move center
-            if (this.moveCount === 1) {
-                const candidates = [[6,6], [6,7], [6,8], [7,6], [7,8], [8,6], [8,7], [8,8]];
-                return candidates[Math.floor(Math.random() * candidates.length)];
-            }
-
-            let bestScore = -1;
-            let bestMoves = [];
-
-            for (let r = 0; r < this.boardSize; r++) {
-                for (let c = 0; c < this.boardSize; c++) {
-                    if (this.boardState[r][c] !== 0) continue;
-
-                    // Chỉ xét ô gần quân đã đánh (trong bán kính 2 ô)
-                    let hasNeighbor = false;
-                    for (let dr = -2; dr <= 2 && !hasNeighbor; dr++) {
-                        for (let dc = -2; dc <= 2 && !hasNeighbor; dc++) {
-                            const nr = r + dr;
-                            const nc = c + dc;
-                            if (nr >= 0 && nr < this.boardSize && nc >= 0 && nc < this.boardSize && this.boardState[nr][nc] !== 0) {
-                                hasNeighbor = true;
-                            }
-                        }
-                    }
-                    if (!hasNeighbor) continue;
-
-                    const score = this.evaluateCell(r, c, player);
-                    if (score > bestScore) {
-                        bestScore = score;
-                        bestMoves = [[r, c]];
-                    } else if (Math.abs(score - bestScore) < 5) {
-                        bestMoves.push([r, c]);
-                    }
-                }
-            }
-
-            if (bestMoves.length === 0) {
-                for (let r = 0; r < this.boardSize; r++) {
-                    for (let c = 0; c < this.boardSize; c++) {
-                        if (this.boardState[r][c] === 0) return [r, c];
-                    }
-                }
-            }
-
-            return bestMoves[Math.floor(Math.random() * bestMoves.length)];
-        }
-
-        evaluateCell(r, c, player) {
-            const opp = (player === 1) ? 2 : 1;
-            const myScore = this.getPatternScore(r, c, player);
-            const oppScore = this.getPatternScore(r, c, opp);
-
-            // Điều chỉnh trọng số công/thủ
-            const attackWeight = (player === 1) ? 1.25 : 1.1;
-            const defenseWeight = (player === 1) ? 1.1 : 1.28;
-
-            const distFromCenter = Math.abs(r - 7) + Math.abs(c - 7);
-            const centerBonus = Math.max(0, 16 - distFromCenter);
-            const jitter = Math.random() * 6;
-
-            return (myScore * attackWeight) + (oppScore * defenseWeight) + centerBonus + jitter;
-        }
-
-        getPatternScore(r, c, p) {
-            const directions = [
-                [[0, 1], [0, -1]],
-                [[1, 0], [-1, 0]],
-                [[1, 1], [-1, -1]],
-                [[1, -1], [-1, 1]]
-            ];
-
-            let total = 0;
-            for (let pair of directions) {
-                let count = 1;
-                let openEnds = 0;
-
-                for (let [dr, dc] of pair) {
-                    let nr = r + dr;
-                    let nc = c + dc;
-                    while (nr >= 0 && nr < this.boardSize && nc >= 0 && nc < this.boardSize && this.boardState[nr][nc] === p) {
-                        count++;
-                        nr += dr;
-                        nc += dc;
-                    }
-                    if (nr >= 0 && nr < this.boardSize && nc >= 0 && nc < this.boardSize && this.boardState[nr][nc] === 0) {
-                        openEnds++;
-                    }
-                }
-
-                if (count >= 5) total += 100000;
-                else if (count === 4) {
-                    if (openEnds === 2) total += 30000;
-                    else if (openEnds === 1) total += 6000;
-                } else if (count === 3) {
-                    if (openEnds === 2) total += 5000;
-                    else if (openEnds === 1) total += 700;
-                } else if (count === 2) {
-                    if (openEnds === 2) total += 250;
-                    else if (openEnds === 1) total += 35;
-                }
-            }
-            return total;
-        }
-
+        // ==========================================
+        // MARKET & HISTORY
+        // ==========================================
         renderMarket(players, stage) {
             const grid = $('#predictionMarketGrid');
             grid.empty();
@@ -1186,7 +1625,7 @@
             hallContainer.empty();
 
             if (!champions || champions.length === 0) {
-                hallContainer.html('<div style="color:#94a3b8; font-style:italic;">Chưa có dữ liệu quán quân các mùa trước.</div>');
+                hallContainer.html('<div style="color:#94a3b8; font-style:italic;">Chưa có dữ liệu quán quân các mùa trước của giải này.</div>');
             } else {
                 champions.forEach(c => {
                     const row = `
@@ -1270,7 +1709,7 @@
             }).then((result) => {
                 if (result.isConfirmed) {
                     const betAmount = result.value;
-                    $.post(apiUrl, { action: 'predict_champion', player_id: playerId, amount: betAmount }, function (res) {
+                    $.post(apiUrl, { action: 'predict_champion', game: self.currentGame, player_id: playerId, amount: betAmount }, function (res) {
                         if (res && res.success) {
                             Swal.fire({
                                 title: 'Đặt Cược Thành Công! 🏆',
@@ -1300,8 +1739,8 @@
     // Khởi tạo đối tượng toàn cục
     window.esportsManager = new EsportsTournamentManager();
 
-    window.openEsportsTournament = function () {
-        window.esportsManager.openModal();
+    window.openEsportsTournament = function (game) {
+        window.esportsManager.openModal(game);
     };
 
     window.closeEsportsTournament = function () {
