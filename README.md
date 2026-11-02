@@ -157,18 +157,28 @@ Toàn bộ trò chơi đều được tính toán toán học chuẩn sòng bạ
 Hệ thống đài truyền hình trực tiếp 24/7 gồm đúng **61 bàn live liên tục** không có bất kỳ khoảng trống hay kênh rác nào:
 
 ```
-[Khán Giả Truy Cập] ───> [LiveStream/spectator.php] ───> Duyệt 61 Kênh Sôi Động
+[Khán Giả Truy Cập] ───> [LiveStream/spectator.php] ───> Duyệt 61 Kênh Sôi Động 24/7
                                   │
                                   ▼
                          [LiveStream/watch.php?id=X]
-                   ┌──────────────┴──────────────┐
-                   ▼                             ▼
-       [Iframe Game 24/7: live_X.php]   [Khung Live Chat & Tương Tác]
-       - Bot Streamer Tự Chơi           - Khóa cứng cố định chiều cao
-       - Chuột Ảo Di Chuyển Mượt        - BotChat.send bình luận gáy khét
-       - Web Audio FX chân thực         - Tặng TikTok Gift FX rơi toàn màn hình
-       - Khóa can thiệp người xem       - Tip GTLM vinh danh Streamer
+         ┌────────────────────────┼────────────────────────┐
+         ▼                        ▼                        ▼
+[Iframe Game: live_X.php]  [👑 Bot Queen GTLM (Trợ Lý)] [Khung Live Chat & Tương Tác]
+- Bot Streamer Tự Chơi     - Nữ Hoàng Hướng Dẫn & Đáp  - Khóa cứng cố định chiều cao
+- Chuột Ảo Di Chuyển       - Launcher Nổi Gọn Gàng      - Tag @Queen hỏi đáp trực tiếp
+- Web Audio FX chân thực   - Khẩu Hình Lip-sync Canvas - Huy hiệu [👑 QUEEN GTLM] vàng
+- Khóa can thiệp cược      - Giọng Nữ Web Speech Ngọt  - Tip & Quà TikTok rơi toàn màn hình
 ```
+
+### 👑 Trợ Lý Toàn Năng: Bot Queen GTLM (Giải Đáp Thắc Mắc & Hướng Dẫn Người Chơi)
+1. **Hình tượng & Tính cách:**
+   - Nữ hoàng trợ lý GTLM với vương miện vàng óng ánh, tóc tím thạch anh hoàng gia, đôi mắt to tròn long lanh chớp mắt tự nhiên (3-5s), giọng nói nữ ngọt ngào, lễ phép, tươi vui và có những câu trêu đùa duyên dáng.
+2. **Nhiệm vụ cốt lõi:**
+   - **Giải đáp thắc mắc toàn diện:** Hướng dẫn tân thủ cách xem live, cách ra chiêu cược, cách nhận GTLM miễn phí (điểm danh, vòng quay, lì xì), luật chơi các game, quyền lợi cấp VIP và Bang hội.
+   - **Giao tiếp thân thiện:** Chào hỏi lễ phép, cảm ơn khi được khen, đối đáp tự nhiên và dí dỏm.
+3. **Giao diện trực quan & Tiện dụng (Dễ nhìn - Dễ thao tác):**
+   - **Nút Nổi (Floating Launcher):** Nằm gọn gàng góc dưới màn hình, không hề che khuất bàn cược hay khung video.
+   - **Bảng Điều Khiển Mở Rộng (Support Drawer):** Khi bấm vào sẽ mở bảng trợ lý với Canvas Lip-sync sống động, nút Bật/Tắt Giọng (Mute/Unmute), 6 nút hướng dẫn nhanh 1-chạm (FAQ Chips) và ô nhập câu hỏi trực tiếp.
 
 ### 📋 Danh Sách Đầy Đủ 61 Bàn LiveStream Hiện Hữu:
 

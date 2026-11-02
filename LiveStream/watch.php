@@ -309,270 +309,314 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
             overflow: hidden;
         }
 
-                /* 🤖 AI VTuber Cam Overlay Widget */
-        .vtuber-cam-container {
+                        /* 👑 BOT QUEEN GTLM - FLOATING LAUNCHER & SUPPORT PANEL */
+        .queen-floating-launcher {
             position: absolute;
-            top: 55px;
-            right: 18px;
-            width: 200px;
-            background: rgba(15, 23, 42, 0.88);
+            bottom: 72px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.92);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 18px;
-            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.65), 0 0 25px rgba(16, 185, 129, 0.18);
-            z-index: 45;
-            padding: 10px;
+            border: 1px solid rgba(251, 191, 36, 0.5);
+            border-radius: 30px;
+            padding: 6px 14px 6px 8px;
             display: flex;
-            flex-direction: column;
             align-items: center;
-            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            gap: 10px;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6), 0 0 15px rgba(251, 191, 36, 0.25);
+            z-index: 45;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             user-select: none;
         }
-        .vtuber-cam-container:hover {
-            border-color: rgba(16, 185, 129, 0.5);
-            box-shadow: 0 16px 45px rgba(0, 0, 0, 0.8), 0 0 30px rgba(16, 185, 129, 0.35);
+        .queen-floating-launcher:hover {
+            transform: translateY(-3px) scale(1.03);
+            border-color: #fbbf24;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7), 0 0 25px rgba(251, 191, 36, 0.45);
         }
-        .vtuber-header {
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 6px;
-            padding: 0 4px;
-        }
-        .vtuber-identity {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            overflow: hidden;
-        }
-        .vtuber-live-badge {
-            background: rgba(239, 68, 68, 0.2);
-            border: 1px solid #ef4444;
-            color: #fca5a5;
-            font-size: 0.65rem;
-            font-weight: 900;
-            padding: 2px 6px;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            letter-spacing: 0.5px;
-        }
-        .vtuber-live-badge .live-dot {
-            width: 6px;
-            height: 6px;
-            background: #ef4444;
+        .queen-launcher-avatar {
+            position: relative;
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, #7c3aed, #db2777);
             border-radius: 50%;
-            animation: vtuberPulse 1.2s infinite;
-        }
-        @keyframes vtuberPulse {
-            0% { transform: scale(0.9); opacity: 0.7; }
-            50% { transform: scale(1.3); opacity: 1; }
-            100% { transform: scale(0.9); opacity: 0.7; }
-        }
-        .vtuber-streamer-title {
-            font-size: 0.78rem;
-            font-weight: 800;
-            color: #f8fafc;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 80px;
-        }
-        .vtuber-ctrl-btns {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .vtuber-icon-btn {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            color: #cbd5e1;
-            width: 24px;
-            height: 24px;
-            border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.7rem;
+            font-size: 1.25rem;
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+        }
+        .queen-status-dot {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 9px;
+            height: 9px;
+            background: #10b981;
+            border: 2px solid #0f172a;
+            border-radius: 50%;
+        }
+        .queen-launcher-info {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+        .queen-launcher-name {
+            font-size: 0.85rem;
+            font-weight: 900;
+            color: #fbbf24;
+            letter-spacing: 0.3px;
+        }
+        .queen-launcher-desc {
+            font-size: 0.68rem;
+            color: #cbd5e1;
+            font-weight: 600;
+        }
+        .queen-launcher-badge {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #000;
+            font-size: 0.62rem;
+            font-weight: 900;
+            padding: 3px 8px;
+            border-radius: 10px;
+            letter-spacing: 0.5px;
+        }
+
+        /* 👑 Queen Support Drawer / Panel */
+        .queen-support-panel {
+            position: absolute;
+            bottom: 72px;
+            right: 20px;
+            width: 320px;
+            max-width: calc(100vw - 40px);
+            background: rgba(15, 23, 42, 0.96);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(251, 191, 36, 0.4);
+            border-radius: 22px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 35px rgba(251, 191, 36, 0.2);
+            z-index: 55;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            user-select: none;
+            animation: queenPanelSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes queenPanelSlide {
+            from { opacity: 0; transform: translateY(20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .queen-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 8px;
+        }
+        .queen-panel-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .queen-title-crown {
+            font-size: 1.4rem;
+            filter: drop-shadow(0 0 6px #fbbf24);
+        }
+        .queen-main-name {
+            font-size: 0.88rem;
+            font-weight: 900;
+            color: #fbbf24;
+            letter-spacing: 0.5px;
+        }
+        .queen-sub-name {
+            font-size: 0.68rem;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+        .queen-panel-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .queen-btn-icon {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #cbd5e1;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
+            font-size: 0.8rem;
             transition: all 0.2s;
         }
-        .vtuber-icon-btn:hover {
+        .queen-btn-icon:hover {
             background: rgba(255, 255, 255, 0.2);
             color: #fff;
             transform: scale(1.1);
         }
-        .vtuber-icon-btn.muted {
+        .queen-btn-icon.muted {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
             color: #ef4444;
-            border-color: rgba(239, 68, 68, 0.4);
-            background: rgba(239, 68, 68, 0.15);
         }
-        /* Floating Speech Subtitle Bubble */
-        .vtuber-speech-bubble {
-            position: absolute;
-            bottom: calc(100% + 10px);
-            right: 0;
-            width: 230px;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(14px);
-            border: 1px solid rgba(16, 185, 129, 0.4);
-            border-radius: 14px;
-            padding: 10px 14px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 20px rgba(16, 185, 129, 0.25);
-            z-index: 50;
-            pointer-events: none;
-            animation: bubblePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        @keyframes bubblePop {
-            from { opacity: 0; transform: translateY(10px) scale(0.9); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        .vtuber-speech-bubble.fade-out {
-            animation: bubbleFade 0.4s forwards;
-        }
-        @keyframes bubbleFade {
-            from { opacity: 1; transform: translateY(0); }
-            to { opacity: 0; transform: translateY(-8px); }
-        }
-        .bubble-content {
-            font-size: 0.82rem;
-            line-height: 1.4;
-            color: #f1f5f9;
-            font-weight: 600;
-        }
-        .bubble-arrow {
-            position: absolute;
-            bottom: -6px;
-            right: 28px;
-            width: 12px;
-            height: 12px;
-            background: rgba(15, 23, 42, 0.95);
-            border-right: 1px solid rgba(16, 185, 129, 0.4);
-            border-bottom: 1px solid rgba(16, 185, 129, 0.4);
-            transform: rotate(45deg);
-        }
-        /* Canvas Viewport */
-        .vtuber-viewport {
+
+        /* Queen Canvas & Visualizer */
+        .queen-canvas-wrap {
             position: relative;
-            width: 180px;
-            height: 180px;
-            background: radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.08) 0%, rgba(15, 23, 42, 0.6) 100%);
-            border-radius: 14px;
+            width: 140px;
+            height: 140px;
+            margin: 0 auto;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(168, 85, 247, 0.25) 0%, rgba(15, 23, 42, 0.8) 70%);
+            border: 2px solid rgba(251, 191, 36, 0.5);
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.2);
+            cursor: pointer;
             overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
         }
-        .vtuber-viewport canvas {
-            width: 180px;
-            height: 180px;
+        .queen-canvas-wrap canvas {
+            width: 140px;
+            height: 140px;
             display: block;
         }
-        .vtuber-audio-glow {
+        .queen-audio-glow {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            border-radius: 14px;
-            box-shadow: inset 0 0 25px rgba(16, 185, 129, 0.45);
+            border-radius: 50%;
+            box-shadow: inset 0 0 25px rgba(251, 191, 36, 0.6);
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.25s ease;
         }
-        .vtuber-badge-pill {
+        .queen-avatar-hint {
             position: absolute;
-            bottom: 6px;
-            right: 8px;
-            background: rgba(15, 23, 42, 0.85);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            color: #10b981;
-            font-size: 0.62rem;
-            font-weight: 900;
+            bottom: 4px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #f472b6;
+            font-size: 0.6rem;
+            font-weight: 800;
             padding: 2px 6px;
-            border-radius: 4px;
-            letter-spacing: 0.5px;
+            border-radius: 8px;
             pointer-events: none;
         }
-        /* Equalizer Waveform Bars */
-        .vtuber-wave-bars {
+
+        /* Speech Bubble */
+        .queen-speech-bubble {
+            background: rgba(24, 18, 43, 0.95);
+            border: 1px solid rgba(251, 191, 36, 0.4);
+            border-radius: 12px;
+            padding: 8px 12px;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            color: #f1f5f9;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        /* Equalizer wave bars */
+        .queen-wave-bars {
             display: flex;
             align-items: flex-end;
             justify-content: center;
-            gap: 4px;
-            height: 16px;
-            margin-top: 6px;
+            gap: 3px;
+            height: 12px;
             width: 100%;
         }
-        .vtuber-wave-bars .wave-bar {
-            width: 4px;
+        .queen-wave-bars .wave-bar {
+            width: 3px;
             height: 100%;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.25);
             border-radius: 2px;
             transform-origin: bottom;
             transition: transform 0.08s ease, background 0.2s;
         }
-        /* Quick Prompt Chips */
-        .vtuber-quick-chips {
+
+        /* Quick Guides 1-Touch */
+        .queen-quick-guides {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-            margin-top: 8px;
-            width: 100%;
-            flex-wrap: wrap;
+            flex-direction: column;
+            gap: 6px;
         }
-        .vtuber-chip-btn {
+        .queen-guides-label {
+            font-size: 0.68rem;
+            font-weight: 800;
+            color: #fbbf24;
+            letter-spacing: 0.5px;
+        }
+        .queen-chips-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+        }
+        .queen-chip {
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(255, 255, 255, 0.12);
-            color: #94a3b8;
-            font-size: 0.7rem;
+            color: #e2e8f0;
+            padding: 6px 8px;
+            border-radius: 10px;
+            font-size: 0.72rem;
             font-weight: 700;
-            padding: 3px 8px;
-            border-radius: 12px;
             cursor: pointer;
+            text-align: left;
             transition: all 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
-        .vtuber-chip-btn:hover {
-            background: rgba(16, 185, 129, 0.18);
-            border-color: #10b981;
+        .queen-chip:hover {
+            background: rgba(251, 191, 36, 0.18);
+            border-color: #fbbf24;
             color: #fff;
             transform: translateY(-1px);
         }
-        /* Minimized State */
-        .vtuber-cam-container.minimized {
-            width: 52px;
-            height: 52px;
-            padding: 4px;
-            border-radius: 50%;
-            overflow: hidden;
+
+        /* Direct query chat input */
+        .queen-chat-box {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 4px 6px;
         }
-        .vtuber-cam-container.minimized .vtuber-header,
-        .vtuber-cam-container.minimized .vtuber-speech-bubble,
-        .vtuber-cam-container.minimized .vtuber-wave-bars,
-        .vtuber-cam-container.minimized .vtuber-quick-chips,
-        .vtuber-cam-container.minimized .vtuber-badge-pill {
-            display: none !important;
+        .queen-chat-box input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #fff;
+            padding: 6px 8px;
+            font-size: 0.8rem;
+            outline: none;
         }
-        .vtuber-cam-container.minimized .vtuber-viewport {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
+        .queen-btn-send {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            border: none;
+            color: #000;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 800;
+            transition: transform 0.2s;
         }
-        .vtuber-cam-container.minimized .vtuber-viewport canvas {
-            width: 44px;
-            height: 44px;
+        .queen-btn-send:hover {
+            transform: scale(1.08);
         }
-        /* Highlight AI Streamer Chat Lines */
-        .chat-line-ai {
-            background: linear-gradient(90deg, rgba(251, 191, 36, 0.14) 0%, rgba(16, 185, 129, 0.08) 100%) !important;
-            border-left: 3px solid #fbbf24 !important;
-            padding-left: 8px !important;
-            margin: 4px 0 !important;
-            border-radius: 0 8px 8px 0;
-        }
-        .chat-ai-streamer-badge {
+
+        /* Chat Badges for Queen GTLM */
+        .chat-queen-badge {
             background: linear-gradient(135deg, #fbbf24, #f59e0b);
             color: #000;
             font-size: 0.65rem;
@@ -582,8 +626,15 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
             display: inline-flex;
             align-items: center;
             gap: 4px;
-            box-shadow: 0 0 8px rgba(251, 191, 36, 0.5);
+            box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
             margin-right: 4px;
+        }
+        .chat-line-queen {
+            background: linear-gradient(90deg, rgba(251, 191, 36, 0.15) 0%, rgba(236, 72, 153, 0.1) 100%) !important;
+            border-left: 3px solid #fbbf24 !important;
+            padding-left: 8px !important;
+            margin: 4px 0 !important;
+            border-radius: 0 8px 8px 0;
         }
 
 /* Player Section */
@@ -880,6 +931,25 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
             padding: 8px 12px; border-radius: 10px; font-size: 0.85rem; outline: none;
         }
 
+                .btn-ask-queen-chat {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #000;
+            border: none;
+            border-radius: 10px;
+            padding: 0 10px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .btn-ask-queen-chat:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.7);
+        }
+
         .btn-send-msg {
             background: var(--primary); color: #fff; border: none;
             border-radius: 10px; padding: 0 16px; font-weight: 800; cursor: pointer;
@@ -887,6 +957,21 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
 
         /* RESPONSIVE MỚI */
         @media (max-width: 768px) {
+            .queen-floating-launcher {
+                bottom: 68px;
+                right: 12px;
+                padding: 4px 10px 4px 6px;
+                gap: 6px;
+            }
+            .queen-launcher-name { font-size: 0.75rem; }
+            .queen-launcher-desc { display: none; }
+            .queen-support-panel {
+                bottom: 65px;
+                right: 10px;
+                width: calc(100vw - 20px);
+                max-height: 80vh;
+                overflow-y: auto;
+            }
             body { overflow: hidden; } /* Prevent native scrolling, keep app feel */
             
             /* Tách lưới: Nửa trên Video, Nửa dưới Chat nổi */
@@ -1012,38 +1097,54 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
                     <span id="tipBannerText">🎉 <b>Tuấn Mạnh</b> vừa Tip vinh danh Streamer <b>Lão Tiên Tri</b> +50,000 GTLM! ❤️</span>
                 </div>
 
-                                <!-- 🤖 AI VTUBER STREAMER CAM OVERLAY (LIP-SYNC & WEB SPEECH TTS) -->
-                <div class="vtuber-cam-container" id="vtuberCamContainer">
-                    <div class="vtuber-header">
-                        <div class="vtuber-identity">
-                            <span class="vtuber-live-badge"><span class="live-dot"></span> LIVE</span>
-                            <span class="vtuber-streamer-title" id="vtuberTitle">AlphaX 🤖</span>
+                                                <!-- 👑 BOT QUEEN GTLM - FLOATING LAUNCHER & SUPPORT PANEL -->
+                <!-- 1. Floating Launcher Button (Gọn gàng, không che màn hình) -->
+                <div class="queen-floating-launcher" id="queenLauncher" onclick="toggleQueenPanel()" title="Bấm để mở Trợ Lý Hướng Dẫn Queen GTLM">
+                    <div class="queen-launcher-avatar">
+                        <span>👑</span>
+                        <span class="queen-status-dot"></span>
+                    </div>
+                    <div class="queen-launcher-info">
+                        <div class="queen-launcher-name">Queen GTLM</div>
+                        <div class="queen-launcher-desc">Hỗ Trợ & Hướng Dẫn 24/7</div>
+                    </div>
+                    <div class="queen-launcher-badge">HỎI NGAY</div>
+                </div>
+
+                <!-- 2. Queen Support Panel (Mở ra khi bấm, dễ nhìn dễ thao tác) -->
+                <div class="queen-support-panel" id="queenSupportPanel" style="display: none;">
+                    <div class="queen-panel-header">
+                        <div class="queen-panel-title">
+                            <span class="queen-title-crown">👑</span>
+                            <div>
+                                <div class="queen-main-name">QUEEN GTLM</div>
+                                <div class="queen-sub-name">Nữ Hoàng Trợ Lý & Hướng Dẫn</div>
+                            </div>
                         </div>
-                        <div class="vtuber-ctrl-btns">
-                            <button type="button" class="vtuber-icon-btn" id="vtuberVoiceBtn" title="Bật/Tắt Giọng Nói Streamer" onclick="toggleVtuberVoice()">
-                                <i class="fa fa-volume-up" id="vtuberVoiceIcon"></i>
+                        <div class="queen-panel-actions">
+                            <button type="button" class="queen-btn-icon" id="queenVoiceToggle" title="Bật/Tắt Giọng Queen" onclick="toggleQueenVoice()">
+                                <i class="fa fa-volume-up" id="queenVoiceIcon"></i>
                             </button>
-                            <button type="button" class="vtuber-icon-btn" id="vtuberMinBtn" title="Thu nhỏ/Mở rộng" onclick="toggleVtuberMin()">
-                                <i class="fa fa-minus" id="vtuberMinIcon"></i>
+                            <button type="button" class="queen-btn-icon" title="Đóng bảng hỗ trợ" onclick="toggleQueenPanel()">
+                                <i class="fa fa-times"></i>
                             </button>
                         </div>
                     </div>
 
                     <!-- Speech Subtitle Bubble -->
-                    <div class="vtuber-speech-bubble" id="vtuberBubble" style="display: none;">
-                        <div class="bubble-content" id="vtuberBubbleText"></div>
-                        <div class="bubble-arrow"></div>
+                    <div class="queen-speech-bubble" id="queenBubble" style="display: none;">
+                        <div class="bubble-text" id="queenBubbleText"></div>
                     </div>
 
-                    <!-- Main VTuber Canvas & Equalizer -->
-                    <div class="vtuber-viewport" id="vtuberViewport" onclick="if(window.vtuber) window.vtuber.triggerWinkAndFunVoice();">
-                        <canvas id="vtuberCanvas" width="180" height="180" title="Bấm vào Streamer để giao lưu!"></canvas>
-                        <div class="vtuber-audio-glow" id="vtuberAudioGlow"></div>
-                        <div class="vtuber-badge-pill">VTUBER AI</div>
+                    <!-- Queen Canvas Avatar -->
+                    <div class="queen-canvas-wrap" onclick="if(window.queenGTLM) window.queenGTLM.triggerWinkAndSweetTalk();">
+                        <canvas id="queenCanvas" width="140" height="140" title="Bấm vào Queen để giao lưu nhé!"></canvas>
+                        <div class="queen-audio-glow" id="queenAudioGlow"></div>
+                        <div class="queen-avatar-hint"><i class="fa fa-heart"></i> Bấm để giao lưu</div>
                     </div>
 
-                    <!-- Audio Waveform Visualizer -->
-                    <div class="vtuber-wave-bars" id="vtuberWaveBars">
+                    <!-- Audio Wave Equalizer -->
+                    <div class="queen-wave-bars" id="queenWaveBars">
                         <span class="wave-bar"></span>
                         <span class="wave-bar"></span>
                         <span class="wave-bar"></span>
@@ -1053,15 +1154,27 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
                         <span class="wave-bar"></span>
                     </div>
 
-                    <!-- Quick Prompts to ask Streamer AI -->
-                    <div class="vtuber-quick-chips">
-                        <button type="button" class="vtuber-chip-btn" onclick="askStreamerQuick('Bàn  thế trận bên nào đang chiếm ưu thế?')">♟️ Soi cờ</button>
-                        <button type="button" class="vtuber-chip-btn" onclick="askStreamerQuick('Tư vấn thế cờ Minimax đỉnh cao')">🧠 Thế cờ</button>
-                        <button type="button" class="vtuber-chip-btn" onclick="askStreamerQuick('Chào idol streamer!')">👋 Chào</button>
+                    <!-- Fast Guide Buttons (1-Click FAQ Chips) -->
+                    <div class="queen-quick-guides">
+                        <div class="queen-guides-label">✨ HƯỚNG DẪN 1-CHẠM:</div>
+                        <div class="queen-chips-grid">
+                            <button type="button" class="queen-chip" onclick="askQueenGuide('Hướng dẫn xem Live và Ra chiêu')">🎯 Xem Live & Cược</button>
+                            <button type="button" class="queen-chip" onclick="askQueenGuide('Cách nhận GTLM miễn phí mỗi ngày')">💰 Nhận GTLM Free</button>
+                            <button type="button" class="queen-chip" onclick="askQueenGuide('Hướng dẫn chơi Cờ Ca-rô PvP')">♟️ Cờ Ca-rô PvP</button>
+                            <button type="button" class="queen-chip" onclick="askQueenGuide('Đặc quyền cấp VIP và Bang hội')">🏰 VIP & Bang Hội</button>
+                            <button type="button" class="queen-chip" onclick="askQueenGuide('Cách tặng quà cho Streamer')">🎁 Tip & Tặng Quà</button>
+                            <button type="button" class="queen-chip" onclick="askQueenGuide('Chào Queen GTLM xinh đẹp!')">💖 Chào Queen</button>
+                        </div>
+                    </div>
+
+                    <!-- Queen Chat Direct Input -->
+                    <div class="queen-chat-box">
+                        <input type="text" id="queenInput" placeholder="Hỏi Queen bất kỳ thắc mắc nào..." onkeypress="if(event.key==='Enter') sendQueenQuery()">
+                        <button type="button" class="queen-btn-send" onclick="sendQueenQuery()" title="Gửi câu hỏi"><i class="fa fa-paper-plane"></i></button>
                     </div>
                 </div>
 
-<!-- Real Game Iframe (Bản LiveStream Riêng 24/7) -->
+                <!-- Real Game Iframe (Bản LiveStream Riêng 24/7) -->
                 <?php
                 $isRoot = (basename(dirname($_SERVER['SCRIPT_FILENAME'])) !== 'LiveStream');
                 $iframePrefix = $isRoot ? 'LiveStream/' : '';
@@ -1117,7 +1230,7 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
             </div>
 
             <div class="chat-input-area">
-                <input type="text" id="chatInput" placeholder="Nhập tin nhắn hoặc gõ @Bot_<?= $tableId ?> để hỏi AI..." onkeypress="if(event.key==='Enter') sendChatMsg()">
+                <input type="text" id="chatInput" placeholder="Nhập tin nhắn hoặc gõ @Queen để hỏi trợ lý..." onkeypress="if(event.key==='Enter') sendChatMsg()">
                 <button class="btn-send-msg" onclick="sendChatMsg()">GỬI</button>
             </div>
         </div>
@@ -1236,13 +1349,65 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
             spawnEmoji(emoji);
         }
 
-        function sendChatMsg() {
+                function sendChatMsg() {
             const msg = $('#chatInput').val().trim();
             if (!msg) return;
             $('#chatInput').val('');
+
+            // Kiểm tra nếu có tag Queen hoặc hỏi đáp trợ lý
+            const isQueenQuery = /(@queen|@bot|@troly|queen)/i.test(msg);
+
             $.post('api_spectator.php', { action: 'send_chat', table_id: currentTableId, message: msg }, function() {
                 loadDetails();
+                if (isQueenQuery) {
+                    askQueenGuide(msg);
+                }
             });
+        }
+
+        function toggleQueenPanel() {
+            const panel = $('#queenSupportPanel');
+            const isVisible = panel.is(':visible');
+            if (isVisible) {
+                panel.fadeOut(200);
+            } else {
+                panel.fadeIn(250);
+                if (window.queenGTLM && !window.queenGTLM.canvas) {
+                    window.queenGTLM.mount('queenCanvas');
+                }
+            }
+        }
+
+        function toggleQueenVoice() {
+            if (window.queenGTLM) {
+                const enabled = window.queenGTLM.toggleVoice();
+                $('#queenVoiceIcon').attr('class', enabled ? 'fa fa-volume-up' : 'fa fa-volume-mute');
+                $('#queenVoiceToggle').toggleClass('muted', !enabled);
+            }
+        }
+
+        function askQueenGuide(prompt) {
+            // Đảm bảo mở panel ra để xem câu trả lời
+            $('#queenSupportPanel').fadeIn(250);
+            if (window.queenGTLM && !window.queenGTLM.canvas) {
+                window.queenGTLM.mount('queenCanvas');
+            }
+
+            $.post('api_streamer_ai.php', { table_id: currentTableId, message: prompt }, function(res) {
+                if (res && res.success) {
+                    loadDetails();
+                    if (window.queenGTLM) {
+                        window.queenGTLM.speak(res.reply);
+                    }
+                }
+            }, 'json');
+        }
+
+        function sendQueenQuery() {
+            const val = $('#queenInput').val().trim();
+            if (!val) return;
+            $('#queenInput').val('');
+            askQueenGuide(val);
         }
 
         function clearLiveChat() {
@@ -1665,11 +1830,11 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
                         username: <?= json_encode($_SESSION['Name'] ?? 'Khán Giả') ?>
                     });
 
-                    GTLMRealtime.on('streamer_ai_reply', (data) => {
+                    GTLMRealtime.on('queen_gtlm_reply', (data) => {
                         if (data && data.table_id == currentTableId) {
                             loadDetails();
-                            if (window.vtuber && !window.vtuber.isSpeaking) {
-                                window.vtuber.speak(data.reply);
+                            if (window.queenGTLM && !window.queenGTLM.isSpeaking) {
+                                window.queenGTLM.speak(data.reply);
                             }
                         }
                     });
