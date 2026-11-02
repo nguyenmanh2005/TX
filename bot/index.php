@@ -134,6 +134,15 @@ if ($topRes) {
     }
 }
 
+// Lấy số lượng thành tựu của từng bot
+$achCounts = [];
+$achRes = $conn->query("SELECT user_id, COUNT(*) as cnt FROM user_achievements GROUP BY user_id");
+if ($achRes) {
+    while ($ar = $achRes->fetch_assoc()) {
+        $achCounts[(int)$ar['user_id']] = (int)$ar['cnt'];
+    }
+}
+
 // 4. Lấy dữ liệu Bot từ Database (Join Frames)
 $botsList = [];
 $sql = "SELECT u.Iduser, u.Name, u.Email, u.Money, u.ImageURL, 
@@ -168,6 +177,7 @@ while($row = $res->fetch_assoc()) {
     
     $row['state'] = $state;
     $row['state']['mood'] = $currentMood;
+    $row['ach_count'] = $achCounts[(int)$row['Iduser']] ?? 0;
     $botsList[] = $row;
 }
 
@@ -788,6 +798,69 @@ $dominantMood = $moodMeta[$dominantMoodKey] ?? $moodMeta['happy'];
             box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
         }
 
+        .army-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .army-filter-select {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 10px 14px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #fff;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .army-filter-select:focus {
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+        }
+
+        .army-filter-select option {
+            background: #0f172a;
+            color: #fff;
+        }
+
+        .army-filter-pills {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 12px 0 18px 0;
+        }
+
+        .army-filter-pill {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-glass);
+            color: var(--text-muted);
+            padding: 6px 12px;
+            border-radius: 9px;
+            font-size: 0.74rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .army-filter-pill:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.18);
+        }
+
+        .army-filter-pill.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+        }
+
         .army-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -1383,35 +1456,100 @@ $dominantMood = $moodMeta[$dominantMoodKey] ?? $moodMeta['happy'];
         <section>
             <div class="army-section-header">
                 <div>
-                    <h2 style="font-size: 1.25rem; font-weight: 800;">
-                        📂 DANH SÁCH QUÂN ĐOÀN CHI TIẾT
+                    <h2 style="font-size: 1.25rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                        <span>📂 DANH SÁCH QUÂN ĐOÀN CHI TIẾT</span>
+                        <span id="armyCountBadge" style="font-size: 0.75rem; background: rgba(99,102,241,0.2); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.3); padding: 2px 8px; border-radius: 8px; font-weight: 800;">
+                            <?= count($botsList) ?> Bot
+                        </span>
                     </h2>
-                    <div style="font-size: 0.78rem; color: var(--text-muted);">
-                        Quản lý toàn bộ <?= count($botsList) ?> thành viên tự động
+                    <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 3px;">
+                        Hiển thị <b id="displayedBotCount" style="color: #fff;"><?= count($botsList) ?></b> thành viên • Tìm kiếm, lọc và sắp xếp linh hoạt
                     </div>
                 </div>
 
-                <div style="position: relative;">
-                    <i class="fa fa-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 0.85rem;"></i>
-                    <input type="text" id="searchBotInput" class="army-search-input" placeholder="Tìm tên hoặc ID bot... (Nhấn / để tìm)">
+                <!-- Controls Toolbar -->
+                <div class="army-toolbar">
+                    <!-- Search Input -->
+                    <div style="position: relative;">
+                        <i class="fa fa-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 0.85rem;"></i>
+                        <input type="text" id="searchBotInput" class="army-search-input" placeholder="Tìm tên, ID (#01) hoặc danh hiệu... (Nhấn /)">
+                    </div>
+
+                    <!-- Sort Select -->
+                    <div style="position: relative;">
+                        <select id="sortBotSelect" class="army-filter-select">
+                            <option value="id_asc">🔢 ID: Từ nhỏ đến lớn (Mặc định)</option>
+                            <option value="id_desc">🔢 ID: Từ lớn đến nhỏ</option>
+                            <option value="money_desc">💰 GTLM: Từ lớn đến nhỏ (Giàu nhất)</option>
+                            <option value="money_asc">💸 GTLM: Từ nhỏ đến lớn (Nghèo nhất)</option>
+                            <option value="ach_desc">🎖️ Thành tựu: Nhiều nhất đến ít nhất</option>
+                            <option value="wins_desc">🏆 Số ván thắng: Nhiều nhất</option>
+                            <option value="losses_desc">💀 Số ván thua: Nhiều nhất</option>
+                        </select>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Quick Mood / Achievement Filters -->
+            <div class="army-filter-pills">
+                <button type="button" class="army-filter-pill active" onclick="setArmyFilter('all', this)">
+                    Tất cả (<?= count($botsList) ?>)
+                </button>
+                <button type="button" class="army-filter-pill" onclick="setArmyFilter('excited', this)">
+                    🟡 Hưng phấn
+                </button>
+                <button type="button" class="army-filter-pill" onclick="setArmyFilter('tilted', this)">
+                    🔴 Cay cú
+                </button>
+                <button type="button" class="army-filter-pill" onclick="setArmyFilter('happy', this)">
+                    🟢 Hạnh phúc
+                </button>
+                <button type="button" class="army-filter-pill" onclick="setArmyFilter('depressed', this)">
+                    ⚪ Thất vọng
+                </button>
+                <button type="button" class="army-filter-pill" onclick="setArmyFilter('has_ach', this)">
+                    🏆 Có Thành Tựu
+                </button>
+                <button type="button" class="army-filter-pill" onclick="setArmyFilter('warning', this)">
+                    ⚠️ Đang lỗi (≥5 Fail)
+                </button>
             </div>
 
             <div class="army-grid" id="botGrid">
                 <?php foreach ($botsList as $bot): ?>
-                    <div class="bot-card" data-name="<?= strtolower($bot['Name']) ?>" data-id="<?= $bot['Iduser'] ?>">
+                    <div class="bot-card" 
+                         data-name="<?= strtolower($bot['Name']) ?>" 
+                         data-id="<?= (int)$bot['Iduser'] ?>"
+                         data-money="<?= (float)$bot['Money'] ?>"
+                         data-wins="<?= (int)($bot['state']['wins'] ?? 0) ?>"
+                         data-losses="<?= (int)($bot['state']['losses'] ?? 0) ?>"
+                         data-mood="<?= $bot['state']['mood'] ?? 'happy' ?>"
+                         data-ach="<?= (int)($bot['ach_count'] ?? 0) ?>"
+                         data-title="<?= strtolower($bot['title_name'] ?? '') ?>"
+                    >
                         <div class="bot-card-top">
                             <img src="<?= $bot['ImageURL'] ?>" class="bot-avatar-thumb" alt="<?= $bot['Name'] ?>" onerror="this.src='../img/avatar_default.png'">
                             <div class="bot-card-info">
                                 <div class="bot-card-name"><?= $bot['Name'] ?></div>
-                                <div class="bot-card-id">ID: #<?= $bot['Iduser'] ?></div>
+                                <div class="bot-card-id" style="display:flex; align-items:center; gap:6px; flex-wrap: wrap;">
+                                    <span>ID: #<?= $bot['Iduser'] ?></span>
+                                    <?php if (!empty($bot['title_name'])): ?>
+                                        <span style="font-size: 0.65rem; color: #a5b4fc; background: rgba(99,102,241,0.15); padding: 1px 5px; border-radius: 4px; border: 1px solid rgba(99,102,241,0.25);" title="Danh hiệu: <?= htmlspecialchars($bot['title_name']) ?>">
+                                            🎖️ <?= $bot['title_name'] ?>
+                                        </span>
+                                    <?php elseif (($bot['ach_count'] ?? 0) > 0): ?>
+                                        <span style="font-size: 0.65rem; color: var(--warn); background: rgba(245,158,11,0.15); padding: 1px 5px; border-radius: 4px; border: 1px solid rgba(245,158,11,0.25);" title="Số lượng thành tựu">
+                                            🏆 <?= $bot['ach_count'] ?> TT
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                             <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
                                 <span class="mood-chip mood-<?= $bot['state']['mood'] ?? 'happy' ?>">
                                     <?= $bot['state']['mood'] ?? 'happy' ?>
                                 </span>
                                 <?php if (isset($bot['state']['fail_count']) && $bot['state']['fail_count'] >= 5): ?>
-                                    <span style="background: var(--danger); color: white; font-size: 0.65rem; padding: 1px 4px; border-radius: 4px; font-weight: 800;">
+                                    <span data-fail="<?= $bot['state']['fail_count'] ?>" style="background: var(--danger); color: white; font-size: 0.65rem; padding: 1px 4px; border-radius: 4px; font-weight: 800;">
                                         ⚠️ <?= $bot['state']['fail_count'] ?> FAIL
                                     </span>
                                 <?php endif; ?>
@@ -1978,22 +2116,107 @@ $dominantMood = $moodMeta[$dominantMoodKey] ?? $moodMeta['happy'];
 
         setInterval(refreshData, 10000); // 10s auto sync
 
-        // 🔍 Search Bot Army
+        // 🔍 Search & Sort & Filter Bot Army
+        let currentArmyFilter = 'all';
         const searchInput = document.getElementById('searchBotInput');
-        const botCards = document.querySelectorAll('.bot-card');
+        const sortSelect = document.getElementById('sortBotSelect');
+        const botGrid = document.getElementById('botGrid');
+        const displayedCountEl = document.getElementById('displayedBotCount');
 
-        searchInput.addEventListener('input', function() {
-            const query = this.value.toLowerCase().trim();
-            botCards.forEach(card => {
-                const name = card.getAttribute('data-name');
-                const id = card.getAttribute('data-id');
-                if (name.includes(query) || id.includes(query)) {
+        function applyArmyFilterAndSort() {
+            const query = (searchInput.value || '').toLowerCase().trim();
+            const sortBy = sortSelect.value || 'id_asc';
+            const cards = Array.from(document.querySelectorAll('.bot-card'));
+
+            let visibleCount = 0;
+
+            // 1. Filter
+            cards.forEach(card => {
+                const name = card.getAttribute('data-name') || '';
+                const id = card.getAttribute('data-id') || '';
+                const mood = card.getAttribute('data-mood') || '';
+                const achCount = parseInt(card.getAttribute('data-ach')) || 0;
+                const title = card.getAttribute('data-title') || '';
+                const idWithHash = '#' + id;
+
+                // Check text match: name, ID, or title
+                const matchesSearch = !query || 
+                    name.includes(query) || 
+                    id.includes(query) || 
+                    idWithHash.includes(query) ||
+                    title.includes(query);
+
+                // Check category filter
+                let matchesFilter = true;
+                if (currentArmyFilter === 'all') {
+                    matchesFilter = true;
+                } else if (currentArmyFilter === 'has_ach') {
+                    matchesFilter = achCount > 0 || title.length > 0;
+                } else if (currentArmyFilter === 'warning') {
+                    matchesFilter = card.innerText.includes('FAIL');
+                } else {
+                    matchesFilter = mood === currentArmyFilter;
+                }
+
+                if (matchesSearch && matchesFilter) {
                     card.style.display = 'flex';
+                    visibleCount++;
                 } else {
                     card.style.display = 'none';
                 }
             });
-        });
+
+            // 2. Sort
+            cards.sort((a, b) => {
+                const idA = parseInt(a.getAttribute('data-id')) || 0;
+                const idB = parseInt(b.getAttribute('data-id')) || 0;
+                const moneyA = parseFloat(a.getAttribute('data-money')) || 0;
+                const moneyB = parseFloat(b.getAttribute('data-money')) || 0;
+                const winsA = parseInt(a.getAttribute('data-wins')) || 0;
+                const winsB = parseInt(b.getAttribute('data-wins')) || 0;
+                const lossesA = parseInt(a.getAttribute('data-losses')) || 0;
+                const lossesB = parseInt(b.getAttribute('data-losses')) || 0;
+                const achA = parseInt(a.getAttribute('data-ach')) || 0;
+                const achB = parseInt(b.getAttribute('data-ach')) || 0;
+
+                switch (sortBy) {
+                    case 'id_asc':
+                        return idA - idB;
+                    case 'id_desc':
+                        return idB - idA;
+                    case 'money_desc':
+                        return moneyB - moneyA;
+                    case 'money_asc':
+                        return moneyA - moneyB;
+                    case 'wins_desc':
+                        return winsB - winsA;
+                    case 'losses_desc':
+                        return lossesB - lossesA;
+                    case 'ach_desc':
+                        return (achB - achA) || (moneyB - moneyA);
+                    default:
+                        return idA - idB;
+                }
+            });
+
+            // Re-append in sorted order
+            cards.forEach(card => botGrid.appendChild(card));
+
+            // Update displayed counter
+            if (displayedCountEl) {
+                displayedCountEl.textContent = visibleCount;
+            }
+        }
+
+        function setArmyFilter(filterType, btn) {
+            currentArmyFilter = filterType;
+            document.querySelectorAll('.army-filter-pill').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            applyArmyFilterAndSort();
+        }
+
+        searchInput.addEventListener('input', applyArmyFilterAndSort);
+        sortSelect.addEventListener('change', applyArmyFilterAndSort);
 
         // Quick focus on '/'
         document.addEventListener('keydown', (e) => {
