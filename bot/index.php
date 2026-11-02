@@ -240,6 +240,44 @@ if (isset($_GET['ajax'])) {
 }
 
 $inflation = ($stats['total_bot_money'] / ($stats['total_human_money'] ?: 1)) * 100;
+
+// Tính toán tâm trạng chủ đạo động
+$moodMeta = [
+    'excited' => [
+        'name' => 'Hưng Phấn',
+        'color' => 'var(--warn)',
+        'hex' => '#f59e0b',
+        'icon' => 'fa-bolt'
+    ],
+    'happy' => [
+        'name' => 'Hạnh Phúc',
+        'color' => 'var(--success)',
+        'hex' => '#10b981',
+        'icon' => 'fa-face-smile'
+    ],
+    'tilted' => [
+        'name' => 'Cay Cú',
+        'color' => 'var(--danger)',
+        'hex' => '#ef4444',
+        'icon' => 'fa-fire-flame-curved'
+    ],
+    'depressed' => [
+        'name' => 'Thất Vọng',
+        'color' => '#94a3b8',
+        'hex' => '#94a3b8',
+        'icon' => 'fa-face-sad-tear'
+    ]
+];
+
+$dominantMoodKey = 'happy';
+$maxMoodCount = -1;
+foreach ($stats['moods'] as $mKey => $mCount) {
+    if ($mCount > $maxMoodCount) {
+        $maxMoodCount = $mCount;
+        $dominantMoodKey = $mKey;
+    }
+}
+$dominantMood = $moodMeta[$dominantMoodKey] ?? $moodMeta['happy'];
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -1066,13 +1104,15 @@ $inflation = ($stats['total_bot_money'] / ($stats['total_human_money'] ?: 1)) * 
             <div class="kpi-card">
                 <div class="kpi-header">
                     <span class="kpi-title">Tâm Trạng Chủ Đạo</span>
-                    <div class="kpi-icon-wrap" style="color: var(--secondary);">
-                        <i class="fa fa-face-smile"></i>
+                    <div class="kpi-icon-wrap" id="dominantMoodIconWrap" style="color: <?= $dominantMood['color'] ?>;">
+                        <i id="dominantMoodIcon" class="fa <?= $dominantMood['icon'] ?>"></i>
                     </div>
                 </div>
-                <div class="kpi-value" style="color: var(--secondary);">Hạnh Phúc</div>
-                <div class="kpi-subtitle">
-                    <span>🟢 <?= $stats['moods']['happy'] ?> • 🟡 <?= $stats['moods']['excited'] ?> • 🔴 <?= $stats['moods']['tilted'] ?></span>
+                <div class="kpi-value" id="dominantMoodValue" style="color: <?= $dominantMood['color'] ?>;">
+                    <?= $dominantMood['name'] ?>
+                </div>
+                <div class="kpi-subtitle" id="dominantMoodSubtitle">
+                    <span>🟢 <?= $stats['moods']['happy'] ?> • 🟡 <?= $stats['moods']['excited'] ?> • 🔴 <?= $stats['moods']['tilted'] ?><?= !empty($stats['moods']['depressed']) ? ' • ⚪ ' . $stats['moods']['depressed'] : '' ?></span>
                 </div>
             </div>
         </section>
@@ -1260,24 +1300,67 @@ $inflation = ($stats['total_bot_money'] / ($stats['total_human_money'] ?: 1)) * 
                 </div>
 
                 <!-- 4. Mini Economy & Mood Doughnuts -->
-                <div class="panel-box">
-                    <div class="panel-header">
+                <div class="panel-box" style="overflow: hidden;">
+                    <div class="panel-header" style="margin-bottom: 14px;">
                         <div class="panel-title">
                             <i class="fa fa-pie-chart" style="color: var(--cyan);"></i>
                             <span>Cán Cân & Tâm Trạng Hiện Tại</span>
                         </div>
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <div>
-                            <div style="text-align: center; font-size: 0.75rem; color: var(--text-muted); font-weight: 700; margin-bottom: 6px;">Tiền Tệ</div>
-                            <div style="height: 140px;">
+                    <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start;">
+                        <!-- Column 1: Tiền Tệ -->
+                        <div style="min-width: 0; display: flex; flex-direction: column; align-items: center; width: 100%;">
+                            <div style="text-align: center; font-size: 0.76rem; color: var(--text-muted); font-weight: 700; margin-bottom: 6px;">Tiền Tệ</div>
+                            <div style="position: relative; width: 100%; height: 115px; max-width: 130px; margin: 0 auto;">
                                 <canvas id="economyChart"></canvas>
                             </div>
+                            <div id="ecoCustomLegend" style="margin-top: 10px; display: flex; flex-direction: column; gap: 4px; width: 100%; font-size: 0.7rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(99, 102, 241, 0.08); padding: 4px 7px; border-radius: 6px; border: 1px solid rgba(99, 102, 241, 0.2);">
+                                    <span style="color: #a5b4fc; display: flex; align-items: center; gap: 5px;">
+                                        <span style="width: 7px; height: 7px; border-radius: 50%; background: #6366f1; display: inline-block;"></span> Bot
+                                    </span>
+                                    <span id="ecoBotPct" style="font-weight: 800; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;">...</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(16, 185, 129, 0.08); padding: 4px 7px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.2);">
+                                    <span style="color: #6ee7b7; display: flex; align-items: center; gap: 5px;">
+                                        <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block;"></span> Người thật
+                                    </span>
+                                    <span id="ecoHumanPct" style="font-weight: 800; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;">...</span>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <div style="text-align: center; font-size: 0.75rem; color: var(--text-muted); font-weight: 700; margin-bottom: 6px;">Cảm Xúc</div>
-                            <div style="height: 140px;">
+
+                        <!-- Column 2: Cảm Xúc -->
+                        <div style="min-width: 0; display: flex; flex-direction: column; align-items: center; width: 100%;">
+                            <div style="text-align: center; font-size: 0.76rem; color: var(--text-muted); font-weight: 700; margin-bottom: 6px;">Cảm Xúc</div>
+                            <div style="position: relative; width: 100%; height: 115px; max-width: 130px; margin: 0 auto;">
                                 <canvas id="moodChart"></canvas>
+                            </div>
+                            <div id="moodCustomLegend" style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 100%; font-size: 0.68rem;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(245, 158, 11, 0.08); padding: 4px 5px; border-radius: 6px; border: 1px solid rgba(245, 158, 11, 0.2);" title="Hưng phấn">
+                                    <span style="color: #fcd34d; display: flex; align-items: center; gap: 3px;">
+                                        <span style="width: 6px; height: 6px; border-radius: 50%; background: #f59e0b; display: inline-block;"></span> Phấn
+                                    </span>
+                                    <b id="moodLegendExcited" style="color: #fff; font-family: 'JetBrains Mono', monospace;"><?= $stats['moods']['excited'] ?></b>
+                                </div>
+                                <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(239, 68, 68, 0.08); padding: 4px 5px; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.2);" title="Cay cú">
+                                    <span style="color: #fca5a5; display: flex; align-items: center; gap: 3px;">
+                                        <span style="width: 6px; height: 6px; border-radius: 50%; background: #ef4444; display: inline-block;"></span> Cay
+                                    </span>
+                                    <b id="moodLegendTilted" style="color: #fff; font-family: 'JetBrains Mono', monospace;"><?= $stats['moods']['tilted'] ?></b>
+                                </div>
+                                <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(16, 185, 129, 0.08); padding: 4px 5px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.2);" title="Hạnh phúc">
+                                    <span style="color: #6ee7b7; display: flex; align-items: center; gap: 3px;">
+                                        <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981; display: inline-block;"></span> Phúc
+                                    </span>
+                                    <b id="moodLegendHappy" style="color: #fff; font-family: 'JetBrains Mono', monospace;"><?= $stats['moods']['happy'] ?></b>
+                                </div>
+                                <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(148, 163, 184, 0.08); padding: 4px 5px; border-radius: 6px; border: 1px solid rgba(148, 163, 184, 0.2);" title="Thất vọng">
+                                    <span style="color: #cbd5e1; display: flex; align-items: center; gap: 3px;">
+                                        <span style="width: 6px; height: 6px; border-radius: 50%; background: #64748b; display: inline-block;"></span> Nản
+                                    </span>
+                                    <b id="moodLegendDepressed" style="color: #fff; font-family: 'JetBrains Mono', monospace;"><?= $stats['moods']['depressed'] ?></b>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1554,16 +1637,24 @@ $inflation = ($stats['total_bot_money'] / ($stats['total_human_money'] ?: 1)) * 
                     data: [<?= $stats['total_bot_money'] ?>, <?= $stats['total_human_money'] ?>],
                     backgroundColor: ['#6366f1', '#10b981'],
                     borderWidth: 0,
-                    hoverOffset: 12
+                    hoverOffset: 8
                 }]
             },
             options: { 
                 responsive: true, 
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Outfit', size: 10 } } }
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                let val = ctx.parsed || 0;
+                                return ' ' + ctx.label + ': ' + Number(val).toLocaleString() + ' GTLM';
+                            }
+                        }
+                    }
                 },
-                cutout: '70%'
+                cutout: '72%'
             }
         });
 
@@ -1576,15 +1667,96 @@ $inflation = ($stats['total_bot_money'] / ($stats['total_human_money'] ?: 1)) * 
                 datasets: [{ 
                     data: [<?= $stats['moods']['happy'] ?>, <?= $stats['moods']['excited'] ?>, <?= $stats['moods']['tilted'] ?>, <?= $stats['moods']['depressed'] ?>], 
                     backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#64748b'], 
-                    borderWidth: 0 
+                    borderWidth: 0,
+                    hoverOffset: 8
                 }]
             },
             options: { 
                 responsive: true, 
                 maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Outfit', size: 10 } } } } 
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                let val = ctx.parsed || 0;
+                                return ' ' + ctx.label + ': ' + val + ' bot';
+                            }
+                        }
+                    }
+                },
+                cutout: '68%'
             }
         });
+
+        function updateEconomyPercentages(botMoney, humanMoney) {
+            const total = Number(botMoney) + Number(humanMoney);
+            const botPct = total > 0 ? ((botMoney / total) * 100).toFixed(1) : '0';
+            const humanPct = total > 0 ? ((humanMoney / total) * 100).toFixed(1) : '0';
+            const elBot = document.getElementById('ecoBotPct');
+            const elHuman = document.getElementById('ecoHumanPct');
+            if (elBot) elBot.textContent = botPct + '%';
+            if (elHuman) elHuman.textContent = humanPct + '%';
+        }
+
+        function updateMoodLegend(moods) {
+            if (!moods) return;
+            const elExcited = document.getElementById('moodLegendExcited');
+            const elTilted = document.getElementById('moodLegendTilted');
+            const elHappy = document.getElementById('moodLegendHappy');
+            const elDepressed = document.getElementById('moodLegendDepressed');
+            if (elExcited) elExcited.textContent = moods.excited ?? 0;
+            if (elTilted) elTilted.textContent = moods.tilted ?? 0;
+            if (elHappy) elHappy.textContent = moods.happy ?? 0;
+            if (elDepressed) elDepressed.textContent = moods.depressed ?? 0;
+        }
+
+        function updateDominantMoodUI(moods) {
+            if (!moods) return;
+            const moodMeta = {
+                excited: { name: 'Hưng Phấn', color: 'var(--warn)', icon: 'fa-bolt' },
+                happy: { name: 'Hạnh Phúc', color: 'var(--success)', icon: 'fa-face-smile' },
+                tilted: { name: 'Cay Cú', color: 'var(--danger)', icon: 'fa-fire-flame-curved' },
+                depressed: { name: 'Thất Vọng', color: '#94a3b8', icon: 'fa-face-sad-tear' }
+            };
+
+            let dominantKey = 'happy';
+            let maxCount = -1;
+            for (const [key, cnt] of Object.entries(moods)) {
+                if (cnt > maxCount) {
+                    maxCount = cnt;
+                    dominantKey = key;
+                }
+            }
+
+            const dom = moodMeta[dominantKey] || moodMeta.happy;
+            const domVal = document.getElementById('dominantMoodValue');
+            const domIcon = document.getElementById('dominantMoodIcon');
+            const domIconWrap = document.getElementById('dominantMoodIconWrap');
+            const domSub = document.getElementById('dominantMoodSubtitle');
+
+            if (domVal) {
+                domVal.textContent = dom.name;
+                domVal.style.color = dom.color;
+            }
+            if (domIcon) {
+                domIcon.className = 'fa ' + dom.icon;
+            }
+            if (domIconWrap) {
+                domIconWrap.style.color = dom.color;
+            }
+            if (domSub) {
+                let subHtml = `<span>🟢 ${moods.happy || 0} • 🟡 ${moods.excited || 0} • 🔴 ${moods.tilted || 0}`;
+                if (moods.depressed && moods.depressed > 0) {
+                    subHtml += ` • ⚪ ${moods.depressed}`;
+                }
+                subHtml += `</span>`;
+                domSub.innerHTML = subHtml;
+            }
+        }
+
+        // Khởi tạo phần trăm ban đầu
+        updateEconomyPercentages(<?= $stats['total_bot_money'] ?>, <?= $stats['total_human_money'] ?>);
 
         // 🔄 Range Filter
         let currentRange = '1d';
@@ -1633,6 +1805,11 @@ $inflation = ($stats['total_bot_money'] / ($stats['total_human_money'] ?: 1)) * 
                 moodLineChart.data.datasets[2].data = data.moodHistory.tilted;
                 moodLineChart.data.datasets[3].data = data.moodHistory.depressed;
                 moodLineChart.update();
+
+                // Update Doughnut Custom Legends & Dominant Mood
+                updateEconomyPercentages(data.stats.total_bot_money, data.stats.total_human_money);
+                updateMoodLegend(data.stats.moods);
+                updateDominantMoodUI(data.stats.moods);
 
                 // Update Logs
                 const logEl = document.getElementById('liveLogs');
