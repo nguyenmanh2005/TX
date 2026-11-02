@@ -1,0 +1,628 @@
+/**
+ * ⚔️ ESPORTS TOURNAMENT BRACKET & PREDICTION CSS
+ * Giao diện Cây Thi Đấu & Sàn Dự Đoán Quán Quân chuẩn phong cách Cyberpunk Esports
+ */
+
+.esports-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(3, 7, 18, 0.88);
+    backdrop-filter: blur(14px);
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+}
+
+.esports-modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.esports-modal-box {
+    width: 95vw;
+    max-width: 1280px;
+    height: 90vh;
+    max-height: 860px;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 30, 0.98) 100%);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(251, 191, 36, 0.15);
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    transform: scale(0.95);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.esports-modal-overlay.active .esports-modal-box {
+    transform: scale(1);
+}
+
+/* Modal Header */
+.esports-header {
+    padding: 16px 24px;
+    background: linear-gradient(90deg, rgba(30, 27, 75, 0.8) 0%, rgba(15, 23, 42, 0.9) 50%, rgba(20, 10, 35, 0.8) 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.esports-title-group {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.esports-badge-icon {
+    font-size: 2rem;
+    filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.6));
+    animation: crownFloat 3s ease-in-out infinite;
+}
+
+@keyframes crownFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+}
+
+.esports-title-text h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 900;
+    color: #f8fafc;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.esports-title-text .season-tag {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #000;
+    font-size: 0.75rem;
+    font-weight: 900;
+    padding: 2px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+}
+
+.esports-stage-status {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stage-pill {
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.stage-pill.betting {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    animation: pulseBorder 1.5s infinite;
+}
+
+.stage-pill.playing {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.stage-pill.finished {
+    background: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.4);
+}
+
+@keyframes pulseBorder {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    50% { box-shadow: 0 0 12px 2px rgba(16, 185, 129, 0.6); }
+}
+
+.esports-timer-pool {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.esports-timer-box {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 6px 14px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.esports-timer-box .timer-label {
+    font-size: 0.65rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.esports-timer-box .timer-val {
+    font-size: 1.15rem;
+    font-weight: 900;
+    color: #fbbf24;
+    font-family: monospace;
+}
+
+.esports-pool-box {
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    padding: 6px 14px;
+    border-radius: 10px;
+    text-align: right;
+}
+
+.esports-pool-box .pool-label {
+    font-size: 0.65rem;
+    color: #fbbf24;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.esports-pool-box .pool-val {
+    font-size: 1.15rem;
+    font-weight: 900;
+    color: #34d399;
+}
+
+.btn-close-esports {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #94a3b8;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-close-esports:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+/* Navigation Tabs */
+.esports-tabs-nav {
+    display: flex;
+    background: rgba(0, 0, 0, 0.25);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0 20px;
+    gap: 8px;
+}
+
+.esports-tab-btn {
+    background: none;
+    border: none;
+    padding: 12px 20px;
+    color: #94a3b8;
+    font-size: 0.9rem;
+    font-weight: 800;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.esports-tab-btn:hover {
+    color: #f8fafc;
+}
+
+.esports-tab-btn.active {
+    color: #fbbf24;
+    border-bottom-color: #fbbf24;
+}
+
+/* Tab Panes */
+.esports-tab-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    position: relative;
+}
+
+.esports-tab-pane {
+    display: none;
+    animation: fadeIn 0.25s ease-out;
+}
+
+.esports-tab-pane.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ========================================================
+   TAB 1: CÂY THI ĐẤU (BRACKET TREE)
+======================================================== */
+.bracket-tree-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 900px;
+    padding: 10px 0;
+    position: relative;
+}
+
+.bracket-column {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    flex: 1;
+    gap: 20px;
+}
+
+.bracket-column.col-center {
+    flex: 1.2;
+    align-items: center;
+    text-align: center;
+    padding: 0 10px;
+}
+
+.bracket-col-title {
+    font-size: 0.75rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    color: #94a3b8;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+/* Match Card */
+.bracket-match-card {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    position: relative;
+    transition: 0.2s;
+}
+
+.bracket-match-card.live-playing {
+    border-color: #ef4444;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+    animation: pulseCard 2s infinite;
+}
+
+@keyframes pulseCard {
+    0%, 100% { border-color: rgba(239, 68, 68, 0.6); }
+    50% { border-color: rgba(239, 68, 68, 1); }
+}
+
+.match-header-tag {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #94a3b8;
+    margin-bottom: 6px;
+    padding: 0 4px;
+}
+
+.match-header-tag .live-tag {
+    color: #ef4444;
+    font-weight: 900;
+}
+
+.player-slot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    border-radius: 8px;
+    margin-bottom: 4px;
+    background: rgba(0, 0, 0, 0.25);
+    transition: 0.2s;
+}
+
+.player-slot:last-child {
+    margin-bottom: 0;
+}
+
+.player-slot.winner {
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.25) 0%, rgba(16, 185, 129, 0.05) 100%);
+    border-left: 3px solid #10b981;
+}
+
+.player-slot.loser {
+    opacity: 0.45;
+}
+
+.player-info-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.player-avatar-icon {
+    font-size: 1.15rem;
+}
+
+.player-name-text {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #f8fafc;
+}
+
+.player-slot.winner .player-name-text {
+    color: #34d399;
+}
+
+.player-elo-tag {
+    font-size: 0.65rem;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.player-score-badge {
+    font-size: 0.9rem;
+    font-weight: 900;
+    color: #f8fafc;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.player-slot.winner .player-score-badge {
+    background: #10b981;
+    color: #000;
+}
+
+/* Center Trophy Zone */
+.trophy-glory-box {
+    margin-bottom: 16px;
+    position: relative;
+}
+
+.big-trophy-icon {
+    font-size: 4rem;
+    filter: drop-shadow(0 0 25px rgba(251, 191, 36, 0.8));
+    animation: trophyGlow 2.5s ease-in-out infinite;
+}
+
+@keyframes trophyGlow {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.6)); }
+    50% { transform: scale(1.08); filter: drop-shadow(0 0 35px rgba(251, 191, 36, 1)); }
+}
+
+.champion-crowned-card {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.25) 0%, rgba(217, 119, 6, 0.1) 100%);
+    border: 2px solid #fbbf24;
+    border-radius: 16px;
+    padding: 14px 20px;
+    box-shadow: 0 0 30px rgba(251, 191, 36, 0.3);
+    margin-top: 10px;
+}
+
+.champion-crowned-title {
+    font-size: 0.75rem;
+    font-weight: 900;
+    color: #fbbf24;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}
+
+.champion-crowned-name {
+    font-size: 1.35rem;
+    font-weight: 900;
+    color: #ffffff;
+    text-shadow: 0 0 10px rgba(251, 191, 36, 0.6);
+}
+
+/* ========================================================
+   TAB 2: SÀN ĐẶT CƯỢC DỰ ĐOÁN QUÁN QUÂN
+======================================================== */
+.prediction-market-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.player-predict-card {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 16px;
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.player-predict-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(251, 191, 36, 0.5);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.card-top-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.card-player-hero {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.hero-avatar-frame {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    border: 2px solid;
+}
+
+.hero-meta h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 900;
+    color: #f8fafc;
+}
+
+.hero-meta .hero-title-tag {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.odds-badge {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+    font-size: 1.05rem;
+    font-weight: 900;
+    padding: 4px 10px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+.card-lore-text {
+    font-size: 0.8rem;
+    color: #cbd5e1;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    min-height: 40px;
+}
+
+.card-action-bar {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-predict-now {
+    flex: 1;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: #000;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 900;
+    cursor: pointer;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.btn-predict-now:hover {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    box-shadow: 0 0 14px rgba(251, 191, 36, 0.6);
+}
+
+.btn-predict-now:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #475569;
+    color: #94a3b8;
+    box-shadow: none;
+}
+
+/* ========================================================
+   TAB 3: VÉ CƯỢC & LỊCH SỬ
+======================================================== */
+.my-bets-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.bet-ticket-card {
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.bet-ticket-card.status-won {
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.bet-ticket-card.status-lost {
+    border-color: #ef4444;
+    opacity: 0.6;
+}
+
+.ticket-status-pill {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.ticket-status-pill.pending { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+.ticket-status-pill.won { background: rgba(16, 185, 129, 0.25); color: #34d399; }
+.ticket-status-pill.lost { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .esports-modal-box {
+        width: 100vw;
+        height: 100vh;
+        border-radius: 0;
+        max-height: none;
+    }
+    .bracket-tree-container {
+        flex-direction: column;
+        min-width: 100%;
+        gap: 30px;
+    }
+    .bracket-column {
+        width: 100%;
+    }
+}

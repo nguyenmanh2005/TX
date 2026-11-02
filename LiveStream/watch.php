@@ -202,6 +202,8 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
     <?php $assetPrefix = (basename(dirname($_SERVER['SCRIPT_FILENAME'])) === 'LiveStream') ? '../' : ''; ?>
     <script src="<?= $assetPrefix ?>assets/js/vtuber-avatar.js"></script>
     <script src="<?= $assetPrefix ?>assets/js/donate-voice.js"></script>
+    <link rel="stylesheet" href="<?= $assetPrefix ?>assets/css/tournament-bracket.css">
+    <script src="<?= $assetPrefix ?>assets/js/tournament-bracket.js"></script>
     <!-- TTS using native browser API instead of responsivevoice to avoid API key warning -->
     <style>
         html, body, div, p, span, section, header, footer, aside, nav, table, tr, td, iframe, canvas {
@@ -1051,6 +1053,9 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
             <button class="btn-channel-switch" onclick="openChannelSwitcher()">
                 <i class="fa fa-tv"></i> ĐỔI KÊNH
             </button>
+            <button class="btn-channel-switch" onclick="openEsportsTournament()" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.3) 0%, rgba(217, 119, 6, 0.4) 100%); border-color: #f59e0b; color: #fbbf24;" title="Đấu Trường Cờ Ca-rô AI & Dự Đoán Quán Quân">
+                <i class="fa fa-trophy"></i> GIẢI ĐẤU 30P
+            </button>
         </div>
 
         <div class="user-balance-chip">
@@ -1204,6 +1209,9 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
                     </button>
                     <button class="dock-btn btn-gift" onclick="openGiftStoreModal()" title="Tặng Quà">
                         <i class="fa fa-gift"></i>
+                    </button>
+                    <button class="dock-btn btn-tournament" onclick="openEsportsTournament()" title="Đấu Trường Cờ Ca-rô AI (Bracket & Dự Đoán)" style="background: rgba(245, 158, 11, 0.25); border: 1px solid #f59e0b; color: #fbbf24;">
+                        <i class="fa fa-trophy"></i>
                     </button>
                     <button class="dock-btn btn-play" onclick="confirmPlayNow('<?= htmlspecialchars($currentGame['real_game']) ?>', '<?= htmlspecialchars($currentGame['name']) ?>')" title="Vào Tự Chơi">
                         <i class="fa fa-gamepad"></i>
@@ -1812,7 +1820,7 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
             const appRoot = '/' + (pathParts[1] && !pathParts[1].includes('.') ? pathParts[1] + '/' : '');
             const base = origin + appRoot;
 
-            ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/gtlm-realtime.js', 'assets/js/donate-voice.js', 'assets/js/vtuber-avatar.js'].forEach(src => {
+            ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/gtlm-realtime.js', 'assets/js/donate-voice.js', 'assets/js/tournament-bracket.js', 'assets/js/vtuber-avatar.js'].forEach(src => {
                 const s = document.createElement('script');
                 s.src = base + src; s.async = false;
                 document.head.appendChild(s);

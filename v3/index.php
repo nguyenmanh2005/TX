@@ -205,6 +205,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/lobby.css">
     <link rel="stylesheet" href="assets/css/sound-ui.css">
+    <link rel="stylesheet" href="assets/css/tournament-bracket.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="assets/js/tournament-bracket.js"></script>
     <?php 
     require_once '../include_css.php';
     echo getCSSIncludes(['special_effects' => true]); 
@@ -665,6 +669,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['submit_giftcode'])) {
     </div>
 
     <div style="display: flex; align-items: center; gap: 20px;">
+        <button type="button" onclick="openEsportsTournament()" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.35)); border: 1px solid #f59e0b; color: #fbbf24; border-radius: 999px; padding: 8px 18px; font-weight: 800; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 0 15px rgba(245, 158, 11, 0.3); transition: all 0.2s;" title="Đấu Trường Cờ Ca-rô AI & Sàn Dự Đoán Quán Quân"><i class="fa fa-trophy"></i> GIẢI ĐẤU 30P</button>
         <div style="background: rgba(255,255,255,0.08); padding: 8px 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.15); font-weight: 700; font-size: 14px;">
             💰 <span style="color: #4ade80;"><?= number_format($user['Money'], 0, ',', '.') ?></span> GTLM
         </div>
