@@ -1,8 +1,14 @@
 /**
- * ⚔️ ESPORTS TOURNAMENT BRACKET & PREDICTION CSS
+ * ⚔️ ESPORTS TOURNAMENT BRACKET & PREDICTION CSS v3.0
  * Giao diện Cây Thi Đấu & Sàn Dự Đoán Quán Quân chuẩn phong cách Cyberpunk Esports
+ * Tối ưu hóa thị giác: Sang trọng, trực quan, dễ nhìn, đường nối phân nhánh Bracket chuẩn thi đấu
  */
 
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
+
+/* ========================================================
+   MODAL OVERLAY & CONTAINER
+======================================================== */
 .esports-modal-overlay {
     position: fixed;
     top: 0;
@@ -10,7 +16,8 @@
     width: 100vw;
     height: 100vh;
     background: rgba(3, 7, 18, 0.88);
-    backdrop-filter: blur(14px);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     z-index: 999999;
     display: flex;
     align-items: center;
@@ -27,19 +34,19 @@
 }
 
 .esports-modal-box {
-    width: 95vw;
-    max-width: 1280px;
-    height: 90vh;
-    max-height: 860px;
-    background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 30, 0.98) 100%);
-    border: 1px solid rgba(251, 191, 36, 0.3);
-    box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(251, 191, 36, 0.15);
+    width: 96vw;
+    max-width: 1340px;
+    height: 92vh;
+    max-height: 880px;
+    background: radial-gradient(circle at 50% 0%, rgba(30, 27, 75, 0.6) 0%, rgba(10, 15, 30, 0.98) 70%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(251, 191, 36, 0.12);
     border-radius: 20px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     position: relative;
-    transform: scale(0.95);
+    transform: scale(0.96);
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -47,10 +54,12 @@
     transform: scale(1);
 }
 
-/* Modal Header */
+/* ========================================================
+   MODAL HEADER
+======================================================== */
 .esports-header {
-    padding: 16px 24px;
-    background: linear-gradient(90deg, rgba(30, 27, 75, 0.8) 0%, rgba(15, 23, 42, 0.9) 50%, rgba(20, 10, 35, 0.8) 100%);
+    padding: 14px 24px;
+    background: linear-gradient(90deg, rgba(23, 23, 50, 0.9) 0%, rgba(15, 23, 42, 0.95) 50%, rgba(26, 18, 40, 0.9) 100%);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
     align-items: center;
@@ -67,7 +76,7 @@
 
 .esports-badge-icon {
     font-size: 2rem;
-    filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.6));
+    filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.7));
     animation: crownFloat 3s ease-in-out infinite;
 }
 
@@ -93,7 +102,7 @@
     font-size: 0.75rem;
     font-weight: 900;
     padding: 3px 10px;
-    border-radius: 8px;
+    border-radius: 20px;
     letter-spacing: 0.5px;
     display: inline-flex;
     align-items: center;
@@ -127,9 +136,9 @@
 }
 
 .esports-stage-status {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: #94a3b8;
-    margin-top: 2px;
+    margin-top: 3px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -138,7 +147,7 @@
 .stage-pill {
     padding: 2px 10px;
     border-radius: 20px;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.5px;
     text-transform: uppercase;
@@ -155,6 +164,7 @@
     background: rgba(239, 68, 68, 0.15);
     color: #f87171;
     border: 1px solid rgba(239, 68, 68, 0.4);
+    animation: pulseBorderRed 1.5s infinite;
 }
 
 .stage-pill.finished {
@@ -168,98 +178,110 @@
     50% { box-shadow: 0 0 12px 2px rgba(16, 185, 129, 0.6); }
 }
 
+@keyframes pulseBorderRed {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    50% { box-shadow: 0 0 12px 2px rgba(239, 68, 68, 0.6); }
+}
+
 .esports-timer-pool {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
 }
 
 .esports-timer-box {
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(15, 23, 42, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 6px 14px;
+    padding: 5px 12px;
     border-radius: 10px;
     text-align: center;
 }
 
 .esports-timer-box .timer-label {
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     color: #94a3b8;
     text-transform: uppercase;
-    font-weight: 700;
+    font-weight: 800;
+    letter-spacing: 0.5px;
 }
 
 .esports-timer-box .timer-val {
-    font-size: 1.15rem;
+    font-size: 1.1rem;
     font-weight: 900;
     color: #fbbf24;
-    font-family: monospace;
+    font-family: 'JetBrains Mono', monospace;
 }
 
 .esports-pool-box {
-    background: rgba(251, 191, 36, 0.1);
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
     border: 1px solid rgba(251, 191, 36, 0.3);
-    padding: 6px 14px;
+    padding: 5px 12px;
     border-radius: 10px;
     text-align: right;
 }
 
 .esports-pool-box .pool-label {
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     color: #fbbf24;
     text-transform: uppercase;
-    font-weight: 700;
+    font-weight: 800;
+    letter-spacing: 0.5px;
 }
 
 .esports-pool-box .pool-val {
-    font-size: 1.15rem;
+    font-size: 1.1rem;
     font-weight: 900;
     color: #34d399;
 }
 
 .btn-close-esports {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     color: #94a3b8;
     width: 36px;
     height: 36px;
     border-radius: 10px;
-    font-size: 1.1rem;
+    font-size: 1.3rem;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: 0.2s;
+    transition: all 0.2s;
+    line-height: 1;
 }
 
 .btn-close-esports:hover {
     background: rgba(239, 68, 68, 0.2);
     border-color: #ef4444;
     color: #ef4444;
+    transform: rotate(90deg);
 }
 
-/* Navigation Tabs */
+/* ========================================================
+   NAVIGATION TABS
+======================================================== */
 .esports-tabs-nav {
     display: flex;
-    background: rgba(0, 0, 0, 0.25);
+    background: rgba(10, 15, 30, 0.7);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     padding: 0 20px;
-    gap: 8px;
+    gap: 10px;
 }
 
 .esports-tab-btn {
     background: none;
     border: none;
-    padding: 12px 20px;
+    padding: 12px 18px;
     color: #94a3b8;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     font-weight: 800;
     cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: 0.2s;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
     display: flex;
     align-items: center;
     gap: 8px;
+    letter-spacing: 0.5px;
 }
 
 .esports-tab-btn:hover {
@@ -269,13 +291,16 @@
 .esports-tab-btn.active {
     color: #fbbf24;
     border-bottom-color: #fbbf24;
+    background: linear-gradient(180deg, transparent 0%, rgba(251, 191, 36, 0.08) 100%);
 }
 
-/* Tab Panes */
+/* ========================================================
+   TAB CONTENT CONTAINER
+======================================================== */
 .esports-tab-content {
     flex: 1;
     overflow-y: auto;
-    padding: 20px;
+    padding: 16px 20px;
     position: relative;
 }
 
@@ -294,117 +319,525 @@
 }
 
 /* ========================================================
-   TAB 1: CÂY THI ĐẤU (BRACKET TREE)
+   STAGE HUD & INTERACTIVE STEPPER BAR
+   Thay thế hàng 11 nút bấm cũ bằng HUD giải đấu chuyên nghiệp
 ======================================================== */
-.bracket-tree-container {
+.esports-hud-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(90deg, rgba(20, 27, 45, 0.85) 0%, rgba(15, 23, 42, 0.95) 50%, rgba(25, 20, 45, 0.85) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    padding: 8px 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.hud-stage-status {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    min-width: 900px;
-    padding: 10px 0;
+    gap: 10px;
+    min-width: 180px;
+}
+
+.hud-stage-beacon {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 10px #10b981;
+    animation: beaconPulse 1.5s infinite;
+}
+
+@keyframes beaconPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.4); opacity: 0.6; }
+}
+
+.hud-stage-text .hud-stage-label {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+.hud-stage-text .hud-stage-name {
+    font-size: 0.95rem;
+    font-weight: 900;
+    color: #fbbf24;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* 5-Step Progress Stepper */
+.hud-stepper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    justify-content: center;
+    max-width: 600px;
+}
+
+.hud-step-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.hud-step-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.hud-step-item.active {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.25) 0%, rgba(217, 119, 6, 0.15) 100%);
+    border-color: #fbbf24;
+    box-shadow: 0 0 14px rgba(251, 191, 36, 0.35);
+}
+
+.hud-step-item.active .step-dot {
+    background: #fbbf24;
+    color: #000;
+    font-weight: 900;
+    box-shadow: 0 0 8px #fbbf24;
+}
+
+.hud-step-item.active .step-label {
+    color: #ffffff;
+    font-weight: 900;
+}
+
+.step-dot {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+    font-size: 0.7rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.step-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 0.3px;
+    transition: all 0.2s;
+}
+
+.hud-step-line {
+    width: 14px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 2px;
+}
+
+/* Actions & Settings Dropdown */
+.hud-actions-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     position: relative;
 }
 
+.btn-hud-watch-live {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: #ffffff;
+    border: none;
+    padding: 7px 14px;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    font-weight: 900;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 0 14px rgba(239, 68, 68, 0.5);
+    animation: livePulse 1.5s infinite;
+    transition: all 0.2s;
+}
+
+.btn-hud-watch-live:hover {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.8);
+    transform: translateY(-1px);
+}
+
+.hud-settings-dropdown-wrap {
+    position: relative;
+}
+
+.btn-hud-tool {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #e2e8f0;
+    padding: 7px 12px;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.btn-hud-tool:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.hud-settings-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: rgba(15, 23, 42, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 14px;
+    padding: 12px;
+    width: 250px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(251, 191, 36, 0.15);
+    backdrop-filter: blur(16px);
+    z-index: 1000;
+    display: none;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.hud-settings-menu.active {
+    display: block;
+}
+
+.settings-menu-header {
+    font-size: 0.65rem;
+    font-weight: 900;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+    padding: 0 4px;
+}
+
+.settings-season-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.btn-season-opt {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #cbd5e1;
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 6px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.btn-season-opt:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border-color: #fbbf24;
+}
+
+.btn-season-opt.opt-spring:hover { border-color: #f43f5e; color: #f43f5e; }
+.btn-season-opt.opt-summer:hover { border-color: #f59e0b; color: #f59e0b; }
+.btn-season-opt.opt-autumn:hover { border-color: #ea580c; color: #ea580c; }
+.btn-season-opt.opt-winter:hover { border-color: #06b6d4; color: #06b6d4; }
+
+.settings-menu-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 8px 0;
+}
+
+.btn-settings-action {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.btn-settings-action:last-child {
+    margin-bottom: 0;
+}
+
+.btn-settings-action:hover {
+    background: rgba(251, 191, 36, 0.15);
+    border-color: #fbbf24;
+    color: #fbbf24;
+}
+
+/* ========================================================
+   TAB 1: CÂY THI ĐẤU (BRACKET TREE) WITH CONNECTORS
+======================================================== */
+.bracket-tree-wrapper {
+    overflow-x: auto;
+    padding: 10px 0 20px 0;
+}
+
+.bracket-tree-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1100px;
+    gap: 0;
+    position: relative;
+    padding: 10px 0;
+}
+
+/* Columns */
 .bracket-column {
     display: flex;
     flex-direction: column;
     justify-content: space-around;
-    flex: 1;
-    gap: 20px;
+    width: 215px;
+    gap: 24px;
+    z-index: 2;
+}
+
+.bracket-column.col-sf {
+    width: 215px;
+    gap: 0;
+    justify-content: center;
 }
 
 .bracket-column.col-center {
-    flex: 1.2;
+    width: 270px;
     align-items: center;
     text-align: center;
     padding: 0 10px;
+    z-index: 3;
 }
 
 .bracket-col-title {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 900;
     text-transform: uppercase;
     color: #94a3b8;
     letter-spacing: 1px;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 }
 
-/* Match Card */
+/* SVG Branch Connector Columns */
+.bracket-branch-col {
+    width: 44px;
+    align-self: stretch;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+.bracket-branch-col.branch-final-in {
+    width: 32px;
+}
+
+.bracket-svg-connector {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.branch-wire {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.18);
+    stroke-width: 2px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: all 0.3s ease;
+}
+
+.branch-wire.active {
+    stroke: #fbbf24;
+    stroke-width: 2.5px;
+    filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.7));
+}
+
+.branch-wire.playing {
+    stroke: #ef4444;
+    stroke-width: 2.5px;
+    filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.8));
+    animation: wirePulse 1.2s infinite alternate;
+}
+
+@keyframes wirePulse {
+    from { opacity: 0.7; }
+    to { opacity: 1; }
+}
+
+/* ========================================================
+   MATCH CARD (SLEEK ESPORTS CYBERPUNK CARD)
+======================================================== */
 .bracket-match-card {
-    background: rgba(30, 41, 59, 0.7);
+    background: linear-gradient(145deg, rgba(22, 29, 49, 0.92) 0%, rgba(13, 18, 33, 0.96) 100%);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
-    padding: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    padding: 8px 10px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
     position: relative;
-    transition: 0.2s;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+}
+
+.bracket-match-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(251, 191, 36, 0.5);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 15px rgba(251, 191, 36, 0.2);
+}
+
+.bracket-match-card.non-clickable {
+    cursor: default !important;
+}
+
+.bracket-match-card.non-clickable:hover {
+    transform: none !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5) !important;
 }
 
 .bracket-match-card.live-playing {
     border-color: #ef4444;
-    box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
-    animation: pulseCard 2s infinite;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.35);
+    animation: livePulseCard 2s infinite;
 }
 
-@keyframes pulseCard {
-    0%, 100% { border-color: rgba(239, 68, 68, 0.6); }
-    50% { border-color: rgba(239, 68, 68, 1); }
+@keyframes livePulseCard {
+    0%, 100% { border-color: rgba(239, 68, 68, 0.6); box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
+    50% { border-color: rgba(239, 68, 68, 1); box-shadow: 0 0 25px rgba(239, 68, 68, 0.55); }
+}
+
+.bracket-match-card.final-card {
+    border: 2px solid rgba(251, 191, 36, 0.5);
+    box-shadow: 0 0 30px rgba(251, 191, 36, 0.2);
+    background: linear-gradient(145deg, rgba(30, 26, 55, 0.95) 0%, rgba(18, 15, 33, 0.98) 100%);
 }
 
 .match-header-tag {
     display: flex;
     justify-content: space-between;
-    font-size: 0.65rem;
+    align-items: center;
+    font-size: 0.68rem;
     font-weight: 800;
     color: #94a3b8;
     margin-bottom: 6px;
-    padding: 0 4px;
+    padding: 0 2px;
 }
 
 .match-header-tag .live-tag {
     color: #ef4444;
     font-weight: 900;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
+.match-header-tag .finished-tag {
+    color: #10b981;
+    font-weight: 800;
+}
+
+.match-header-tag .upcoming-tag {
+    color: #64748b;
+    font-weight: 700;
+}
+
+/* Player Slot inside Match Card */
 .player-slot {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 6px 10px;
+    padding: 5px 8px;
     border-radius: 8px;
     margin-bottom: 4px;
-    background: rgba(0, 0, 0, 0.25);
-    transition: 0.2s;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    transition: all 0.2s;
+    height: 34px;
+    box-sizing: border-box;
 }
 
-.player-slot:last-child {
+.player-slot:last-of-type {
     margin-bottom: 0;
 }
 
 .player-slot.winner {
-    background: linear-gradient(90deg, rgba(16, 185, 129, 0.25) 0%, rgba(16, 185, 129, 0.05) 100%);
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.22) 0%, rgba(16, 185, 129, 0.04) 100%);
     border-left: 3px solid #10b981;
+    border-color: rgba(16, 185, 129, 0.3);
 }
 
 .player-slot.loser {
     opacity: 0.45;
 }
 
+.player-slot.waiting {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    opacity: 0.6;
+}
+
 .player-info-left {
     display: flex;
     align-items: center;
     gap: 8px;
+    overflow: hidden;
 }
 
 .player-avatar-icon {
-    font-size: 1.15rem;
+    font-size: 1.05rem;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
 .player-name-text {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 800;
     color: #f8fafc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 105px;
 }
 
 .player-slot.winner .player-name-text {
@@ -412,57 +845,144 @@
 }
 
 .player-elo-tag {
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     color: #64748b;
-    font-weight: 600;
+    font-weight: 700;
+    margin-left: 4px;
 }
 
 .player-score-badge {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     font-weight: 900;
-    color: #f8fafc;
-    width: 24px;
-    height: 24px;
+    color: #cbd5e1;
+    width: 22px;
+    height: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 6px;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
 }
 
 .player-slot.winner .player-score-badge {
     background: #10b981;
     color: #000;
+    border-color: #10b981;
+    font-weight: 900;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
 }
 
-/* Center Trophy Zone */
-.trophy-glory-box {
-    margin-bottom: 16px;
+/* Match Action Buttons */
+.btn-watch-match {
+    width: 100%;
+    margin-top: 6px;
+    padding: 5px 8px;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    cursor: pointer;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.btn-watch-match.live {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+    animation: livePulse 1.5s infinite;
+}
+
+.btn-watch-match.finished {
+    background: rgba(255, 255, 255, 0.06);
+    color: #cbd5e1;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.btn-watch-match.finished:hover {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border-color: #10b981;
+}
+
+.match-waiting-tag {
+    margin-top: 5px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #64748b;
+    background: rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+/* ========================================================
+   CENTER TROPHY & CHAMPIONSHIP GLORY ZONE
+======================================================== */
+.championship-pedestal {
+    margin-bottom: 14px;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.pedestal-halo {
+    position: absolute;
+    width: 160px;
+    height: 160px;
+    background: radial-gradient(circle, rgba(251, 191, 36, 0.25) 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: 0;
+    pointer-events: none;
 }
 
 .big-trophy-icon {
-    font-size: 4rem;
-    filter: drop-shadow(0 0 25px rgba(251, 191, 36, 0.8));
+    font-size: 3.6rem;
+    filter: drop-shadow(0 0 25px rgba(251, 191, 36, 0.85));
     animation: trophyGlow 2.5s ease-in-out infinite;
+    position: relative;
+    z-index: 1;
 }
 
 @keyframes trophyGlow {
     0%, 100% { transform: scale(1); filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.6)); }
-    50% { transform: scale(1.08); filter: drop-shadow(0 0 35px rgba(251, 191, 36, 1)); }
+    50% { transform: scale(1.06); filter: drop-shadow(0 0 35px rgba(251, 191, 36, 1)); }
+}
+
+.pedestal-title {
+    font-weight: 900;
+    color: #fbbf24;
+    font-size: 1.05rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    text-shadow: 0 0 12px rgba(251, 191, 36, 0.6);
+    position: relative;
+    z-index: 1;
 }
 
 .champion-crowned-card {
-    background: linear-gradient(135deg, rgba(251, 191, 36, 0.25) 0%, rgba(217, 119, 6, 0.1) 100%);
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(217, 119, 6, 0.08) 100%);
     border: 2px solid #fbbf24;
-    border-radius: 16px;
-    padding: 14px 20px;
-    box-shadow: 0 0 30px rgba(251, 191, 36, 0.3);
-    margin-top: 10px;
+    border-radius: 14px;
+    padding: 10px 16px;
+    box-shadow: 0 0 25px rgba(251, 191, 36, 0.35);
+    margin-top: 12px;
+    width: 100%;
+    max-width: 250px;
 }
 
 .champion-crowned-title {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 900;
     color: #fbbf24;
     text-transform: uppercase;
@@ -470,10 +990,11 @@
 }
 
 .champion-crowned-name {
-    font-size: 1.35rem;
+    font-size: 1.25rem;
     font-weight: 900;
     color: #ffffff;
     text-shadow: 0 0 10px rgba(251, 191, 36, 0.6);
+    margin: 2px 0;
 }
 
 /* ========================================================
@@ -486,20 +1007,21 @@
 }
 
 .player-predict-card {
-    background: rgba(30, 41, 59, 0.7);
+    background: linear-gradient(145deg, rgba(22, 29, 49, 0.85) 0%, rgba(13, 18, 33, 0.95) 100%);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
     padding: 16px;
-    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
 }
 
 .player-predict-card:hover {
     transform: translateY(-4px);
     border-color: rgba(251, 191, 36, 0.5);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55), 0 0 15px rgba(251, 191, 36, 0.2);
 }
 
 .card-top-header {
@@ -516,15 +1038,16 @@
 }
 
 .hero-avatar-frame {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
     background: rgba(0, 0, 0, 0.4);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.8rem;
+    font-size: 1.7rem;
     border: 2px solid;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
 .hero-meta h3 {
@@ -535,7 +1058,7 @@
 }
 
 .hero-meta .hero-title-tag {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     color: #94a3b8;
     font-weight: 600;
 }
@@ -548,16 +1071,18 @@
     padding: 4px 10px;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+    font-family: 'JetBrains Mono', monospace;
 }
 
 .card-lore-text {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: #cbd5e1;
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(0, 0, 0, 0.25);
     padding: 8px 12px;
     border-radius: 8px;
     margin-bottom: 14px;
-    min-height: 40px;
+    min-height: 38px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .card-action-bar {
@@ -575,24 +1100,27 @@
     font-size: 0.85rem;
     font-weight: 900;
     cursor: pointer;
-    transition: 0.2s;
+    transition: all 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
 }
 
 .btn-predict-now:hover {
     background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-    box-shadow: 0 0 14px rgba(251, 191, 36, 0.6);
+    box-shadow: 0 0 16px rgba(251, 191, 36, 0.6);
+    transform: translateY(-1px);
 }
 
 .btn-predict-now:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    background: #475569;
+    background: #334155;
     color: #94a3b8;
     box-shadow: none;
+    transform: none;
 }
 
 /* ========================================================
@@ -605,7 +1133,7 @@
 }
 
 .bet-ticket-card {
-    background: rgba(30, 41, 59, 0.6);
+    background: linear-gradient(145deg, rgba(22, 29, 49, 0.75) 0%, rgba(13, 18, 33, 0.9) 100%);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     padding: 14px 18px;
@@ -614,6 +1142,7 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 12px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
 }
 
 .bet-ticket-card.status-won {
@@ -637,130 +1166,6 @@
 .ticket-status-pill.pending { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
 .ticket-status-pill.won { background: rgba(16, 185, 129, 0.25); color: #34d399; }
 .ticket-status-pill.lost { background: rgba(239, 68, 68, 0.2); color: #f87171; }
-
-/* ========================================================
-   MATCH CARD ACTIONS & STAGE CONTROLLER BAR
-======================================================== */
-.bracket-match-card {
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-}
-.bracket-match-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(251, 191, 36, 0.5);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4), 0 0 12px rgba(251, 191, 36, 0.2);
-}
-.btn-watch-match {
-    width: 100%;
-    margin-top: 6px;
-    padding: 6px 10px;
-    border-radius: 8px;
-    font-size: 0.75rem;
-    font-weight: 800;
-    cursor: pointer;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    transition: 0.2s;
-}
-.btn-watch-match.live {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: #fff;
-    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
-    animation: livePulse 1.5s infinite;
-}
-.btn-watch-match.finished {
-    background: rgba(255, 255, 255, 0.08);
-    color: #cbd5e1;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-}
-.btn-watch-match.finished:hover {
-    background: rgba(16, 185, 129, 0.2);
-    color: #34d399;
-    border-color: #10b981;
-}
-.bracket-match-card.non-clickable {
-    cursor: default !important;
-}
-.bracket-match-card.non-clickable:hover {
-    transform: none !important;
-    border-color: rgba(255, 255, 255, 0.1) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
-}
-.match-waiting-tag {
-    margin-top: 6px;
-    padding: 6px 10px;
-    border-radius: 8px;
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: #64748b;
-    background: rgba(0, 0, 0, 0.25);
-    border: 1px dashed rgba(255, 255, 255, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-}
-
-.esports-stage-controller-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: rgba(15, 23, 42, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 10px 14px;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-.stage-info-pill {
-    font-size: 0.85rem;
-    color: #cbd5e1;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-.stage-quick-actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-}
-.btn-stage-action {
-    background: rgba(255, 255, 255, 0.07);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #f8fafc;
-    padding: 6px 12px;
-    border-radius: 8px;
-    font-size: 0.75rem;
-    font-weight: 800;
-    cursor: pointer;
-    transition: 0.2s;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-}
-.btn-stage-action:hover {
-    background: rgba(251, 191, 36, 0.2);
-    border-color: #fbbf24;
-    color: #fbbf24;
-}
-.btn-stage-action.btn-watch-live-top {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    border-color: #ef4444;
-    color: #fff;
-    box-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
-    animation: livePulse 1.5s infinite;
-}
-.btn-stage-action.active-stage {
-    background: #fbbf24;
-    color: #000;
-    border-color: #fbbf24;
-    font-weight: 900;
-}
 
 /* ========================================================
    TAB 2: ĐẤU TRƯỜNG CỜ CA-RÔ LIVE (ARENA 15x15)
@@ -808,7 +1213,7 @@
     padding: 5px 10px;
     border-radius: 8px;
     cursor: pointer;
-    transition: 0.2s;
+    transition: all 0.2s;
 }
 
 .match-pill-btn:hover {
@@ -839,7 +1244,7 @@
     padding: 5px 10px;
     border-radius: 8px;
     cursor: pointer;
-    transition: 0.2s;
+    transition: all 0.2s;
 }
 
 .arena-tool-btn:hover {
@@ -856,7 +1261,7 @@
 }
 
 .duel-player-card {
-    background: rgba(30, 41, 59, 0.7);
+    background: linear-gradient(145deg, rgba(22, 29, 49, 0.85) 0%, rgba(13, 18, 33, 0.95) 100%);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 14px;
     padding: 10px 14px;
@@ -886,8 +1291,8 @@
 
 .duel-player-avatar {
     font-size: 2rem;
-    width: 48px;
-    height: 48px;
+    width: 46px;
+    height: 46px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -901,13 +1306,13 @@
 }
 
 .duel-player-name {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     font-weight: 900;
     color: #f8fafc;
 }
 
 .duel-player-meta {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     color: #94a3b8;
     margin-top: 2px;
 }
@@ -922,7 +1327,7 @@
 }
 
 .duel-player-style {
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     color: #64748b;
     font-style: italic;
     margin-top: 2px;
@@ -955,14 +1360,14 @@
 /* Center Score in HUD */
 .duel-center-score {
     text-align: center;
-    background: rgba(0, 0, 0, 0.35);
+    background: rgba(0, 0, 0, 0.4);
     padding: 8px 16px;
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .duel-stage-tag {
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-weight: 900;
     color: #fbbf24;
     letter-spacing: 1px;
@@ -970,11 +1375,12 @@
 }
 
 .duel-score-display {
-    font-size: 1.6rem;
+    font-size: 1.5rem;
     font-weight: 900;
     color: #f8fafc;
     letter-spacing: 2px;
     margin: 2px 0;
+    font-family: 'JetBrains Mono', monospace;
 }
 
 .duel-score-display .score-num.p1 { color: #ef4444; }
@@ -982,7 +1388,7 @@
 .duel-score-display .score-colon { color: #64748b; margin: 0 4px; }
 
 .duel-move-count {
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     color: #94a3b8;
 }
 
@@ -1096,6 +1502,17 @@
     z-index: 10;
 }
 
+@keyframes popStone {
+    0% { transform: scale(0.3); opacity: 0; }
+    80% { transform: scale(1.15); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes winPulse {
+    0% { box-shadow: 0 0 5px #fbbf24; }
+    100% { box-shadow: 0 0 18px #fbbf24; }
+}
+
 /* Victory Overlay in Arena */
 .arena-victory-modal {
     position: absolute;
@@ -1153,7 +1570,7 @@
     font-weight: 800;
     cursor: pointer;
     border: none;
-    transition: 0.2s;
+    transition: all 0.2s;
 }
 
 .btn-vic-restart {
@@ -1224,7 +1641,27 @@
     animation: livePulse 1.2s infinite;
 }
 
-/* Responsive */
+@keyframes livePulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.08); opacity: 0.85; }
+}
+
+/* ========================================================
+   RESPONSIVE DESIGN
+======================================================== */
+@media (max-width: 1024px) {
+    .esports-modal-box {
+        width: 98vw;
+        height: 95vh;
+        max-height: none;
+    }
+    .hud-stepper {
+        order: 3;
+        width: 100%;
+        max-width: 100%;
+    }
+}
+
 @media (max-width: 768px) {
     .esports-modal-box {
         width: 100vw;
@@ -1232,10 +1669,25 @@
         border-radius: 0;
         max-height: none;
     }
+    .esports-header {
+        padding: 10px 14px;
+    }
+    .esports-tabs-nav {
+        padding: 0 10px;
+        overflow-x: auto;
+    }
+    .esports-tab-btn {
+        padding: 10px 12px;
+        font-size: 0.78rem;
+        white-space: nowrap;
+    }
     .bracket-tree-container {
         flex-direction: column;
         min-width: 100%;
-        gap: 30px;
+        gap: 20px;
+    }
+    .bracket-branch-col {
+        display: none;
     }
     .bracket-column {
         width: 100%;

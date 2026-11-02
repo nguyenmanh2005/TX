@@ -90,41 +90,77 @@
                     <div class="esports-tab-content">
                         <!-- Tab 1: Cây thi đấu -->
                         <div class="esports-tab-pane active" id="pane-bracket">
-                            <!-- Stage Controller Bar -->
-                            <div class="esports-stage-controller-bar">
-                                <div class="stage-info-pill">
-                                    <span>Giai đoạn hiện tại: <b id="ctrlStageName" style="color:#fbbf24;">Đang tải...</b></span>
+                            <!-- Tournament Stage HUD Bar -->
+                            <div class="esports-hud-bar">
+                                <div class="hud-stage-status">
+                                    <div class="hud-stage-beacon"></div>
+                                    <div class="hud-stage-text">
+                                        <div class="hud-stage-label" id="hudStageLabel">GIAI ĐOẠN HIỆN TẠI</div>
+                                        <div class="hud-stage-name" id="hudStageName">Đang tải...</div>
+                                    </div>
                                 </div>
-                                <div class="stage-quick-actions">
-                                    <button type="button" class="btn-stage-action btn-watch-live-top" id="btnWatchLiveTop" onclick="window.esportsManager.watchCurrentLiveMatch()">
-                                        <i class="fa fa-play"></i> 🔴 VÀO XEM TRẬN LIVE NGAY
+
+                                <div class="hud-stepper">
+                                    <div class="hud-step-item" id="stepBetting" onclick="window.esportsManager.setStage('betting')" title="Giai đoạn Mở Cược">
+                                        <div class="step-dot">1</div>
+                                        <div class="step-label">Mở Cược</div>
+                                    </div>
+                                    <div class="hud-step-line"></div>
+                                    <div class="hud-step-item" id="stepQf" onclick="window.esportsManager.setStage('quarter_finals')" title="Giai đoạn Tứ Kết">
+                                        <div class="step-dot">2</div>
+                                        <div class="step-label">Tứ Kết</div>
+                                    </div>
+                                    <div class="hud-step-line"></div>
+                                    <div class="hud-step-item" id="stepSf" onclick="window.esportsManager.setStage('semi_finals')" title="Giai đoạn Bán Kết">
+                                        <div class="step-dot">3</div>
+                                        <div class="step-label">Bán Kết</div>
+                                    </div>
+                                    <div class="hud-step-line"></div>
+                                    <div class="hud-step-item" id="stepFinals" onclick="window.esportsManager.setStage('finals')" title="Trận Chung Kết">
+                                        <div class="step-dot">4</div>
+                                        <div class="step-label">Chung Kết</div>
+                                    </div>
+                                    <div class="hud-step-line"></div>
+                                    <div class="hud-step-item" id="stepFinished" onclick="window.esportsManager.setStage('finished')" title="Trao Cúp Vô Địch">
+                                        <div class="step-dot">🏆</div>
+                                        <div class="step-label">Vinh Danh</div>
+                                    </div>
+                                </div>
+
+                                <div class="hud-actions-group">
+                                    <button type="button" class="btn-hud-watch-live" id="btnWatchLiveTop" onclick="window.esportsManager.watchCurrentLiveMatch()" title="Xem trực tiếp trận đấu đang diễn ra">
+                                        <i class="fa fa-play"></i> <span>🔴 XEM LIVE TRẬN ĐẤU</span>
                                     </button>
-                                    <button type="button" class="btn-stage-action" id="btnStageReset" onclick="window.esportsManager.setStage('betting')" title="Mở lại sàn cược từ đầu để đặt cược">
-                                        <i class="fa fa-undo"></i> Đấu Lại Từ Đầu (Mở Cược)
-                                    </button>
-                                    <button type="button" class="btn-stage-action" id="btnStageQf" onclick="window.esportsManager.setStage('quarter_finals')" title="Chuyển ngay đến Vòng Tứ Kết">
-                                        ⚔️ Vòng Tứ Kết
-                                    </button>
-                                    <button type="button" class="btn-stage-action" id="btnStageSf" onclick="window.esportsManager.setStage('semi_finals')" title="Chuyển ngay đến Vòng Bán Kết">
-                                        ⚡ Vòng Bán Kết
-                                    </button>
-                                    <button type="button" class="btn-stage-action" id="btnStageFinals" onclick="window.esportsManager.setStage('finals')" title="Chuyển ngay đến Trận Chung Kết">
-                                        👑 Trận Chung Kết
-                                    </button>
-                                    <button type="button" class="btn-stage-action" id="btnStageAuto" onclick="window.esportsManager.setStage('auto')" title="Chạy tự động theo đồng hồ hệ thống 30 phút">
-                                        ⏰ Giờ Thật (Tự Động)
-                                    </button>
-                                    <div class="season-quick-pills" style="display:inline-flex; gap:4px; margin-left:6px; border-left:1px solid rgba(255,255,255,0.15); padding-left:6px;">
-                                        <button type="button" class="btn-stage-action" onclick="window.esportsManager.setSeason('xuan')" title="Chuyển sang Mùa Xuân">🌸 Xuân</button>
-                                        <button type="button" class="btn-stage-action" onclick="window.esportsManager.setSeason('ha')" title="Chuyển sang Mùa Hạ">☀️ Hạ</button>
-                                        <button type="button" class="btn-stage-action" onclick="window.esportsManager.setSeason('thu')" title="Chuyển sang Mùa Thu">🍂 Thu</button>
-                                        <button type="button" class="btn-stage-action" onclick="window.esportsManager.setSeason('dong')" title="Chuyển sang Mùa Đông">❄️ Đông</button>
+                                    
+                                    <div class="hud-settings-dropdown-wrap">
+                                        <button type="button" class="btn-hud-tool" id="btnHudSettingsToggle" onclick="window.esportsManager.toggleSettingsMenu()" title="Tùy chọn mùa giải & mô phỏng">
+                                            <i class="fa fa-sliders-h"></i> <span>⚙️ Tùy Chỉnh</span>
+                                        </button>
+                                        <div class="hud-settings-menu" id="hudSettingsMenu">
+                                            <div class="settings-menu-header">CHỌN MÙA GIẢI</div>
+                                            <div class="settings-season-grid">
+                                                <button type="button" class="btn-season-opt opt-spring" onclick="window.esportsManager.setSeason('xuan')">🌸 Mùa Xuân</button>
+                                                <button type="button" class="btn-season-opt opt-summer" onclick="window.esportsManager.setSeason('ha')">☀️ Mùa Hạ</button>
+                                                <button type="button" class="btn-season-opt opt-autumn" onclick="window.esportsManager.setSeason('thu')">🍂 Mùa Thu</button>
+                                                <button type="button" class="btn-season-opt opt-winter" onclick="window.esportsManager.setSeason('dong')">❄️ Mùa Đông</button>
+                                            </div>
+                                            <div class="settings-menu-divider"></div>
+                                            <div class="settings-menu-header">CHẾ ĐỘ GIẢI ĐẤU</div>
+                                            <button type="button" class="btn-settings-action" onclick="window.esportsManager.setStage('auto')">
+                                                <i class="fa fa-clock"></i> Chạy Giờ Thật (Tự Động 30 Phút)
+                                            </button>
+                                            <button type="button" class="btn-settings-action" onclick="window.esportsManager.setStage('betting')">
+                                                <i class="fa fa-redo"></i> Đấu Lại Từ Đầu (Reset & Mở Cược)
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="bracket-tree-container" id="bracketTreeContainer">
-                                <!-- Dynamic Rendered Bracket Tree -->
+                            <div class="bracket-tree-wrapper">
+                                <div class="bracket-tree-container" id="bracketTreeContainer">
+                                    <!-- Dynamic Rendered Bracket Tree with Connectors -->
+                                </div>
                             </div>
                         </div>
 
@@ -291,6 +327,16 @@
                 const targetTab = $(this).data('tab');
                 self.switchTab(targetTab);
             });
+
+            $(document).on('click', function (e) {
+                if (!$(e.target).closest('.hud-settings-dropdown-wrap').length) {
+                    $('#hudSettingsMenu').removeClass('active');
+                }
+            });
+        }
+
+        toggleSettingsMenu() {
+            $('#hudSettingsMenu').toggleClass('active');
         }
 
         switchTab(tabId) {
@@ -373,37 +419,54 @@
             $('#esportsTitle').html(`ĐẠI CHIẾN CỜ CA-RÔ AI <span class="season-tag ${badgeClass}">${seasonTag}</span>`);
             $('#esportsPoolVal').text(new Intl.NumberFormat().format(t.total_pool) + ' GTLM');
             $('#esportsUserMoney').text('Số dư của sếp: ' + this.currentData.user_money_formatted + ' GTLM');
-            $('#ctrlStageName').html(`${t.stage_title} • <span class="season-tag ${badgeClass}" style="padding:1px 8px; font-size:0.75rem;">${seasonTag}</span>`);
 
+            // Stage Stepper & HUD Status
+            $('.hud-step-item').removeClass('active');
             const stagePill = $('#esportsStagePill');
             const stageDesc = $('#esportsStageDesc');
-
-            $('.btn-stage-action').removeClass('active-stage');
+            const hudStageName = $('#hudStageName');
+            const hudStageLabel = $('#hudStageLabel');
 
             if (t.stage === 'betting') {
                 stagePill.attr('class', 'stage-pill betting').text('🔥 MỞ SÀN CƯỢC');
                 stageDesc.text('Đếm ngược trước khi khởi tranh Tứ Kết');
-                $('#btnStageReset').addClass('active-stage');
+                hudStageLabel.text('GIAI ĐOẠN 1 / 4');
+                hudStageName.html(`🔥 ĐANG MỞ CƯỢC • <span class="season-tag ${badgeClass}" style="padding:1px 8px; font-size:0.75rem;">${seasonTag}</span>`);
+                $('#stepBetting').addClass('active');
                 $('#arenaLiveBadge').hide();
+                $('#btnWatchLiveTop').hide();
             } else if (t.stage === 'quarter_finals') {
                 stagePill.attr('class', 'stage-pill playing').text('⚔️ VÒNG TỨ KẾT');
                 stageDesc.text('4 trận đối đầu loại trực tiếp');
-                $('#btnStageQf').addClass('active-stage');
+                hudStageLabel.text('GIAI ĐOẠN 2 / 4');
+                hudStageName.html(`⚔️ VÒNG TỨ KẾT • <span class="season-tag ${badgeClass}" style="padding:1px 8px; font-size:0.75rem;">${seasonTag}</span>`);
+                $('#stepQf').addClass('active');
                 $('#arenaLiveBadge').show();
+                $('#btnWatchLiveTop').show();
             } else if (t.stage === 'semi_finals') {
                 stagePill.attr('class', 'stage-pill playing').text('⚡ VÒNG BÁN KẾT');
                 stageDesc.text('Tranh 2 vé vào Chung Kết');
-                $('#btnStageSf').addClass('active-stage');
+                hudStageLabel.text('GIAI ĐOẠN 3 / 4');
+                hudStageName.html(`⚡ VÒNG BÁN KẾT • <span class="season-tag ${badgeClass}" style="padding:1px 8px; font-size:0.75rem;">${seasonTag}</span>`);
+                $('#stepSf').addClass('active');
                 $('#arenaLiveBadge').show();
+                $('#btnWatchLiveTop').show();
             } else if (t.stage === 'finals') {
                 stagePill.attr('class', 'stage-pill playing').text('👑 TRẬN CHUNG KẾT');
                 stageDesc.text('Đại chiến tranh Cúp Vàng GTLM');
-                $('#btnStageFinals').addClass('active-stage');
+                hudStageLabel.text('GIAI ĐOẠN 4 / 4');
+                hudStageName.html(`👑 TRẬN CHUNG KẾT • <span class="season-tag ${badgeClass}" style="padding:1px 8px; font-size:0.75rem;">${seasonTag}</span>`);
+                $('#stepFinals').addClass('active');
                 $('#arenaLiveBadge').show();
+                $('#btnWatchLiveTop').show();
             } else {
                 stagePill.attr('class', 'stage-pill finished').text('🏆 TRAO CÚP VÀNG');
                 stageDesc.text('Chuẩn bị khởi tranh Mùa Giải tiếp theo');
+                hudStageLabel.text('KẾT THÚC MÙA GIẢI');
+                hudStageName.html(`🏆 TRAO CÚP VÀNG • <span class="season-tag ${badgeClass}" style="padding:1px 8px; font-size:0.75rem;">${seasonTag}</span>`);
+                $('#stepFinished').addClass('active');
                 $('#arenaLiveBadge').hide();
+                $('#btnWatchLiveTop').hide();
             }
 
             this.renderBracket(t.bracket, t.stage);
@@ -419,10 +482,10 @@
             const renderSlot = (player, score, isWinner, isLoser) => {
                 if (!player) {
                     return `
-                    <div class="player-slot" style="opacity: 0.45; border: 1px dashed rgba(255,255,255,0.12); background: rgba(0,0,0,0.15);">
+                    <div class="player-slot waiting">
                         <div class="player-info-left">
-                            <span class="player-avatar-icon">❔</span>
-                            <span class="player-name-text" style="color:#94a3b8; font-style:italic;">Chờ đối thủ</span>
+                            <span class="player-avatar-icon">⏳</span>
+                            <span class="player-name-text" style="color:#64748b; font-style:italic;">Chờ vòng trước</span>
                         </div>
                         <div class="player-score-badge" style="opacity:0.3;">-</div>
                     </div>`;
@@ -432,9 +495,9 @@
                 <div class="player-slot ${winClass}">
                     <div class="player-info-left">
                         <span class="player-avatar-icon">${player.avatar}</span>
-                        <div>
-                            <div class="player-name-text" style="color:${player.color};">${player.name}</div>
-                            <div class="player-elo-tag">Elo: ${player.elo}</div>
+                        <div style="display:flex; align-items:baseline; overflow:hidden;">
+                            <span class="player-name-text" style="color:${player.color};">${player.name}</span>
+                            <span class="player-elo-tag">${player.elo}</span>
                         </div>
                     </div>
                     <div class="player-score-badge">${score}</div>
@@ -452,25 +515,29 @@
 
                 let btnHtml = '';
                 let canClick = false;
+                let statusBadge = '<span class="upcoming-tag">○ SẮP ĐẤU</span>';
+
                 if (isLive && hasBothPlayers) {
-                    btnHtml = `<button type="button" class="btn-watch-match live"><i class="fa fa-play-circle"></i> 🔴 XEM TRỰC TIẾP TRẬN NÀY</button>`;
+                    statusBadge = '<span class="live-tag">● LIVE</span>';
+                    btnHtml = `<button type="button" class="btn-watch-match live"><i class="fa fa-play-circle"></i> 🔴 Xem Trực Tiếp</button>`;
                     canClick = true;
                 } else if (isFinished && hasBothPlayers) {
-                    btnHtml = `<button type="button" class="btn-watch-match finished"><i class="fa fa-eye"></i> 👁️ Xem Lại Ván Đấu (AI Replay)</button>`;
+                    statusBadge = '<span class="finished-tag">✓ KẾT THÚC</span>';
+                    btnHtml = `<button type="button" class="btn-watch-match finished"><i class="fa fa-eye"></i> 👁️ Xem Lại Ván Đấu</button>`;
                     canClick = true;
                 } else {
-                    // BỎ HOÀN TOÀN ĐẤU THỬ - CHỈ HIỂN THỊ CHỜ VÒNG ĐẤU
-                    btnHtml = `<div class="match-waiting-tag"><i class="fa fa-hourglass-half"></i> <span>${!hasBothPlayers ? 'Chờ đối thủ vòng trước' : 'Chưa đến giờ thi đấu'}</span></div>`;
+                    statusBadge = '<span class="upcoming-tag">○ CHỜ ĐỐI THỦ</span>';
+                    btnHtml = `<div class="match-waiting-tag"><i class="fa fa-hourglass-half"></i> <span>Chưa diễn ra</span></div>`;
                     canClick = false;
                 }
 
                 const clickAttr = canClick ? `onclick="window.esportsManager.openMatchArena(${match.match_id})" title="Bấm vào để xem trận đấu"` : `style="cursor: default;"`;
 
                 return `
-                <div class="bracket-match-card ${isLive ? 'live-playing' : ''} ${!canClick ? 'non-clickable' : ''}" ${clickAttr}>
+                <div class="bracket-match-card ${isLive ? 'live-playing' : ''} ${isCenterFinal ? 'final-card' : ''} ${!canClick ? 'non-clickable' : ''}" ${clickAttr}>
                     <div class="match-header-tag">
                         <span>${title}</span>
-                        ${isLive ? '<span class="live-tag">🔥 ĐANG ĐẤU</span>' : (isFinished ? '<span style="color:#10b981;">✓ XONG</span>' : '<span style="color:#94a3b8;">SẮP ĐẤU</span>')}
+                        ${statusBadge}
                     </div>
                     ${renderSlot(p1, match.p1_score, p1Win, p2Win)}
                     ${renderSlot(p2, match.p2_score, p2Win, p1Win)}
@@ -479,56 +546,104 @@
                 `;
             };
 
+            const wireClass = (match) => {
+                if (!match) return '';
+                if (match.status === 'playing') return 'playing';
+                if (match.status === 'finished') return 'active';
+                return '';
+            };
+
             // Cột 1: Tứ Kết Trái (Match 1 & 2)
             let col1Html = `
             <div class="bracket-column">
-                <div class="bracket-col-title">TỨ KẾT (NHÁNH TRÁI)</div>
-                ${renderMatchCard('TRẬN 1 (#1 vs #8)', bracket.qf[0])}
-                ${renderMatchCard('TRẬN 2 (#4 vs #5)', bracket.qf[1])}
+                <div class="bracket-col-title">⚔️ TỨ KẾT (TRÁI)</div>
+                ${renderMatchCard('TK 1 (#1 vs #8)', bracket.qf[0])}
+                ${renderMatchCard('TK 2 (#4 vs #5)', bracket.qf[1])}
+            </div>`;
+
+            // Đường nối nhánh trái: QF1 & QF2 -> SF1
+            const qf1Wire = wireClass(bracket.qf[0]);
+            const qf2Wire = wireClass(bracket.qf[1]);
+            const conn1Html = `
+            <div class="bracket-branch-col branch-left">
+                <svg class="bracket-svg-connector" viewBox="0 0 44 260" preserveAspectRatio="none">
+                    <path d="M 0 65 H 22 V 130 H 44" class="branch-wire ${qf1Wire}" />
+                    <path d="M 0 195 H 22 V 130 H 44" class="branch-wire ${qf2Wire}" />
+                </svg>
             </div>`;
 
             // Cột 2: Bán Kết Trái (Match 5)
             let col2Html = `
-            <div class="bracket-column">
-                <div class="bracket-col-title">BÁN KẾT 1</div>
-                ${renderMatchCard('BÁN KẾT NHÁNH TRÁI', bracket.sf[0])}
+            <div class="bracket-column col-sf">
+                <div class="bracket-col-title">⚡ BÁN KẾT 1</div>
+                ${renderMatchCard('BÁN KẾT 1', bracket.sf[0])}
+            </div>`;
+
+            // Đường nối SF1 -> Chung Kết
+            const sf1Wire = wireClass(bracket.sf[0]);
+            const conn2Html = `
+            <div class="bracket-branch-col branch-final-in">
+                <svg class="bracket-svg-connector" viewBox="0 0 32 260" preserveAspectRatio="none">
+                    <path d="M 0 130 H 32" class="branch-wire ${sf1Wire}" />
+                </svg>
             </div>`;
 
             // Cột 3: Trung Tâm - Cúp Vàng & Chung Kết
             let centerHtml = `
             <div class="bracket-column col-center">
-                <div class="trophy-glory-box">
+                <div class="championship-pedestal">
+                    <div class="pedestal-halo"></div>
                     <div class="big-trophy-icon">🏆</div>
-                    <div style="font-weight:900; color:#fbbf24; font-size:1.1rem; letter-spacing:1px;">CÚP VÔ ĐỊCH GTLM</div>
+                    <div class="pedestal-title">CÚP VÔ ĐỊCH GTLM</div>
                 </div>
-                <div style="width: 100%; max-width: 330px;">
-                    <div class="bracket-col-title">TRẬN CHUNG KẾT KINH ĐIỂN</div>
-                    ${renderMatchCard('CHUNG KẾT VÔ ĐỊCH', bracket.final, true)}
+                <div style="width: 100%; max-width: 250px;">
+                    <div class="bracket-col-title">👑 CHUNG KẾT VÔ ĐỊCH</div>
+                    ${renderMatchCard('CHUNG KẾT', bracket.final, true)}
                 </div>
                 ${bracket.champion ? `
                 <div class="champion-crowned-card">
                     <div class="champion-crowned-title">👑 ĐƯƠNG KIM QUÁN QUÂN</div>
                     <div class="champion-crowned-name">${bracket.champion.avatar} ${bracket.champion.name}</div>
-                    <div style="font-size:0.8rem; color:#fef08a;">${bracket.champion.title}</div>
+                    <div style="font-size:0.75rem; color:#fef08a;">${bracket.champion.title}</div>
                 </div>` : ''}
+            </div>`;
+
+            // Đường nối Chung Kết <- SF2
+            const sf2Wire = wireClass(bracket.sf[1]);
+            const conn3Html = `
+            <div class="bracket-branch-col branch-final-in">
+                <svg class="bracket-svg-connector" viewBox="0 0 32 260" preserveAspectRatio="none">
+                    <path d="M 0 130 H 32" class="branch-wire ${sf2Wire}" />
+                </svg>
             </div>`;
 
             // Cột 4: Bán Kết Phải (Match 6)
             let col4Html = `
-            <div class="bracket-column">
-                <div class="bracket-col-title">BÁN KẾT 2</div>
-                ${renderMatchCard('BÁN KẾT NHÁNH PHẢI', bracket.sf[1])}
+            <div class="bracket-column col-sf">
+                <div class="bracket-col-title">⚡ BÁN KẾT 2</div>
+                ${renderMatchCard('BÁN KẾT 2', bracket.sf[1])}
+            </div>`;
+
+            // Đường nối SF2 <- QF3 & QF4
+            const qf3Wire = wireClass(bracket.qf[2]);
+            const qf4Wire = wireClass(bracket.qf[3]);
+            const conn4Html = `
+            <div class="bracket-branch-col branch-right">
+                <svg class="bracket-svg-connector" viewBox="0 0 44 260" preserveAspectRatio="none">
+                    <path d="M 44 65 H 22 V 130 H 0" class="branch-wire ${qf3Wire}" />
+                    <path d="M 44 195 H 22 V 130 H 0" class="branch-wire ${qf4Wire}" />
+                </svg>
             </div>`;
 
             // Cột 5: Tứ Kết Phải (Match 3 & 4)
             let col5Html = `
             <div class="bracket-column">
-                <div class="bracket-col-title">TỨ KẾT (NHÁNH PHẢI)</div>
-                ${renderMatchCard('TRẬN 3 (#2 vs #7)', bracket.qf[2])}
-                ${renderMatchCard('TRẬN 4 (#3 vs #6)', bracket.qf[3])}
+                <div class="bracket-col-title">⚔️ TỨ KẾT (PHẢI)</div>
+                ${renderMatchCard('TK 3 (#2 vs #7)', bracket.qf[2])}
+                ${renderMatchCard('TK 4 (#3 vs #6)', bracket.qf[3])}
             </div>`;
 
-            container.html(col1Html + col2Html + centerHtml + col4Html + col5Html);
+            container.html(col1Html + conn1Html + col2Html + conn2Html + centerHtml + conn3Html + col4Html + conn4Html + col5Html);
         }
 
         renderMatchPills() {
@@ -1013,6 +1128,7 @@
 
         // Chuyển giai đoạn giải đấu
         setStage(stageName) {
+            $('#hudSettingsMenu').removeClass('active');
             const self = this;
             const origin = window.location.origin;
             const pathParts = window.location.pathname.split('/');
@@ -1043,6 +1159,7 @@
 
         // Chuyển mùa giải: Xuân - Hạ - Thu - Đông
         setSeason(seasonName) {
+            $('#hudSettingsMenu').removeClass('active');
             const self = this;
             const origin = window.location.origin;
             const pathParts = window.location.pathname.split('/');
