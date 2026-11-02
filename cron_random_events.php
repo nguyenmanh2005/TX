@@ -95,8 +95,12 @@ $activeEvent = $conn->query("
 ")->fetch_assoc();
 
 if ($activeEvent) {
-    echo "Event đang chạy (id={$activeEvent['id']}), bỏ qua.\n";
-    exit;
+    if (!isset($_GET['force'])) {
+        echo "Event đang chạy (id={$activeEvent['id']}), bỏ qua.\n";
+        exit;
+    }
+    // Nếu force kích hoạt sự kiện mới, đóng sự kiện cũ trước
+    $conn->query("UPDATE random_events SET is_active = 0, ends_at = NOW(), ended_real_at = NOW() WHERE is_active = 1");
 }
 
 // Lấy event cuối cùng đã chạy

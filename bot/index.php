@@ -29,12 +29,12 @@ $historyFile = 'sessions/economy_history.json';
 $syncData = file_exists($syncFile) ? json_decode(file_get_contents($syncFile), true) : [];
 $history = file_exists($historyFile) ? json_decode(file_get_contents($historyFile), true) : [];
 
-// 1.2 Handle Random Event Trigger
-if (isset($_GET['action']) && $_GET['action'] === 'trigger_event') {
+// 1.2 Handle Random Event Trigger / Switch
+if (isset($_GET['action']) && ($_GET['action'] === 'trigger_event' || $_GET['action'] === 'switch_event')) {
     define('ALLOW_EVENT_WEB', true);
     $_GET['force'] = 1;
     require_once '../cron_random_events.php';
-    header("Location: index.php?msg=Đã kích hoạt sự kiện ngẫu nhiên!");
+    header("Location: index.php?msg=" . urlencode("Đã bắt đầu sự kiện mới thành công!"));
     exit;
 }
 
@@ -431,9 +431,17 @@ if (isset($_GET['ajax'])) {
                         <div id="activeEventAdmin">
                             <?php if ($stats['active_event']): ?>
                                 <div style="background: rgba(99, 102, 241, 0.1); padding: 15px; border-radius: 15px; border: 1px solid rgba(99, 102, 241, 0.2);">
-                                    <div style="font-weight: 800; font-size: 14px; margin-bottom: 5px;"><?= $stats['active_event']['event_name'] ?></div>
-                                    <div style="font-size: 11px; color: #94a3b8; margin-bottom: 10px;"><?= $stats['active_event']['description'] ?></div>
-                                    <div style="font-size: 12px; font-weight: 700; color: var(--status-warn);">⏰ Kết thúc: <?= date('H:i:s', strtotime($stats['active_event']['ends_at'])) ?></div>
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                                        <div style="font-weight: 800; font-size: 14px; margin-bottom: 5px;"><?= $stats['active_event']['event_name'] ?></div>
+                                        <span style="font-size: 10px; background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 2px 7px; border-radius: 6px; font-weight: 800; white-space: nowrap;">ĐANG CHẠY</span>
+                                    </div>
+                                    <div style="font-size: 11px; color: #94a3b8; margin-bottom: 12px;"><?= $stats['active_event']['description'] ?></div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                        <div style="font-size: 12px; font-weight: 700; color: var(--status-warn);">⏰ Kết thúc: <?= date('H:i:s', strtotime($stats['active_event']['ends_at'])) ?></div>
+                                        <a href="index.php?action=switch_event" style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; text-decoration: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3); transition: transform 0.15s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+                                            🎲 Bắt đầu sự kiện khác
+                                        </a>
+                                    </div>
                                 </div>
                             <?php else: ?>
                                 <div style="text-align: center; padding: 10px;">
@@ -899,9 +907,17 @@ if (isset($_GET['ajax'])) {
                     if (data.stats.active_event) {
                         eventAdminEl.innerHTML = `
                             <div style="background: rgba(99, 102, 241, 0.1); padding: 15px; border-radius: 15px; border: 1px solid rgba(99, 102, 241, 0.2);">
-                                <div style="font-weight: 800; font-size: 14px; margin-bottom: 5px;">${data.stats.active_event.event_name}</div>
-                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 10px;">${data.stats.active_event.description}</div>
-                                <div style="font-size: 12px; font-weight: 700; color: var(--status-warn);">⏰ Kết thúc: ${data.stats.active_event.ends_at.split(' ')[1]}</div>
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                                    <div style="font-weight: 800; font-size: 14px; margin-bottom: 5px;">${data.stats.active_event.event_name}</div>
+                                    <span style="font-size: 10px; background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 2px 7px; border-radius: 6px; font-weight: 800; white-space: nowrap;">ĐANG CHẠY</span>
+                                </div>
+                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 12px;">${data.stats.active_event.description}</div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                    <div style="font-size: 12px; font-weight: 700; color: var(--status-warn);">⏰ Kết thúc: ${data.stats.active_event.ends_at.split(' ')[1]}</div>
+                                    <a href="index.php?action=switch_event" style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; text-decoration: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3); transition: transform 0.15s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+                                        🎲 Bắt đầu sự kiện khác
+                                    </a>
+                                </div>
                             </div>
                         `;
                     } else {
