@@ -25,7 +25,14 @@
 10. [⚙️ Cấu Trúc Cơ Sở Dữ Liệu (Database Schema)](#10-️-cấu-trúc-cơ-sở-dữ-liệu-database-schema)
 11. [🚀 Hướng Dẫn Cài Đặt & Triển Khai Môi Trường](#11--hướng-dẫn-cài-đặt--triển-khai-môi-trường)
 12. [📊 Hệ Thống Quản Trị Sới Bạc (Admin Control Center)](#12--hệ-thống-quản-trị-sới-bạc-admin-control-center)
-13. [📜 Bản Quyền & Giấy Phép](#13--bản-quyền--giấy-phép)
+13. [📜 Bản Quyền, Tài Nguyên Bên Thứ 3 & Tuyên Bố Phi Lợi Nhuận](#13--bản-quyền-tài-nguyên-bên-thứ-3--tuyên-bố-phi-lợi-nhuận)
+    - [13.1 🚫 Tuyên Bố Phi Lợi Nhuận & Miễn Trừ Thương Mại](#131--tuyên-bố-phi-lợi-nhuận--miễn-trừ-thương-mại)
+    - [13.2 🖼️ Ghi Nhận Tài Nguyên Hình Ảnh & Đồ Họa Bên Thứ 3](#132-️-ghi-nhận-tài-nguyên-hình-ảnh--đồ-họa-bên-thứ-3-third-party-visual-assets)
+    - [13.3 🎵 Tài Nguyên Âm Thanh & Hiệu Ứng (Audio & SFX Credits)](#133--tài-nguyên-âm-thanh--hiệu-ứng-audio--sfx-credits)
+    - [13.4 📚 Thư Viện & Công Nghệ Mã Nguồn Mở (Open Source)](#134--thư-viện--công-nghệ-mã-nguồn-mở-open-source-libraries)
+    - [13.5 🤖 Sự Hỗ Trợ Từ Các Mô Hình Trí Tuệ Nhân Tạo (AI Collaboration)](#135--sự-hỗ-trợ-từ-các-mô-hình-trí-tuệ-nhân-tạo-ai-collaboration)
+    - [13.6 ⚖️ Chính Sách Bảo Hộ Quyền Tác Giả & Quy Trình Gỡ Bỏ Tài Nguyên (DMCA / Takedown)](#136-️-chính-sách-bảo-hộ-quyền-tác-giả--quy-trình-gỡ-bỏ-tài-nguyên-dmca--takedown-policy)
+    - [13.7 📜 Bản Quyền Mã Nguồn & Giấy Phép Dự Án](#137--bản-quyền-mã-nguồn--giấy-phép-dự-án)
 
 ---
 
@@ -396,11 +403,103 @@ Truy cập tại [admin_dashboard.php](file:///c:/xampp/htdocs/1/admin_dashboard
 
 ---
 
-## 13. 📜 BẢN QUYỀN & GIẤY PHÉP
+## 13. 📜 BẢN QUYỀN, TÀI NGUYÊN BÊN THỨ 3 & TUYÊN BỐ PHI LỢI NHUẬN
 
-- **Bản Quyền Thuộc Về:** Dự Án Giải Trí Trực Tuyến GTLM Gaming Platform (nguyenmanh2005/TX).
-- **Phát Triển & Vận Hành:** Đội ngũ phát triển độc quyền GTLM Core Team.
+> [!IMPORTANT]
+> ### 🚫 TUYÊN BỐ ĐẶC BIỆT: DỰ ÁN HOÀN TOÀN PHI LỢI NHUẬN (100% NON-PROFIT & EDUCATIONAL PURPOSES)
+> **Dự án GTLM Gaming Platform (nguyenmanh2005/TX) được phát triển và vận hành với mục đích DUY NHẤT là nghiên cứu học thuật, giáo dục công nghệ lập trình web và thử nghiệm giải thuật phần mềm.**
+> - **TUYỆT ĐỐI KHÔNG CÓ Ý ĐỊNH THU VỀ BẤT KỲ LỢI NHUẬN THƯƠNG MẠI NÀO DƯỚI BẤT KỲ HÌNH THỨC NÀO.**
+> - **KHÔNG THU TIỀN THẬT, KHÔNG CÓ CỔNG NẠP/RÚT TIỀN MẶT, KHÔNG QUY ĐỔI THẺ CÀO, KHÔNG BÁN VẬT PHẨM LẤY TIỀN THẬT.**
+> - **ĐỒNG TIỀN ẢO GTLM VÀ KIM CƯƠNG HOÀN TOÀN LÀ ĐIỂM SỐ MÔ PHỎNG VÔ GIÁ TRỊ NGOÀI ĐỜI THỰC.**
+> - Mọi tài nguyên hình ảnh, âm thanh từ bên thứ ba được sử dụng trên tinh thần **Học hỏi - Tôn trọng bản quyền - Fair Use phi thương mại**.
+
+---
+
+### 13.1 🚫 Tuyên Bố Phi Lợi Nhuận, Miễn Trừ Thương Mại & Cảnh Báo Pháp Lý
+
+1. **Mục Đích Nghiên Cứu Kỹ Thuật & Giáo Dục Lập Trình:**
+   - Dự án là sản phẩm đồ án thực nghiệm Full-stack chuyên sâu (PHP 8.0+ kết hợp MySQLi đa luồng, Canvas 2D/3D WebGL, Three.js, CSS Glassmorphism hiện đại, Web Audio API Synthesizer và giải thuật Minimax cờ Ca-rô AI).
+   - Tác giả và đội ngũ phát triển cam kết **không kinh doanh**, **không thu lợi nhuận**, không thu phí dịch vụ, không chèn banner quảng cáo kiếm tiền và không có bất kỳ hành vi thương mại hóa nào.
+
+2. **Quy Định Tiền Ảo GTLM & Điểm Số Mô Phỏng:**
+   - Đơn vị tiền tệ **GTLM (Gia Tài Lộc Mệnh)** và **Kim Cương** chỉ đóng vai trò là các biến số toán học (numeric variables) phục vụ việc kiểm thử logic cân bằng sòng bạc (RTP/House Edge), kiểm thử tải trọng luồng dữ liệu thời gian thực và mang lại trải nghiệm giải trí mô phỏng lành mạnh.
+   - GTLM **tuyệt đối không thể quy đổi thành tiền mặt, thẻ cào điện thoại, tiền mã hóa (crypto) hay bất kỳ hiện kim / tài sản có giá trị thực tế nào**.
+   - Ban quản trị nghiêm cấm triệt để mọi hành vi mua bán, sang nhượng hoặc giao dịch điểm GTLM bằng tiền thật giữa các người chơi ngoài đời thực. Mọi tài khoản vi phạm sẽ bị khóa vĩnh viễn không cần báo trước.
+
+3. **Cảnh Báo Tuân Thủ Pháp Luật & Trách Nhiệm Người Dùng:**
+   - Dự án nghiêm cấm tuyệt đối việc sử dụng mã nguồn này để tổ chức đánh bạc ăn tiền thật hoặc bất kỳ hoạt động trái pháp luật hiện hành của nước Cộng hòa Xã hội Chủ nghĩa Việt Nam cũng như luật pháp quốc tế.
+   - Người sử dụng tự chịu hoàn toàn trách nhiệm pháp lý nếu tự ý triển khai mã nguồn vào các mục đích phi giáo dục hoặc trái pháp luật.
+
+---
+
+### 13.2 🖼️ Ghi Nhận Bản Quyền Tài Nguyên Hình Ảnh & Đồ Họa Bên Thứ 3 (Visual Assets Credits)
+
+Dự án cam kết tôn trọng tuyệt đối quyền tác giả và quyền sở hữu trí tuệ của tất cả các nghệ sĩ, studio và cộng đồng sáng tạo trên thế giới. Các tài nguyên đồ họa được sử dụng theo giấy phép mã nguồn mở (Creative Commons Zero CC0, Open Source, Personal / Non-commercial Use) hoặc theo nguyên tắc **Sử Dụng Hợp Lý (Fair Use)** cho mục đích nghiên cứu học thuật phi lợi nhuận:
+
+| Tài Nguyên / Nền Tảng | Hạng Mục Sử Dụng Trong Nền Tảng | Tác Giả / Nhà Cung Cấp | Giấy Phép & Ghi Nhận Bản Quyền (Credits) |
+| :--- | :--- | :--- | :--- |
+| **Kenney Assets** | Bộ bài tây hoàn chỉnh (Playing Cards Pack 52 lá + Jokers), xúc xắc xúc xắc và thẻ bài giao diện (`games/img/anh-bai/`, `LiveStream/img/anh-bai/`) | **Kenney** ([kenney.nl](https://kenney.nl)) | **Creative Commons Zero (CC0 1.0 Universal - Public Domain)**. Trân trọng cảm ơn tác giả Kenney vì kho tài nguyên mở vô giá cho cộng đồng lập trình game! |
+| **Freepik & Unsplash** | Hình nền các phòng game, banner sự kiện, ảnh nền sảnh VIP và hoa văn texture | Các nghệ sĩ cộng tác trên [Freepik](https://freepik.com) & [Unsplash](https://unsplash.com) | Giấy phép sử dụng miễn phí cho mục đích học tập và dự án phi thương mại. |
+| **Sweezy Cursors, RW-Designer, Custom Cursor** | Bộ con trỏ chuột nghệ thuật độc quyền (`img/chuot.png`, `img/tay.png`) | [Sweezy Cursors](https://sweezy-cursors.com), [RW-Designer](https://www.rw-designer.com), [Custom Cursor](https://custom-cursor.com) | Tài nguyên con trỏ chuột web miễn phí phục vụ trải nghiệm giao diện người dùng. |
+| **Itch.io Indie Creators** | Sprite quái vật hầm ngục (`greedy_cave.php`), hình ảnh Hắc Long Boss Thế Giới (`world_boss.php`) | Các nghệ sĩ độc lập trên [Itch.io](https://itch.io) | Sử dụng theo giấy phép tài nguyên indie phi thương mại. |
+| **Transparent Textures** | Họa tiết vi lưới nền tối, hoa văn sòng bạc sang trọng | [Transparent Textures](https://www.transparenttextures.com) | Họa tiết nền web mở miễn phí cho cộng đồng. |
+| **AI Image Generation** | Hình nền các màn đấu Battle Royale, Sới Gà Thần Kê, Bài Tứ Sắc, Thần Thú Pet | Được sinh bởi Midjourney, Stable Diffusion, DALL-E, Gemini & Grok | Bản quyền hình ảnh sinh bởi AI phi thương mại phục vụ minh họa ý tưởng game. |
+| **DiceBear Avatars API** | Ảnh đại diện vector SVG tự động sinh ngẫu nhiên cho hội viên và 61 Bot Streamer | [DiceBear API](https://api.dicebear.com) | Giấy phép mã nguồn mở (CC BY 4.0 / MIT License). |
+
+---
+
+### 13.3 🎵 Tài Nguyên Âm Thanh & Hiệu Ứng (Audio & SFX Credits)
+
+- **YouTube Audio Library ([youtube.com/audiolibrary](https://www.youtube.com/audiolibrary)):** Nhạc nền sảnh chờ, nhạc nền thư giãn cho các kênh phát sóng LiveStream 24/7 (Royalty-Free Music).
+- **Pixabay Music & Mixkit ([pixabay.com](https://pixabay.com/music/), [mixkit.co](https://mixkit.co)):** Hiệu ứng âm thanh (SFX) mở bát, lắc xí ngầu, nổ hũ Jackpot, tiếng reo hò chiến thắng.
+- **Bensound & Zapsplat ([bensound.com](https://www.bensound.com), [zapsplat.com](https://www.zapsplat.com)):** Tài nguyên âm thanh chất lượng cao phục vụ các màn đấu kịch tính.
+- **HTML5 Web Audio API Synthesizer:** Hệ thống âm thanh độc quyền tự động sinh sóng dao động (Sine, Square, Triangle wave) trực tiếp bằng mã JavaScript trên trình duyệt (trong các game Cờ Ca-rô, Slot, Crash, Xúc xắc) giúp tối ưu hiệu năng và không phụ thuộc file âm thanh tĩnh bên ngoài.
+
+---
+
+### 13.4 📚 Thư Viện & Công Nghệ Mã Nguồn Mở (Open Source Libraries)
+
+Dự án sử dụng và ghi nhận sự đóng góp to lớn của cộng đồng phát triển mã nguồn mở toàn cầu:
+- **Three.js ([threejs.org](https://threejs.org)):** Giấy phép MIT — Thư viện đồ họa 3D WebGL render hạt không gian vũ trụ.
+- **GSAP - GreenSock ([greensock.com](https://greensock.com/gsap/)):** Thư viện chuyển động hoạt hình chuyên nghiệp cho quà tặng rơi và thẻ bài lật 3D.
+- **Chart.js ([chartjs.org](https://chartjs.org)):** Giấy phép MIT — Biểu đồ phân tích tài chính dòng tiền trên Admin Dashboard.
+- **SweetAlert2 ([sweetalert2.github.io](https://sweetalert2.github.io)):** Giấy phép MIT — Hộp thoại thông báo pop-up thông minh.
+- **Font Awesome ([fontawesome.com](https://fontawesome.com)):** Giấy phép SIL OFL & CC BY 4.0 — Bộ biểu tượng icon giao diện.
+- **Google Fonts ([fonts.google.com](https://fonts.google.com)):** Các phông chữ Inter, Roboto, Outfit, Orbitron, JetBrains Mono theo giấy phép Open Font License (OFL).
+- **jQuery ([jquery.com](https://jquery.com)):** Giấy phép MIT — Nền tảng điều khiển DOM và kết nối AJAX không đồng bộ.
+
+---
+
+### 13.5 🤖 Sự Hỗ Trợ Từ Các Mô Hình Trí Tuệ Nhân Tạo (AI Collaboration)
+
+Dự án có sự đồng hành và hỗ trợ phát triển logic thuật toán từ các mô hình trí tuệ nhân tạo tiên tiến:
+- **Google DeepMind / Gemini / Antigravity Agent:** Hỗ trợ tối ưu hóa thuật toán cờ Ca-rô Minimax cắt tỉa Alpha-Beta, kiến trúc đồng bộ thời gian thực cho 61 bàn LiveStream, cơ chế bảo vệ phiên làm việc và cấu trúc sơ đồ tri thức Graphify.
+- **Anthropic Claude / OpenAI ChatGPT / xAI Grok:** Hỗ trợ thiết kế kịch bản toán học xác suất hoàn vốn (RTP), hệ thống âm thanh Web Audio API, và các thuật toán phân bổ xúc xắc chuẩn Provably Fair.
+
+---
+
+### 13.6 ⚖️ Chính Sách Bảo Hộ Quyền Tác Giả & Quy Trình Gỡ Bỏ Tài Nguyên (DMCA / Takedown Policy)
+
+> [!NOTE]
+> **Cam Kết Tôn Trọng Tuyệt Đối Quyền Sở Hữu Trí Tuệ:**
+> Dự án GTLM Gaming Platform được xây dựng dựa trên tinh thần học hỏi, chia sẻ kiến thức kỹ thuật và phụng sự cộng đồng nghiên cứu mã nguồn mở.
+> 
+> Nếu bạn là tác giả, nghệ sĩ hoặc chủ sở hữu hợp pháp của bất kỳ hình ảnh, âm thanh, biểu tượng hay tài sản trí tuệ nào xuất hiện trong dự án này và **không mong muốn tài nguyên của mình được sử dụng** trong dự án nghiên cứu phi lợi nhuận này, hoặc muốn bổ sung/thay đổi thông tin ghi nhận công lao (Attribution):
+> 
+> 📬 **Vui lòng liên hệ với ban quản trị:**
+> - **Email quản trị:** `cumanhpt@gmail.com`
+> - **Kênh tiếp nhận GitHub Issues:** [https://github.com/nguyenmanh2005/TX/issues](https://github.com/nguyenmanh2005/TX/issues)
+> 
+> Ban quản trị cam kết sẽ phản hồi, tiếp nhận và **tiến hành gỡ bỏ hoặc cập nhật thông tin tài nguyên theo đúng yêu cầu của tác giả trong vòng 24 đến 48 giờ làm việc**, trên tinh thần tôn trọng tối đa quyền tác giả và quy chuẩn quốc tế.
+
+---
+
+### 13.7 📜 Bản Quyền Mã Nguồn & Giấy Phép Dự Án
+
+- **Đơn Vị Phát Triển:** Đội ngũ phát triển độc quyền GTLM Core Team (nguyenmanh2005/TX).
+- **Phân Loại Dự Án:** **Dự án Nghiên Cứu Giáo Dục, Học Tập, Giải Trí Thuần Túy & PHI LỢI NHUẬN (100% Non-Profit Educational / Academic / Research Prototype)**.
 - **Giấy Phép:** Dự án nhằm mục đích giải trí, học tập VÀ PHI LỢI NHUẬN.
+- **Ràng Buộc Sử Dụng:** Nghiêm cấm mọi hành vi sao chép, đóng gói, phân phối lại hoặc sử dụng mã nguồn của dự án này nhằm mục đích thương mại, thu phí, trục lợi tài chính hoặc tổ chức các hoạt động đánh bạc tiền thật trái pháp luật.
 
 ---
 *⭐ Chúc xếp và cộng đồng người chơi có những giây phút trải nghiệm giải trí thăng hoa cùng GTLM Gaming Platform! ⭐*

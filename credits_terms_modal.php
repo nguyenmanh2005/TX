@@ -533,7 +533,7 @@
                         GTLM là nền tảng <strong>giải trí game hoàn toàn miễn phí</strong>, được xây dựng với mục đích
                         mang lại trải nghiệm vui chơi lành mạnh, an toàn cho mọi người.
                         <br><br>
-                        <i style="color: #667eea;">⚠️ <b>Lưu ý quan trọng:</b> Dự án được phát triển phi lợi nhuận, không có ý định quảng bá, thương mại hóa hay kiếm GTLM từ người dùng dưới bất kỳ hình thức nào.</i>
+                        <i style="color: #667eea;">⚠️ <b>Lưu ý quan trọng:</b> Dự án được phát triển hoàn toàn <b>PHI LỢI NHUẬN</b> cho mục đích học tập, nghiên cứu và giải trí, tuyệt đối không có ý định thương mại hóa, quảng bá thương mại hay thu về bất kỳ lợi nhuận nào từ người dùng dưới mọi hình thức.</i>
                         <br><br>
                        
                     </p>
@@ -876,9 +876,10 @@
                 </div>
 
                 <div class="gtlm-made-badge">
-                    Được xây dựng với ❤️ bởi đội phát triển <b>GTLM</b>.<br>
-                    Một số thư viện, tài nguyên hình ảnh và assets được sử dụng theo giấy phép của tác giả gốc.<br>
-                    Xin cảm ơn các dự án mã nguồn mở và cộng đồng sáng tạo.
+                    Được xây dựng với ❤️ bởi đội ngũ phát triển <b>GTLM Core Team</b>.<br>
+                    Dự án hoạt động với mục tiêu <b>học tập, nghiên cứu kỹ thuật & HOÀN TOÀN PHI LỢI NHUẬN</b>.<br>
+                    Toàn bộ thư viện, hình ảnh và tài nguyên âm thanh bên thứ ba được sử dụng trên tinh thần tôn trọng bản quyền & chia sẻ mở.<br>
+                    Trân trọng cảm ơn các tác giả, nghệ sĩ và cộng đồng nguồn mở quốc tế!
                 </div>
             </div>
 
@@ -912,8 +913,8 @@
                 <div class="gtlm-rule-item">
                     <div class="gtlm-rule-icon yellow">🎯</div>
                     <div class="gtlm-rule-text">
-                        <h4>Mục đích giải trí</h4>
-                        <p>GTLM là nền tảng giải trí thuần túy. Đồng GTLM không có giá trị  Gtlm thực tế và không thể quy đổi ra  Gtlm mặt.</p>
+                        <h4>Mục đích giải trí & Phi lợi nhuận</h4>
+                        <p>GTLM là nền tảng thử nghiệm kỹ thuật và giải trí thuần túy phi lợi nhuận. Điểm GTLM và Kim Cương hoàn toàn là số ảo mô phỏng, không có giá trị tiền tệ thực tế và tuyệt đối không thể quy đổi ra tiền mặt hay bất kỳ hiện vật nào.</p>
                     </div>
                 </div>
 
