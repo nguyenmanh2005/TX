@@ -201,6 +201,7 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <?php $assetPrefix = (basename(dirname($_SERVER['SCRIPT_FILENAME'])) === 'LiveStream') ? '../' : ''; ?>
     <script src="<?= $assetPrefix ?>assets/js/vtuber-avatar.js"></script>
+    <script src="<?= $assetPrefix ?>assets/js/donate-voice.js"></script>
     <!-- TTS using native browser API instead of responsivevoice to avoid API key warning -->
     <style>
         html, body, div, p, span, section, header, footer, aside, nav, table, tr, td, iframe, canvas {
@@ -1462,36 +1463,10 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
             });
         }
 
+        // 🎙️ Giọng Nam độc lập đọc Donate & Tặng quà (không dùng chung với Bot Queen GTLM)
         function speakStreamerVoice(text) {
-            if (!text) return;
-            // Thay thế GTLM thành "Gờ Tờ Lờ Mờ" để đọc tiếng Việt chuẩn hơn
-            let cleanText = text.replace(/[*#_`~]/g, '').replace(/GTLM/g, 'Gờ Tờ Lờ Mờ').trim();
-            if (!cleanText) return;
-
-            // Sử dụng Google Translate TTS để đảm bảo đọc tiếng Việt chuẩn xác
-            fallbackSpeech(cleanText);
-        }
-
-        function fallbackSpeech(cleanText) {
-            if ('speechSynthesis' in window) {
-                try {
-                    window.speechSynthesis.cancel();
-                    const utterance = new SpeechSynthesisUtterance(cleanText);
-                    utterance.lang = 'vi-VN';
-                    utterance.rate = 1.1;
-                    
-                    // Cố gắng tìm giọng tiếng Việt cục bộ trên máy
-                    let voices = window.speechSynthesis.getVoices();
-                    let viVoice = voices.find(v => v.lang.toLowerCase().includes('vi') || v.name.toLowerCase().includes('viet'));
-                    
-                    if (viVoice) {
-                        utterance.voice = viVoice;
-                    }
-
-                    window.speechSynthesis.speak(utterance);
-                } catch(e) {
-                    console.log("Speech error:", e);
-                }
+            if (window.gtlmDonateVoice) {
+                window.gtlmDonateVoice.announce(text);
             }
         }
 
@@ -1837,7 +1812,7 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
             const appRoot = '/' + (pathParts[1] && !pathParts[1].includes('.') ? pathParts[1] + '/' : '');
             const base = origin + appRoot;
 
-            ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/gtlm-realtime.js', 'assets/js/vtuber-avatar.js'].forEach(src => {
+            ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/gtlm-realtime.js', 'assets/js/donate-voice.js', 'assets/js/vtuber-avatar.js'].forEach(src => {
                 const s = document.createElement('script');
                 s.src = base + src; s.async = false;
                 document.head.appendChild(s);

@@ -23,6 +23,8 @@
             this.currentUtterance = null;
             this.speechTimeout = null;
             this.femaleVoice = null;
+            this.hasConfirmedFemaleVoice = false;
+            this.currentAudio = null;
 
             // Canvas & Animation state
             this.canvas = null;
@@ -54,11 +56,37 @@
         initVoices() {
             if (!('speechSynthesis' in window)) return;
             const voices = window.speechSynthesis.getVoices();
-            // Ưu tiên tìm giọng NỮ tiếng Việt chuẩn (HoaiMy, Linh, Vietnamese Female)
-            this.femaleVoice = voices.find(v => 
+            if (!voices || voices.length === 0) return;
+
+            // KIỂM TRA & LOẠI TRỪ TUYỆT ĐỐI CÁC GIỌNG NAM (An, Nam, Male, NamMinh, Duc, Tuan, Minh)
+            const isMaleName = (name) => {
+                const lower = String(name).toLowerCase();
+                return lower.includes(' an') || lower.includes('namminh') || lower.includes(' male') || lower.includes('nam') || lower.includes('minh') || lower.includes('duc') || lower.includes('tuan');
+            };
+
+            // Ưu tiên 1: Giọng Nữ tiếng Việt được định danh rõ (HoaiMy, Linh, Female, Nu, Lan, Mai)
+            let femaleVi = voices.find(v => 
                 (v.lang && v.lang.toLowerCase().startsWith('vi')) && 
+                !isMaleName(v.name) &&
                 (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('hoaimy') || v.name.toLowerCase().includes('linh') || v.name.toLowerCase().includes('nu'))
-            ) || voices.find(v => (v.lang && v.lang.toLowerCase().startsWith('vi')) || (v.name && v.name.toLowerCase().includes('viet'))) || null;
+            );
+
+            // Ưu tiên 2: "Google tiếng Việt" trên Chrome (đây là giọng nữ chuẩn 100%)
+            if (!femaleVi) {
+                femaleVi = voices.find(v => 
+                    (v.lang && v.lang.toLowerCase().startsWith('vi')) && 
+                    v.name.toLowerCase().includes('google') &&
+                    !isMaleName(v.name)
+                );
+            }
+
+            if (femaleVi) {
+                this.femaleVoice = femaleVi;
+                this.hasConfirmedFemaleVoice = true;
+            } else {
+                this.femaleVoice = null;
+                this.hasConfirmedFemaleVoice = false;
+            }
         }
 
         mount(canvasElementId) {
@@ -487,71 +515,122 @@
                 return;
             }
 
-            if (!('speechSynthesis' in window)) {
-                this.simulateLipSyncWithoutAudio(displayClean, onEndCallback);
-                return;
+            // Dừng audio stream trước đó nếu đang phát
+            if (this.currentAudio) {
+                try {
+                    this.currentAudio.pause();
+                    this.currentAudio.currentTime = 0;
+                } catch(e){}
+                this.currentAudio = null;
             }
 
-            try {
-                window.speechSynthesis.cancel();
+            // 1. NẾU TRÌNH DUYỆT CÓ GIỌNG NỮ TIẾNG VIỆT ĐÍCH THỰC (HoaiMy, Google tiếng Việt...)
+            if (this.hasConfirmedFemaleVoice && this.femaleVoice && ('speechSynthesis' in window)) {
+                try {
+                    let voiceText = displayClean
+                        .replace(/GTLM/gi, 'Gờ Tờ Lờ Mờ')
+                        .replace(/AI/gi, 'A I')
+                        .replace(/PvP/gi, 'P v P')
+                        .replace(/VIP/gi, 'V I P')
+                        .replace(/Queen/gi, 'Quin')
+                        .replace(/15x15/gi, 'mười lăm nhân mười lăm')
+                        .replace(/x(\d+(\.\d+)?)/gi, 'nhân $1');
 
-                // Tinh chỉnh văn bản để đọc tiếng Việt chuẩn xác
-                let voiceText = displayClean
-                    .replace(/GTLM/gi, 'Gờ Tờ Lờ Mờ')
-                    .replace(/AI/gi, 'A I')
-                    .replace(/PvP/gi, 'P v P')
-                    .replace(/VIP/gi, 'V I P')
-                    .replace(/Queen/gi, 'Quin')
-                    .replace(/15x15/gi, 'mười lăm nhân mười lăm')
-                    .replace(/x(\d+(\.\d+)?)/gi, 'nhân $1');
-
-                const utterance = new SpeechSynthesisUtterance(voiceText);
-                utterance.lang = 'vi-VN';
-                utterance.rate = 1.05;  // Tốc độ chuẩn rõ ràng
-                utterance.pitch = 1.2;   // Giọng nữ trẻ trung ngọt ngào
-
-                if (this.femaleVoice) {
+                    const utterance = new SpeechSynthesisUtterance(voiceText);
+                    utterance.lang = 'vi-VN';
                     utterance.voice = this.femaleVoice;
-                }
+                    utterance.rate = 1.05;  // Tốc độ chuẩn rõ ràng
+                    utterance.pitch = 1.35; // Giọng nữ trong trẻo, ngọt ngào, nữ tính
 
-                utterance.onstart = () => {
+                    utterance.onstart = () => {
+                        this.isSpeaking = true;
+                        this.toggleAudioGlow(true);
+                    };
+
+                    utterance.onboundary = (e) => {
+                        this.mouthTarget = 0.65 + Math.random() * 0.3;
+                    };
+
+                    utterance.onend = () => {
+                        this.isSpeaking = false;
+                        this.toggleAudioGlow(false);
+                        this.scheduleHideBubble(2200);
+                        if (onEndCallback) onEndCallback();
+                    };
+
+                    utterance.onerror = () => {
+                        this.isSpeaking = false;
+                        this.toggleAudioGlow(false);
+                        this.scheduleHideBubble(2000);
+                    };
+
+                    this.currentUtterance = utterance;
+                    window.speechSynthesis.speak(utterance);
+
+                    clearTimeout(this.speechTimeout);
+                    const estimatedMs = Math.max(2500, (voiceText.split(' ').length / 2.6) * 1000);
+                    this.speechTimeout = setTimeout(() => {
+                        if (this.isSpeaking) {
+                            this.isSpeaking = false;
+                            this.toggleAudioGlow(false);
+                            this.scheduleHideBubble(1500);
+                        }
+                    }, estimatedMs + 2000);
+                    return;
+
+                } catch (err) {
+                    console.log('Queen WebSpeech error, fallback audio stream:', err);
+                }
+            }
+
+            // 2. KHI HỆ THỐNG KHÔNG CÓ GIỌNG NỮ TIẾNG VIỆT (VD chỉ có giọng Nam Microsoft An):
+            // SỬ DỤNG AUDIO STREAM NỮ TIẾNG VIỆT CHUẨN 100% CỦA QUEEN GTLM
+            this.speakViaAudioStream(displayClean, onEndCallback);
+        }
+
+        speakViaAudioStream(text, onEndCallback) {
+            try {
+                const origin = window.location.origin;
+                const pathParts = window.location.pathname.split('/');
+                const appRoot = '/' + (pathParts[1] && !pathParts[1].includes('.') ? pathParts[1] + '/' : '');
+                const ttsUrl = origin + appRoot + 'LiveStream/api_tts.php?text=' + encodeURIComponent(text);
+
+                const audio = new Audio(ttsUrl);
+                this.currentAudio = audio;
+
+                audio.onplay = () => {
                     this.isSpeaking = true;
                     this.toggleAudioGlow(true);
                 };
 
-                utterance.onboundary = (e) => {
-                    this.mouthTarget = 0.7 + Math.random() * 0.25;
+                // Đồng bộ nhịp khẩu hình Lip-sync theo âm thanh
+                audio.ontimeupdate = () => {
+                    if (this.isSpeaking) {
+                        this.mouthTarget = 0.35 + Math.random() * 0.55;
+                    }
                 };
 
-                utterance.onend = () => {
+                audio.onended = () => {
                     this.isSpeaking = false;
                     this.toggleAudioGlow(false);
+                    this.mouthTarget = 0.05;
                     this.scheduleHideBubble(2200);
+                    this.currentAudio = null;
                     if (onEndCallback) onEndCallback();
                 };
 
-                utterance.onerror = () => {
-                    this.isSpeaking = false;
-                    this.toggleAudioGlow(false);
-                    this.scheduleHideBubble(2000);
+                audio.onerror = (e) => {
+                    console.log('Queen Audio stream error, fallback simulate:', e);
+                    this.simulateLipSyncWithoutAudio(text, onEndCallback);
                 };
 
-                this.currentUtterance = utterance;
-                window.speechSynthesis.speak(utterance);
-
-                clearTimeout(this.speechTimeout);
-                const estimatedMs = Math.max(2500, (voiceText.split(' ').length / 2.6) * 1000);
-                this.speechTimeout = setTimeout(() => {
-                    if (this.isSpeaking) {
-                        this.isSpeaking = false;
-                        this.toggleAudioGlow(false);
-                        this.scheduleHideBubble(1500);
-                    }
-                }, estimatedMs + 2000);
+                audio.play().catch(err => {
+                    console.log('Audio play prevented or blocked:', err);
+                    this.simulateLipSyncWithoutAudio(text, onEndCallback);
+                });
 
             } catch (err) {
-                console.log('Queen TTS error:', err);
-                this.simulateLipSyncWithoutAudio(displayClean, onEndCallback);
+                this.simulateLipSyncWithoutAudio(text, onEndCallback);
             }
         }
 
@@ -603,8 +682,14 @@
             this.voiceEnabled = !this.voiceEnabled;
             localStorage.setItem('gtlm_queen_voice', this.voiceEnabled ? 'true' : 'false');
             
-            if (!this.voiceEnabled && 'speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
+            if (!this.voiceEnabled) {
+                if (this.currentAudio) {
+                    try { this.currentAudio.pause(); } catch(e){}
+                    this.currentAudio = null;
+                }
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                }
                 this.isSpeaking = false;
                 this.toggleAudioGlow(false);
             }
@@ -629,6 +714,7 @@
 
         destroy() {
             if (this.animId) cancelAnimationFrame(this.animId);
+            if (this.currentAudio) { try { this.currentAudio.pause(); } catch(e){} this.currentAudio = null; }
             if ('speechSynthesis' in window) window.speechSynthesis.cancel();
         }
     }

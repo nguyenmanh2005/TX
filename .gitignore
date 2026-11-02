@@ -6,6 +6,7 @@ bot/sessions/
 bot/cycle_logs/
 bot/logs/
 bot/tester_session.txt
+LiveStream/cache_tts/
 .gemini/
 .agents/
 =
