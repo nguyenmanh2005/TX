@@ -92,9 +92,38 @@
     color: #000;
     font-size: 0.75rem;
     font-weight: 900;
-    padding: 2px 8px;
-    border-radius: 6px;
+    padding: 3px 10px;
+    border-radius: 8px;
     letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+    transition: 0.25s;
+}
+
+.esports-title-text .season-tag.season-spring {
+    background: linear-gradient(135deg, #ec4899, #f43f5e);
+    color: #ffffff;
+    box-shadow: 0 0 14px rgba(244, 63, 94, 0.6);
+}
+
+.esports-title-text .season-tag.season-summer {
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
+    color: #ffffff;
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.6);
+}
+
+.esports-title-text .season-tag.season-autumn {
+    background: linear-gradient(135deg, #d97706, #ea580c);
+    color: #ffffff;
+    box-shadow: 0 0 14px rgba(234, 88, 12, 0.6);
+}
+
+.esports-title-text .season-tag.season-winter {
+    background: linear-gradient(135deg, #0284c7, #06b6d4);
+    color: #ffffff;
+    box-shadow: 0 0 14px rgba(6, 182, 212, 0.6);
 }
 
 .esports-stage-status {

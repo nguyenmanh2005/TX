@@ -114,6 +114,12 @@
                                     <button type="button" class="btn-stage-action" id="btnStageAuto" onclick="window.esportsManager.setStage('auto')" title="Chạy tự động theo đồng hồ hệ thống 30 phút">
                                         ⏰ Giờ Thật (Tự Động)
                                     </button>
+                                    <div class="season-quick-pills" style="display:inline-flex; gap:4px; margin-left:6px; border-left:1px solid rgba(255,255,255,0.15); padding-left:6px;">
+                                        <button type="button" class="btn-stage-action" onclick="window.esportsManager.setSeason('xuan')" title="Chuyển sang Mùa Xuân">🌸 Xuân</button>
+                                        <button type="button" class="btn-stage-action" onclick="window.esportsManager.setSeason('ha')" title="Chuyển sang Mùa Hạ">☀️ Hạ</button>
+                                        <button type="button" class="btn-stage-action" onclick="window.esportsManager.setSeason('thu')" title="Chuyển sang Mùa Thu">🍂 Thu</button>
+                                        <button type="button" class="btn-stage-action" onclick="window.esportsManager.setSeason('dong')" title="Chuyển sang Mùa Đông">❄️ Đông</button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -362,10 +368,12 @@
             const t = this.currentData.tournament;
 
             // Header Elements
-            $('#esportsTitle').html(`ĐẠI CHIẾN CỜ CA-RÔ AI <span class="season-tag">MÙA #${t.season_number}</span>`);
+            const seasonTag = t.season_tag || ('MÙA #' + t.season_number);
+            const badgeClass = t.season_badge_class || '';
+            $('#esportsTitle').html(`ĐẠI CHIẾN CỜ CA-RÔ AI <span class="season-tag ${badgeClass}">${seasonTag}</span>`);
             $('#esportsPoolVal').text(new Intl.NumberFormat().format(t.total_pool) + ' GTLM');
             $('#esportsUserMoney').text('Số dư của sếp: ' + this.currentData.user_money_formatted + ' GTLM');
-            $('#ctrlStageName').text(t.stage_title);
+            $('#ctrlStageName').html(`${t.stage_title} • <span class="season-tag ${badgeClass}" style="padding:1px 8px; font-size:0.75rem;">${seasonTag}</span>`);
 
             const stagePill = $('#esportsStagePill');
             const stageDesc = $('#esportsStageDesc');
@@ -961,6 +969,36 @@
                         position: 'top-end',
                         showConfirmButton: false,
                         timer: 2500,
+                        timerProgressBar: true,
+                        background: '#0f172a',
+                        color: '#f8fafc'
+                    });
+                    Toast.fire({
+                        icon: 'success',
+                        title: res.message
+                    });
+                }
+            }, 'json');
+        }
+
+        // Chuyển mùa giải: Xuân - Hạ - Thu - Đông
+        setSeason(seasonName) {
+            const self = this;
+            const origin = window.location.origin;
+            const pathParts = window.location.pathname.split('/');
+            const appRoot = '/' + (pathParts[1] && !pathParts[1].includes('.') ? pathParts[1] + '/' : '');
+            const apiUrl = origin + appRoot + 'api_esports_tournament.php';
+
+            $.post(apiUrl, { action: 'set_season', season: seasonName }, function (res) {
+                if (res && res.success) {
+                    self.currentData.tournament = res.tournament;
+                    self.renderAll();
+
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 2000,
                         timerProgressBar: true,
                         background: '#0f172a',
                         color: '#f8fafc'

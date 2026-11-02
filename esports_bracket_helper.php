@@ -175,12 +175,67 @@ if (!function_exists('getEsportsCurrentSeasonInfo')) {
 function getEsportsCurrentSeasonInfo($now = null) {
     if ($now === null) $now = time();
     $cycleSeconds = 1800; // 30 phút một mùa giải
-    // Mốc khởi chạy MÙA #1 (Khởi đầu tính từ mùa đầu tiên khi ra mắt)
+    // Mốc khởi chạy MÙA XUÂN (Khởi đầu tính từ mùa đầu tiên khi ra mắt)
     $launchTimestamp = 1793628000;
     $launchBase = (int)floor($launchTimestamp / $cycleSeconds);
     $rawSeason = (int)floor($now / $cycleSeconds);
 
-    $seasonNumber = max(1, ($rawSeason - $launchBase + 1));
+    $seasonIndex = max(0, ($rawSeason - $launchBase)); // 0, 1, 2, 3...
+    $seasonNumber = $seasonIndex + 1; // 1, 2, 3, 4...
+
+    // 🌸 ☀️ 🍂 ❄️ 4 Mùa: XUÂN - HẠ - THU - ĐÔNG
+    $seasonsList = [
+        0 => [
+            'name' => 'MÙA XUÂN',
+            'code' => 'xuan',
+            'icon' => '🌸',
+            'badge_class' => 'season-spring',
+            'tag' => '🌸 MÙA XUÂN',
+            'theme' => 'Sắc Xuân Rực Rỡ'
+        ],
+        1 => [
+            'name' => 'MÙA HẠ',
+            'code' => 'ha',
+            'icon' => '☀️',
+            'badge_class' => 'season-summer',
+            'tag' => '☀️ MÙA HẠ',
+            'theme' => 'Hạ Lửa Rực Cháy'
+        ],
+        2 => [
+            'name' => 'MÙA THU',
+            'code' => 'thu',
+            'icon' => '🍂',
+            'badge_class' => 'season-autumn',
+            'tag' => '🍂 MÙA THU',
+            'theme' => 'Thu Vàng Khúc Biệt'
+        ],
+        3 => [
+            'name' => 'MÙA ĐÔNG',
+            'code' => 'dong',
+            'icon' => '❄️',
+            'badge_class' => 'season-winter',
+            'tag' => '❄️ MÙA ĐÔNG',
+            'theme' => 'Băng Tuyết Vô Địch'
+        ]
+    ];
+
+    // Cho phép đổi mùa thủ công nếu chọn trong công cụ
+    $forceSeason = $_SESSION['esports_force_season'] ?? null;
+    if ($forceSeason !== null && isset($seasonsList[(int)$forceSeason])) {
+        $cycleIndex = (int)$forceSeason;
+    } else {
+        $cycleIndex = $seasonIndex % 4;
+    }
+
+    $currentSeason = $seasonsList[$cycleIndex];
+    $yearNumber = (int)floor($seasonIndex / 4) + 1;
+
+    $seasonTag = $currentSeason['tag'];
+    if ($yearNumber > 1) {
+        $seasonTag .= " (NĂM {$yearNumber})";
+    }
+
+    $title = "Đại Chiến Cờ Ca-rô AI Siêu Cấp - " . $currentSeason['name'] . ($yearNumber > 1 ? " (Năm {$yearNumber})" : "");
     $elapsed = $now % $cycleSeconds;
 
     $seasonStartTime = date('Y-m-d H:i:s', $rawSeason * $cycleSeconds);
@@ -189,6 +244,12 @@ function getEsportsCurrentSeasonInfo($now = null) {
     return [
         'season_id' => $seasonNumber,
         'season_number' => $seasonNumber,
+        'season_name' => $currentSeason['name'],
+        'season_icon' => $currentSeason['icon'],
+        'season_tag' => $seasonTag,
+        'season_badge_class' => $currentSeason['badge_class'],
+        'season_theme' => $currentSeason['theme'],
+        'title' => $title,
         'elapsed' => $elapsed,
         'start_time' => $seasonStartTime,
         'end_time' => $seasonEndTime,
@@ -207,6 +268,10 @@ function getCurrentEsportsTournament($conn, $forceStage = null) {
     $seasonInfo = getEsportsCurrentSeasonInfo();
     $seasonId = $seasonInfo['season_id'];
     $seasonNumber = $seasonInfo['season_number'];
+    $seasonName = $seasonInfo['season_name'];
+    $seasonTag = $seasonInfo['season_tag'];
+    $seasonBadgeClass = $seasonInfo['season_badge_class'];
+    $title = $seasonInfo['title'];
     $elapsed = $seasonInfo['elapsed'];
     $seasonStartTime = $seasonInfo['start_time'];
     $seasonEndTime = $seasonInfo['end_time'];
@@ -374,7 +439,7 @@ function getCurrentEsportsTournament($conn, $forceStage = null) {
         'champion' => $isFinalFinished ? $champion : null
     ];
 
-    $title = "Đại Chiến Cờ Ca-rô AI Siêu Cấp - Mùa #" . $seasonNumber;
+    $title = $seasonInfo['title'];
     $bracketJson = json_encode($bracketTree, JSON_UNESCAPED_UNICODE);
 
     if (!$tour) {
@@ -412,6 +477,9 @@ function getCurrentEsportsTournament($conn, $forceStage = null) {
         'id' => $tourDbId,
         'season_id' => $seasonId,
         'season_number' => $seasonNumber,
+        'season_name' => $seasonName,
+        'season_tag' => $seasonTag,
+        'season_badge_class' => $seasonBadgeClass,
         'title' => $title,
         'stage' => $currentStage,
         'stage_title' => $stageTitle,

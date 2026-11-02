@@ -112,6 +112,31 @@ switch ($action) {
         ], JSON_UNESCAPED_UNICODE);
         break;
 
+    case 'set_season':
+        $season = trim($_POST['season'] ?? $_GET['season'] ?? 'auto');
+        if ($season === 'auto') {
+            unset($_SESSION['esports_force_season']);
+        } elseif ($season === 'xuan' || $season === '0') {
+            $_SESSION['esports_force_season'] = 0;
+        } elseif ($season === 'ha' || $season === '1') {
+            $_SESSION['esports_force_season'] = 1;
+        } elseif ($season === 'thu' || $season === '2') {
+            $_SESSION['esports_force_season'] = 2;
+        } elseif ($season === 'dong' || $season === '3') {
+            $_SESSION['esports_force_season'] = 3;
+        }
+
+        $tournament = getCurrentEsportsTournament($conn, $_SESSION['esports_force_stage'] ?? null);
+        $myBets = ($userId > 0) ? getUserEsportsPredictions($conn, $userId, $tournament['season_id']) : [];
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Đã đổi sang: ' . $tournament['season_tag'],
+            'tournament' => $tournament,
+            'my_bets' => $myBets
+        ], JSON_UNESCAPED_UNICODE);
+        break;
+
     default:
         echo json_encode(['success' => false, 'message' => 'Hành động không hợp lệ!']);
         break;
