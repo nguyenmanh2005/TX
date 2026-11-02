@@ -1007,7 +1007,7 @@ $userAvatar = !empty($userData['ImageURL']) ? $userData['ImageURL'] : '../img/av
             box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
         }
 
-        /* ── Right Dock: Sidebar (Chat, Buff Lounge & Top Channels) ── */
+        /* ── Right Dock: Sidebar (Live Chat & Top Channels) ── */
         .hub-sidebar {
             display: flex;
             flex-direction: column;
@@ -1163,82 +1163,7 @@ $userAvatar = !empty($userData['ImageURL']) ? $userData['ImageURL'] : '../img/av
             transform: scale(1.05);
         }
 
-        /* Tab 2: Buff Lounge */
-        .buff-container {
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .buff-item-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--border-glass);
-            border-radius: 14px;
-            padding: 12px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: all 0.2s;
-        }
-
-        .buff-item-card:hover {
-            background: rgba(255, 255, 255, 0.06);
-            border-color: rgba(255, 255, 255, 0.2);
-        }
-
-        .buff-icon {
-            font-size: 2rem;
-            width: 44px;
-            height: 44px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 12px;
-        }
-
-        .buff-details {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .buff-title {
-            font-weight: 800;
-            font-size: 0.88rem;
-            color: #fff;
-        }
-
-        .buff-desc {
-            font-size: 0.72rem;
-            color: var(--text-muted);
-            margin: 2px 0 4px 0;
-        }
-
-        .buff-price {
-            font-size: 0.78rem;
-            font-weight: 800;
-            color: var(--accent-amber);
-        }
-
-        .btn-send-buff {
-            background: rgba(245, 158, 11, 0.15);
-            border: 1px solid rgba(245, 158, 11, 0.3);
-            color: var(--accent-amber);
-            font-size: 0.75rem;
-            font-weight: 800;
-            padding: 6px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-send-buff:hover {
-            background: var(--accent-amber);
-            color: #000;
-        }
-
-        /* Tab 3: Top Live Channels */
+        /* Tab 2: Top Live Channels */
         .top-channels-container {
             padding: 12px;
             display: flex;
@@ -1538,20 +1463,17 @@ $userAvatar = !empty($userData['ImageURL']) ? $userData['ImageURL'] : '../img/av
 
         </main>
 
-        <!-- ── Right Sidebar Dock (Live Chat & Buff Lounge) ── -->
+        <!-- ── Right Sidebar Dock (Live Chat & Top Channels) ── -->
         <aside class="hub-sidebar">
 
             <!-- Sidebar Card with Tab Navigation -->
             <div class="sidebar-card">
                 <div class="sidebar-tabs">
                     <button class="sidebar-tab-btn active" onclick="switchSidebarTab('chat', this)">
-                        <i class="fa fa-comments"></i> CHAT LIVE
-                    </button>
-                    <button class="sidebar-tab-btn" onclick="switchSidebarTab('buff', this)">
-                        <i class="fa fa-bolt"></i> BƠM BUFF
+                        <i class="fa fa-comments"></i> CHAT TRẬN ĐỊA
                     </button>
                     <button class="sidebar-tab-btn" onclick="switchSidebarTab('top', this)">
-                        <i class="fa fa-chart-line"></i> TOP VIEW
+                        <i class="fa fa-chart-line"></i> TOP BÀN LIVE
                     </button>
                 </div>
 
@@ -1591,44 +1513,7 @@ $userAvatar = !empty($userData['ImageURL']) ? $userData['ImageURL'] : '../img/av
                     </form>
                 </div>
 
-                <!-- Tab 2: Buff Lounge -->
-                <div id="tabContentBuff" class="buff-container" style="display: none;">
-                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">
-                        Gửi bùa cổ vũ cho Streamer và tăng vận may toàn bàn:
-                    </div>
-
-                    <div class="buff-item-card">
-                        <div class="buff-icon">🍀</div>
-                        <div class="buff-details">
-                            <div class="buff-title">Bùa May Mắn</div>
-                            <div class="buff-desc">Tăng vận may tài lộc trong 3 ván</div>
-                            <div class="buff-price">15,000 GTLM</div>
-                        </div>
-                        <button class="btn-send-buff" onclick="sendBuffAction('Bùa May Mắn', 15000, '🍀')">Gửi</button>
-                    </div>
-
-                    <div class="buff-item-card">
-                        <div class="buff-icon">🚀</div>
-                        <div class="buff-details">
-                            <div class="buff-title">Tên Lửa Hype</div>
-                            <div class="buff-desc">+20% tỷ lệ húp thưởng rực rỡ</div>
-                            <div class="buff-price">25,000 GTLM</div>
-                        </div>
-                        <button class="btn-send-buff" onclick="sendBuffAction('Tên Lửa Hype', 25000, '🚀')">Gửi</button>
-                    </div>
-
-                    <div class="buff-item-card">
-                        <div class="buff-icon">🛡️</div>
-                        <div class="buff-details">
-                            <div class="buff-title">Khiên Hộ Mệnh</div>
-                            <div class="buff-desc">Bảo hộ hoàn 50% GTLM nếu không may mắn</div>
-                            <div class="buff-price">20,000 GTLM</div>
-                        </div>
-                        <button class="btn-send-buff" onclick="sendBuffAction('Khiên Hộ Mệnh', 20000, '🛡️')">Gửi</button>
-                    </div>
-                </div>
-
-                <!-- Tab 3: Top Live Channels -->
+                <!-- Tab 2: Top Live Channels -->
                 <div id="tabContentTop" class="top-channels-container" style="display: none;">
                     <!-- Rendered via JavaScript -->
                 </div>
@@ -1918,11 +1803,9 @@ $userAvatar = !empty($userData['ImageURL']) ? $userData['ImageURL'] : '../img/av
             $('.sidebar-tab-btn').removeClass('active');
             $(btn).addClass('active');
 
-            $('#tabContentChat, #tabContentBuff, #tabContentTop').hide();
+            $('#tabContentChat, #tabContentTop').hide();
             if (tabName === 'chat') {
                 $('#tabContentChat').show();
-            } else if (tabName === 'buff') {
-                $('#tabContentBuff').show();
             } else if (tabName === 'top') {
                 $('#tabContentTop').show();
             }
@@ -1965,35 +1848,6 @@ $userAvatar = !empty($userData['ImageURL']) ? $userData['ImageURL'] : '../img/av
             const box = $('#chatMessagesBox');
             box.append(bubble);
             box.scrollTop(box[0].scrollHeight);
-        }
-
-        // Send Buff Action
-        function sendBuffAction(buffName, cost, icon) {
-            Swal.fire({
-                title: icon + ' ' + buffName,
-                text: `Xác nhận gửi ${buffName} cổ vũ Streamer với giá ${cost.toLocaleString()} GTLM?`,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#8b5cf6',
-                cancelButtonColor: '#64748b',
-                confirmButtonText: '🚀 Gửi Ngay',
-                cancelButtonText: 'Hủy'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $.post('api_spectator.php', {
-                        action: 'tip',
-                        table_id: currentSpotlightId,
-                        amount: cost
-                    }, function(res) {
-                        if (res && res.success) {
-                            Swal.fire('Thành Công!', `Đã gửi ${buffName} thành công! Idol đã nhận được phước lành.`, 'success');
-                            appendChatMessage('Hệ Thống', `🌟 Đạo Hữu vừa gửi ${buffName} cổ vũ Trận Địa!`, 'author-vip');
-                        } else {
-                            Swal.fire('Thất bại', (res && res.message) ? res.message : 'Số dư GTLM không đủ hoặc có lỗi phát sinh!', 'error');
-                        }
-                    });
-                }
-            });
         }
 
         // Dynamic 3D particle background settings
