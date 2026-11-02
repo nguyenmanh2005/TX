@@ -534,6 +534,24 @@ body::after{
                     <p>Kiểm toán an ninh 5.0, Kịch bản Chat AI, Mưa Lì Xì, Sound FX & CSDL Bot.</p>
                 </div>
             </a>
+            <?php
+            require_once __DIR__ . '/realtime/realtime_publisher.php';
+            $wsOnline = RealtimePublisher::isOnline();
+            ?>
+            <div class="action-card" style="border-color: <?= $wsOnline ? 'rgba(16, 185, 129, 0.4)' : 'rgba(245, 158, 11, 0.4)' ?>;">
+                <div class="action-icon" style="background: <?= $wsOnline ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #f59e0b, #d97706)' ?>;">
+                    <i class="fa fa-bolt"></i>
+                </div>
+                <div class="action-content" style="flex:1;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <h4>WebSocket Gateway (0ms)</h4>
+                        <span style="font-size:11px; font-weight:800; padding:2px 8px; border-radius:12px; background:<?= $wsOnline ? 'rgba(16, 185, 129, 0.2); color:#10b981' : 'rgba(245, 158, 11, 0.2); color:#f59e0b' ?>;">
+                            <?= $wsOnline ? '🟢 ONLINE (Port 8088)' : '🟡 STANDBY (SSE Fallback)' ?>
+                        </span>
+                    </div>
+                    <p>Đường truyền 0ms cho Chat, PvP Cờ Ca-rô & 61 Bàn Live. Khởi chạy bằng run_websocket.bat.</p>
+                </div>
+            </div>
             <a href="admin_dashboard.php?page=economy&sub=analytics" class="action-card">
                 <div class="action-icon" style="background: linear-gradient(135deg, #06b6d4, #22d3ee);"><i class="fa fa-chart-line"></i></div>
                 <div class="action-content">

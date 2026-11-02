@@ -1317,7 +1317,7 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
             const appRoot = '/' + (pathParts[1] && !pathParts[1].includes('.') ? pathParts[1] + '/' : '');
             const base = origin + appRoot;
 
-            ['threejs-background.js', 'assets/js/game-effects.js'].forEach(src => {
+            ['threejs-background.js', 'assets/js/game-effects.js', 'assets/js/gtlm-realtime.js'].forEach(src => {
                 const s = document.createElement('script');
                 s.src = base + src; s.async = false;
                 document.head.appendChild(s);
@@ -1327,6 +1327,27 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
         $(document).ready(() => {
             loadDetails();
             setInterval(loadDetails, 2000);
+
+            // ⚡ Kết nối WebSocket Realtime cho phòng Live
+            setTimeout(() => {
+                if (typeof GTLMRealtime !== 'undefined') {
+                    const roomChannel = 'live_<?= $tableId ?>';
+                    GTLMRealtime.subscribe(roomChannel, {
+                        userId: <?= (int)$userId ?>,
+                        username: <?= json_encode($_SESSION['Name'] ?? 'Khán Giả') ?>
+                    });
+
+                    GTLMRealtime.on('viewer_count', (data) => {
+                        if (data && data.channel === roomChannel) {
+                            const countEl = document.getElementById('viewersCount');
+                            if (countEl) {
+                                const realCount = Math.max(1, data.count || 1);
+                                countEl.textContent = (realCount + 300 + (<?= $tableId ?> % 40)).toLocaleString();
+                            }
+                        }
+                    });
+                }
+            }, 300);
         });
     </script>
     <canvas id="threejs-background"></canvas>

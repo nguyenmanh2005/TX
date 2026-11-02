@@ -209,6 +209,7 @@ if ($challengeId > 0) {
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Orbitron:wght@700;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="assets/js/gtlm-realtime.js"></script>
     <style>
         :root {
             --primary: #3b82f6;
@@ -1265,6 +1266,27 @@ if ($challengeId > 0) {
         $(document).ready(function() {
             initBoard();
             pollGame();
+
+            // ⚡ Kết nối WebSocket Realtime 0ms cho ván cờ
+            if (typeof GTLMRealtime !== 'undefined' && challengeId > 0) {
+                GTLMRealtime.subscribe('pvp_' + challengeId, {
+                    userId: myId,
+                    username: <?= json_encode($userName) ?>
+                });
+
+                GTLMRealtime.on('caro_move', function(data) {
+                    if (!gameActive) return;
+                    if (data && data.challenge_id == challengeId) {
+                        // Nước đi đối thủ nhận tức thì qua WebSocket 0ms
+                        $.get('api_pvp_challenge.php', { action: 'get_challenge', challenge_id: challengeId }, function(res) {
+                            if (res.success && res.challenge) {
+                                playWoodClickSound();
+                                updateUI(res.challenge);
+                            }
+                        });
+                    }
+                });
+            }
         });
     </script>
     <?php endif; ?>

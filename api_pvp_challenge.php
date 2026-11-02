@@ -498,6 +498,21 @@ switch ($action) {
                 $updateResult->close();
 
                 $conn->commit();
+
+                // ⚡ Bắn sự kiện chiến thắng Realtime 0ms tới kênh WebSocket
+                require_once __DIR__ . '/realtime/realtime_publisher.php';
+                RealtimePublisher::publish('pvp_' . $challengeId, 'caro_move', [
+                    'challenge_id'    => $challengeId,
+                    'row'             => $row,
+                    'col'             => $col,
+                    'token'           => $playerToken,
+                    'player_id'       => $userId,
+                    'current_turn_id' => 0,
+                    'is_win'          => true,
+                    'winner_id'       => $userId,
+                    'board'           => $board
+                ]);
+
                 echo json_encode([
                     'success' => true,
                     'is_win' => true,
@@ -574,6 +589,20 @@ switch ($action) {
                 $updateMove->close();
 
                 $conn->commit();
+
+                // ⚡ Bắn sự kiện nước đi Realtime 0ms tới đối thủ qua WebSocket
+                require_once __DIR__ . '/realtime/realtime_publisher.php';
+                RealtimePublisher::publish('pvp_' . $challengeId, 'caro_move', [
+                    'challenge_id'    => $challengeId,
+                    'row'             => $row,
+                    'col'             => $col,
+                    'token'           => $playerToken,
+                    'player_id'       => $userId,
+                    'current_turn_id' => $opponentId,
+                    'is_win'          => false,
+                    'board'           => $board
+                ]);
+
                 echo json_encode([
                     'success' => true,
                     'is_win' => false,

@@ -59,6 +59,7 @@ Nền tảng được thiết kế xoay quanh đơn vị tiền tệ trung tâm 
 | **Chuyển Động** | GSAP (GreenSock 3.12.2), CSS Keyframes | Hiệu ứng rơi quà tặng TikTok Gift FX, thẻ bài lật 3D, sóng radar quét đối thủ |
 | **Tương Tác DOM** | jQuery 3.6.0, SweetAlert2 v11 | Xử lý AJAX không tải lại trang, modal xác nhận cược, thông báo chiến thắng |
 | **Âm Thanh** | HTML5 Web Audio API Synthesizer | Tạo hiệu ứng âm thanh động (Sound FX) không cần asset tĩnh |
+| **Realtime Gateway** | WebSockets (RFC 6455) & Server-Sent Events (SSE) | Truyền tin độ trễ 0ms cho Chat Thế Giới, Nước đi PvP Cờ Ca-rô, LiveStream Viewer Count |
 | **Phông Chữ** | Google Fonts (Outfit, Orbitron, JetBrains Mono, Inter) | Kiểu chữ số công nghệ số hóa, đồng bộ tiếng Việt không bao giờ lỗi font |
 
 ---
@@ -77,6 +78,12 @@ Nền tảng được thiết kế xoay quanh đơn vị tiền tệ trung tâm 
 ├── tower_of_gods.php              # Siêu phẩm Tháp Thần Bài 100 Tầng (3v3 RPG Turn-Based Auto-Battler)
 ├── plinko_royale_v3.php           # Game Thả Bóng Plinko Vương Triều V3 (Jackpot Siêu Khủng x1000)
 ├── watch.php                      # Proxy điều hướng chuẩn về phòng xem LiveStream
+├── run_websocket.bat              # Script 1-click khởi chạy WebSocket Gateway Server trên Windows
+│
+├── realtime/                      # ⚡ Cổng Truyền Tin Thời Gian Thực 0ms (RFC 6455 WebSocket Engine)
+│   ├── websocket_server.php       # Máy chủ WebSocket Gateway đa kênh (Chat, PvP, LiveStream)
+│   ├── realtime_publisher.php     # Helper PHP backend phát sự kiện tức thì tới WebSocket
+│   └── sse_stream.php             # Kênh truyền luồng Server-Sent Events (SSE) dự phòng tự động
 │
 ├── LiveStream/                    # 📺 HỆ THỐNG ĐÀI TRUYỀN HÌNH LIVE CASINO 24/7
 │   ├── spectator.php              # Sảnh tổng quan duyệt 61 kênh phát sóng trực tiếp

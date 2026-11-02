@@ -52,7 +52,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message'])) {
         $chatFrameValue = $chatFrame ?? null;
         $stmt->bind_param("isssi", $userId, $username, $message, $avatar, $chatFrameValue);
         $stmt->execute();
+        $insertedMsgId = $conn->insert_id;
         $stmt->close();
+
+        // ⚡ Bắn sự kiện Realtime 0ms qua WebSocket Gateway
+        require_once __DIR__ . '/realtime/realtime_publisher.php';
+        $msgDetails = $conn->query("
+            SELECT cm.id, cm.username, cm.message, cm.created_at, cm.avatar, cm.chat_frame_id, 
+                   cf.ImageURL AS frame_image,
+                   u.active_title_id, u.avatar_frame_id, u.Role,
+                   a.icon as title_icon, a.name as title_name,
+                   af.ImageURL AS avatar_frame_image
+            FROM chat_messages cm
+            LEFT JOIN chat_frames cf ON cm.chat_frame_id = cf.id
+            LEFT JOIN users u ON cm.user_id = u.Iduser
+            LEFT JOIN achievements a ON u.active_title_id = a.id
+            LEFT JOIN avatar_frames af ON u.avatar_frame_id = af.id
+            WHERE cm.id = $insertedMsgId
+            LIMIT 1
+        ")->fetch_assoc();
+        if ($msgDetails) {
+            $msgDetails['reactions'] = [];
+            RealtimePublisher::publish('chat', 'chat_message', $msgDetails);
+        }
 
         // --- INTERCEPT CHAT COMMANDS FOR RANDOM EVENTS ---
         $lowerMsg = mb_strtolower($message);
@@ -613,12 +635,85 @@ if (isset($_GET['action']) && $_GET['action'] === 'react' && isset($_GET['msg_id
             pointer-events: none;
         }
 
+        /* ── WebSocket Realtime Status & Typing Indicator ── */
+        .ws-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .ws-badge .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        .ws-badge.connected {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+        .ws-badge.connected .dot {
+            background: #10b981;
+            box-shadow: 0 0 8px #10b981;
+            animation: pulseDot 2s infinite;
+        }
+        .ws-badge.connecting {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+        .ws-badge.connecting .dot {
+            background: #f59e0b;
+        }
+        .ws-badge.fallback {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.4);
+        }
+        .ws-badge.fallback .dot {
+            background: #60a5fa;
+        }
+        @keyframes pulseDot {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.4); opacity: 0.6; }
+        }
+        .typing-indicator-box {
+            display: none;
+            padding: 6px 14px;
+            font-size: 12px;
+            color: #64748b;
+            font-style: italic;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(8px);
+            border-radius: 12px;
+            margin: 6px 0;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            animation: fadeInTyping 0.3s ease;
+        }
+        @keyframes fadeInTyping {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
     
-  <h2 style="text-align:center;">💬 Kênh Chat Thế Giới</h2>
+  <div style="display:flex; justify-content:center; align-items:center; gap:12px; margin-bottom:14px; flex-wrap:wrap;">
+      <h2 style="margin:0; text-align:center;">💬 Kênh Chat Thế Giới</h2>
+      <span id="ws-status-badge" class="ws-badge connecting" title="Trạng thái WebSocket Gateway">
+          <span class="dot"></span> <span id="ws-status-text">Đang kết nối Realtime...</span>
+      </span>
+  </div>
   <div id="chat-box"></div>
+  <div id="chat-typing-indicator" class="typing-indicator-box">
+      ✍️ <strong id="typing-user-name" style="color:#6366f1;"></strong> đang soạn tin nhắn...
+  </div>
   <div id="chat-form">
     <form onsubmit="sendMessage(); return false;">
       <input type="text" id="message" placeholder="Nhập tin nhắn của bạn... (thử !nhận khi có event)" autocomplete="off">
@@ -1019,9 +1114,73 @@ if (isset($_GET['action']) && $_GET['action'] === 'react' && isset($_GET['msg_id
         });
     }
 
-    // Refresh chat auto
-    setInterval(loadMessages, 3000);
+    // Refresh chat auto (fallback poll)
+    setInterval(loadMessages, 5000);
     loadMessages(); // Gọi hàm load message ban đầu
+  </script>
+
+  <!-- GTLM Realtime Engine SDK (Port 8088 & SSE Fallback) -->
+  <script src="assets/js/gtlm-realtime.js"></script>
+  <script>
+    (function() {
+        if (typeof GTLMRealtime === 'undefined') return;
+
+        // 1. Tham gia kênh Chat Thế Giới
+        GTLMRealtime.subscribe('chat', {
+            userId: <?= (int)$userId ?>,
+            username: <?= json_encode($_SESSION['Name'] ?? 'Đạo Hữu') ?>
+        });
+
+        // 2. Cập nhật Badge Trạng Thái
+        GTLMRealtime.onStatusChange(function(status) {
+            const badge = document.getElementById('ws-status-badge');
+            const text = document.getElementById('ws-status-text');
+            if (!badge || !text) return;
+            badge.className = 'ws-badge ' + status;
+            if (status === 'connected') {
+                text.textContent = 'Realtime 0ms (WebSocket)';
+            } else if (status === 'fallback') {
+                text.textContent = 'Luồng HTTP (SSE)';
+            } else if (status === 'connecting') {
+                text.textContent = 'Đang kết nối lại...';
+            } else {
+                text.textContent = 'Ngoại tuyến';
+            }
+        });
+
+        // 3. Nhận tin nhắn mới 0ms tức thì
+        GTLMRealtime.on('chat:chat_message', function(msg) {
+            // Tải lại tin nhắn ngay lập tức mà không cần đợi vòng lặp setInterval
+            loadMessages();
+            // Ẩn thanh đang soạn tin nếu người đó vừa gửi
+            const box = document.getElementById('chat-typing-indicator');
+            if (box) box.style.display = 'none';
+        });
+
+        // 4. Hiển thị thông báo người khác đang soạn tin (Typing Indicator)
+        let typingTimer = null;
+        GTLMRealtime.on('chat:typing', function(data) {
+            const box = document.getElementById('chat-typing-indicator');
+            const nameEl = document.getElementById('typing-user-name');
+            if (!box || !nameEl) return;
+            nameEl.textContent = data.username || 'Một đạo hữu';
+            box.style.display = 'block';
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(function() {
+                box.style.display = 'none';
+            }, 2500);
+        });
+
+        // 5. Bắn tín hiệu khi bản thân gõ phím
+        const msgInput = document.getElementById('message');
+        if (msgInput) {
+            msgInput.addEventListener('input', function() {
+                if (msgInput.value.trim().length > 0) {
+                    GTLMRealtime.sendTyping('chat', <?= json_encode($_SESSION['Name'] ?? 'Đạo Hữu') ?>);
+                }
+            });
+        }
+    })();
   </script>
 
     <!-- Three.js Background System -->
