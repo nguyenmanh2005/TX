@@ -609,6 +609,580 @@
 .ticket-status-pill.won { background: rgba(16, 185, 129, 0.25); color: #34d399; }
 .ticket-status-pill.lost { background: rgba(239, 68, 68, 0.2); color: #f87171; }
 
+/* ========================================================
+   MATCH CARD ACTIONS & STAGE CONTROLLER BAR
+======================================================== */
+.bracket-match-card {
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+.bracket-match-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(251, 191, 36, 0.5);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4), 0 0 12px rgba(251, 191, 36, 0.2);
+}
+.btn-watch-match {
+    width: 100%;
+    margin-top: 6px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    cursor: pointer;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: 0.2s;
+}
+.btn-watch-match.live {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+    animation: livePulse 1.5s infinite;
+}
+.btn-watch-match.finished {
+    background: rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.btn-watch-match.finished:hover {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border-color: #10b981;
+}
+.btn-watch-match.upcoming {
+    background: rgba(255, 255, 255, 0.05);
+    color: #94a3b8;
+    border: 1px dashed rgba(255, 255, 255, 0.15);
+}
+.btn-watch-match.upcoming:hover {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    border-color: #3b82f6;
+}
+
+.esports-stage-controller-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.stage-info-pill {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.stage-quick-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.btn-stage-action {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #f8fafc;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.btn-stage-action:hover {
+    background: rgba(251, 191, 36, 0.2);
+    border-color: #fbbf24;
+    color: #fbbf24;
+}
+.btn-stage-action.btn-watch-live-top {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    border-color: #ef4444;
+    color: #fff;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
+    animation: livePulse 1.5s infinite;
+}
+.btn-stage-action.active-stage {
+    background: #fbbf24;
+    color: #000;
+    border-color: #fbbf24;
+    font-weight: 900;
+}
+
+/* ========================================================
+   TAB 2: ĐẤU TRƯỜNG CỜ CA-RÔ LIVE (ARENA 15x15)
+======================================================== */
+.arena-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.arena-match-header-bar {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 8px 14px;
+    border-radius: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.arena-match-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.match-pill-btns {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.match-pill-btn {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #cbd5e1;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 5px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.match-pill-btn:hover {
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+}
+
+.match-pill-btn.active {
+    background: linear-gradient(135deg, #fbbf24, #d97706);
+    color: #000;
+    border-color: #fbbf24;
+    font-weight: 900;
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
+}
+
+.arena-quick-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.arena-tool-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #f8fafc;
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 5px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.arena-tool-btn:hover {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+/* Duel HUD */
+.arena-hud-duel {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 16px;
+    align-items: center;
+}
+
+.duel-player-card {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    transition: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.duel-player-card.player-x {
+    border-left: 4px solid #ef4444;
+}
+
+.duel-player-card.player-o {
+    border-right: 4px solid #a855f7;
+    flex-direction: row-reverse;
+    text-align: right;
+}
+
+.duel-player-card.active-turn {
+    background: rgba(30, 41, 59, 0.95);
+    border-color: #fbbf24;
+    box-shadow: 0 0 18px rgba(251, 191, 36, 0.4);
+    transform: scale(1.02);
+}
+
+.duel-player-avatar {
+    font-size: 2rem;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.duel-player-details {
+    flex: 1;
+}
+
+.duel-player-name {
+    font-size: 1.1rem;
+    font-weight: 900;
+    color: #f8fafc;
+}
+
+.duel-player-meta {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-top: 2px;
+}
+
+.duel-player-meta .badge-role {
+    color: #ef4444;
+    font-weight: 900;
+}
+
+.duel-player-meta .badge-role.o {
+    color: #a855f7;
+}
+
+.duel-player-style {
+    font-size: 0.7rem;
+    color: #64748b;
+    font-style: italic;
+    margin-top: 2px;
+}
+
+.turn-indicator-badge {
+    position: absolute;
+    bottom: -8px;
+    padding: 2px 8px;
+    font-size: 0.65rem;
+    font-weight: 900;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #94a3b8;
+    display: none;
+}
+
+.duel-player-card.active-turn .turn-indicator-badge {
+    display: block;
+    background: #fbbf24;
+    color: #000;
+    border-color: #fbbf24;
+    box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+}
+
+.duel-player-card.player-x .turn-indicator-badge { left: 14px; }
+.duel-player-card.player-o .turn-indicator-badge { right: 14px; }
+
+/* Center Score in HUD */
+.duel-center-score {
+    text-align: center;
+    background: rgba(0, 0, 0, 0.35);
+    padding: 8px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.duel-stage-tag {
+    font-size: 0.7rem;
+    font-weight: 900;
+    color: #fbbf24;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.duel-score-display {
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: #f8fafc;
+    letter-spacing: 2px;
+    margin: 2px 0;
+}
+
+.duel-score-display .score-num.p1 { color: #ef4444; }
+.duel-score-display .score-num.p2 { color: #a855f7; }
+.duel-score-display .score-colon { color: #64748b; margin: 0 4px; }
+
+.duel-move-count {
+    font-size: 0.72rem;
+    color: #94a3b8;
+}
+
+/* Caro Board Wrap 15x15 */
+.arena-board-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    background: #0b1120;
+    padding: 10px;
+    border-radius: 16px;
+    border: 1px solid rgba(251, 191, 36, 0.25);
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.6);
+}
+
+.board-coord-row {
+    display: grid;
+    grid-template-columns: 20px repeat(15, 26px) 20px;
+    gap: 2px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: #64748b;
+    margin: 2px 0;
+}
+
+.board-with-side-coords {
+    display: flex;
+    align-items: center;
+}
+
+.board-coord-col {
+    display: grid;
+    grid-template-rows: repeat(15, 26px);
+    gap: 2px;
+    width: 20px;
+    align-items: center;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: #64748b;
+}
+
+.caro-match-board {
+    display: grid;
+    grid-template-columns: repeat(15, 26px);
+    grid-template-rows: repeat(15, 26px);
+    gap: 2px;
+    background: #0f172a;
+    padding: 4px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.caro-match-cell {
+    width: 26px;
+    height: 26px;
+    background: #1e293b;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 900;
+    cursor: default;
+    transition: all 0.15s ease;
+    position: relative;
+}
+
+.caro-match-cell:hover {
+    background: #334155;
+}
+
+.caro-match-cell.star-point::after {
+    content: '';
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.35);
+    border-radius: 50%;
+}
+
+.caro-match-cell.piece-x {
+    background: rgba(239, 68, 68, 0.18);
+    color: #ef4444;
+    text-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+    animation: popStone 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.caro-match-cell.piece-o {
+    background: rgba(168, 85, 247, 0.18);
+    color: #c084fc;
+    text-shadow: 0 0 10px rgba(168, 85, 247, 0.8);
+    animation: popStone 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.caro-match-cell.last-move {
+    outline: 2px solid #fbbf24;
+    outline-offset: -2px;
+    box-shadow: 0 0 12px #fbbf24;
+    z-index: 5;
+}
+
+.caro-match-cell.win-cell {
+    background: rgba(251, 191, 36, 0.35) !important;
+    outline: 2px solid #fbbf24 !important;
+    animation: winPulse 0.8s infinite alternate ease-in-out;
+    z-index: 10;
+}
+
+/* Victory Overlay in Arena */
+.arena-victory-modal {
+    position: absolute;
+    inset: 0;
+    background: rgba(3, 7, 18, 0.9);
+    backdrop-filter: blur(8px);
+    border-radius: 16px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    animation: fadeIn 0.3s ease;
+}
+
+.arena-victory-modal.active {
+    display: flex;
+}
+
+.victory-content-box {
+    text-align: center;
+    padding: 24px;
+    max-width: 400px;
+}
+
+.victory-icon-trophy {
+    font-size: 3.5rem;
+    filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.8));
+    animation: crownFloat 2s infinite ease-in-out;
+}
+
+.victory-headline {
+    margin: 10px 0 6px 0;
+    font-size: 1.4rem;
+    font-weight: 900;
+    color: #fbbf24;
+}
+
+.victory-subtext {
+    font-size: 0.9rem;
+    color: #e2e8f0;
+    margin-bottom: 20px;
+}
+
+.victory-action-btns {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-vic-restart, .btn-vic-next, .btn-vic-bracket {
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    cursor: pointer;
+    border: none;
+    transition: 0.2s;
+}
+
+.btn-vic-restart {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-vic-restart:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.btn-vic-next {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+}
+
+.btn-vic-next:hover {
+    box-shadow: 0 0 18px rgba(16, 185, 129, 0.7);
+}
+
+.btn-vic-bracket {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #000;
+}
+
+.btn-vic-bracket:hover {
+    box-shadow: 0 0 14px rgba(251, 191, 36, 0.6);
+}
+
+/* Commentary Bar */
+.arena-commentary-bar {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 8px 14px;
+    gap: 10px;
+    font-size: 0.82rem;
+}
+
+.comm-badge {
+    color: #fbbf24;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.comm-ticker-text {
+    color: #cbd5e1;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
+
+.badge-pulse {
+    background: #ef4444;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 900;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: 4px;
+    animation: livePulse 1.2s infinite;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .esports-modal-box {
@@ -624,5 +1198,13 @@
     }
     .bracket-column {
         width: 100%;
+    }
+    .arena-hud-duel {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    .duel-player-card.player-o {
+        flex-direction: row;
+        text-align: left;
     }
 }

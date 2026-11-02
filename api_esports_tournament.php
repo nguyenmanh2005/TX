@@ -78,6 +78,40 @@ switch ($action) {
         ], JSON_UNESCAPED_UNICODE);
         break;
 
+    case 'set_stage':
+        $stage = trim($_POST['stage'] ?? $_GET['stage'] ?? 'auto');
+        if ($stage === 'auto') {
+            unset($_SESSION['esports_force_stage']);
+        } elseif (in_array($stage, ['betting', 'quarter_finals', 'semi_finals', 'finals', 'finished'])) {
+            $_SESSION['esports_force_stage'] = $stage;
+        }
+
+        $tournament = getCurrentEsportsTournament($conn, $_SESSION['esports_force_stage'] ?? null);
+        $myBets = ($userId > 0) ? getUserEsportsPredictions($conn, $userId, $tournament['season_id']) : [];
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Đã chuyển giai đoạn thành công sang: ' . $tournament['stage_title'],
+            'tournament' => $tournament,
+            'my_bets' => $myBets
+        ], JSON_UNESCAPED_UNICODE);
+        break;
+
+    case 'reset_tournament':
+        $target = trim($_POST['stage'] ?? $_GET['stage'] ?? 'betting');
+        $_SESSION['esports_force_stage'] = in_array($target, ['betting', 'quarter_finals', 'semi_finals', 'finals']) ? $target : 'betting';
+
+        $tournament = getCurrentEsportsTournament($conn, $_SESSION['esports_force_stage']);
+        $myBets = ($userId > 0) ? getUserEsportsPredictions($conn, $userId, $tournament['season_id']) : [];
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Đã khởi động lại giải đấu từ giai đoạn: ' . $tournament['stage_title'],
+            'tournament' => $tournament,
+            'my_bets' => $myBets
+        ], JSON_UNESCAPED_UNICODE);
+        break;
+
     default:
         echo json_encode(['success' => false, 'message' => 'Hành động không hợp lệ!']);
         break;
