@@ -100,28 +100,28 @@
                                     </div>
                                 </div>
 
-                                <div class="hud-stepper">
-                                    <div class="hud-step-item" id="stepBetting" onclick="window.esportsManager.setStage('betting')" title="Giai đoạn Mở Cược">
+                                <div class="hud-stepper" title="Tiến trình tự động theo đồng hồ giải đấu">
+                                    <div class="hud-step-item" id="stepBetting">
                                         <div class="step-dot">1</div>
                                         <div class="step-label">Mở Cược</div>
                                     </div>
                                     <div class="hud-step-line"></div>
-                                    <div class="hud-step-item" id="stepQf" onclick="window.esportsManager.setStage('quarter_finals')" title="Giai đoạn Tứ Kết">
+                                    <div class="hud-step-item" id="stepQf">
                                         <div class="step-dot">2</div>
                                         <div class="step-label">Tứ Kết</div>
                                     </div>
                                     <div class="hud-step-line"></div>
-                                    <div class="hud-step-item" id="stepSf" onclick="window.esportsManager.setStage('semi_finals')" title="Giai đoạn Bán Kết">
+                                    <div class="hud-step-item" id="stepSf">
                                         <div class="step-dot">3</div>
                                         <div class="step-label">Bán Kết</div>
                                     </div>
                                     <div class="hud-step-line"></div>
-                                    <div class="hud-step-item" id="stepFinals" onclick="window.esportsManager.setStage('finals')" title="Trận Chung Kết">
+                                    <div class="hud-step-item" id="stepFinals">
                                         <div class="step-dot">4</div>
                                         <div class="step-label">Chung Kết</div>
                                     </div>
                                     <div class="hud-step-line"></div>
-                                    <div class="hud-step-item" id="stepFinished" onclick="window.esportsManager.setStage('finished')" title="Trao Cúp Vô Địch">
+                                    <div class="hud-step-item" id="stepFinished">
                                         <div class="step-dot">🏆</div>
                                         <div class="step-label">Vinh Danh</div>
                                     </div>
@@ -131,29 +131,6 @@
                                     <button type="button" class="btn-hud-watch-live" id="btnWatchLiveTop" onclick="window.esportsManager.watchCurrentLiveMatch()" title="Xem trực tiếp trận đấu đang diễn ra">
                                         <i class="fa fa-play"></i> <span>🔴 XEM LIVE TRẬN ĐẤU</span>
                                     </button>
-                                    
-                                    <div class="hud-settings-dropdown-wrap">
-                                        <button type="button" class="btn-hud-tool" id="btnHudSettingsToggle" onclick="window.esportsManager.toggleSettingsMenu()" title="Tùy chọn mùa giải & mô phỏng">
-                                            <i class="fa fa-sliders-h"></i> <span>⚙️ Tùy Chỉnh</span>
-                                        </button>
-                                        <div class="hud-settings-menu" id="hudSettingsMenu">
-                                            <div class="settings-menu-header">CHỌN MÙA GIẢI</div>
-                                            <div class="settings-season-grid">
-                                                <button type="button" class="btn-season-opt opt-spring" onclick="window.esportsManager.setSeason('xuan')">🌸 Mùa Xuân</button>
-                                                <button type="button" class="btn-season-opt opt-summer" onclick="window.esportsManager.setSeason('ha')">☀️ Mùa Hạ</button>
-                                                <button type="button" class="btn-season-opt opt-autumn" onclick="window.esportsManager.setSeason('thu')">🍂 Mùa Thu</button>
-                                                <button type="button" class="btn-season-opt opt-winter" onclick="window.esportsManager.setSeason('dong')">❄️ Mùa Đông</button>
-                                            </div>
-                                            <div class="settings-menu-divider"></div>
-                                            <div class="settings-menu-header">CHẾ ĐỘ GIẢI ĐẤU</div>
-                                            <button type="button" class="btn-settings-action" onclick="window.esportsManager.setStage('auto')">
-                                                <i class="fa fa-clock"></i> Chạy Giờ Thật (Tự Động 30 Phút)
-                                            </button>
-                                            <button type="button" class="btn-settings-action" onclick="window.esportsManager.setStage('betting')">
-                                                <i class="fa fa-redo"></i> Đấu Lại Từ Đầu (Reset & Mở Cược)
-                                            </button>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
 
@@ -328,15 +305,6 @@
                 self.switchTab(targetTab);
             });
 
-            $(document).on('click', function (e) {
-                if (!$(e.target).closest('.hud-settings-dropdown-wrap').length) {
-                    $('#hudSettingsMenu').removeClass('active');
-                }
-            });
-        }
-
-        toggleSettingsMenu() {
-            $('#hudSettingsMenu').toggleClass('active');
         }
 
         switchTab(tabId) {
@@ -420,8 +388,15 @@
             $('#esportsPoolVal').text(new Intl.NumberFormat().format(t.total_pool) + ' GTLM');
             $('#esportsUserMoney').text('Số dư của sếp: ' + this.currentData.user_money_formatted + ' GTLM');
 
-            // Stage Stepper & HUD Status
-            $('.hud-step-item').removeClass('active');
+            // Stepper chỉ hiển thị tiến trình: bước đã qua = done, bước hiện tại = active
+            const stageOrder = ['betting', 'quarter_finals', 'semi_finals', 'finals', 'finished'];
+            const stepIds = ['#stepBetting', '#stepQf', '#stepSf', '#stepFinals', '#stepFinished'];
+            const curIdx = Math.max(0, stageOrder.indexOf(t.stage));
+            $('.hud-step-item').removeClass('active done');
+            stepIds.forEach((id, i) => {
+                if (i < curIdx) $(id).addClass('done');
+                else if (i === curIdx) $(id).addClass('active');
+            });
             const stagePill = $('#esportsStagePill');
             const stageDesc = $('#esportsStageDesc');
             const hudStageName = $('#hudStageName');
@@ -707,7 +682,7 @@
                     color: '#f8fafc'
                 }).fire({
                     icon: 'info',
-                    title: '🔥 Sàn cược đang mở! Tứ kết sẽ tự động khởi tranh khi hết đếm ngược (hoặc sếp bấm [⚔️ Vòng Tứ Kết] để mở ngay).'
+                    title: '🔥 Sàn cược đang mở! Tứ kết sẽ tự động khởi tranh khi hết đếm ngược.'
                 });
                 return;
             }
@@ -1124,68 +1099,6 @@
                 }
             }
             return total;
-        }
-
-        // Chuyển giai đoạn giải đấu
-        setStage(stageName) {
-            $('#hudSettingsMenu').removeClass('active');
-            const self = this;
-            const origin = window.location.origin;
-            const pathParts = window.location.pathname.split('/');
-            const appRoot = '/' + (pathParts[1] && !pathParts[1].includes('.') ? pathParts[1] + '/' : '');
-            const apiUrl = origin + appRoot + 'api_esports_tournament.php';
-
-            $.post(apiUrl, { action: 'set_stage', stage: stageName }, function (res) {
-                if (res && res.success) {
-                    self.currentData.tournament = res.tournament;
-                    self.renderAll();
-
-                    const Toast = Swal.mixin({
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false,
-                        timer: 2500,
-                        timerProgressBar: true,
-                        background: '#0f172a',
-                        color: '#f8fafc'
-                    });
-                    Toast.fire({
-                        icon: 'success',
-                        title: res.message
-                    });
-                }
-            }, 'json');
-        }
-
-        // Chuyển mùa giải: Xuân - Hạ - Thu - Đông
-        setSeason(seasonName) {
-            $('#hudSettingsMenu').removeClass('active');
-            const self = this;
-            const origin = window.location.origin;
-            const pathParts = window.location.pathname.split('/');
-            const appRoot = '/' + (pathParts[1] && !pathParts[1].includes('.') ? pathParts[1] + '/' : '');
-            const apiUrl = origin + appRoot + 'api_esports_tournament.php';
-
-            $.post(apiUrl, { action: 'set_season', season: seasonName }, function (res) {
-                if (res && res.success) {
-                    self.currentData.tournament = res.tournament;
-                    self.renderAll();
-
-                    const Toast = Swal.mixin({
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false,
-                        timer: 2000,
-                        timerProgressBar: true,
-                        background: '#0f172a',
-                        color: '#f8fafc'
-                    });
-                    Toast.fire({
-                        icon: 'success',
-                        title: res.message
-                    });
-                }
-            }, 'json');
         }
 
         renderMarket(players, stage) {

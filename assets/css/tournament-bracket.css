@@ -390,19 +390,43 @@
     gap: 6px;
     padding: 5px 10px;
     border-radius: 20px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    cursor: pointer;
-    transition: all 0.2s;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    cursor: default;
+    pointer-events: none;
+    opacity: 0.55;
+    transition: all 0.3s;
     user-select: none;
+    white-space: nowrap;
 }
 
-.hud-step-item:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
+.hud-step-item.done {
+    opacity: 1;
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.35);
+}
+
+.hud-step-item.done .step-dot {
+    background: #10b981;
+    color: transparent;
+    position: relative;
+    font-size: 0;
+}
+
+.hud-step-item.done .step-dot::after {
+    content: '\2713';
+    color: #04130d;
+    font-size: 0.7rem;
+    font-weight: 900;
+    position: absolute;
+}
+
+.hud-step-item.done .step-label {
+    color: #6ee7b7;
 }
 
 .hud-step-item.active {
+    opacity: 1;
     background: linear-gradient(135deg, rgba(251, 191, 36, 0.25) 0%, rgba(217, 119, 6, 0.15) 100%);
     border-color: #fbbf24;
     box-shadow: 0 0 14px rgba(251, 191, 36, 0.35);

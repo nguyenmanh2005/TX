@@ -219,13 +219,8 @@ function getEsportsCurrentSeasonInfo($now = null) {
         ]
     ];
 
-    // Cho phép đổi mùa thủ công nếu chọn trong công cụ
-    $forceSeason = $_SESSION['esports_force_season'] ?? null;
-    if ($forceSeason !== null && isset($seasonsList[(int)$forceSeason])) {
-        $cycleIndex = (int)$forceSeason;
-    } else {
-        $cycleIndex = $seasonIndex % 4;
-    }
+    // Mùa giải luân phiên Xuân - Hạ - Thu - Đông theo đồng hồ thật (không cho người chơi can thiệp)
+    $cycleIndex = $seasonIndex % 4;
 
     $currentSeason = $seasonsList[$cycleIndex];
     $yearNumber = (int)floor($seasonIndex / 4) + 1;
@@ -276,8 +271,8 @@ function getCurrentEsportsTournament($conn, $forceStage = null) {
     $seasonStartTime = $seasonInfo['start_time'];
     $seasonEndTime = $seasonInfo['end_time'];
 
-    // Xác định trạng thái hiện tại theo tiến trình 30 phút hoặc session force
-    $stageOverride = $forceStage ?? ($_SESSION['esports_force_stage'] ?? null);
+    // Giai đoạn luôn chạy theo tiến trình 30 phút của đồng hồ thật. Không cho phép ép giai đoạn từ phía người chơi.
+    $stageOverride = null;
 
     if ($stageOverride && in_array($stageOverride, ['betting', 'quarter_finals', 'semi_finals', 'finals', 'finished'])) {
         $currentStage = $stageOverride;
@@ -566,14 +561,13 @@ function placeEsportsPrediction($conn, $userId, $playerId, $amount) {
     $seasonId = $seasonInfo['season_id'];
     $elapsed = $seasonInfo['elapsed'];
 
-    // Chỉ cho phép đặt cược trong 10 phút đầu (0 - 600s) hoặc khi được chọn chế độ mở cược
-    $stageOverride = $_SESSION['esports_force_stage'] ?? null;
-    $isBettingStage = ($stageOverride === 'betting') || (!$stageOverride && $elapsed < 600);
+    // Chỉ cho phép đặt cược trong 10 phút đầu (0 - 600s) của mỗi mùa giải
+    $isBettingStage = ($elapsed < 600);
 
     if (!$isBettingStage) {
         return [
             'success' => false,
-            'message' => 'Đã hết thời gian đặt cược mùa giải này (Đang trong giai đoạn thi đấu). Vui lòng chọn "Đấu Lại Từ Đầu (Mở Cược)" hoặc chờ mùa giải kế tiếp sau ít phút nhé!'
+            'message' => 'Đã hết thời gian đặt cược mùa giải này (đang trong giai đoạn thi đấu). Vui lòng chờ mùa giải kế tiếp nhé!'
         ];
     }
 
