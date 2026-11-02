@@ -396,30 +396,6 @@ $userAvatar = !empty($userData['ImageURL']) ? $userData['ImageURL'] : '../img/av
             50% { opacity: 0.5; transform: scale(0.85); }
         }
 
-        .cycle-progress-wrap {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            white-space: nowrap;
-        }
-
-        .cycle-progress-bar {
-            width: 140px;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .cycle-progress-fill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, var(--accent-emerald), var(--accent-cyan));
-            border-radius: 10px;
-            transition: width 0.3s ease;
-        }
-
         /* ── Main Layout Container ── */
         .hub-container {
             max-width: 1680px;
@@ -513,19 +489,6 @@ $userAvatar = !empty($userData['ImageURL']) ? $userData['ImageURL'] : '../img/av
             border-radius: 8px;
             font-size: 0.75rem;
             font-weight: 700;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .badge-phase-pill {
-            background: rgba(245, 158, 11, 0.15);
-            border: 1px solid rgba(245, 158, 11, 0.4);
-            color: var(--accent-amber);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.78rem;
-            font-weight: 800;
             display: inline-flex;
             align-items: center;
             gap: 6px;
@@ -977,17 +940,6 @@ $userAvatar = !empty($userData['ImageURL']) ? $userData['ImageURL'] : '../img/av
             font-size: 0.75rem;
         }
 
-        .card-phase-tag {
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .phase-betting { color: var(--accent-emerald); }
-        .phase-shaking { color: var(--accent-amber); }
-        .phase-result  { color: var(--accent-cyan); }
-
         .card-cta-btn {
             background: linear-gradient(135deg, var(--accent-primary), var(--accent-violet));
             color: #fff;
@@ -1342,13 +1294,6 @@ $userAvatar = !empty($userData['ImageURL']) ? $userData['ImageURL'] : '../img/av
                 <span>Đồng Bộ Realtime: <b>Engine 30s Sync</b></span>
             </div>
         </div>
-
-        <div class="cycle-progress-wrap">
-            <span id="cyclePhaseLabel" style="font-weight: 800; color: var(--accent-emerald);">⏳ RA CHIÊU: 20s</span>
-            <div class="cycle-progress-bar">
-                <div class="cycle-progress-fill" id="cycleProgressBar"></div>
-            </div>
-        </div>
     </div>
 
     <!-- ── Main Layout ── -->
@@ -1366,9 +1311,6 @@ $userAvatar = !empty($userData['ImageURL']) ? $userData['ImageURL'] : '../img/av
                         </span>
                         <span class="badge-viewers-featured" id="spotlightViewerBadge">
                             <i class="fa fa-user"></i> 1,420 đang xem
-                        </span>
-                        <span class="badge-phase-pill" id="spotlightPhaseBadge">
-                            ⏳ RA CHIÊU: 18s
                         </span>
                     </div>
 
@@ -1582,28 +1524,9 @@ $userAvatar = !empty($userData['ImageURL']) ? $userData['ImageURL'] : '../img/av
             });
         }
 
-        // Update Global 30s Cycle Progress
+        // Update Global 30s Cycle Progress (Hidden per user request)
         function updateCycleProgress(state) {
-            const sec = state.cycle_sec || 0;
-            const percent = Math.min(100, Math.round((sec / 30) * 100));
-            $('#cycleProgressBar').css('width', percent + '%');
-
-            let phaseText = '';
-            let phaseColor = '#10b981';
-
-            if (state.phase === 'betting') {
-                phaseText = `⏳ RA CHIÊU CƯỢC: ${state.time_left}s`;
-                phaseColor = '#10b981';
-            } else if (state.phase === 'shaking') {
-                phaseText = `🎲 NÍN THỞ LẮC 3D: ${state.time_left}s`;
-                phaseColor = '#f59e0b';
-            } else {
-                phaseText = `🏆 TRẢ THƯỞNG: ${state.time_left}s`;
-                phaseColor = '#06b6d4';
-            }
-
-            $('#cyclePhaseLabel').text(phaseText).css('color', phaseColor);
-            $('#spotlightPhaseBadge').text(phaseText);
+            // Countdown not needed
         }
 
         // Update Category Count Badges
@@ -1717,11 +1640,6 @@ $userAvatar = !empty($userData['ImageURL']) ? $userData['ImageURL'] : '../img/av
                 return;
             }
 
-            const phaseClass = currentCycleState.phase === 'betting' ? 'phase-betting' :
-                               (currentCycleState.phase === 'shaking' ? 'phase-shaking' : 'phase-result');
-            const phaseLabel = currentCycleState.phase === 'betting' ? '⏳ Ra Chiêu' :
-                               (currentCycleState.phase === 'shaking' ? '🎲 Đang Lắc' : '🏆 Kết Quả');
-
             const html = filtered.map(t => {
                 const tableIdStr = '#' + (t.id < 10 ? '0' : '') + t.id;
                 const cardColor = t.color || '#6366f1';
@@ -1750,8 +1668,8 @@ $userAvatar = !empty($userData['ImageURL']) ? $userData['ImageURL'] : '../img/av
                             </div>
 
                             <div class="card-status-bar">
-                                <span class="card-phase-tag ${phaseClass}">
-                                    <i class="fa fa-bolt"></i> ${phaseLabel}
+                                <span style="font-size: 0.75rem; color: var(--accent-emerald); font-weight: 800; display: flex; align-items: center; gap: 5px;">
+                                    <i class="fa fa-circle" style="font-size: 0.45rem;"></i> TRỰC TIẾP 24/7
                                 </span>
                                 <span class="card-cta-btn">
                                     VÀO XEM <i class="fa fa-arrow-right"></i>
