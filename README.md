@@ -4,8 +4,8 @@
 [![Database](https://img.shields.io/badge/MySQL-MariaDB-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![Frontend](https://img.shields.io/badge/Three.js-WebGL-black?style=for-the-badge&logo=three.js&logoColor=white)](https://threejs.org/)
 [![CSS Architecture](https://img.shields.io/badge/Glassmorphism-Cyberpunk%20Neon-8A2BE2?style=for-the-badge)](https://developer.mozilla.org/en-US/docs/Web/CSS)
-[![Live Stream Tables](https://img.shields.io/badge/LiveStream%20Channels-61%20B%C3%A0n%2024%2F7-10B981?style=for-the-badge)](http://127.0.0.1/1/LiveStream/spectator.php)
-[![PvP Matchmaking](https://img.shields.io/badge/PvP%20Radar-1vs1%20Realtime-EF4444?style=for-the-badge)](http://127.0.0.1/1/pvp_caro.php)
+[![Live Stream Tables](https://img.shields.io/badge/LiveStream%20Channels-61%20B%C3%A0n%2024%2F7-10B981?style=for-the-badge)](LiveStream/spectator.php)
+[![PvP Matchmaking](https://img.shields.io/badge/PvP%20Radar-1vs1%20Realtime-EF4444?style=for-the-badge)](pvp_caro.php)
 
 > **GTLM Gaming Platform (TX)** là hệ sinh thái nền tảng sòng bạc trực tuyến, giải trí mini-game, mạng xã hội bang hội và đài truyền hình LiveStream tương tác ảo 24/7 quy mô lớn. Dự án được xây dựng từ nền tảng nguyên bản (Zero-Framework Vanilla Core) kết hợp công nghệ đồ họa Three.js, CSS3 Glassmorphism, âm thanh Web Audio API Synthesizer và trí tuệ nhân tạo Bot AI Turbo thích ứng theo chuỗi thắng thua.
 
@@ -66,7 +66,7 @@ Nền tảng được thiết kế xoay quanh đơn vị tiền tệ trung tâm 
 ## 3. 📂 SƠ ĐỒ CẤU TRÚC THƯ MỤC DỰ ÁN
 
 ```bash
-c:\xampp\htdocs\1/
+./
 ├── index.php                      # Trang chủ Sảnh Casino Trung Tâm (Lobby & Game Grid Modern)
 ├── login.php / auth.php           # Hệ thống xác thực đăng nhập, đăng ký tài khoản bảo mật
 ├── db_connect.php                 # Kết nối CSDL MySQL, bộ lọc Anti-Exploit, cấu hình Hosting
@@ -362,18 +362,18 @@ Cơ sở dữ liệu trung tâm: `vdkmnuaahosting_taixiu` (hoặc cấu hình t�
   - `extension=curl`
   - `extension=fileinfo`
 
-### Bước 2: Clone Mã Nguồn Vào Thư Mục Web
-Đặt thư mục dự án vào thư mục gốc `htdocs`:
+### Bước 2: Đặt Mã Nguồn Vào Thư Mục Web Server
+Đặt thư mục mã nguồn vào thư mục phục vụ web của bạn (ví dụ thư mục `htdocs/` của máy chủ):
 ```bash
-c:\xampp\htdocs\1
+htdocs/
 ```
 
 ### Bước 3: Cấu Hình Cơ Sở Dữ Liệu
-1. Mở trình duyệt truy cập: `http://127.0.0.1/phpmyadmin/`
+1. Mở công cụ quản lý cơ sở dữ liệu MySQL (ví dụ: giao diện phpMyAdmin hoặc MySQL Workbench / DBeaver / MySQL CLI).
 2. Tạo cơ sở dữ liệu mới có tên: `vdkmnuaahosting_taixiu` (hoặc tên tùy chọn của bạn).
 3. Import các tệp cơ sở dữ liệu nền tảng và nạp dữ liệu bot:
    - Import file: `insert_live_bots.sql` (Tự động khởi tạo đầy đủ 61 Bot Streamer dồi dào GTLM).
-4. Mở file [db_connect.php](file:///c:/xampp/htdocs/1/db_connect.php) kiểm tra cấu hình kết nối:
+4. Mở file [db_connect.php](db_connect.php) kiểm tra cấu hình kết nối:
    ```php
    'DB_SERVER' => 'localhost',
    'DB_NAME'   => 'vdkmnuaahosting_taixiu',
@@ -382,18 +382,18 @@ c:\xampp\htdocs\1
    ```
 
 ### Bước 4: Khởi Chạy Nền Tảng
-Khởi động Apache & MySQL trên bảng điều khiển XAMPP Control Panel, sau đó mở trình duyệt và trải nghiệm:
-- **Trang Chủ Casino Tổng:** `http://127.0.0.1/1/`
-- **Sảnh LiveStream 61 Bàn:** `http://127.0.0.1/1/LiveStream/spectator.php`
-- **Phòng Xem Live Trực Tiếp (Bàn 61 - Cờ Ca-rô AI):** `http://127.0.0.1/1/LiveStream/watch.php?id=61`
-- **Sảnh Đấu Cờ Ca-rô (Đấu Đơn & Radar PvP):** `http://127.0.0.1/1/pvp_caro.php`
-- **Trung Tâm Quản Trị Admin:** `http://127.0.0.1/1/admin_dashboard.php`
+Khởi động máy chủ Web (Apache/Nginx) & MySQL, sau đó truy cập các đường dẫn tương ứng trong dự án:
+- **Trang Chủ Casino Tổng:** `index.php`
+- **Sảnh LiveStream 61 Bàn:** `LiveStream/spectator.php`
+- **Phòng Xem Live Trực Tiếp (Bàn 61 - Cờ Ca-rô AI):** `LiveStream/watch.php?id=61`
+- **Sảnh Đấu Cờ Ca-rô (Đấu Đơn & Radar PvP):** `pvp_caro.php`
+- **Trung Tâm Quản Trị Admin:** `admin_dashboard.php`
 
 ---
 
 ## 12. 📊 HỆ THỐNG QUẢN TRỊ SỚI BẠC (ADMIN CONTROL CENTER)
 
-Truy cập tại [admin_dashboard.php](file:///c:/xampp/htdocs/1/admin_dashboard.php) với quyền tài khoản Quản Trị Viên (`Role = 1`):
+Truy cập tại [admin_dashboard.php](admin_dashboard.php) với quyền tài khoản Quản Trị Viên (`Role = 1`):
 
 - **Biểu Đồ Tài Chính Thời Gian Thực:** Thống kê tổng tiền GTLM lưu thông, dòng tiền nạp/rút, tỷ lệ thắng thua của nhà cái (House Edge).
 - **Quản Lý Hội Viên:** Tra cứu thông tin, lịch sử cược, khóa tài khoản vi phạm, điều chỉnh số dư GTLM trực tiếp.
