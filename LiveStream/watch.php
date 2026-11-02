@@ -1154,16 +1154,15 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
                         <span class="wave-bar"></span>
                     </div>
 
-                    <!-- Fast Guide Buttons (1-Click FAQ Chips) -->
+                    <!-- Hướng Dẫn 1-Chạm Bàn Đang Xem -->
                     <div class="queen-quick-guides">
-                        <div class="queen-guides-label">✨ HƯỚNG DẪN 1-CHẠM:</div>
+                        <div class="queen-guides-label">✨ HƯỚNG DẪN BÀN LIVE [<?= htmlspecialchars($currentGame['name']) ?>]:</div>
                         <div class="queen-chips-grid">
-                            <button type="button" class="queen-chip" onclick="askQueenGuide('Hướng dẫn xem Live và Ra chiêu')">🎯 Xem Live & Cược</button>
-                            <button type="button" class="queen-chip" onclick="askQueenGuide('Cách nhận GTLM miễn phí mỗi ngày')">💰 Nhận GTLM Free</button>
-                            <button type="button" class="queen-chip" onclick="askQueenGuide('Hướng dẫn chơi Cờ Ca-rô PvP')">♟️ Cờ Ca-rô PvP</button>
-                            <button type="button" class="queen-chip" onclick="askQueenGuide('Đặc quyền cấp VIP và Bang hội')">🏰 VIP & Bang Hội</button>
-                            <button type="button" class="queen-chip" onclick="askQueenGuide('Cách tặng quà cho Streamer')">🎁 Tip & Tặng Quà</button>
-                            <button type="button" class="queen-chip" onclick="askQueenGuide('Chào Queen GTLM xinh đẹp!')">💖 Chào Queen</button>
+                            <button type="button" class="queen-chip" onclick="askQueenTableGuide('how_to_play')">📖 Cách chơi bàn này</button>
+                            <button type="button" class="queen-chip" onclick="askQueenTableGuide('how_to_win')">🏆 Thế nào là Thắng?</button>
+                            <button type="button" class="queen-chip" onclick="askQueenTableGuide('how_to_lose')">⚠️ Thế nào là Thua?</button>
+                            <button type="button" class="queen-chip" onclick="askQueenTableGuide('how_to_bet')">🎯 Cách cược & Ra chiêu</button>
+                            <button type="button" class="queen-chip" onclick="askQueenTableGuide('queen_chat')" style="grid-column: span 2;">💖 Chào Queen & Giao lưu</button>
                         </div>
                     </div>
 
@@ -1365,16 +1364,24 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
             });
         }
 
+        function initQueenAvatarIfNeeded() {
+            if (!window.queenGTLM && typeof QueenGTLMAvatar !== 'undefined') {
+                window.queenGTLM = new QueenGTLMAvatar({ tableId: currentTableId });
+            }
+            if (window.queenGTLM) {
+                window.queenGTLM.mount('queenCanvas');
+            }
+        }
+
         function toggleQueenPanel() {
             const panel = $('#queenSupportPanel');
             const isVisible = panel.is(':visible');
             if (isVisible) {
                 panel.fadeOut(200);
             } else {
-                panel.fadeIn(250);
-                if (window.queenGTLM && !window.queenGTLM.canvas) {
-                    window.queenGTLM.mount('queenCanvas');
-                }
+                panel.fadeIn(250, function() {
+                    initQueenAvatarIfNeeded();
+                });
             }
         }
 
@@ -1386,12 +1393,32 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
             }
         }
 
+        function askQueenTableGuide(guideType) {
+            $('#queenSupportPanel').fadeIn(250, function() {
+                initQueenAvatarIfNeeded();
+            });
+
+            let queryText = '';
+            if (guideType === 'how_to_play') queryText = 'Hướng dẫn cách chơi bàn này như thế nào?';
+            else if (guideType === 'how_to_win') queryText = 'Thế nào là Thắng ở bàn này?';
+            else if (guideType === 'how_to_lose') queryText = 'Thế nào là Thua ở bàn này?';
+            else if (guideType === 'how_to_bet') queryText = 'Hướng dẫn cách cược và ra chiêu ở bàn này';
+            else if (guideType === 'queen_chat') queryText = 'Chào Queen GTLM xinh đẹp!';
+
+            $.post('api_streamer_ai.php', { table_id: currentTableId, message: queryText, guide_type: guideType }, function(res) {
+                if (res && res.success) {
+                    loadDetails();
+                    if (window.queenGTLM) {
+                        window.queenGTLM.speak(res.reply);
+                    }
+                }
+            }, 'json');
+        }
+
         function askQueenGuide(prompt) {
-            // Đảm bảo mở panel ra để xem câu trả lời
-            $('#queenSupportPanel').fadeIn(250);
-            if (window.queenGTLM && !window.queenGTLM.canvas) {
-                window.queenGTLM.mount('queenCanvas');
-            }
+            $('#queenSupportPanel').fadeIn(250, function() {
+                initQueenAvatarIfNeeded();
+            });
 
             $.post('api_streamer_ai.php', { table_id: currentTableId, message: prompt }, function(res) {
                 if (res && res.success) {
@@ -1820,6 +1847,11 @@ $isAdmin = isset($_SESSION['Role']) && $_SESSION['Role'] == 1;
         $(document).ready(() => {
             loadDetails();
             setInterval(loadDetails, 2000);
+
+            // 👑 Khởi tạo Trợ Lý Bot Queen GTLM
+            setTimeout(() => {
+                initQueenAvatarIfNeeded();
+            }, 300);
 
             // ⚡ Kết nối WebSocket Realtime cho phòng Live
             setTimeout(() => {

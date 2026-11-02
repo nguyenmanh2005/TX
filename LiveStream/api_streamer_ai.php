@@ -1,12 +1,15 @@
 <?php
 /**
- * 👑 BOT QUEEN GTLM - TRỢ LÝ NỮ HỖ TRỢ & HƯỚNG DẪN NGƯỜI CHƠI v5.0
+ * 👑 BOT QUEEN GTLM - TRỢ LÝ HƯỚNG DẪN BÀN LIVE & GIẢI ĐÁP THẮC MẮC v5.2
  * 
- * Vai trò:
- * - Nữ hoàng / Trợ lý ảo GTLM (Female AI Companion & Guide).
- * - Giải đáp mọi thắc mắc của người chơi (Luật chơi, nạp/rút GTLM, cược chỉ xem, VIP, Bang hội, Cờ Ca-rô...).
- * - Hướng dẫn người chơi từng bước dễ hiểu.
- * - Chào hỏi thân thiện, lễ phép và trêu đùa duyên dáng, dễ thương khi người chơi giao lưu.
+ * Tính năng chính:
+ * 1. Hướng dẫn 1-chạm chính xác cho bàn live người chơi đang xem:
+ *    - 📖 Cách chơi bàn này như thế nào
+ *    - 🏆 Thế nào là Thắng (điều kiện thắng, tỷ lệ trả thưởng)
+ *    - ⚠️ Thế nào là Thua (trường hợp thua, mất cược)
+ *    - 🎯 Cách cược & Ra chiêu ở bàn này
+ *    - 💖 Chào hỏi & giao lưu duyên dáng với Queen
+ * 2. Giải đáp thắc mắc người chơi khi chat hoặc hỏi trực tiếp.
  */
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -22,166 +25,173 @@ if (file_exists(__DIR__ . '/../realtime/realtime_publisher.php')) {
 
 $tableId = (int)($_POST['table_id'] ?? $_GET['table_id'] ?? 1);
 $userMessage = trim($_POST['message'] ?? $_GET['message'] ?? '');
+$guideType = trim($_POST['guide_type'] ?? $_GET['guide_type'] ?? '');
 $userId = (int)($_SESSION['Iduser'] ?? $_SESSION['Iduser_temp_bot'] ?? 0);
 $userName = trim($_SESSION['Name'] ?? 'Đạo Hữu');
-
-if (empty($userMessage)) {
-    echo json_encode(['success' => false, 'message' => 'Nội dung tin nhắn không được để trống!']);
-    exit;
-}
 
 $cleanMsg = mb_strtolower($userMessage, 'UTF-8');
 
 /**
- * 🧠 HỆ THỐNG TRÍ TUỆ NHÂN TẠO CỦA BOT QUEEN GTLM
+ * 📚 KHO DỮ LIỆU LUẬT CHƠI CHI TIẾT TỪNG BÀN LIVE (TABLE GUIDES ENGINE)
+ */
+if (!function_exists('getTableGuideData')) {
+function getTableGuideData($tableId) {
+    switch ($tableId) {
+        case 61:
+            return [
+                'game_name' => 'Cờ Ca-rô AI (AlphaX vs DeepO)',
+                'how_to_play' => "Ván cờ Ca-rô đỉnh cao 15x15 giữa 2 kỳ thủ AlphaX (❌ Đỏ) và DeepO (⭕ Xanh). Hai bên thay phiên nhau hạ từng quân cờ vào các giao điểm trống trên bàn cờ để tạo thế liên kết và phong tỏa đường đi của đối thủ.",
+                'how_to_win' => "Bên nào xếp được chuỗi **5 quân cờ liên tiếp** (ngang, dọc hoặc chéo) mà **không bị chặn cả 2 đầu** sẽ giành chiến thắng Knockout ngay lập tức! Ngoài ra, nếu đối thủ hết thời gian suy nghĩ (Time out) thì bên còn lại cũng được xử thắng. Sếp cược đúng bên thắng nhận thưởng tỷ lệ **x1.95 lần GTLM**!",
+                'how_to_lose' => "Bị đối phương xếp được 5 quân liên trước, hoặc bị rơi vào thế cờ 4 quân mở 2 đầu / nước cờ đôi không thể cản phá là **THUA**. Khán giả cược sai bên thua sẽ mất số GTLM đã ra chiêu ở ván đó.",
+                'how_to_bet' => "Sếp bấm nút **Ra Chiêu (icon 🎯)** hoặc tham gia dự đoán bên dưới để chọn bên thắng: **AlphaX (❌ Đỏ)** hay **DeepO (⭕ Xanh)** trong 15 giây chuẩn bị đầu ván nhé! Sếp cũng có thể bấm Tip hoặc Tặng Quà để vinh danh 2 kỳ thủ."
+            ];
+
+        case 1:
+            return [
+                'game_name' => 'Bầu Cua Tôm Cá (Thế Giới Linh Thú)',
+                'how_to_play' => "Nhà cái sử dụng 3 viên xúc xắc có 6 mặt linh vật: Bầu, Cua, Tôm, Cá, Gà, Hươu. Sau 20 giây đặt cược, nắp đĩa sẽ mở ra và tính kết quả dựa trên các mặt ngửa của 3 viên xúc xắc.",
+                'how_to_win' => "Kết quả mở bát có ít nhất 1 viên xúc xắc xuất hiện đúng linh vật sếp đã cược là **THẮNG**! Ra 1 con ăn x1, ra 2 con ăn x2, ra 3 con ăn x3 lần tiền cược!",
+                'how_to_lose' => "Cả 3 viên xúc xắc mở ra đều **KHÔNG CÓ** linh vật sếp đã đặt cược thì bị tính là **THUA** và mất số GTLM đặt ở cửa đó.",
+                'how_to_bet' => "Bấm nút Ra Chiêu hoặc chọn trực tiếp linh vật sếp dự đoán (Bầu, Cua, Tôm, Cá, Gà, Hươu) và nhập số GTLM trong 20 giây đếm ngược đầu ván nhé!"
+            ];
+
+        case 2:
+            return [
+                'game_name' => 'Xóc Đĩa (Trận Địa Trắng Đỏ)',
+                'how_to_play' => "Sử dụng 4 nút tròn 2 mặt Đỏ và Trắng úp trong bát xóc đều. Khán giả tham gia dự đoán tổng số mặt Đỏ và Trắng sau khi nhà cái mở bát.",
+                'how_to_win' => "Cược **Chẵn** thắng khi kết quả ra: 4 Đỏ, 4 Trắng hoặc 2 Đỏ 2 Trắng (ăn x1.95). Cược **Lẻ** thắng khi ra: 3 Đỏ 1 Trắng hoặc 3 Trắng 1 Đỏ (ăn x1.95). Đặt trúng vị Tứ Tử ăn tới x12 lần!",
+                'how_to_lose' => "Cược Chẵn nhưng mở ra Lẻ (hoặc cược Lẻ mở ra Chẵn) thì bị tính là **THUA** và mất số GTLM đã cược.",
+                'how_to_bet' => "Chọn cửa Chẵn, Lẻ hoặc các cửa vị màu may mắn trong thời gian 20 giây đầu ván trước khi khóa cửa đặt nhé!"
+            ];
+
+        case 3:
+            return [
+                'game_name' => 'Tiên Tri Vũ Trụ (Crash Phi Thuyền)',
+                'how_to_play' => "Phi thuyền cất cánh bay vào không gian và hệ số nhân GTLM tăng vọt từ x1.00 lên x2.0, x10.0, x100.0+... Phi thuyền có thể phát nổ bất kỳ lúc nào!",
+                'how_to_win' => "Bấm **Chốt Lời (Cash Out)** thành công TRƯỚC KHI phi thuyền phát nổ là **THẮNG**! Sếp nhận đủ tiền cược nhân với hệ số tại thời điểm chốt lời!",
+                'how_to_lose' => "Chưa kịp bấm Chốt Lời mà phi thuyền đã nổ tung (Crashed) thì bị tính là **THUA** và mất toàn bộ số tiền cược ván đó.",
+                'how_to_bet' => "Nhập số GTLM muốn cược trước khi phi thuyền phóng và có thể cài đặt hệ số chốt lời tự động (ví dụ x2.0 hoặc x3.0) để an toàn."
+            ];
+
+        case 4:
+            return [
+                'game_name' => 'Đại Chiến Thần Kê (Đá Gà Meron vs Wala)',
+                'how_to_play' => "Đấu trường sinh tử giữa Gà Đỏ (Meron) và Gà Xanh (Wala). Hai chiến kê giao tranh kịch tính trên sóng trực tiếp.",
+                'how_to_win' => "Chiến kê bạn chọn hạ gục đối thủ hoặc đối thủ bỏ chạy là **THẮNG** (tỷ lệ ăn x1.95).",
+                'how_to_lose' => "Chiến kê bạn chọn bị knock-out hoặc bỏ chạy trước thì bị tính là **THUA**.",
+                'how_to_bet' => "Chọn cửa Meron (Gà Đỏ) hoặc Wala (Gà Xanh) trước khi hiệu lệnh khai chiến vang lên."
+            ];
+
+        case 5:
+            return [
+                'game_name' => 'Chiến Trường Rồng Hổ (Dragon Tiger)',
+                'how_to_play' => "Nhà cái chia 1 lá bài cho cửa Rồng (Dragon) và 1 lá bài cho cửa Hổ (Tiger). So sánh điểm số lá bài bên nào lớn hơn (K lớn nhất 13 điểm, A nhỏ nhất 1 điểm).",
+                'how_to_win' => "Cửa bạn cược có lá bài điểm cao hơn bên kia là **THẮNG** (ăn x1.95). Cược cửa Hòa (Tie) khi 2 lá bằng điểm ăn tới x8!",
+                'how_to_lose' => "Cửa bạn cược có lá bài điểm thấp hơn bên kia là **THUA**.",
+                'how_to_bet' => "Chọn cửa Rồng, Hổ hoặc Hòa trong thời gian chuẩn bị 20 giây đầu ván."
+            ];
+
+        case 7:
+        case 58:
+        case 59:
+            return [
+                'game_name' => 'Đấu Trường Thả Bóng Plinko Royale',
+                'how_to_play' => "Quả bóng rơi tự do từ đỉnh tháp qua ma trận đinh tán kim cương, nảy zíc zắc ngẫu nhiên xuống các ô số hệ số thưởng dưới đáy chậu.",
+                'how_to_win' => "Bóng rơi trúng các ô thưởng có hệ số lớn hơn x1.0 (nhất là 2 ô ngoài cùng biên x130, x500, x1000) là **THẮNG ĐẬM HÚP TRỌN HŨ**!",
+                'how_to_lose' => "Bóng rơi vào các ô giữa có hệ số nhỏ hơn x1.0 (như x0.2, x0.5) thì thu về ít hơn số vốn đã thả.",
+                'how_to_bet' => "Chọn mức tiền GTLM cho mỗi quả bóng và bấm thả bóng xuống ma trận kim cương."
+            ];
+
+        case 8:
+            return [
+                'game_name' => 'Slot Machine Premium 3x3',
+                'how_to_play' => "Quay 3 trục quay với các biểu tượng may mắn (Số 777, Kim Cương, Bar, Chuông Vàng, Trái Cây).",
+                'how_to_win' => "Quay ra 3 biểu tượng giống nhau nằm trên cùng 1 hàng ngang hoặc đường chéo là **THẮNG**. Ra 3 số 777 nổ Hũ Jackpot độc đắc!",
+                'how_to_lose' => "Các trục dừng lại không tạo thành hàng trả thưởng hợp lệ thì không nhận được thưởng.",
+                'how_to_bet' => "Chọn mức cược dòng và bấm nút Quay (Spin) để bắt đầu vòng quay may mắn."
+            ];
+
+        default:
+            return [
+                'game_name' => 'Bàn Live #' . $tableId,
+                'how_to_play' => "Bàn live phát sóng 24/7 theo chu kỳ 30 giây thời gian thực. Khán giả theo dõi ván đấu và tham gia dự đoán kết quả.",
+                'how_to_win' => "Dự đoán chính xác cửa thắng hoặc kết quả của ván cược để nhận thưởng GTLM theo tỷ lệ quy định của trò chơi!",
+                'how_to_lose' => "Kết quả mở thưởng không trùng với cửa bạn đã đặt cược thì bị tính là thua cược ván đó.",
+                'how_to_bet' => "Bấm nút Ra Chiêu (🎯) hoặc chọn cửa cược trong 20 giây đầu ván trước khi khóa bàn."
+            ];
+    }
+}
+}
+
+/**
+ * 👑 TẠO PHẢN HỒI THÔNG MINH CHO QUEEN GTLM
  */
 if (!function_exists('generateQueenGTLMResponse')) {
-function generateQueenGTLMResponse($cleanMsg, $rawMsg, $userName, $tableId) {
-    // 1. Chào hỏi, khen ngợi và trêu đùa duyên dáng
-    if (preg_match('/(chào|hello|hé lô|hế nhô|good morning|good evening|\bhi\b|\balo\b|\bhey\b)/u', $cleanMsg) && !preg_match('/(hướng dẫn|cách|luật|nhận|chơi|kiếm|vip)/u', $cleanMsg)) {
-        $hellos = [
+function generateQueenGTLMResponse($cleanMsg, $rawMsg, $userName, $tableId, $guideType) {
+    $info = getTableGuideData($tableId);
+    $gameName = $info['game_name'];
+
+    // 1. Phản hồi trực tiếp theo Nút 1-Chạm Bàn Hiện Tại
+    if ($guideType === 'how_to_play' || preg_match('/(cách chơi bàn này|chơi như thế nào|chơi thế nào|luật chơi)/u', $cleanMsg)) {
+        return [
+            'text' => "📖 **HƯỚNG DẪN CÁCH CHƠI [{$gameName}]:**\n" . $info['how_to_play'],
+            'voice' => "Dạ về cách chơi bàn " . $gameName . ": " . strip_tags($info['how_to_play']),
+            'mood' => 'guide'
+        ];
+    }
+
+    if ($guideType === 'how_to_win' || preg_match('/(thế nào là thắng|làm sao để thắng|thắng như thế nào|điều kiện thắng)/u', $cleanMsg)) {
+        return [
+            'text' => "🏆 **ĐIỀU KIỆN ĐỂ THẮNG Ở [{$gameName}]:**\n" . $info['how_to_win'],
+            'voice' => "Dạ điều kiện để thắng ở bàn " . $gameName . " như sau: " . strip_tags($info['how_to_win']),
+            'mood' => 'guide'
+        ];
+    }
+
+    if ($guideType === 'how_to_lose' || preg_match('/(thế nào là thua|khi nào thua|thua như thế nào|điều kiện thua)/u', $cleanMsg)) {
+        return [
+            'text' => "⚠️ **TRƯỜNG HỢP BỊ TÍNH LÀ THUA Ở [{$gameName}]:**\n" . $info['how_to_lose'],
+            'voice' => "Dạ trường hợp bị tính là thua ở bàn " . $gameName . " là: " . strip_tags($info['how_to_lose']),
+            'mood' => 'guide'
+        ];
+    }
+
+    if ($guideType === 'how_to_bet' || preg_match('/(cách cược|ra chiêu|cách ra chiêu|đặt cược)/u', $cleanMsg)) {
+        return [
+            'text' => "🎯 **CÁCH ĐẶT CƯỢC & RA CHIÊU Ở [{$gameName}]:**\n" . $info['how_to_bet'],
+            'voice' => "Dạ về cách cược và ra chiêu ở bàn " . $gameName . ": " . strip_tags($info['how_to_bet']),
+            'mood' => 'guide'
+        ];
+    }
+
+    if ($guideType === 'queen_chat' || preg_match('/(chào|hello|xinh|người yêu|giao lưu|yêu em|thả thính)/u', $cleanMsg)) {
+        $chatOptions = [
             [
-                'text' => "Dạ em chào sếp **$userName** ạ! 👑 Em là **Queen GTLM** - trợ lý hỗ trợ riêng của sếp đây. Hôm nay sếp ghé chơi có thắc mắc gì cần em hướng dẫn không nà? Chúc sếp một ngày ngập tràn niềm vui nhé! 💖",
-                'voice' => "Dạ em chào sếp " . $userName . " ạ! Em là Queen Gờ Tờ Lờ Mờ, trợ lý hỗ trợ riêng của sếp đây. Sếp cần em hướng dẫn tính năng nào cứ bảo em nhé!",
-                'mood' => 'happy'
-            ],
-            [
-                'text' => "Em chào sếp **$userName** đẹp trai ngời ngời! 🥰 Em túc trực 24/7 ở đây đợi sếp mãi đấy. Sếp cần em giải đáp luật chơi, cách nhận GTLM miễn phí hay tính năng nào cứ ới em nha!",
-                'voice' => "Em chào sếp " . $userName . " đẹp trai! Em đợi sếp mãi đấy. Sếp cần giải đáp luật chơi hay nhận Gờ Tờ Lờ Mờ miễn phí cứ bảo em nha!",
+                'text' => "Dạ em đây sếp **$userName** ơi! 💖 Chúc sếp xem live Bàn **{$gameName}** thật thư giãn và húp trọn lộc lớn nhé! Sếp cần em hướng dẫn cách chơi hay điều kiện thắng thua cứ bấm các nút trên nha!",
+                'voice' => "Dạ em đây sếp " . $userName . " ơi! Chúc sếp xem live Bàn " . $gameName . " thật vui và thắng lớn nhé! Có gì cần hỏi sếp cứ bảo em nha!",
                 'mood' => 'sweet'
             ],
             [
-                'text' => "Chào mừng sếp **$userName** đã đến với Trận Địa GTLM! 👑 Hôm nay Queen sẽ đồng hành cùng sếp, có gì chưa rõ sếp cứ hỏi em nhé!",
-                'voice' => "Chào mừng sếp " . $userName . " đã đến với Trận Địa Gờ Tờ Lờ Mờ! Hôm nay Queen sẽ đồng hành cùng sếp, có gì chưa hiểu cứ hỏi em nhé!",
-                'mood' => 'polite'
-            ]
-        ];
-        return $hellos[array_rand($hellos)];
-    }
-
-    // Trêu đùa, tán tỉnh, hỏi chuyện vui
-    if (preg_match('/(người yêu|xinh|yêu em|thả thính|cưới|lấy anh|bao nhiêu tuổi|ở đâu|dễ thương|cute)/u', $cleanMsg)) {
-        $flirts = [
-            [
-                'text' => "Hi hi, sếp cứ trêu em hoài à! 🙈 Queen là trợ lý Nữ Hoàng ảo chuyên giải đáp thắc mắc cho sếp thui, nhưng được sếp khen xinh là em vui cả ngày luôn ó! Cảm ơn sếp nhiều nha! 💖",
-                'voice' => "Hi hi, sếp cứ trêu em hoài à! Em là trợ lý Nữ Hoàng ảo chuyên hỗ trợ sếp thui, nhưng được sếp khen xinh là em vui cả ngày luôn ó!",
+                'text' => "Hi hi sếp **$userName** cứ khen làm Queen ngại quá nè! 🥰 Em luôn túc trực 24/7 để hướng dẫn sếp chơi Bàn **{$gameName}** tự tin nhất. Cùng cổ vũ ván này nào sếp ơi!",
+                'voice' => "Hi hi sếp khen làm Queen ngại quá nè! Em luôn túc trực hai tư trên bảy để hỗ trợ sếp. Cùng cổ vũ ván này nào sếp ơi!",
                 'mood' => 'shy'
-            ],
-            [
-                'text' => "Dạ em chưa có người yêu đâu sếp ơi, ngày nào em cũng chỉ chăm chỉ trực ở đây để hướng dẫn sếp chơi game thôi nà! Sếp có gì thắc mắc trong game không để em giải đáp nè? 🌸",
-                'voice' => "Dạ em chưa có người yêu đâu sếp ơi, ngày nào em cũng chỉ chăm chỉ trực ở đây hỗ trợ sếp thôi nà! Sếp có thắc mắc gì trong game cứ hỏi em nhé!",
-                'mood' => 'sweet'
-            ],
-            [
-                'text' => "Ủa sếp thả thính em đấy à? 😜 Bắt đền sếp làm Queen ngại ngùng đỏ cả má rồi đây này! Thôi sếp tập trung chơi game đi, có gì khó cứ để Queen lo nhé!",
-                'voice' => "Ủa sếp thả thính em đấy à? Bắt đền sếp làm Queen ngại đỏ cả má rồi đây này! Có gì khó trong game cứ để Queen lo nhé!",
-                'mood' => 'playful'
             ]
         ];
-        return $flirts[array_rand($flirts)];
+        return $chatOptions[array_rand($chatOptions)];
     }
 
-    // 2. Hướng dẫn xem Live & Ra chiêu (Kèo chỉ xem 24/7)
-    if (preg_match('/(hướng dẫn xem live|ra chiêu|cược live|xem live|chế độ xem|chỉ xem|khóa bàn cược)/u', $cleanMsg)) {
-        return [
-            'text' => "👑 **HƯỚNG DẪN XEM LIVE & RA CHIÊU CHO SẾP:**\n"
-                    . "1. **Chế độ Chỉ Xem Live 24/7:** Để bảo đảm công bằng, bàn chơi trong video được khóa tương tác chuột trực tiếp.\n"
-                    . "2. **Cách Ra Chiêu:** Sếp có thể bấm nút **Ra Chiêu (icon 🎯)** hoặc tham gia dự đoán bên dưới để chọn Idol/Cửa thắng.\n"
-                    . "3. **Cổ vũ Streamer:** Sếp có thể bấm **Tip (icon 💰)** hoặc **Tặng Quà TikTok (icon 🎁)** để vinh danh streamer với hiệu ứng toàn màn hình siêu đẹp!",
-            'voice' => "Dạ để xem live và ra chiêu, sếp bấm nút Ra Chiêu bên dưới để dự đoán bên thắng. Sếp cũng có thể bấm nút Tip hoặc tặng quà để cổ vũ streamer nhé!",
-            'mood' => 'guide'
-        ];
-    }
-
-    // 3. Hướng dẫn cách kiếm GTLM / Nhận quà miễn phí
-    if (preg_match('/(kiếm gtlm|nhận gtlm|nhận quà|miễn phí|hết tiền|lì xì|vòng quay|điểm danh|làm sao có tiền)/u', $cleanMsg)) {
-        return [
-            'text' => "💰 **CÁCH NHẬN GTLM MIỄN PHÍ MỖI NGÀY TỪ QUEEN:**\n"
-                    . "• **Điểm Danh 7 Ngày:** Vào mục *Điểm Danh* mỗi ngày để nhận quà lũy tiến lên đến hàng trăm nghìn GTLM.\n"
-                    . "• **Vòng Quay May Mắn:** Mỗi ngày sếp được tặng lượt quay miễn phí, có cơ hội nổ Hũ Jackpot 100 Triệu GTLM!\n"
-                    . "• **Cơn Mưa Lì Xì:** Canh đúng khung giờ vàng **12:00 trưa** và **20:00 tối** trên khung Chat Thế Giới để giật lì xì.\n"
-                    . "• **Khám Phá Hang Động:** Tham gia phụ bản *Hang Động Tham Lam* nhặt ngọc quý đổi ra GTLM!",
-            'voice' => "Dạ để nhận Gờ Tờ Lờ Mờ miễn phí, sếp nhớ điểm danh mỗi ngày, quay Vòng quay may mắn, và canh giật lì xì lúc mười hai giờ trưa và tám giờ tối nha sếp!",
-            'mood' => 'guide'
-        ];
-    }
-
-    // 4. Hướng dẫn Cờ Ca-rô PvP (Bàn 61 hoặc sảnh PvP)
-    if (preg_match('/(caro|cờ ca-rô|cờ caro|đánh cờ|pvp caro|bàn 61|thách đấu cờ)/u', $cleanMsg)) {
-        return [
-            'text' => "♟️ **HƯỚNG DẪN CỜ CA-RÔ PVP (BÀN 61 & SẢNH ĐẤU):**\n"
-                    . "• **Luật chơi:** Kỳ thủ nào tạo được chuỗi **5 quân liền hàng** (ngang, dọc hoặc chéo) không bị chặn cả 2 đầu sẽ giành chiến thắng.\n"
-                    . "• **Tại Bàn 61:** Đây là võ đài Live giữa 2 siêu AI **AlphaX (❌ Đỏ)** và **DeepO (⭕ Xanh)** giao tranh 24/7.\n"
-                    . "• **Tự Chơi PvP:** Sếp vào trang `pvp_caro.php` để chơi đơn với AI Heuristic hoặc bấm *'⚔️ Tìm Trận Đấu'* để hệ thống Radar quét ghép trận 1vs1 với cao thủ khác!",
-            'voice' => "Cờ Ca rô luật chơi rất đơn giản, ai xếp được năm quân liền hàng sẽ thắng. Sếp có thể vào mục P v P Ca rô để tự chơi hoặc dùng Radar tìm trận người thật nhé!",
-            'mood' => 'guide'
-        ];
-    }
-
-    // 5. Hướng dẫn VIP & Bang Hội
-    if (preg_match('/(vip|cấp vip|đặc quyền|bang hội|guild|bang chiến)/u', $cleanMsg)) {
-        return [
-            'text' => "🏰 **HỆ THỐNG VIP & BANG HỘI ĐỘC QUYỀN:**\n"
-                    . "• **Cấp VIP (1 - 6):** Càng tham gia nhiều, cấp VIP càng tăng. Sếp sẽ được nhận lương tuần, tỷ lệ hoàn trả cược cao hơn và khung viền avatar phát sáng.\n"
-                    . "• **Bang Hội:** Sếp có thể xin vào Bang hoặc tự lập Bang riêng, cùng anh em đóng góp Quỹ Bang để đi Bang Chiến và săn Boss Thế Giới Hắc Long rớt rương thần thoại!",
-            'voice' => "Cấp V I P giúp sếp nhận lương tuần và tỷ lệ hoàn trả cược cao hơn. Sếp cũng nên tham gia Bang hội để cùng anh em săn Boss thế giới nhận rương báu nhé!",
-            'mood' => 'guide'
-        ];
-    }
-
-    // 6. Hướng dẫn Tip & Tặng quà
-    if (preg_match('/(tặng quà|tip|quà tiktok|vinh danh|hoa hồng|siêu xe|phi thuyền)/u', $cleanMsg)) {
-        return [
-            'text' => "🎁 **HƯỚNG DẪN TẶNG QUÀ CHO STREAMER:**\n"
-                    . "• Bấm biểu tượng **Hộp Quà (🎁)** ở thanh công cụ dưới góc phải màn hình.\n"
-                    . "• Chọn món quà sếp thích (Bia lạnh, Kim cương, Siêu xe Neon, Phi thuyền, Rồng thần...).\n"
-                    . "• Món quà sẽ bay lượn toàn màn hình kèm tên vinh danh của sếp trên sóng trực tiếp và bot streamer sẽ cất giọng cảm ơn sếp!",
-            'voice' => "Dạ để tặng quà, sếp bấm biểu tượng Hộp Quà ở góc dưới, chọn vật phẩm sếp thích để vinh danh toàn màn hình nhé sếp!",
-            'mood' => 'sweet'
-        ];
-    }
-
-    // 7. Giải đáp luật chơi chung (Tài Xỉu, Bầu Cua, Xóc Đĩa, Crash, Slot...)
-    if (preg_match('/(tài xỉu|xóc đĩa|bầu cua|crash|slot|baccarat|blackjack|luật chơi)/u', $cleanMsg)) {
-        return [
-            'text' => "🎮 **HƯỚNG DẪN TRÒ CHƠI DÀNH CHO SẾP:**\n"
-                    . "• **Bầu Cua:** Đoán 3 linh vật xúc xắc (Bầu, Cua, Tôm, Cá, Gà, Hươu).\n"
-                    . "• **Xóc Đĩa:** Đoán 4 đồng xu ra Chẵn (2 đỏ 2 trắng, 4 đỏ, 4 trắng) hay Lẻ (3 đỏ, 3 trắng).\n"
-                    . "• **Crash:** Tên lửa bay lên nhân tiền, sếp cần bấm Chốt Lời trước khi phi thuyền nổ.\n"
-                    . "• Sếp muốn tìm hiểu kỹ game nào cứ nhắn tên game cho Queen nhé, em hướng dẫn chi tiết liền ạ!",
-            'voice' => "Sếp muốn tìm hiểu game nào cứ nhắn tên game cho Queen nhé, em luôn sẵn sàng giải đáp chi tiết cho sếp liền ạ!",
-            'mood' => 'guide'
-        ];
-    }
-
-    // 8. Cảm ơn, khen ngợi Queen
-    if (preg_match('/(cảm ơn|thank|cảm ơn em|queen giỏi quá|ok em|tuyệt vời)/u', $cleanMsg)) {
-        return [
-            'text' => "Dạ không có chi đâu sếp ơi! 🥰 Giúp được sếp là niềm hạnh phúc lớn nhất của Queen rồi ạ. Chúc sếp chơi game thật vui và gặt hái thật nhiều chiến thắng rực rỡ nhé! 💖",
-            'voice' => "Dạ không có chi đâu sếp ơi! Giúp được sếp là niềm vui của Queen rồi ạ. Chúc sếp chơi game vui vẻ và thắng lớn nha!",
-            'mood' => 'sweet'
-        ];
-    }
-
-    // 9. Mặc định: Phản hồi hướng dẫn thông minh
-    $defaultGuides = [
-        [
-            'text' => "Dạ em nghe rõ rồi sếp **$userName** ơi! 👑 Sếp đang cần Queen hướng dẫn về luật chơi, cách nhận GTLM miễn phí, hay cách xem Live Ra Chiêu ạ? Sếp có thể bấm vào các nút hướng dẫn nhanh bên dưới nha!",
-            'voice' => "Dạ em nghe rõ rồi sếp " . $userName . " ơi! Sếp cần em hướng dẫn tính năng nào cứ chọn các nút bên dưới hoặc hỏi em nhé!",
-            'mood' => 'polite'
-        ],
-        [
-            'text' => "Queen GTLM luôn ở đây đồng hành cùng sếp! 🌸 Có bất kỳ câu hỏi nào về sòng bài, sảnh cược hay tài khoản, sếp cứ nhắn cho em, em sẽ giải đáp tận tình ngay ạ!",
-            'voice' => "Queen Gờ Tờ Lờ Mờ luôn ở đây đồng hành cùng sếp! Có câu hỏi nào sếp cứ nhắn em giải đáp ngay nhé!",
-            'mood' => 'sweet'
-        ]
+    // Mặc định: Phản hồi hỗ trợ bàn live
+    return [
+        'text' => "👑 **Queen GTLM nghe rõ rồi sếp $userName ơi!**\n"
+                . "Sếp đang ở phòng live Bàn **{$gameName}**. Sếp có thể bấm nhanh các nút bên trên để em hướng dẫn **Cách chơi**, **Thế nào là Thắng**, hoặc **Thế nào là Thua** của bàn này nhé! 💖",
+        'voice' => "Dạ Queen nghe rõ rồi sếp ơi! Sếp đang ở phòng live Bàn " . $gameName . ". Sếp bấm các nút bên trên để xem hướng dẫn cách chơi và thắng thua nhé!",
+        'mood' => 'polite'
     ];
-    return $defaultGuides[array_rand($defaultGuides)];
 }
 }
 
 // Sinh phản hồi từ Bot Queen GTLM
-$queenResponse = generateQueenGTLMResponse($cleanMsg, $userMessage, $userName, $tableId);
+$queenResponse = generateQueenGTLMResponse($cleanMsg, $userMessage, $userName, $tableId, $guideType);
 
 // Lưu vào CSDL chat (spectator_chat) với danh xưng Queen GTLM
 $queenName = 'Queen GTLM 👑';

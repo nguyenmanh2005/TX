@@ -67,21 +67,31 @@
             this.ctx = this.canvas.getContext('2d');
 
             const dpr = window.devicePixelRatio || 1;
-            const rect = this.canvas.getBoundingClientRect();
-            const w = rect.width || 160;
-            const h = rect.height || 160;
+            // Cố định kích thước chuẩn 140x140 để đảm bảo luôn vẽ sắc nét kể cả khi ban đầu phần tử bị ẩn
+            const w = 140;
+            const h = 140;
             
             this.canvas.width = w * dpr;
             this.canvas.height = h * dpr;
-            this.ctx.scale(dpr, dpr);
+            this.canvas.style.width = w + 'px';
+            this.canvas.style.height = h + 'px';
+            
+            // Dùng setTransform để thiết lập ma trận tỉ lệ dpr, tránh bị scale cộng dồn nhiều lần
+            this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             this.displayW = w;
             this.displayH = h;
 
-            this.canvas.addEventListener('click', () => {
-                this.triggerWinkAndSweetTalk();
-            });
+            if (!this.hasClickListener) {
+                this.canvas.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.triggerWinkAndSweetTalk();
+                });
+                this.hasClickListener = true;
+            }
 
-            this.animate();
+            if (!this.animId) {
+                this.animate();
+            }
         }
 
         animate() {
